@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 export class OrganizationRepository {
   async exists(client: PoolClient, organizationId: string): Promise<boolean> {
     const result = await client.query<{ exists: boolean }>(
-      "select exists(select 1 from organizations where id = $1 and deleted_at is null) as exists",
+      "select exists(select 1 from organizations where id = $1 and status <> 'closed') as exists",
       [organizationId]
     );
 
@@ -16,7 +16,7 @@ export class OrganizationRepository {
         select id, name, slug
         from organizations
         where id = $1
-          and deleted_at is null
+          and status <> 'closed'
         limit 1
       `,
       [organizationId]

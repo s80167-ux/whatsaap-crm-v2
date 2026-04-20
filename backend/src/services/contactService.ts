@@ -29,15 +29,15 @@ export class ContactService {
       contact = await this.contactRepository.create(client, {
         organizationId: input.organizationId,
         displayName: input.profileName,
-        phonePrimary: input.phoneRaw,
-        phonePrimaryNormalized: normalizedPhone
+        primaryPhoneE164: input.phoneRaw,
+        primaryPhoneNormalized: normalizedPhone
       });
     } else {
       contact = await this.contactRepository.anchor(client, {
         contactId: contact.id,
         displayName: input.profileName,
-        phonePrimary: input.phoneRaw,
-        phonePrimaryNormalized: normalizedPhone
+        primaryPhoneE164: input.phoneRaw,
+        primaryPhoneNormalized: normalizedPhone
       });
     }
 
@@ -46,8 +46,8 @@ export class ContactService {
       contactId: contact.id,
       whatsappAccountId: input.whatsappAccountId,
       whatsappJid: input.whatsappJid,
-      phoneNumber: input.phoneRaw,
-      phoneNumberNormalized: normalizedPhone,
+      phoneE164: input.phoneRaw,
+      phoneNormalized: normalizedPhone,
       profileName: input.profileName
     });
 

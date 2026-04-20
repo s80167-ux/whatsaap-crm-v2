@@ -10,13 +10,19 @@ export class ContactIdentityRepository {
   ): Promise<ContactIdentityRecord | null> {
     const result = await client.query<ContactIdentityRecord>(
       `
-        select id, organization_id, contact_id, whatsapp_account_id, whatsapp_jid,
-               phone_number, phone_number_normalized, raw_profile_name
+        select
+          id,
+          organization_id,
+          contact_id,
+          whatsapp_account_id,
+          wa_jid,
+          phone_e164,
+          phone_normalized,
+          profile_name
         from contact_identities
         where organization_id = $1
           and whatsapp_account_id = $2
-          and whatsapp_jid = $3
-          and deleted_at is null
+          and wa_jid = $3
         limit 1
       `,
       [organizationId, whatsappAccountId, whatsappJid]
@@ -32,8 +38,8 @@ export class ContactIdentityRepository {
       contactId: string;
       whatsappAccountId: string;
       whatsappJid: string;
-      phoneNumber: string | null;
-      phoneNumberNormalized: string | null;
+      phoneE164: string | null;
+      phoneNormalized: string | null;
       profileName: string | null;
     }
   ): Promise<ContactIdentityRecord> {
@@ -41,33 +47,41 @@ export class ContactIdentityRepository {
       `
         insert into contact_identities (
           organization_id,
+          channel,
           contact_id,
           whatsapp_account_id,
-          whatsapp_jid,
-          phone_number,
-          phone_number_normalized,
-          raw_profile_name,
+          wa_jid,
+          phone_e164,
+          phone_normalized,
+          profile_name,
           last_seen_at
         )
-        values ($1, $2, $3, $4, $5, $6, nullif(trim($7), ''), timezone('utc', now()))
-        on conflict (organization_id, whatsapp_account_id, whatsapp_jid)
-        where deleted_at is null
+        values ($1, 'whatsapp', $2, $3, $4, $5, $6, nullif(trim($7), ''), timezone('utc', now()))
+        on conflict (organization_id, channel, wa_jid)
         do update set
           contact_id = excluded.contact_id,
-          phone_number = coalesce(contact_identities.phone_number, excluded.phone_number),
-          phone_number_normalized = coalesce(contact_identities.phone_number_normalized, excluded.phone_number_normalized),
-          raw_profile_name = coalesce(nullif(trim(contact_identities.raw_profile_name), ''), excluded.raw_profile_name),
+          whatsapp_account_id = excluded.whatsapp_account_id,
+          phone_e164 = coalesce(contact_identities.phone_e164, excluded.phone_e164),
+          phone_normalized = coalesce(contact_identities.phone_normalized, excluded.phone_normalized),
+          profile_name = coalesce(nullif(trim(contact_identities.profile_name), ''), excluded.profile_name),
           last_seen_at = timezone('utc', now())
-        returning id, organization_id, contact_id, whatsapp_account_id, whatsapp_jid,
-                  phone_number, phone_number_normalized, raw_profile_name
+        returning
+          id,
+          organization_id,
+          contact_id,
+          whatsapp_account_id,
+          wa_jid,
+          phone_e164,
+          phone_normalized,
+          profile_name
       `,
       [
         input.organizationId,
         input.contactId,
         input.whatsappAccountId,
         input.whatsappJid,
-        input.phoneNumber,
-        input.phoneNumberNormalized,
+        input.phoneE164,
+        input.phoneNormalized,
         input.profileName
       ]
     );

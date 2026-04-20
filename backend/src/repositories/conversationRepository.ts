@@ -10,20 +10,61 @@ export class ConversationRepository {
       contactId: string;
     }
   ): Promise<ConversationRecord> {
+    const existing = await client.query<ConversationRecord>(
+      `
+        select
+          id,
+          organization_id,
+          whatsapp_account_id,
+          contact_id,
+          channel,
+          external_thread_key,
+          last_message_at,
+          last_incoming_at,
+          last_outgoing_at,
+          unread_count
+        from conversations
+        where organization_id = $1
+          and whatsapp_account_id = $2
+          and contact_id = $3
+          and channel = 'whatsapp'
+        order by created_at asc
+        limit 1
+      `,
+      [input.organizationId, input.whatsappAccountId, input.contactId]
+    );
+
+    if (existing.rows[0]) {
+      return existing.rows[0];
+    }
+
     const result = await client.query<ConversationRecord>(
       `
         insert into conversations (
           organization_id,
+          channel,
           whatsapp_account_id,
-          contact_id
+          contact_id,
+          external_thread_key,
+          thread_type,
+          status
         )
-        values ($1, $2, $3)
-        on conflict (organization_id, whatsapp_account_id, contact_id)
+        values ($1, 'whatsapp', $2, $3, $4, 'direct', 'open')
+        on conflict (organization_id, channel, whatsapp_account_id, external_thread_key)
         do update set updated_at = timezone('utc', now())
-        returning id, organization_id, whatsapp_account_id, contact_id,
-                  last_message_id, last_message_at, last_message_preview, unread_count
+        returning
+          id,
+          organization_id,
+          whatsapp_account_id,
+          contact_id,
+          channel,
+          external_thread_key,
+          last_message_at,
+          last_incoming_at,
+          last_outgoing_at,
+          unread_count
       `,
-      [input.organizationId, input.whatsappAccountId, input.contactId]
+      [input.organizationId, input.whatsappAccountId, input.contactId, `contact:${input.contactId}`]
     );
 
     return result.rows[0];
@@ -33,28 +74,29 @@ export class ConversationRepository {
     client: PoolClient,
     input: {
       conversationId: string;
-      messageId: string;
+      direction: "incoming" | "outgoing";
       sentAt: Date;
-      preview: string | null;
       incrementUnread: boolean;
     }
   ): Promise<void> {
     await client.query(
       `
         update conversations
-        set last_message_id = case
-                                when last_message_at is null or last_message_at <= $3 then $2
-                                else last_message_id
-                              end,
-            last_message_at = greatest(coalesce(last_message_at, to_timestamp(0)), $3),
-            last_message_preview = case
-                                     when last_message_at is null or last_message_at <= $3 then $4
-                                     else last_message_preview
-                                   end,
-            unread_count = case when $5 then unread_count + 1 else unread_count end
+        set last_message_at = greatest(coalesce(last_message_at, to_timestamp(0)), $2),
+            last_incoming_at = case
+                                 when $3 = 'incoming'
+                                   then greatest(coalesce(last_incoming_at, to_timestamp(0)), $2)
+                                 else last_incoming_at
+                               end,
+            last_outgoing_at = case
+                                 when $3 = 'outgoing'
+                                   then greatest(coalesce(last_outgoing_at, to_timestamp(0)), $2)
+                                 else last_outgoing_at
+                               end,
+            unread_count = case when $4 then unread_count + 1 else unread_count end
         where id = $1
       `,
-      [input.conversationId, input.messageId, input.sentAt.toISOString(), input.preview, input.incrementUnread]
+      [input.conversationId, input.sentAt.toISOString(), input.direction, input.incrementUnread]
     );
   }
 
@@ -66,24 +108,40 @@ export class ConversationRepository {
           c.organization_id,
           c.whatsapp_account_id,
           c.contact_id,
+          c.channel,
+          c.external_thread_key,
           c.last_message_at,
-          c.last_message_preview,
+          c.last_incoming_at,
+          c.last_outgoing_at,
           c.unread_count,
-          coalesce(ct.display_name, ci.raw_profile_name, ct.phone_primary, ci.phone_number, 'Unknown') as contact_name,
-          coalesce(ct.phone_primary_normalized, ci.phone_number_normalized) as phone_number_normalized
+          coalesce(ct.display_name, ci.profile_push_name, ci.profile_name, ct.primary_phone_e164, ci.phone_e164, 'Unknown') as contact_name,
+          coalesce(ct.primary_phone_normalized, ci.phone_normalized) as phone_number_normalized,
+          ct.primary_avatar_url as contact_avatar_url,
+          lm.content_text as last_message_preview,
+          lm.message_type as last_message_type,
+          lm.direction as last_message_direction
         from conversations c
         join contacts ct on ct.id = c.contact_id
         left join lateral (
-          select raw_profile_name, phone_number, phone_number_normalized
+          select
+            profile_name,
+            profile_push_name,
+            phone_e164,
+            phone_normalized
           from contact_identities
           where contact_id = c.contact_id
             and (whatsapp_account_id = c.whatsapp_account_id or whatsapp_account_id is null)
-            and deleted_at is null
           order by updated_at desc
           limit 1
         ) ci on true
+        left join lateral (
+          select content_text, message_type, direction
+          from messages
+          where conversation_id = c.id
+          order by sent_at desc nulls last, created_at desc, id desc
+          limit 1
+        ) lm on true
         where c.organization_id = $1
-          and c.deleted_at is null
         order by c.last_message_at desc nulls last, c.updated_at desc, c.id desc
       `,
       [organizationId]

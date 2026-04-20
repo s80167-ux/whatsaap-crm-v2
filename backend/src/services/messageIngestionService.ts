@@ -34,8 +34,8 @@ export class MessageIngestionService {
         conversationId: conversation.id,
         contactId: contact.id,
         whatsappAccountId: input.whatsappAccountId,
-        contactIdentityId: identity.id,
         externalMessageId: input.externalMessageId,
+        externalChatId: input.remoteJid,
         direction: input.direction,
         messageType: input.messageType,
         contentText: input.textBody,
@@ -46,10 +46,9 @@ export class MessageIngestionService {
       if (inserted) {
         await this.conversationRepository.bumpLastMessage(client, {
           conversationId: conversation.id,
-          messageId: message.id,
+          direction: input.direction,
           sentAt: input.sentAt,
-          preview: input.textBody,
-          incrementUnread: input.direction === "inbound"
+          incrementUnread: input.direction === "incoming"
         });
       }
 

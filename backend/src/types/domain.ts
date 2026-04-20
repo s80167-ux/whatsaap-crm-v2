@@ -4,8 +4,9 @@ export interface ContactRecord {
   id: UUID;
   organization_id: UUID;
   display_name: string | null;
-  phone_primary: string | null;
-  phone_primary_normalized: string | null;
+  primary_phone_e164: string | null;
+  primary_phone_normalized: string | null;
+  primary_avatar_url?: string | null;
 }
 
 export interface ContactIdentityRecord {
@@ -13,10 +14,11 @@ export interface ContactIdentityRecord {
   organization_id: UUID;
   contact_id: UUID;
   whatsapp_account_id: UUID | null;
-  whatsapp_jid: string;
-  phone_number: string | null;
-  phone_number_normalized: string | null;
-  raw_profile_name: string | null;
+  wa_jid: string;
+  phone_e164: string | null;
+  phone_normalized: string | null;
+  profile_name: string | null;
+  profile_push_name?: string | null;
 }
 
 export interface ConversationRecord {
@@ -24,9 +26,11 @@ export interface ConversationRecord {
   organization_id: UUID;
   whatsapp_account_id: UUID;
   contact_id: UUID;
-  last_message_id: UUID | null;
+  channel?: string;
+  external_thread_key?: string | null;
   last_message_at: string | null;
-  last_message_preview: string | null;
+  last_incoming_at?: string | null;
+  last_outgoing_at?: string | null;
   unread_count: number;
 }
 
@@ -36,13 +40,16 @@ export interface MessageRecord {
   conversation_id: UUID;
   contact_id: UUID;
   whatsapp_account_id: UUID;
-  contact_identity_id: UUID | null;
   external_message_id: string;
-  direction: "inbound" | "outbound";
+  external_chat_id?: string | null;
+  direction: "incoming" | "outgoing" | "system";
   message_type: string;
   content_text: string | null;
-  raw_payload: unknown;
+  content_json: unknown;
   sent_at: string;
+  delivered_at?: string | null;
+  read_at?: string | null;
+  ack_status?: string;
 }
 
 export interface WhatsAppAccountRecord {
@@ -65,7 +72,7 @@ export interface InboundMessageInput {
   profileName: string | null;
   textBody: string | null;
   messageType: string;
-  direction: "inbound" | "outbound";
+  direction: "incoming" | "outgoing";
   sentAt: Date;
   rawPayload: unknown;
 }

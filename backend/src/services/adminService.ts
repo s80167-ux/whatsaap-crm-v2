@@ -1,4 +1,5 @@
 import { pool, withTransaction } from "../config/database.js";
+import { logger } from "../config/logger.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import { UserAdminRepository } from "../repositories/userAdminRepository.js";
 import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
@@ -131,7 +132,10 @@ export class AdminService {
       });
     });
 
-    await this.sessionManager.initializeSession(account);
+    void this.sessionManager.initializeSession(account).catch((error) => {
+      logger.error({ error, accountId: account.id }, "Failed to initialize WhatsApp session after account creation");
+    });
+
     return account;
   }
 }

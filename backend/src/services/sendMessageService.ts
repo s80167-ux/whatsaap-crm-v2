@@ -21,7 +21,7 @@ export class SendMessageService {
     const conversation = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
         `
-          select c.contact_id, ci.whatsapp_jid as contact_jid
+          select c.contact_id, ci.wa_jid as contact_jid
           from conversations c
           join contact_identities ci on ci.contact_id = c.contact_id and ci.whatsapp_account_id = c.whatsapp_account_id
           where c.id = $1
@@ -48,9 +48,9 @@ export class SendMessageService {
         conversationId: input.conversationId,
         contactId: conversationRow.contact_id,
         whatsappAccountId: input.whatsappAccountId,
-        contactIdentityId: null,
         externalMessageId: outboundMessageId,
-        direction: "outbound",
+        externalChatId: recipientJid,
+        direction: "outgoing",
         messageType: "text",
         contentText: input.text,
         rawPayload: outbound ?? null,
@@ -60,9 +60,8 @@ export class SendMessageService {
       if (stored.inserted) {
         await this.conversationRepository.bumpLastMessage(client, {
           conversationId: input.conversationId,
-          messageId: stored.message.id,
+          direction: "outgoing",
           sentAt,
-          preview: input.text,
           incrementUnread: false
         });
       }

@@ -38,8 +38,8 @@ export function ContactsPage() {
                   className="table-row text-sm text-text-muted"
                 >
                   <td className="px-5 py-4 font-medium text-text">{contact.display_name ?? "Unknown"}</td>
-                  <td className="px-5 py-4">{contact.phone_primary ?? "--"}</td>
-                  <td className="px-5 py-4">{contact.phone_primary_normalized ?? "--"}</td>
+                  <td className="px-5 py-4">{contact.primary_phone_e164 ?? "--"}</td>
+                  <td className="px-5 py-4">{contact.primary_phone_normalized ?? "--"}</td>
                 </motion.tr>
               ))
             )}

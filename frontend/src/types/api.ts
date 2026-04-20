@@ -29,6 +29,6 @@ export interface Contact {
   id: string;
   organization_id: string;
   display_name: string | null;
-  phone_primary: string | null;
-  phone_primary_normalized: string | null;
+  primary_phone_e164: string | null;
+  primary_phone_normalized: string | null;
 }

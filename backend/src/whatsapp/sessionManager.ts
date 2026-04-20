@@ -106,7 +106,7 @@ export class WhatsAppSessionManager {
           continue;
         }
 
-        const direction = message.key.fromMe ? "outbound" : "inbound";
+        const direction = message.key.fromMe ? "outgoing" : "incoming";
         const sentAt = new Date(Number(message.messageTimestamp) * 1000 || Date.now());
 
         try {

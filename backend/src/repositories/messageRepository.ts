@@ -9,9 +9,9 @@ export class MessageRepository {
       conversationId: string;
       contactId: string;
       whatsappAccountId: string;
-      contactIdentityId: string | null;
       externalMessageId: string;
-      direction: "inbound" | "outbound";
+      externalChatId?: string | null;
+      direction: "incoming" | "outgoing";
       messageType: string;
       contentText: string | null;
       rawPayload: unknown;
@@ -26,16 +26,17 @@ export class MessageRepository {
             conversation_id,
             contact_id,
             whatsapp_account_id,
-            contact_identity_id,
             external_message_id,
+            external_chat_id,
+            channel,
             direction,
             message_type,
             content_text,
-            raw_payload,
+            content_json,
             sent_at
           )
-          values ($1, $2, $3, $4, $5, $6, $7, $8, nullif($9, ''), $10, $11)
-          on conflict (organization_id, whatsapp_account_id, external_message_id)
+          values ($1, $2, $3, $4, $5, $6, 'whatsapp', $7, $8, nullif($9, ''), $10, $11)
+          on conflict (whatsapp_account_id, external_message_id)
           do nothing
           returning *, true as inserted
         )
@@ -45,7 +46,7 @@ export class MessageRepository {
         from messages m
         where m.organization_id = $1
           and m.whatsapp_account_id = $4
-          and m.external_message_id = $6
+          and m.external_message_id = $5
           and not exists (select 1 from inserted)
         limit 1
       `,
@@ -54,8 +55,8 @@ export class MessageRepository {
         input.conversationId,
         input.contactId,
         input.whatsappAccountId,
-        input.contactIdentityId,
         input.externalMessageId,
+        input.externalChatId ?? null,
         input.direction,
         input.messageType,
         input.contentText,
@@ -75,13 +76,25 @@ export class MessageRepository {
   ): Promise<MessageRecord[]> {
     const result = await client.query<MessageRecord>(
       `
-        select id, organization_id, conversation_id, contact_id, whatsapp_account_id,
-               contact_identity_id, external_message_id, direction, message_type,
-               content_text, raw_payload, sent_at
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
         from messages
         where organization_id = $1
           and conversation_id = $2
-          and deleted_at is null
         order by sent_at asc, id asc
       `,
       [organizationId, conversationId]

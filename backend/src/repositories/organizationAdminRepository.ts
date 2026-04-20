@@ -4,7 +4,7 @@ export interface OrganizationRecord {
   id: string;
   name: string;
   slug: string;
-  is_active: boolean;
+  status: string;
   created_at: string;
 }
 
@@ -12,9 +12,8 @@ export class OrganizationAdminRepository {
   async list(client: PoolClient): Promise<OrganizationRecord[]> {
     const result = await client.query<OrganizationRecord>(
       `
-        select id, name, slug, is_active, created_at
+        select id, name, slug, status, created_at
         from organizations
-        where deleted_at is null
         order by created_at desc
       `
     );
@@ -30,7 +29,7 @@ export class OrganizationAdminRepository {
       `
         insert into organizations (name, slug)
         values ($1, $2)
-        returning id, name, slug, is_active, created_at
+        returning id, name, slug, status, created_at
       `,
       [input.name, input.slug]
     );

@@ -9,11 +9,15 @@ export class ContactRepository {
   ): Promise<ContactRecord | null> {
     const result = await client.query<ContactRecord>(
       `
-        select id, organization_id, display_name, phone_primary, phone_primary_normalized
+        select
+          id,
+          organization_id,
+          display_name,
+          primary_phone_e164,
+          primary_phone_normalized
         from contacts
         where organization_id = $1
-          and phone_primary_normalized = $2
-          and deleted_at is null
+          and primary_phone_normalized = $2
         limit 1
       `,
       [organizationId, normalizedPhone]
@@ -27,8 +31,8 @@ export class ContactRepository {
     input: {
       organizationId: string;
       displayName: string | null;
-      phonePrimary: string | null;
-      phonePrimaryNormalized: string | null;
+      primaryPhoneE164: string | null;
+      primaryPhoneNormalized: string | null;
     }
   ): Promise<ContactRecord> {
     const result = await client.query<ContactRecord>(
@@ -36,13 +40,18 @@ export class ContactRepository {
         insert into contacts (
           organization_id,
           display_name,
-          phone_primary,
-          phone_primary_normalized
+          primary_phone_e164,
+          primary_phone_normalized
         )
         values ($1, nullif(trim($2), ''), $3, $4)
-        returning id, organization_id, display_name, phone_primary, phone_primary_normalized
+        returning
+          id,
+          organization_id,
+          display_name,
+          primary_phone_e164,
+          primary_phone_normalized
       `,
-      [input.organizationId, input.displayName, input.phonePrimary, input.phonePrimaryNormalized]
+      [input.organizationId, input.displayName, input.primaryPhoneE164, input.primaryPhoneNormalized]
     );
 
     return result.rows[0];
@@ -53,20 +62,25 @@ export class ContactRepository {
     input: {
       contactId: string;
       displayName: string | null;
-      phonePrimary: string | null;
-      phonePrimaryNormalized: string | null;
+      primaryPhoneE164: string | null;
+      primaryPhoneNormalized: string | null;
     }
   ): Promise<ContactRecord> {
     const result = await client.query<ContactRecord>(
       `
         update contacts
         set display_name = coalesce(nullif(trim(display_name), ''), nullif(trim($2), '')),
-            phone_primary = coalesce(phone_primary, $3),
-            phone_primary_normalized = coalesce(phone_primary_normalized, $4)
+            primary_phone_e164 = coalesce(primary_phone_e164, $3),
+            primary_phone_normalized = coalesce(primary_phone_normalized, $4)
         where id = $1
-        returning id, organization_id, display_name, phone_primary, phone_primary_normalized
+        returning
+          id,
+          organization_id,
+          display_name,
+          primary_phone_e164,
+          primary_phone_normalized
       `,
-      [input.contactId, input.displayName, input.phonePrimary, input.phonePrimaryNormalized]
+      [input.contactId, input.displayName, input.primaryPhoneE164, input.primaryPhoneNormalized]
     );
 
     return result.rows[0];
@@ -75,9 +89,14 @@ export class ContactRepository {
   async list(client: PoolClient, organizationId: string): Promise<ContactRecord[]> {
     const result = await client.query<ContactRecord>(
       `
-        select id, organization_id, display_name, phone_primary, phone_primary_normalized
+        select
+          id,
+          organization_id,
+          display_name,
+          primary_phone_e164,
+          primary_phone_normalized
         from contacts
-        where organization_id = $1 and deleted_at is null
+        where organization_id = $1
         order by updated_at desc, created_at desc
       `,
       [organizationId]

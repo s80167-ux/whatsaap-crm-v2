@@ -23,6 +23,24 @@ const createWhatsAppAccountSchema = z.object({
   phoneNumber: z.string().min(6).optional().nullable()
 });
 
+function mapWhatsAppAccount(account: {
+  id: string;
+  organization_id: string;
+  label: string | null;
+  account_phone_e164: string | null;
+  account_phone_normalized: string | null;
+  connection_status: string;
+}) {
+  return {
+    id: account.id,
+    organization_id: account.organization_id,
+    name: account.label,
+    phone_number: account.account_phone_e164,
+    phone_number_normalized: account.account_phone_normalized,
+    status: account.connection_status
+  };
+}
+
 export async function listOrganizations(_req: Request, res: Response) {
   const organizations = await adminService.listOrganizations();
   return res.json({ data: organizations });
@@ -74,7 +92,7 @@ export async function listWhatsAppAccounts(req: Request, res: Response) {
 
   const organizationId = typeof req.query.organization_id === "string" ? req.query.organization_id : undefined;
   const accounts = await adminService.listWhatsAppAccounts(req.auth, organizationId);
-  return res.json({ data: accounts });
+  return res.json({ data: accounts.map(mapWhatsAppAccount) });
 }
 
 export async function createWhatsAppAccount(req: Request, res: Response) {
@@ -87,5 +105,5 @@ export async function createWhatsAppAccount(req: Request, res: Response) {
     ...input,
     phoneNumber: input.phoneNumber ?? null
   });
-  return res.status(201).json({ data: account });
+  return res.status(201).json({ data: mapWhatsAppAccount(account) });
 }
