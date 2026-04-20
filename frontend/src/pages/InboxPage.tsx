@@ -22,9 +22,9 @@ export function InboxPage() {
   const conversationCountLabel = `${conversations.length} active threads`;
 
   return (
-    <div className="grid h-full gap-6 xl:grid-cols-[360px,1fr,320px]">
+    <div className="grid gap-5 xl:grid-cols-[340px,minmax(0,1fr),300px] xl:items-start">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card className="grid h-full grid-rows-[auto,1fr] bg-white" elevated>
+        <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white" elevated>
           <header className="pb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
             <div className="mt-3 flex items-end justify-between gap-4">
@@ -35,7 +35,7 @@ export function InboxPage() {
             </div>
           </header>
           {isLoading ? (
-            <div className="flex items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
           ) : (
             <ConversationList
               conversations={conversations}

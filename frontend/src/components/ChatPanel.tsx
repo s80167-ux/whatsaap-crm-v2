@@ -39,7 +39,7 @@ export function ChatPanel({
 
   if (!conversation) {
     return (
-      <Card className="flex h-full items-center justify-center p-10" elevated>
+      <Card className="flex min-h-[420px] items-center justify-center p-10" elevated>
         <div className="max-w-sm text-center">
           <p className="text-lg font-semibold text-text">Pick a conversation</p>
           <p className="mt-2 text-sm leading-6 text-text-muted">
@@ -51,12 +51,12 @@ export function ChatPanel({
   }
 
   return (
-    <Card className="grid h-full grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
-      <header className="border-b border-border bg-white px-6 py-5">
+    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
+      <header className="border-b border-border bg-white px-6 py-4">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
       </header>
-      <div className="overflow-y-auto bg-background-elevated px-6 py-5 space-y-4">
+      <div className="overflow-y-auto bg-background-elevated px-5 py-4 space-y-3">
         {messages.map((message) => (
           <motion.div
             key={message.id}

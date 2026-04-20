@@ -4,10 +4,10 @@ import { Card } from "./Card";
 
 export function ContactInfoPanel({ conversation }: { conversation?: Conversation }) {
   return (
-    <Card className="h-full bg-white" elevated>
+    <Card className="bg-white xl:max-h-[calc(100vh-9.5rem)] xl:overflow-auto" elevated>
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Contact</p>
       {conversation ? (
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-4">
           <div>
             <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
             <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No normalized number yet"}</p>
@@ -27,7 +27,7 @@ export function ContactInfoPanel({ conversation }: { conversation?: Conversation
           </motion.div>
         </div>
       ) : (
-        <p className="mt-6 text-sm leading-6 text-text-muted">
+        <p className="mt-5 text-sm leading-6 text-text-muted">
           Select a thread to inspect the canonical contact and conversation metadata.
         </p>
       )}
