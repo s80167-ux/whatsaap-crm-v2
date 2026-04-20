@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #101828;
+  background: #f7f8fa;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: #101828;
+  background: #f7f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+
+  ::selection {
+    background: rgba(34, 197, 94, 0.16);
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply border border-border bg-card shadow-soft;
+  }
+
+  .section-title {
+    @apply text-2xl font-semibold tracking-tight text-text;
+  }
+
+  .section-copy {
+    @apply text-sm leading-6 text-text-muted;
+  }
+
+  .table-row {
+    @apply border-t border-border transition-colors hover:bg-background-tint/60;
+  }
+}
