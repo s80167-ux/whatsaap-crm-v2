@@ -6,15 +6,25 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#22C55E",
+          DEFAULT: "#FF7A1A",
           foreground: "#FFFFFF",
-          soft: "#E8F9EF",
-          deep: "#16A34A"
+          soft: "#FFF0E4",
+          deep: "#E26100"
+        },
+        secondary: {
+          DEFAULT: "#2F80ED",
+          soft: "#EAF3FF",
+          deep: "#1E66C8"
+        },
+        accent: {
+          DEFAULT: "#2DBE60",
+          soft: "#E7F9EE",
+          deep: "#23954B"
         },
         background: {
-          DEFAULT: "#F7F8FA",
-          elevated: "#FCFCFD",
-          tint: "#F1F5F3"
+          DEFAULT: "#F8FAFC",
+          elevated: "#FCFDFE",
+          tint: "#F3F7FB"
         },
         card: {
           DEFAULT: "#FFFFFF",
@@ -22,19 +32,19 @@ export default {
           muted: "#FAFBFC"
         },
         border: {
-          DEFAULT: "#E8EDF2",
-          strong: "#D8E0E8"
+          DEFAULT: "#E4EBF3",
+          strong: "#D1DBE8"
         },
         text: {
-          DEFAULT: "#101828",
-          muted: "#667085",
-          soft: "#98A2B3"
+          DEFAULT: "#142033",
+          muted: "#62748A",
+          soft: "#94A3B8"
         },
-        ink: "#101828",
-        mist: "#F1F5F3",
-        sand: "#F9FAFB",
-        teal: "#22C55E",
-        coral: "#E76F51"
+        ink: "#142033",
+        mist: "#F3F7FB",
+        sand: "#FFF7F0",
+        teal: "#2DBE60",
+        coral: "#FF7A1A"
       },
       borderRadius: {
         xl: "0.5rem",
@@ -42,9 +52,9 @@ export default {
         "3xl": "1rem"
       },
       boxShadow: {
-        soft: "0 1px 4px rgba(16, 24, 40, 0.04)",
-        panel: "0 6px 18px rgba(16, 24, 40, 0.05)",
-        lift: "0 12px 32px rgba(16, 24, 40, 0.08)"
+        soft: "0 1px 4px rgba(20, 32, 51, 0.05)",
+        panel: "0 8px 24px rgba(20, 32, 51, 0.07)",
+        lift: "0 16px 36px rgba(20, 32, 51, 0.10)"
       },
       spacing: {
         4.5: "1.125rem",
@@ -53,7 +63,7 @@ export default {
       },
       backgroundImage: {
         "hero-grid":
-          "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,248,250,1))"
+          "radial-gradient(circle at top left, rgba(255,122,26,0.18), transparent 32%), radial-gradient(circle at right, rgba(47,128,237,0.16), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,1))"
       }
     }
   },

@@ -65,7 +65,7 @@ export function ChatPanel({
             transition={{ duration: 0.18 }}
             className={`max-w-[80%] rounded-lg px-4 py-3 text-sm ${
               message.direction === "outbound"
-                ? "ml-auto border border-primary/10 bg-primary-soft text-text"
+                ? "ml-auto border border-secondary/10 bg-secondary-soft/70 text-text"
                 : "border border-border bg-white text-text"
             }`}
           >
