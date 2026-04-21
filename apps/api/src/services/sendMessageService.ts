@@ -15,6 +15,13 @@ export class SendMessageService {
   ) {}
 
   async send(input: SendMessageInput) {
+    const normalizedText = input.text?.trim() ?? "";
+    const hasAttachment = Boolean(input.attachment);
+
+    if (!normalizedText && !hasAttachment) {
+      throw new Error("Message text or one attachment is required");
+    }
+
     const message = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
         `
@@ -37,6 +44,21 @@ export class SendMessageService {
       }
 
       const queuedAt = new Date();
+      const attachmentMetadata = input.attachment
+        ? {
+            outboundMedia: {
+              kind: input.attachment.kind,
+              fileName: input.attachment.fileName,
+              mimeType: input.attachment.mimeType,
+              fileSizeBytes: input.attachment.fileSizeBytes
+            }
+          }
+        : null;
+
+      const messageType = input.attachment?.kind ?? "text";
+      const contentText =
+        normalizedText || (input.attachment ? `${input.attachment.kind.toUpperCase()}: ${input.attachment.fileName}` : "");
+
       const draft = await this.messageRepository.createOutboundDraft(client, {
         organizationId: input.organizationId,
         conversationId: input.conversationId,
@@ -44,7 +66,9 @@ export class SendMessageService {
         whatsappAccountId: input.whatsappAccountId,
         externalMessageId: `queued:${crypto.randomUUID()}`,
         externalChatId: recipientJid,
-        contentText: input.text,
+        contentText,
+        messageType,
+        contentJson: attachmentMetadata,
         sentAt: queuedAt
       });
 
@@ -63,7 +87,17 @@ export class SendMessageService {
         contactId: conversationRow.contact_id,
         whatsappAccountId: input.whatsappAccountId,
         recipientJid,
-        messageText: input.text
+        messageText: normalizedText || input.attachment?.fileName || draft.content_text || "",
+        payload: input.attachment
+          ? {
+              attachment: {
+                kind: input.attachment.kind,
+                fileName: input.attachment.fileName,
+                mimeType: input.attachment.mimeType,
+                dataBase64: input.attachment.dataBase64
+              }
+            }
+          : null
       });
 
       await this.conversationRepository.bumpLastMessage(client, {

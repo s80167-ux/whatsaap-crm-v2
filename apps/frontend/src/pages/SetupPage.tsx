@@ -13,6 +13,7 @@ import {
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
+import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { getStoredUser } from "../lib/auth";
 
@@ -396,6 +397,11 @@ export function SetupPage() {
                   <p>Last disconnected: {formatTimestamp(account.last_disconnected_at)}</p>
                   <p>Health score: {account.health_score ?? "--"}</p>
                 </div>
+                {account.status?.toLowerCase() === "qr_required" ? (
+                  <div className="mt-4">
+                    <WhatsAppQrDisplay accountId={account.id} />
+                  </div>
+                ) : null}
                 <div className="mt-3 space-y-2">
                   <Button
                     variant="secondary"

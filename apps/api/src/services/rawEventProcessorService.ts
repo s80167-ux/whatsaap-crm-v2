@@ -4,6 +4,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { ProcessedEventKeyRepository } from "../repositories/processedEventKeyRepository.js";
 import { RawEventRepository, type RawChannelEventRecord } from "../repositories/rawEventRepository.js";
+import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
 
 type WhatsAppMessageEventPayload = {
@@ -20,14 +21,25 @@ type WhatsAppMessageEventPayload = {
   rawPayload: unknown;
 };
 
+type WhatsAppMessageStatusEventPayload = {
+  organizationId: string;
+  whatsappAccountId: string;
+  externalMessageId: string;
+  remoteJid: string;
+  ackStatus: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
+  eventAt: string;
+  rawPayload: unknown;
+};
+
 export class RawEventProcessorService {
   constructor(
     private readonly rawEventRepository = new RawEventRepository(),
     private readonly processedEventKeyRepository = new ProcessedEventKeyRepository(),
-    private readonly messageIngestionService = new MessageIngestionService()
+    private readonly messageIngestionService = new MessageIngestionService(),
+    private readonly messageStatusSyncService = new MessageStatusSyncService()
   ) {}
 
-  private buildEventKey(event: RawChannelEventRecord, payload: WhatsAppMessageEventPayload) {
+  private buildMessageEventKey(event: RawChannelEventRecord, payload: WhatsAppMessageEventPayload) {
     return createHash("sha256")
       .update(
         [
@@ -43,7 +55,89 @@ export class RawEventProcessorService {
       .digest("hex");
   }
 
+  private buildMessageStatusEventKey(event: RawChannelEventRecord, payload: WhatsAppMessageStatusEventPayload) {
+    return createHash("sha256")
+      .update(
+        [
+          event.organization_id,
+          event.whatsapp_account_id,
+          event.source,
+          event.event_type,
+          payload.externalMessageId,
+          payload.ackStatus,
+          payload.eventAt
+        ].join(":")
+      )
+      .digest("hex");
+  }
+
+  private parseEventDate(value: string, context: { rawEventId: string; eventType: string }) {
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error(`Invalid event timestamp for ${context.eventType}: ${value} (raw event ${context.rawEventId})`);
+    }
+
+    return parsed;
+  }
+
   async processEvent(event: RawChannelEventRecord) {
+    if (event.event_type === "message.status") {
+      const payload = event.payload as WhatsAppMessageStatusEventPayload;
+
+      if (!payload?.externalMessageId || !payload?.ackStatus || !payload?.eventAt) {
+        await withTransaction((client) =>
+          this.rawEventRepository.markIgnored(client, event.id, "Unsupported raw status event payload")
+        );
+        return;
+      }
+
+      const eventKey = this.buildMessageStatusEventKey(event, payload);
+
+      try {
+        const eventAt = this.parseEventDate(payload.eventAt, {
+          rawEventId: event.id,
+          eventType: event.event_type
+        });
+
+        const status = await withTransaction(async (client) => {
+          const shouldProcess = await this.processedEventKeyRepository.createIfAbsent(client, {
+            organizationId: event.organization_id,
+            source: event.source,
+            eventKey
+          });
+
+          if (!shouldProcess) {
+            await this.rawEventRepository.markIgnored(client, event.id, "Event key already processed");
+            return "ignored" as const;
+          }
+
+          await this.messageStatusSyncService.apply(client, {
+            organizationId: payload.organizationId,
+            whatsappAccountId: payload.whatsappAccountId,
+            externalMessageId: payload.externalMessageId,
+            ackStatus: payload.ackStatus,
+            eventAt,
+            rawPayload: payload.rawPayload
+          });
+
+          await this.rawEventRepository.markProcessed(client, event.id);
+          return "processed" as const;
+        });
+
+        if (status === "ignored") {
+          return;
+        }
+
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to process raw status event";
+        await withTransaction((client) => this.rawEventRepository.markFailed(client, event.id, message));
+        logger.error({ err: error, rawEventId: event.id }, "Failed to process raw status event");
+        return;
+      }
+    }
+
     const payload = event.payload as WhatsAppMessageEventPayload;
 
     if (!payload?.externalMessageId || !payload?.remoteJid) {
@@ -51,41 +145,51 @@ export class RawEventProcessorService {
       return;
     }
 
-    const eventKey = this.buildEventKey(event, payload);
+    const eventKey = this.buildMessageEventKey(event, payload);
 
     try {
-      const shouldProcess = await withTransaction(async (client) => {
-        return this.processedEventKeyRepository.createIfAbsent(client, {
+      const sentAt = this.parseEventDate(payload.sentAt, {
+        rawEventId: event.id,
+        eventType: event.event_type
+      });
+
+      const status = await withTransaction(async (client) => {
+        const shouldProcess = await this.processedEventKeyRepository.createIfAbsent(client, {
           organizationId: event.organization_id,
           source: event.source,
           eventKey
         });
+
+        if (!shouldProcess) {
+          await this.rawEventRepository.markIgnored(client, event.id, "Event key already processed");
+          return "ignored" as const;
+        }
+
+        await this.messageIngestionService.ingest({
+          organizationId: payload.organizationId,
+          whatsappAccountId: payload.whatsappAccountId,
+          externalMessageId: payload.externalMessageId,
+          remoteJid: payload.remoteJid,
+          phoneRaw: payload.phoneRaw,
+          profileName: payload.profileName,
+          textBody: payload.textBody,
+          messageType: payload.messageType,
+          direction: payload.direction,
+          sentAt,
+          rawPayload: payload.rawPayload
+        });
+
+        await this.rawEventRepository.markProcessed(client, event.id);
+        return "processed" as const;
       });
 
-      if (!shouldProcess) {
-        await withTransaction((client) => this.rawEventRepository.markIgnored(client, event.id, "Event key already processed"));
+      if (status === "ignored") {
         return;
       }
-
-      await this.messageIngestionService.ingest({
-        organizationId: payload.organizationId,
-        whatsappAccountId: payload.whatsappAccountId,
-        externalMessageId: payload.externalMessageId,
-        remoteJid: payload.remoteJid,
-        phoneRaw: payload.phoneRaw,
-        profileName: payload.profileName,
-        textBody: payload.textBody,
-        messageType: payload.messageType,
-        direction: payload.direction,
-        sentAt: new Date(payload.sentAt),
-        rawPayload: payload.rawPayload
-      });
-
-      await withTransaction((client) => this.rawEventRepository.markProcessed(client, event.id));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to process raw event";
       await withTransaction((client) => this.rawEventRepository.markFailed(client, event.id, message));
-      logger.error({ error, rawEventId: event.id }, "Failed to process raw event");
+      logger.error({ err: error, rawEventId: event.id }, "Failed to process raw event");
     }
   }
 

@@ -1,5 +1,6 @@
 import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
+import { AppError } from "../lib/errors.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { UserAdminRepository } from "../repositories/userAdminRepository.js";
@@ -197,18 +198,54 @@ export class AdminService {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);
 
       if (!existingAccount) {
-        throw new Error("WhatsApp account not found");
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
       }
 
       if (authUser.role !== "super_admin" && existingAccount.organization_id !== authUser.organizationId) {
-        throw new Error("Insufficient permissions");
+        throw new AppError("Insufficient permissions", 403, "forbidden");
       }
 
       return existingAccount;
     });
 
-    await this.connectorClient.reconnectAccount(account.id);
+    try {
+      await this.connectorClient.reconnectAccount(account.id);
+    } catch (error) {
+      logger.warn(
+        { error, accountId: account.id },
+        "Failed to reconnect WhatsApp account through connector"
+      );
+      throw new AppError(
+        "WhatsApp connector is unavailable or failed to start the reconnect flow",
+        502,
+        "connector_unavailable"
+      );
+    }
+
     return account;
+  }
+
+  async getWhatsAppAccountQr(authUser: AuthUser, accountId: string) {
+    const client = await pool.connect();
+    try {
+      const account = await this.whatsappRepository.findById(client, accountId);
+
+      if (!account) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (authUser.role !== "super_admin" && account.organization_id !== authUser.organizationId) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      if (account.connection_status !== "qr_required") {
+        return null;
+      }
+
+      return this.whatsappRepository.findLatestQrByAccountId(client, accountId);
+    } finally {
+      client.release();
+    }
   }
 
   async deleteWhatsAppAccount(authUser: AuthUser, accountId: string) {
@@ -216,21 +253,26 @@ export class AdminService {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);
 
       if (!existingAccount) {
-        throw new Error("WhatsApp account not found");
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
       }
 
       if (authUser.role !== "super_admin" && existingAccount.organization_id !== authUser.organizationId) {
-        throw new Error("Insufficient permissions");
+        throw new AppError("Insufficient permissions", 403, "forbidden");
       }
 
       return this.whatsappRepository.deleteById(client, accountId);
     });
 
     if (!account) {
-      throw new Error("WhatsApp account not found");
+      throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
     }
 
-    await this.connectorClient.terminateAccount(account.id);
+    void this.connectorClient.terminateAccount(account.id).catch((error) => {
+      logger.warn(
+        { error, accountId: account.id },
+        "WhatsApp account deleted but connector session cleanup failed"
+      );
+    });
 
     return account;
   }

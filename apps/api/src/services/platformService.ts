@@ -110,6 +110,60 @@ export class PlatformService {
         `
       );
 
+      const receiptTotalsResult = await client.query<{
+        pending: string;
+        server_ack: string;
+        device_delivered: string;
+        read: string;
+        played: string;
+        failed: string;
+      }>(
+        `
+          select
+            count(*) filter (where direction = 'outgoing' and ack_status = 'pending')::text as pending,
+            count(*) filter (where direction = 'outgoing' and ack_status = 'server_ack')::text as server_ack,
+            count(*) filter (where direction = 'outgoing' and ack_status = 'device_delivered')::text as device_delivered,
+            count(*) filter (where direction = 'outgoing' and ack_status = 'read')::text as read,
+            count(*) filter (where direction = 'outgoing' and ack_status = 'played')::text as played,
+            count(*) filter (where direction = 'outgoing' and ack_status = 'failed')::text as failed
+          from messages
+        `
+      );
+
+      const receiptsResult = await client.query<{
+        id: string;
+        organization_id: string;
+        conversation_id: string;
+        whatsapp_account_id: string;
+        external_message_id: string;
+        external_chat_id: string | null;
+        content_text: string | null;
+        ack_status: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
+        sent_at: string;
+        delivered_at: string | null;
+        read_at: string | null;
+      }>(
+        `
+          select
+            id,
+            organization_id,
+            conversation_id,
+            whatsapp_account_id,
+            external_message_id,
+            external_chat_id,
+            content_text,
+            ack_status,
+            sent_at,
+            delivered_at,
+            read_at
+          from messages
+          where direction = 'outgoing'
+          order by coalesce(read_at, delivered_at, sent_at) desc, id desc
+          limit $1
+        `,
+        [limit]
+      );
+
       const jobsResult = await client.query<{
         id: string;
         organization_id: string;
@@ -154,6 +208,15 @@ export class PlatformService {
           failed: "0",
           dispatched_today: "0"
         },
+        receipts_totals: receiptTotalsResult.rows[0] ?? {
+          pending: "0",
+          server_ack: "0",
+          device_delivered: "0",
+          read: "0",
+          played: "0",
+          failed: "0"
+        },
+        receipts: receiptsResult.rows,
         jobs: jobsResult.rows
       };
     } finally {

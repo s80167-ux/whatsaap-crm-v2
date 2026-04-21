@@ -36,6 +36,14 @@ export interface Message {
   ack_status?: string;
 }
 
+export interface OutboundAttachmentInput {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  fileSizeBytes: number;
+}
+
 export interface Contact {
   id: string;
   organization_id: string;

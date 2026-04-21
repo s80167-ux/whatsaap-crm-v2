@@ -1,5 +1,5 @@
 import { apiGet, apiPost } from "../lib/http";
-import type { Contact, Conversation, Message } from "../types/api";
+import type { Contact, Conversation, Message, OutboundAttachmentInput } from "../types/api";
 
 type ConversationApiRecord = Conversation;
 type MessageApiRecord = Message;
@@ -41,7 +41,8 @@ export async function assignConversation(payload: { conversationId: string; orga
 export async function sendMessage(payload: {
   whatsappAccountId: string;
   conversationId: string;
-  text: string;
+  text?: string;
+  attachment?: OutboundAttachmentInput | null;
 }) {
   return apiPost<{ data: Message }>("/messages/send", payload);
 }

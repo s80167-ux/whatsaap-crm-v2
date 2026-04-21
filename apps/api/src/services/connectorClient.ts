@@ -42,7 +42,17 @@ export class ConnectorClient {
     });
   }
 
-  async sendMessage(input: { accountId: string; recipientJid: string; text: string }) {
+  async sendMessage(input: {
+    accountId: string;
+    recipientJid: string;
+    text?: string | null;
+    attachment?: {
+      kind: "image" | "video" | "audio" | "document";
+      fileName: string;
+      mimeType: string;
+      dataBase64: string;
+    } | null;
+  }) {
     return this.request<{ key?: { id?: string } } | Record<string, unknown>>("/internal/messages/send", {
       method: "POST",
       body: JSON.stringify(input)

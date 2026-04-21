@@ -13,11 +13,13 @@
 ```text
 Baileys Event
   -> apps/whatsapp-connector receives message.upsert
+  -> apps/whatsapp-connector receives messages.update for outbound ack progression
   -> connector writes raw_channel_events
   -> backend raw event worker claims pending events
   -> ContactService anchors canonical contacts + identities
   -> ConversationService resolves one thread per contact/account
   -> MessageRepository.insertIfAbsent() stores the message idempotently
+  -> MessageStatusSyncService applies ack/status updates idempotently
   -> ProjectionService refreshes inbox/contact/dashboard summaries
   -> API clients receive database changes via Supabase Realtime
 ```
@@ -128,6 +130,27 @@ See [frontend/.env.example](../frontend/.env.example).
 5. Open Inbox, assign a contact to yourself, then assign a conversation to yourself.
 6. Send an outbound message and confirm:
    - a new outbound bubble appears
-   - ack state is visible in the bubble
+   - the outbox row reaches `dispatched`
+   - `messages.ack_status` reaches at least `server_ack`
    - conversation ordering stays stable
-7. Log in as an assigned-scope user and confirm only owned/assigned records are visible.
+7. Send an inbound WhatsApp message from a real device and confirm:
+   - the `raw_channel_events` row is created and processed
+   - the contact, conversation, message, and projection rows refresh correctly
+8. Open the recipient chat on a real device and confirm whether WhatsApp emits later delivery/read receipts:
+   - `message_status_events` appends any receipt events that arrive
+   - `messages.ack_status` advances beyond `server_ack` when WhatsApp sends them
+   - `read_at` populates once the message is actually read
+9. Log in as an assigned-scope user and confirm only owned/assigned records are visible.
+
+## Deferred Next Phase
+
+- Media support is intentionally deferred to the next phase.
+- Current state:
+  - inbound media types are classified, stored as message metadata, and rendered as media-aware inbox bubbles
+  - outbound media send supports one attachment per message through the queue and connector flow
+  - current transport uses JSON/base64 with a practical 4 MB attachment limit
+  - file preview and download are not yet available because storage-backed media persistence is still pending
+- Planned next-phase work:
+  - persist media assets to storage
+  - link `media_assets` to `messages`
+  - add actual preview and download support for stored media

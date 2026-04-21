@@ -113,7 +113,7 @@ Status: completed
 
 ## Phase 5: Raw Event Ingestion and Workers
 
-Status: in progress
+Status: completed
 
 - [x] Write inbound events to `raw_channel_events` only.
 - [x] Build deterministic `event_key` generation.
@@ -131,6 +131,7 @@ Status: in progress
 - [x] Update conversation timestamps and unread counters.
 - [x] Mark events as processed, failed, or ignored.
 - [x] Add reconciliation and replay worker.
+- [x] Apply outbound ack/status updates from WhatsApp `messages.update` into `message_status_events` and `messages`.
 
 ## Phase 6: Projection Tables and Query Models
 
@@ -179,6 +180,7 @@ Status: in progress
 - [x] Add outbox/dispatch flow for outgoing messages.
 - [x] Update ack statuses and `message_status_events`.
 - [x] Add admin UI for organization/user/account management.
+- [x] Complete human-verified receipt progression test from `server_ack` to `read` on a real recipient device.
 
 ## Phase 9: Frontend Product Surfaces
 
@@ -194,6 +196,8 @@ Status: in progress
 - [x] Build contact detail and ownership UI.
 - [x] Build WhatsApp account health and reconnect UI.
 - [x] Build platform organizations/usage UI for super admin.
+- [x] Add media-aware rendering in Inbox for non-text WhatsApp messages.
+- [x] Add outbound media compose and send support in Inbox.
 
 ## Phase 10: Ops, Deployment, and Hardening
 
@@ -216,12 +220,19 @@ Status: in progress
   - [x] Message outbox worker running
   - [x] Super-admin login verified against live Supabase Auth
   - [x] `GET /platform/organizations` verified against legacy-compatible organizations schema
+- [x] Verify at least one live WhatsApp account can:
+  - [x] connect through the extracted connector service
+  - [x] ingest inbound messages through `raw_channel_events`
+  - [x] refresh projections after inbound processing
+  - [x] dispatch an outbound message through the outbox worker
+  - [x] persist `server_ack` for outbound delivery
+- [x] Verify end-to-end recipient read receipts on a real device after the new `messages.update` ack pipeline.
 
 ## Current Execution Status
 
 - Current phase: Phase 10, Ops, Deployment, and Hardening
-- Current completed step: local runtime verification for API, connector, workers, auth, and platform organization queries
-- Next highest-impact step: connect at least one live WhatsApp account and run an end-to-end inbound/outbound message verification through `raw_channel_events`, projections, and the outbox dispatcher
+- Current completed step: Inbox now supports outbound one-file media send through the live queue and connector flow
+- Next highest-impact step: storage-backed media persistence and true preview/download support, followed by any remaining shared TypeScript workspace cleanup
 
 ## Recommended Immediate Execution Order
 

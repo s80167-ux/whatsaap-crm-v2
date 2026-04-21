@@ -4,6 +4,7 @@ import { requirePermission, requireRole } from "../../middleware/authMiddleware.
 import {
   createWhatsAppAccount,
   deleteWhatsAppAccount,
+  getWhatsAppAccountQr,
   listRawEvents,
   listWhatsAppAccounts,
   reconnectWhatsAppAccount,
@@ -14,6 +15,7 @@ export const adminRoutes = Router();
 
 adminRoutes.get("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
+adminRoutes.get("/whatsapp-accounts/:accountId/qr", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(getWhatsAppAccountQr));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
 adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(deleteWhatsAppAccount));
 

@@ -41,4 +41,34 @@ export class RawEventIngestionService {
       })
     );
   }
+
+  async enqueueMessageStatusEvent(input: {
+    organizationId: string;
+    whatsappAccountId: string;
+    externalMessageId: string;
+    remoteJid: string;
+    ackStatus: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
+    eventAt: Date;
+    rawPayload: unknown;
+  }) {
+    return withTransaction((client) =>
+      this.rawEventRepository.enqueue(client, {
+        organizationId: input.organizationId,
+        whatsappAccountId: input.whatsappAccountId,
+        source: "whatsapp",
+        eventType: "message.status",
+        externalEventId: input.externalMessageId,
+        eventTimestamp: input.eventAt,
+        payload: {
+          organizationId: input.organizationId,
+          whatsappAccountId: input.whatsappAccountId,
+          externalMessageId: input.externalMessageId,
+          remoteJid: input.remoteJid,
+          ackStatus: input.ackStatus,
+          eventAt: input.eventAt.toISOString(),
+          rawPayload: input.rawPayload
+        }
+      })
+    );
+  }
 }

@@ -15,7 +15,7 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-hero-grid px-6 py-4">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] gap-6 md:grid-cols-[280px,1fr]">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1880px] gap-6 md:grid-cols-[280px,1fr]">
         <motion.aside initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell flex h-full flex-col rounded-2xl p-6" elevated>
             <div>
@@ -56,7 +56,7 @@ export function DashboardLayout() {
             </div>
           </Card>
         </motion.aside>
-        <main className="rounded-2xl bg-transparent px-6 py-4">
+        <main className="rounded-2xl bg-transparent px-3 py-4 xl:px-4">
           <Outlet />
         </main>
       </div>

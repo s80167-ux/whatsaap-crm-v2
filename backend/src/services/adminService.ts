@@ -207,8 +207,40 @@ export class AdminService {
       return existingAccount;
     });
 
-    await this.connectorClient.reconnectAccount(account.id);
+    try {
+      await this.connectorClient.reconnectAccount(account.id);
+    } catch (error) {
+      logger.warn(
+        { error, accountId: account.id },
+        "Failed to reconnect WhatsApp account through connector"
+      );
+      throw new Error("WhatsApp connector is unavailable or failed to start the reconnect flow");
+    }
+
     return account;
+  }
+
+  async getWhatsAppAccountQr(authUser: AuthUser, accountId: string) {
+    const client = await pool.connect();
+    try {
+      const account = await this.whatsappRepository.findById(client, accountId);
+
+      if (!account) {
+        throw new Error("WhatsApp account not found");
+      }
+
+      if (authUser.role !== "super_admin" && account.organization_id !== authUser.organizationId) {
+        throw new Error("Insufficient permissions");
+      }
+
+      if (account.connection_status !== "qr_required") {
+        return null;
+      }
+
+      return this.whatsappRepository.findLatestQrByAccountId(client, accountId);
+    } finally {
+      client.release();
+    }
   }
 
   async deleteWhatsAppAccount(authUser: AuthUser, accountId: string) {
@@ -230,7 +262,12 @@ export class AdminService {
       throw new Error("WhatsApp account not found");
     }
 
-    await this.connectorClient.terminateAccount(account.id);
+    void this.connectorClient.terminateAccount(account.id).catch((error) => {
+      logger.warn(
+        { error, accountId: account.id },
+        "WhatsApp account deleted but connector session cleanup failed"
+      );
+    });
 
     return account;
   }

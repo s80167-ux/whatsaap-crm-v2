@@ -5,8 +5,8 @@ This document maps the current working scaffold into the target architecture fro
 ## Current State
 
 - `apps/frontend/`: active Vite React app with login, dashboard shell, setup page, inbox, contacts, platform diagnostics, and role-scoped dashboards
-- `apps/api/`: active Express API with Supabase Auth, SaaS schema integration, projection-backed queries, workers, and admin/platform flows
-- `apps/whatsapp-connector/`: active Baileys connector service with runtime persistence and lease ownership
+- `apps/api/`: active Express API with Supabase Auth, SaaS schema integration, projection-backed queries, workers, outbox dispatch, and ack/status ingestion
+- `apps/whatsapp-connector/`: active Baileys connector service with runtime persistence, lease ownership, outbound dispatch, and outbound status event capture
 - `frontend/`: legacy compatibility copy of the old frontend root
 - `backend/`: legacy compatibility copy of the old backend root
 - `database/schema.sql`: starter schema for current app model
@@ -59,3 +59,8 @@ This document maps the current working scaffold into the target architecture fro
 ## Migration Rule
 
 The repository now runs from `apps/*`. The existing `frontend/` and `backend/` folders are retained as non-workspace legacy copies until cleanup is explicitly approved. During this phase, no destructive moves are performed.
+
+## Known Deferred Work
+
+- Inbox media rendering and outbound media sending remain intentionally deferred to the next implementation phase.
+- Full end-to-end read receipt verification now depends on a real recipient device opening the message after the new `messages.update` path was wired.

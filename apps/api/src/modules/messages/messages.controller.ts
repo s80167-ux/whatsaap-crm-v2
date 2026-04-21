@@ -10,10 +10,22 @@ const queryService = new QueryService();
 const sendMessageService = new SendMessageService();
 const auditLogService = new AuditLogService();
 
+const attachmentSchema = z.object({
+  kind: z.enum(["image", "video", "audio", "document"]),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(255),
+  dataBase64: z.string().min(1),
+  fileSizeBytes: z.number().int().positive().max(4 * 1024 * 1024)
+});
+
 const sendSchema = z.object({
   whatsappAccountId: z.string().uuid(),
   conversationId: z.string().uuid(),
-  text: z.string().min(1)
+  text: z.string().trim().max(4000).optional(),
+  attachment: attachmentSchema.optional().nullable()
+}).refine((input) => Boolean(input.text?.trim()) || Boolean(input.attachment), {
+  message: "Message text or one attachment is required",
+  path: ["text"]
 });
 
 const conversationParamsSchema = z.object({
@@ -72,7 +84,9 @@ export async function sendWhatsAppMessage(request: Request, response: Response) 
     metadata: {
       conversation_id: input.conversationId,
       whatsapp_account_id: input.whatsappAccountId,
-      external_message_id: message.external_message_id
+      external_message_id: message.external_message_id,
+      message_type: input.attachment?.kind ?? "text",
+      attachment_file_name: input.attachment?.fileName ?? null
     },
     request: getRequestAuditContext(request)
   });

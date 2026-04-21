@@ -28,6 +28,7 @@ export class MessageDispatchService {
       whatsappAccountId: string;
       recipientJid: string;
       messageText: string;
+      payload?: unknown;
     }
   ) {
     return this.outboxRepository.create(client, {
@@ -37,7 +38,8 @@ export class MessageDispatchService {
       contactId: input.contactId,
       whatsappAccountId: input.whatsappAccountId,
       recipientJid: input.recipientJid,
-      messageText: input.messageText
+      messageText: input.messageText,
+      payload: input.payload
     });
   }
 
@@ -49,6 +51,7 @@ export class MessageDispatchService {
     whatsappAccountId: string;
     recipientJid: string;
     messageText: string;
+    payload?: unknown;
   }) {
     return withTransaction((client) =>
       this.outboxRepository.create(client, {
@@ -58,7 +61,8 @@ export class MessageDispatchService {
         contactId: input.contactId,
         whatsappAccountId: input.whatsappAccountId,
         recipientJid: input.recipientJid,
-        messageText: input.messageText
+        messageText: input.messageText,
+        payload: input.payload
       })
     );
   }
@@ -83,7 +87,8 @@ export class MessageDispatchService {
       const outbound = await this.connectorClient.sendMessage({
         accountId: job.whatsapp_account_id,
         recipientJid: job.recipient_jid,
-        text: job.message_text
+        text: job.message_text,
+        attachment: this.extractAttachmentPayload(job.payload)
       });
 
       const sentAt = new Date();
@@ -111,8 +116,7 @@ export class MessageDispatchService {
 
         await this.messageRepository.updateAckStatus(client, {
           messageId: job.message_id,
-          ackStatus: "server_ack",
-          deliveredAt: sentAt
+          ackStatus: "server_ack"
         });
 
         await this.conversationRepository.bumpLastMessage(client, {
@@ -189,5 +193,35 @@ export class MessageDispatchService {
     } finally {
       client.release();
     }
+  }
+
+  private extractAttachmentPayload(payload: unknown) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const attachment = (payload as { attachment?: unknown }).attachment;
+
+    if (!attachment || typeof attachment !== "object" || Array.isArray(attachment)) {
+      return null;
+    }
+
+    const candidate = attachment as {
+      kind?: "image" | "video" | "audio" | "document";
+      fileName?: string;
+      mimeType?: string;
+      dataBase64?: string;
+    };
+
+    if (!candidate.kind || !candidate.fileName || !candidate.mimeType || !candidate.dataBase64) {
+      return null;
+    }
+
+    return {
+      kind: candidate.kind,
+      fileName: candidate.fileName,
+      mimeType: candidate.mimeType,
+      dataBase64: candidate.dataBase64
+    };
   }
 }

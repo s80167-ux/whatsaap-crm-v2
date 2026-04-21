@@ -22,9 +22,9 @@ export function InboxPage() {
   const conversationCountLabel = `${conversations.length} active threads`;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[340px,minmax(0,1fr),300px] xl:items-start">
+    <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[300px,minmax(0,1fr)] 2xl:grid-cols-[340px,minmax(0,1.7fr),300px] xl:items-start">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white" elevated>
+        <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white xl:sticky xl:top-0" elevated>
           <header className="pb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
             <div className="mt-3 flex items-end justify-between gap-4">
@@ -54,6 +54,7 @@ export function InboxPage() {
         }}
       />
       <ContactInfoPanel
+        className="xl:col-span-2 2xl:col-span-1"
         conversation={stableSelectedConversation}
         onAssigned={() => {
           void queryClient.invalidateQueries({ queryKey: ["conversations"] });

@@ -80,6 +80,27 @@ export interface PlatformOutboundDispatchSummary {
     failed: string;
     dispatched_today: string;
   };
+  receipts_totals: {
+    pending: string;
+    server_ack: string;
+    device_delivered: string;
+    read: string;
+    played: string;
+    failed: string;
+  };
+  receipts: Array<{
+    id: string;
+    organization_id: string;
+    conversation_id: string;
+    whatsapp_account_id: string;
+    external_message_id: string;
+    external_chat_id: string | null;
+    content_text: string | null;
+    ack_status: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
+    sent_at: string;
+    delivered_at: string | null;
+    read_at: string | null;
+  }>;
   jobs: Array<{
     id: string;
     organization_id: string;

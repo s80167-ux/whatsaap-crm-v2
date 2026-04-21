@@ -29,8 +29,18 @@ export class ConnectorCommandService {
     return { accountId };
   }
 
-  async sendMessage(input: { accountId: string; recipientJid: string; text: string }) {
-    return this.sessionManager.sendMessage(input.accountId, input.recipientJid, input.text);
+  async sendMessage(input: {
+    accountId: string;
+    recipientJid: string;
+    text?: string | null;
+    attachment?: {
+      kind: "image" | "video" | "audio" | "document";
+      fileName: string;
+      mimeType: string;
+      dataBase64: string;
+    } | null;
+  }) {
+    return this.sessionManager.sendMessage(input.accountId, input.recipientJid, input.text ?? null, input.attachment ?? null);
   }
 
   private async getAccount(accountId: string) {

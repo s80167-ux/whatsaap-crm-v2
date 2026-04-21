@@ -6,6 +6,7 @@ import {
   deleteOrganization,
   deleteOrganizationUser,
   deleteWhatsAppAccount,
+  getWhatsAppAccountQr,
   listOrganizations,
   listRawEvents,
   listOrganizationUsers,
@@ -28,6 +29,7 @@ adminRoutes.delete("/users/:userId", requirePermission("org.manage_users"), asyn
 
 adminRoutes.get("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
+adminRoutes.get("/whatsapp-accounts/:accountId/qr", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(getWhatsAppAccountQr));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
 adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(deleteWhatsAppAccount));
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));

@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Conversation } from "../types/api";
+import { getConversationPreview } from "../lib/messageContent";
 
 export function ConversationList({
   conversations,
@@ -39,7 +40,7 @@ export function ConversationList({
             </span>
           </div>
           <p className="mt-3 overflow-hidden text-sm leading-6 text-text-muted">
-            {conversation.last_message_preview ?? "No messages yet"}
+            {getConversationPreview(conversation.last_message_preview, conversation.last_message_type)}
           </p>
         </motion.button>
       ))}

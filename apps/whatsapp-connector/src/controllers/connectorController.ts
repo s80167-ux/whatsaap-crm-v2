@@ -8,10 +8,21 @@ const accountParamSchema = z.object({
   accountId: z.string().uuid()
 });
 
+const attachmentSchema = z.object({
+  kind: z.enum(["image", "video", "audio", "document"]),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(255),
+  dataBase64: z.string().min(1)
+});
+
 const sendMessageSchema = z.object({
   accountId: z.string().uuid(),
   recipientJid: z.string().min(3),
-  text: z.string().min(1)
+  text: z.string().trim().max(4000).optional(),
+  attachment: attachmentSchema.optional().nullable()
+}).refine((input) => Boolean(input.text?.trim()) || Boolean(input.attachment), {
+  message: "Message text or one attachment is required",
+  path: ["text"]
 });
 
 export async function health(_req: Request, res: Response) {

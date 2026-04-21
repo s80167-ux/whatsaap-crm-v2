@@ -57,7 +57,8 @@ export class ContactIdentityRepository {
           last_seen_at
         )
         values ($1, 'whatsapp', $2, $3, $4, $5, $6, nullif(trim($7), ''), timezone('utc', now()))
-        on conflict (organization_id, channel, wa_jid)
+        on conflict (organization_id, whatsapp_account_id, wa_jid)
+        where deleted_at is null
         do update set
           contact_id = excluded.contact_id,
           whatsapp_account_id = excluded.whatsapp_account_id,

@@ -235,6 +235,19 @@ export async function reconnectWhatsAppAccount(req: Request, res: Response) {
   return res.status(202).json({ data: mapWhatsAppAccount(account) });
 }
 
+export async function getWhatsAppAccountQr(req: Request, res: Response) {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const accountId = z.string().uuid().parse(req.params.accountId);
+  const qrRecord = await adminService.getWhatsAppAccountQr(req.auth, accountId);
+  return res.json({
+    qr: qrRecord?.qr ?? null,
+    generated_at: qrRecord?.generated_at ?? null
+  });
+}
+
 export async function replayRawEvents(req: Request, res: Response) {
   if (!req.auth) {
     return res.status(401).json({ error: "Authentication required" });

@@ -25,6 +25,11 @@ type WhatsAppAccountColumns = {
   health_score: boolean;
 };
 
+export type WhatsAppAccountQrRecord = {
+  qr: string;
+  generated_at: string;
+};
+
 export class WhatsAppAdminRepository {
   private static cachedColumns: WhatsAppAccountColumns | null = null;
 
@@ -238,6 +243,25 @@ export class WhatsAppAdminRepository {
           ${columns.last_connected_at ? "last_connected_at" : "null"} as last_connected_at,
           ${columns.last_disconnected_at ? "last_disconnected_at" : "null"} as last_disconnected_at,
           ${columns.health_score ? "health_score" : "null"} as health_score
+      `,
+      [accountId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async findLatestQrByAccountId(client: PoolClient, accountId: string): Promise<WhatsAppAccountQrRecord | null> {
+    const result = await client.query<WhatsAppAccountQrRecord>(
+      `
+        select
+          payload->>'qr' as qr,
+          created_at::text as generated_at
+        from whatsapp_connection_events
+        where whatsapp_account_id = $1
+          and event_type = 'qr_required'
+          and coalesce(payload->>'qr', '') <> ''
+        order by created_at desc, id desc
+        limit 1
       `,
       [accountId]
     );

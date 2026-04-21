@@ -8,9 +8,11 @@ import { Button } from "./Button";
 import { Card } from "./Card";
 
 export function ContactInfoPanel({
+  className,
   conversation,
   onAssigned
 }: {
+  className?: string;
   conversation?: Conversation;
   onAssigned?: () => void;
 }) {
@@ -39,7 +41,7 @@ export function ContactInfoPanel({
   }
 
   return (
-    <Card className="bg-white xl:max-h-[calc(100vh-9.5rem)] xl:overflow-auto" elevated>
+    <Card className={`bg-white xl:max-h-[calc(100vh-9.5rem)] xl:overflow-auto 2xl:sticky 2xl:top-0 ${className ?? ""}`} elevated>
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Contact</p>
       {conversation ? (
         <div className="mt-5 space-y-4">

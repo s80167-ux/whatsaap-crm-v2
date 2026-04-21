@@ -5,6 +5,24 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { usePlatformAuditLogs, usePlatformHealth, usePlatformOrganizations, usePlatformOutboundDispatch, usePlatformUsage } from "../hooks/useDashboard";
 
+function formatAckStatusLabel(status: string) {
+  switch (status) {
+    case "server_ack":
+      return "Sent";
+    case "device_delivered":
+      return "Delivered";
+    case "read":
+      return "Read";
+    case "played":
+      return "Played";
+    case "failed":
+      return "Failed";
+    case "pending":
+    default:
+      return "Pending";
+  }
+}
+
 export function PlatformPage() {
   const queryClient = useQueryClient();
   const { data: organizations = [], isLoading: organizationsLoading } = usePlatformOrganizations();
@@ -76,6 +94,33 @@ export function PlatformPage() {
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Dispatched today</p>
           <p className="mt-4 text-4xl font-semibold text-text">{outboundDispatch?.totals.dispatched_today ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-6">
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Ack pending</p>
+          <p className="mt-4 text-3xl font-semibold text-text">{outboundDispatch?.receipts_totals.pending ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Sent</p>
+          <p className="mt-4 text-3xl font-semibold text-text">{outboundDispatch?.receipts_totals.server_ack ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Delivered</p>
+          <p className="mt-4 text-3xl font-semibold text-text">{outboundDispatch?.receipts_totals.device_delivered ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Read</p>
+          <p className="mt-4 text-3xl font-semibold text-emerald-700">{outboundDispatch?.receipts_totals.read ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Played</p>
+          <p className="mt-4 text-3xl font-semibold text-sky-700">{outboundDispatch?.receipts_totals.played ?? (outboundDispatchLoading ? "..." : "0")}</p>
+        </Card>
+        <Card elevated>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Receipt failed</p>
+          <p className="mt-4 text-3xl font-semibold text-coral">{outboundDispatch?.receipts_totals.failed ?? (outboundDispatchLoading ? "..." : "0")}</p>
         </Card>
       </div>
 
@@ -217,6 +262,44 @@ export function PlatformPage() {
                     <td className="px-5 py-4">{job.last_attempt_at ? new Date(job.last_attempt_at).toLocaleString() : "--"}</td>
                     <td className="px-5 py-4">{job.next_attempt_at ? new Date(job.next_attempt_at).toLocaleString() : "--"}</td>
                     <td className="px-5 py-4">{job.last_error ?? "--"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card elevated>
+        <h3 className="text-lg font-semibold text-text">Recent outbound receipts</h3>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
+          <table className="min-w-full bg-white/80">
+            <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+              <tr>
+                <th className="px-5 py-4">Ack</th>
+                <th className="px-5 py-4">Message</th>
+                <th className="px-5 py-4">Sent</th>
+                <th className="px-5 py-4">Delivered</th>
+                <th className="px-5 py-4">Read</th>
+              </tr>
+            </thead>
+            <tbody>
+              {outboundDispatchLoading ? (
+                <tr>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={5}>
+                    Loading outbound receipts...
+                  </td>
+                </tr>
+              ) : (
+                (outboundDispatch?.receipts ?? []).slice(0, 12).map((receipt) => (
+                  <tr key={receipt.id} className="table-row text-sm text-text-muted">
+                    <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">
+                      {formatAckStatusLabel(receipt.ack_status)}
+                    </td>
+                    <td className="px-5 py-4 font-medium text-text">{receipt.content_text ?? receipt.external_message_id}</td>
+                    <td className="px-5 py-4">{new Date(receipt.sent_at).toLocaleString()}</td>
+                    <td className="px-5 py-4">{receipt.delivered_at ? new Date(receipt.delivered_at).toLocaleString() : "--"}</td>
+                    <td className="px-5 py-4">{receipt.read_at ? new Date(receipt.read_at).toLocaleString() : "--"}</td>
                   </tr>
                 ))
               )}

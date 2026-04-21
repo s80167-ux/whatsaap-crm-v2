@@ -2,6 +2,7 @@ import { withTransaction } from "../config/database.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import type { InboundMessageInput } from "../types/domain.js";
+import { normalizeMessageType } from "../utils/message.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { ProjectionService } from "./projectionService.js";
@@ -39,7 +40,7 @@ export class MessageIngestionService {
         externalMessageId: input.externalMessageId,
         externalChatId: input.remoteJid,
         direction: input.direction,
-        messageType: input.messageType,
+        messageType: normalizeMessageType(input.messageType),
         contentText: input.textBody,
         rawPayload: input.rawPayload,
         sentAt: input.sentAt

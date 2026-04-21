@@ -83,3 +83,14 @@ export async function reconnectWhatsAppAccount(request: Request, response: Respo
 
   return response.status(202).json({ data: mapWhatsAppAccount(account) });
 }
+
+export async function getWhatsAppAccountQr(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const qrRecord = await adminService.getWhatsAppAccountQr(auth, accountId);
+
+  return response.json({
+    qr: qrRecord?.qr ?? null,
+    generated_at: qrRecord?.generated_at ?? null
+  });
+}

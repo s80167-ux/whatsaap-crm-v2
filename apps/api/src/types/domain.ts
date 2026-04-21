@@ -86,5 +86,14 @@ export interface SendMessageInput {
   organizationId: UUID;
   whatsappAccountId: UUID;
   conversationId: UUID;
-  text: string;
+  text?: string | null;
+  attachment?: OutboundMediaAttachmentInput | null;
+}
+
+export interface OutboundMediaAttachmentInput {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  fileSizeBytes: number;
 }

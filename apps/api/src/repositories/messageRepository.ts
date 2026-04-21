@@ -2,6 +2,44 @@ import type { PoolClient } from "pg";
 import type { MessageRecord } from "../types/domain.js";
 
 export class MessageRepository {
+  async findByExternalMessageId(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      whatsappAccountId: string;
+      externalMessageId: string;
+    }
+  ): Promise<MessageRecord | null> {
+    const result = await client.query<MessageRecord>(
+      `
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+        from messages
+        where organization_id = $1
+          and whatsapp_account_id = $2
+          and external_message_id = $3
+        limit 1
+      `,
+      [input.organizationId, input.whatsappAccountId, input.externalMessageId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async createOutboundDraft(
     client: PoolClient,
     input: {
@@ -11,7 +49,9 @@ export class MessageRepository {
       whatsappAccountId: string;
       externalMessageId: string;
       externalChatId?: string | null;
-      contentText: string;
+      contentText?: string | null;
+      messageType?: string;
+      contentJson?: unknown;
       sentAt: Date;
     }
   ): Promise<MessageRecord> {
@@ -32,7 +72,7 @@ export class MessageRepository {
           ack_status,
           sent_at
         )
-        values ($1, $2, $3, $4, $5, $6, 'whatsapp', 'outgoing', 'text', nullif($7, ''), null, 'pending', $8)
+        values ($1, $2, $3, $4, $5, $6, 'whatsapp', 'outgoing', $7, nullif($8, ''), $9, 'pending', $10)
         returning
           id,
           organization_id,
@@ -57,7 +97,9 @@ export class MessageRepository {
         input.whatsappAccountId,
         input.externalMessageId,
         input.externalChatId ?? null,
-        input.contentText,
+        input.messageType ?? "text",
+        input.contentText ?? null,
+        input.contentJson ?? null,
         input.sentAt.toISOString()
       ]
     );
@@ -101,7 +143,7 @@ export class MessageRepository {
             sent_at
           )
           values ($1, $2, $3, $4, $5, $6, 'whatsapp', $7, $8, nullif($9, ''), $10, $11, $12)
-          on conflict (whatsapp_account_id, external_message_id)
+          on conflict (organization_id, whatsapp_account_id, external_message_id)
           do nothing
           returning *, true as inserted
         )
@@ -162,22 +204,62 @@ export class MessageRepository {
       failedAt?: Date | null;
     }
   ): Promise<void> {
+    const deliveredAt = input.deliveredAt ? input.deliveredAt.toISOString() : null;
+    const readAt = input.readAt ? input.readAt.toISOString() : null;
+    const failedAt = input.failedAt ? input.failedAt.toISOString() : null;
+
     await client.query(
       `
         update messages
-        set ack_status = $2,
-            delivered_at = coalesce($3, delivered_at),
-            read_at = coalesce($4, read_at),
-            failed_at = coalesce($5, failed_at),
+        set ack_status = case
+              when (
+                case ack_status
+                  when 'played' then 5
+                  when 'read' then 4
+                  when 'device_delivered' then 3
+                  when 'server_ack' then 2
+                  when 'pending' then 1
+                  when 'failed' then 0
+                  else 0
+                end
+              ) <= (
+                case $2::text
+                  when 'played' then 5
+                  when 'read' then 4
+                  when 'device_delivered' then 3
+                  when 'server_ack' then 2
+                  when 'pending' then 1
+                  when 'failed' then 0
+                  else 0
+                end
+              )
+              or ack_status = 'failed'
+            then $2::text
+            else ack_status
+          end,
+            delivered_at = case
+              when $3::timestamptz is null then delivered_at
+              when delivered_at is null then $3::timestamptz
+              else delivered_at
+            end,
+            read_at = case
+              when $4::timestamptz is null then read_at
+              when read_at is null then $4::timestamptz
+              else read_at
+            end,
+            failed_at = case
+              when $2::text = 'failed' then coalesce($5::timestamptz, failed_at)
+              else null
+            end,
             updated_at = timezone('utc', now())
         where id = $1
       `,
       [
         input.messageId,
         input.ackStatus,
-        input.deliveredAt?.toISOString() ?? null,
-        input.readAt?.toISOString() ?? null,
-        input.failedAt?.toISOString() ?? null
+        deliveredAt,
+        readAt,
+        failedAt
       ]
     );
   }
@@ -198,7 +280,7 @@ export class MessageRepository {
         set external_message_id = $2,
             external_chat_id = coalesce($3, external_chat_id),
             content_json = coalesce($4, content_json),
-            sent_at = coalesce(sent_at, $5),
+            sent_at = $5,
             updated_at = timezone('utc', now())
         where id = $1
       `,
