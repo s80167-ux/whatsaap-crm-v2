@@ -110,13 +110,26 @@ export class ConversationRepository {
           c.contact_id,
           c.channel,
           c.external_thread_key,
-          c.last_message_at,
+          coalesce(lm.sent_at, c.last_message_at) as last_message_at,
           c.last_incoming_at,
           c.last_outgoing_at,
           c.unread_count,
-          coalesce(ct.display_name, ci.profile_push_name, ci.profile_name, ct.primary_phone_e164, ci.phone_e164, 'Unknown') as contact_name,
-          coalesce(ct.primary_phone_normalized, ci.phone_normalized) as phone_number_normalized,
-          ct.primary_avatar_url as contact_avatar_url,
+          coalesce(
+            nullif(trim(ct.display_name), ''),
+            nullif(trim(ci.profile_push_name), ''),
+            nullif(trim(ci.profile_name), ''),
+            nullif(trim(ct.primary_phone_e164), ''),
+            nullif(trim(ci.phone_e164), ''),
+            'Unknown'
+          ) as contact_name,
+          coalesce(
+            nullif(trim(ct.primary_phone_normalized), ''),
+            nullif(trim(ci.phone_normalized), '')
+          ) as phone_number_normalized,
+          coalesce(
+            nullif(trim(ct.primary_avatar_url), ''),
+            nullif(trim(ci.profile_avatar_url), '')
+          ) as contact_avatar_url,
           lm.content_text as last_message_preview,
           lm.message_type as last_message_type,
           lm.direction as last_message_direction
@@ -124,25 +137,37 @@ export class ConversationRepository {
         join contacts ct on ct.id = c.contact_id
         left join lateral (
           select
-            profile_name,
-            profile_push_name,
-            phone_e164,
-            phone_normalized
-          from contact_identities
-          where contact_id = c.contact_id
-            and (whatsapp_account_id = c.whatsapp_account_id or whatsapp_account_id is null)
-          order by updated_at desc
+            ci.profile_name,
+            ci.profile_push_name,
+            ci.phone_e164,
+            ci.phone_normalized,
+            ci.profile_avatar_url
+          from contact_identities ci
+          where ci.contact_id = c.contact_id
+            and (ci.whatsapp_account_id = c.whatsapp_account_id or ci.whatsapp_account_id is null)
+          order by
+            case when ci.whatsapp_account_id = c.whatsapp_account_id then 0 else 1 end,
+            case when nullif(trim(ci.profile_push_name), '') is not null then 0 else 1 end,
+            case when nullif(trim(ci.profile_name), '') is not null then 0 else 1 end,
+            case when nullif(trim(ci.phone_normalized), '') is not null then 0 else 1 end,
+            ci.last_seen_at desc nulls last,
+            ci.updated_at desc nulls last,
+            ci.created_at desc,
+            ci.id desc
           limit 1
         ) ci on true
         left join lateral (
-          select content_text, message_type, direction
+          select sent_at, content_text, message_type, direction
           from messages
           where conversation_id = c.id
           order by sent_at desc nulls last, created_at desc, id desc
           limit 1
         ) lm on true
         where c.organization_id = $1
-        order by c.last_message_at desc nulls last, c.updated_at desc, c.id desc
+        order by
+          coalesce(lm.sent_at, c.last_message_at) desc nulls last,
+          c.updated_at desc,
+          c.id desc
       `,
       [organizationId]
     );
