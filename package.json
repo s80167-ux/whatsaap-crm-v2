@@ -5,7 +5,8 @@
   "workspaces": [
     "apps/api",
     "apps/frontend",
-    "apps/whatsapp-connector"
+    "apps/whatsapp-connector",
+    "frontend"
   ],
   "scripts": {
     "dev:backend": "npm --workspace apps/api run dev",

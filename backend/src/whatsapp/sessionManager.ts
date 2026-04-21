@@ -15,6 +15,7 @@ import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountReposi
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
 import { jidToPhone } from "../utils/phone.js";
+import { setQrCode, clearQrCode } from "./qrCodeStore.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 
@@ -116,15 +117,19 @@ export class WhatsAppSessionManager {
 
     socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
+        setQrCode(account.id, qr);
         await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "qr_required"));
         logger.info(
           { accountId: account.id, qrLength: qr.length },
-          "WhatsApp QR received; handle it from connection.update instead of terminal output"
+          "WhatsApp QR received; QR stored in qrCodeStore"
         );
+      } else {
+        clearQrCode(account.id);
       }
 
       if (connection === "open") {
         await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "connected"));
+        clearQrCode(account.id);
         logger.info({ accountId: account.id }, "WhatsApp session connected");
       }
 
