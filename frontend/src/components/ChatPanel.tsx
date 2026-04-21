@@ -6,6 +6,25 @@ import { Button } from "./Button";
 import { Card } from "./Card";
 import { Input } from "./Input";
 
+function formatAckStatus(status?: string) {
+  switch (status) {
+    case "server_ack":
+      return "Sent";
+    case "device_delivered":
+      return "Delivered";
+    case "read":
+      return "Read";
+    case "played":
+      return "Played";
+    case "failed":
+      return "Failed";
+    case "pending":
+      return "Pending";
+    default:
+      return null;
+  }
+}
+
 export function ChatPanel({
   conversation,
   messages,
@@ -17,6 +36,7 @@ export function ChatPanel({
 }) {
   const [text, setText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [sendNotice, setSendNotice] = useState<string | null>(null);
 
   async function handleSend() {
     if (!conversation || !text.trim()) {
@@ -24,6 +44,7 @@ export function ChatPanel({
     }
 
     setIsSending(true);
+    setSendNotice(null);
     try {
       await sendMessage({
         whatsappAccountId: conversation.whatsapp_account_id,
@@ -31,7 +52,10 @@ export function ChatPanel({
         text
       });
       setText("");
+      setSendNotice("Message queued and stored. Watch the latest bubble for ack status.");
       onMessageSent();
+    } catch (error) {
+      setSendNotice(error instanceof Error ? error.message : "Unable to send message");
     } finally {
       setIsSending(false);
     }
@@ -55,6 +79,7 @@ export function ChatPanel({
       <header className="border-b border-border bg-white px-6 py-4">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
+        {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
       <div className="overflow-y-auto bg-background-elevated px-5 py-4 space-y-3">
         {messages.map((message) => (
@@ -64,13 +89,16 @@ export function ChatPanel({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18 }}
             className={`max-w-[80%] rounded-lg px-4 py-3 text-sm ${
-              message.direction === "outbound"
+              message.direction === "outgoing"
                 ? "ml-auto border border-secondary/10 bg-secondary-soft/70 text-text"
                 : "border border-border bg-white text-text"
             }`}
           >
             <p>{message.content_text ?? `[${message.message_type}]`}</p>
-            <p className="mt-2 text-xs text-text-soft">{new Date(message.sent_at).toLocaleString()}</p>
+            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-text-soft">
+              <p>{new Date(message.sent_at).toLocaleString()}</p>
+              {message.direction === "outgoing" ? <p>{formatAckStatus(message.ack_status) ?? "Queued"}</p> : null}
+            </div>
           </motion.div>
         ))}
       </div>

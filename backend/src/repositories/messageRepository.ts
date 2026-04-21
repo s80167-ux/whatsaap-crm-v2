@@ -16,6 +16,7 @@ export class MessageRepository {
       contentText: string | null;
       rawPayload: unknown;
       sentAt: Date;
+      ackStatus?: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
     }
   ): Promise<{ message: MessageRecord; inserted: boolean }> {
     const result = await client.query<MessageRecord & { inserted: boolean }>(
@@ -33,9 +34,10 @@ export class MessageRepository {
             message_type,
             content_text,
             content_json,
+            ack_status,
             sent_at
           )
-          values ($1, $2, $3, $4, $5, $6, 'whatsapp', $7, $8, nullif($9, ''), $10, $11)
+          values ($1, $2, $3, $4, $5, $6, 'whatsapp', $7, $8, nullif($9, ''), $10, $11, $12)
           on conflict (whatsapp_account_id, external_message_id)
           do nothing
           returning *, true as inserted
@@ -61,6 +63,7 @@ export class MessageRepository {
         input.messageType,
         input.contentText,
         input.rawPayload ?? null,
+        input.ackStatus ?? "pending",
         input.sentAt.toISOString()
       ]
     );
@@ -69,11 +72,64 @@ export class MessageRepository {
     return { message, inserted };
   }
 
+  async appendStatusEvent(
+    client: PoolClient,
+    input: {
+      messageId: string;
+      status: string;
+      payload?: unknown;
+    }
+  ): Promise<void> {
+    await client.query(
+      `
+        insert into message_status_events (message_id, status, payload)
+        values ($1, $2, $3)
+      `,
+      [input.messageId, input.status, input.payload ?? null]
+    );
+  }
+
+  async updateAckStatus(
+    client: PoolClient,
+    input: {
+      messageId: string;
+      ackStatus: "pending" | "server_ack" | "device_delivered" | "read" | "played" | "failed";
+      deliveredAt?: Date | null;
+      readAt?: Date | null;
+      failedAt?: Date | null;
+    }
+  ): Promise<void> {
+    await client.query(
+      `
+        update messages
+        set ack_status = $2,
+            delivered_at = coalesce($3, delivered_at),
+            read_at = coalesce($4, read_at),
+            failed_at = coalesce($5, failed_at),
+            updated_at = timezone('utc', now())
+        where id = $1
+      `,
+      [
+        input.messageId,
+        input.ackStatus,
+        input.deliveredAt?.toISOString() ?? null,
+        input.readAt?.toISOString() ?? null,
+        input.failedAt?.toISOString() ?? null
+      ]
+    );
+  }
+
   async listByConversation(
     client: PoolClient,
     organizationId: string,
-    conversationId: string
+    conversationId: string,
+    options?: {
+      assignedOnly?: boolean;
+      organizationUserId?: string | null;
+    }
   ): Promise<MessageRecord[]> {
+    const assignedOnly = options?.assignedOnly ?? false;
+    const organizationUserId = options?.organizationUserId ?? null;
     const result = await client.query<MessageRecord>(
       `
         select
@@ -95,9 +151,26 @@ export class MessageRepository {
         from messages
         where organization_id = $1
           and conversation_id = $2
+          and (
+            not $3::boolean
+            or exists (
+              select 1
+              from conversations c
+              where c.id = messages.conversation_id
+                and (
+                  c.assigned_user_id = $4
+                  or exists (
+                    select 1
+                    from conversation_assignments ca
+                    where ca.conversation_id = c.id
+                      and ca.organization_user_id = $4
+                  )
+                )
+            )
+          )
         order by sent_at asc, id asc
       `,
-      [organizationId, conversationId]
+      [organizationId, conversationId, assignedOnly, organizationUserId]
     );
 
     return result.rows;

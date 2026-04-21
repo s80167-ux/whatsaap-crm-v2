@@ -2,22 +2,18 @@ import { withTransaction } from "../config/database.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import type { SendMessageInput } from "../types/domain.js";
-import { WhatsAppSessionManager } from "../whatsapp/sessionManager.js";
+import { ConnectorClient } from "./connectorClient.js";
+import { ProjectionService } from "./projectionService.js";
 
 export class SendMessageService {
   constructor(
-    private readonly sessionManager = WhatsAppSessionManager.getInstance(),
+    private readonly connectorClient = new ConnectorClient(),
     private readonly messageRepository = new MessageRepository(),
-    private readonly conversationRepository = new ConversationRepository()
+    private readonly conversationRepository = new ConversationRepository(),
+    private readonly projectionService = new ProjectionService()
   ) {}
 
   async send(input: SendMessageInput) {
-    const session = this.sessionManager.getSocket(input.whatsappAccountId);
-
-    if (!session) {
-      throw new Error("WhatsApp session is not connected");
-    }
-
     const conversation = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
         `
@@ -39,9 +35,16 @@ export class SendMessageService {
         throw new Error("Recipient identity not found for conversation");
       }
 
-      const outbound = await session.sendMessage(recipientJid, { text: input.text });
+      const outbound = await this.connectorClient.sendMessage({
+        accountId: input.whatsappAccountId,
+        recipientJid,
+        text: input.text
+      });
       const sentAt = new Date();
-      const outboundMessageId = outbound?.key?.id ?? crypto.randomUUID();
+      const outboundMessageId =
+        typeof outbound === "object" && outbound && "key" in outbound
+          ? ((outbound as { key?: { id?: string } }).key?.id ?? crypto.randomUUID())
+          : crypto.randomUUID();
 
       const stored = await this.messageRepository.insertIfAbsent(client, {
         organizationId: input.organizationId,
@@ -54,10 +57,23 @@ export class SendMessageService {
         messageType: "text",
         contentText: input.text,
         rawPayload: outbound ?? null,
-        sentAt
+        sentAt,
+        ackStatus: "server_ack"
       });
 
       if (stored.inserted) {
+        await this.messageRepository.appendStatusEvent(client, {
+          messageId: stored.message.id,
+          status: "server_ack",
+          payload: outbound ?? null
+        });
+
+        await this.messageRepository.updateAckStatus(client, {
+          messageId: stored.message.id,
+          ackStatus: "server_ack",
+          deliveredAt: sentAt
+        });
+
         await this.conversationRepository.bumpLastMessage(client, {
           conversationId: input.conversationId,
           direction: "outgoing",
@@ -65,6 +81,13 @@ export class SendMessageService {
           incrementUnread: false
         });
       }
+
+      await this.projectionService.refreshForMessage(client, {
+        organizationId: input.organizationId,
+        conversationId: input.conversationId,
+        contactId: conversationRow.contact_id,
+        sentAt
+      });
 
       return stored.message;
     });

@@ -8,7 +8,12 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "create:user": "tsx src/scripts/createUser.ts"
+    "create:user": "tsx src/scripts/createUser.ts",
+    "worker:raw-events": "tsx src/workers/processRawEvents.ts",
+    "worker:raw-events:once": "tsx src/workers/processRawEvents.ts --once",
+    "worker:projections:rebuild": "tsx src/workers/rebuildProjections.ts",
+    "worker:raw-events:replay": "tsx src/workers/replayRawEvents.ts",
+    "worker:usage-daily": "tsx src/workers/aggregateUsageDaily.ts"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",

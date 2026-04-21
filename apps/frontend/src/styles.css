@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #142033;
+  background:
+    radial-gradient(circle at top left, rgba(255, 122, 26, 0.12), transparent 32%),
+    radial-gradient(circle at right, rgba(47, 128, 237, 0.12), transparent 34%),
+    #f8fafc;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: #142033;
+  background:
+    radial-gradient(circle at top left, rgba(255, 122, 26, 0.12), transparent 32%),
+    radial-gradient(circle at right, rgba(47, 128, 237, 0.12), transparent 34%),
+    #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+
+  ::selection {
+    background: rgba(255, 122, 26, 0.18);
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply border border-border bg-card shadow-soft;
+  }
+
+  .section-title {
+    @apply text-2xl font-semibold tracking-tight text-text;
+  }
+
+  .section-copy {
+    @apply text-sm leading-6 text-text-muted;
+  }
+
+  .table-row {
+    @apply border-t border-border transition-colors hover:bg-secondary-soft/40;
+  }
+
+  .brand-badge {
+    @apply inline-flex items-center rounded-full border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
+  }
+}

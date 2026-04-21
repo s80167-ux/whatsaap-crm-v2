@@ -36,4 +36,34 @@ export class OrganizationAdminRepository {
 
     return result.rows[0];
   }
+
+  async findById(client: PoolClient, organizationId: string): Promise<OrganizationRecord | null> {
+    const result = await client.query<OrganizationRecord>(
+      `
+        select id, name, slug, status, created_at
+        from organizations
+        where id = $1
+        limit 1
+      `,
+      [organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async softDelete(client: PoolClient, organizationId: string): Promise<OrganizationRecord | null> {
+    const result = await client.query<OrganizationRecord>(
+      `
+        update organizations
+        set status = 'closed',
+            updated_at = timezone('utc', now())
+        where id = $1
+          and status <> 'closed'
+        returning id, name, slug, status, created_at
+      `,
+      [organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
 }

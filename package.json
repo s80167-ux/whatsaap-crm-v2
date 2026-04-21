@@ -3,13 +3,23 @@
   "private": true,
   "version": "2.0.0",
   "workspaces": [
-    "backend",
-    "frontend"
+    "apps/api",
+    "apps/frontend",
+    "apps/whatsapp-connector"
   ],
   "scripts": {
-    "dev:backend": "npm --workspace backend run dev",
-    "dev:frontend": "npm --workspace frontend run dev",
-    "build": "npm run build --workspace backend && npm run build --workspace frontend",
-    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend"
+    "dev:backend": "npm --workspace apps/api run dev",
+    "dev:frontend": "npm --workspace apps/frontend run dev",
+    "dev:connector": "npm --workspace apps/whatsapp-connector run dev",
+    "create:user": "npm --workspace apps/api run create:user --",
+    "worker:raw-events": "npm --workspace apps/api run worker:raw-events",
+    "worker:raw-events:once": "npm --workspace apps/api run worker:raw-events:once",
+    "worker:message-outbox": "npm --workspace apps/api run worker:message-outbox",
+    "worker:message-outbox:once": "npm --workspace apps/api run worker:message-outbox:once",
+    "worker:raw-events:replay": "npm --workspace apps/api run worker:raw-events:replay --",
+    "worker:projections:rebuild": "npm --workspace apps/api run worker:projections:rebuild",
+    "worker:usage-daily": "npm --workspace apps/api run worker:usage-daily --",
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/frontend && npm run build --workspace apps/whatsapp-connector",
+    "lint": "npm run lint --workspace apps/api && npm run lint --workspace apps/frontend && npm run lint --workspace apps/whatsapp-connector"
   }
 }

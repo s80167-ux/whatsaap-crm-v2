@@ -12,16 +12,27 @@
 
 ```text
 Baileys Event
-  -> WhatsAppSessionManager receives message.upsert
-  -> MessageIngestionService parses sender/recipient and raw payload
-  -> normalizePhone() derives a canonical phone string
-  -> ContactService.findOrCreateContact() anchors the canonical contact
-  -> ContactIdentityRepository.upsert() binds the WhatsApp JID/account to the contact
-  -> ConversationService.findOrCreateConversation() resolves one thread per contact/account
+  -> apps/whatsapp-connector receives message.upsert
+  -> connector writes raw_channel_events
+  -> backend raw event worker claims pending events
+  -> ContactService anchors canonical contacts + identities
+  -> ConversationService resolves one thread per contact/account
   -> MessageRepository.insertIfAbsent() stores the message idempotently
-  -> ConversationRepository.bumpLastMessage() updates last_message_at / last_message_id
+  -> ProjectionService refreshes inbox/contact/dashboard summaries
   -> API clients receive database changes via Supabase Realtime
 ```
+
+## Connector Ownership
+
+- `apps/whatsapp-connector` uses a lease on `whatsapp_accounts` to ensure one logical connector instance owns a WhatsApp account at a time.
+- Lease ownership is tracked via:
+  - `connector_owner_id`
+  - `connector_claimed_at`
+  - `connector_heartbeat_at`
+- Active lifecycle state is persisted through:
+  - `whatsapp_account_sessions`
+  - `whatsapp_connection_events`
+- If a connector stops heartbeating and the lease becomes stale, another connector instance can safely acquire ownership.
 
 ## Deduplication Rules
 
@@ -37,7 +48,7 @@ Baileys Event
 - `services/`: domain logic, transactions, normalization, deduplication
 - `controllers/`: HTTP request orchestration
 - `routes/`: API declarations
-- `whatsapp/`: Baileys session lifecycle and event bridging
+- `apps/whatsapp-connector`: Baileys session lifecycle and event bridging over internal HTTP commands
 
 ## Realtime Strategy
 
@@ -56,9 +67,10 @@ See [backend/.env.example](../backend/.env.example).
 
 Important:
 
-- `JWT_SECRET` is required for API auth
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are required for auth + admin operations
 - The backend accepts legacy env aliases `VITE_SUPABASE_URL` and `VITE_SUPABASE_SERVICE_ROLE_KEY` so existing local setups do not break immediately
 - For a clean production setup, prefer the canonical names `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+- `BAILEYS_AUTH_DIR` should point at persistent storage in any non-ephemeral environment
 
 ### Frontend env
 
@@ -68,11 +80,12 @@ See [frontend/.env.example](../frontend/.env.example).
 
 - Login endpoint: `POST /api/auth/login`
 - Profile endpoint: `GET /api/auth/me`
-- Protected API routes require a Bearer token
+- Protected API routes require a Supabase access token as Bearer auth
 - Organization-scoped routes derive tenant context from the authenticated user, not from a mutable client header
 - Suggested permissions:
   - `super_admin`: cross-tenant oversight and provisioning
-  - `admin`: organization management and account configuration
+  - `org_admin`: organization management and account configuration
+  - `manager`: team-wide operational visibility inside the organization
   - `agent`: inbox and outbound messaging
   - `user`: basic CRM access
 
@@ -86,13 +99,17 @@ See [frontend/.env.example](../frontend/.env.example).
 ### Railway
 
 - Deploy `backend`
+- Deploy `apps/whatsapp-connector`
 - Mount a persistent volume to `/data`
-- Set `BAILEYS_AUTH_DIR=/data/baileys_auth`
-- Set `DATABASE_URL` and WhatsApp-related env vars
+- Set `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` on the backend
+- Set `DATABASE_URL`, `BAILEYS_AUTH_DIR`, and `CONNECTOR_INTERNAL_SECRET` on the connector
+- Set `CONNECTOR_INSTANCE_ID` uniquely per connector service or replica group
+- Point `CONNECTOR_BASE_URL` on the backend at the connector's private Railway URL
 
 ### Supabase
 
-- Run `database/schema.sql`
+- Apply the versioned SQL files in `infra/sql/migrations` in order
+- Treat `database/schema.sql` as a legacy starter schema, not the source of truth for migrated environments
 - Enable Realtime on `conversations` and `messages`
 - Use a service role key on the backend only
 
@@ -101,3 +118,16 @@ See [frontend/.env.example](../frontend/.env.example).
 - Run multiple backend instances behind a queue or sticky session strategy for WhatsApp workers if needed
 - Keep a single logical owner per WhatsApp session to avoid double-consuming events
 - Add `pg_notify` or a jobs table later for outbound retries if delivery guarantees need to increase
+
+## Smoke Test Checklist
+
+1. Create `super_admin`, then log in successfully through the frontend.
+2. Create an organization and an `org_admin`.
+3. Create a WhatsApp account and confirm the account card appears in Setup.
+4. Trigger `Reconnect account` and confirm status/timestamps refresh.
+5. Open Inbox, assign a contact to yourself, then assign a conversation to yourself.
+6. Send an outbound message and confirm:
+   - a new outbound bubble appears
+   - ack state is visible in the bubble
+   - conversation ordering stays stable
+7. Log in as an assigned-scope user and confirm only owned/assigned records are visible.

@@ -6,188 +6,222 @@ This task list converts the SaaS blueprint into an implementation roadmap for th
 
 Status: completed
 
-- [ ] Create target monorepo structure:
+- [x] Create target monorepo structure:
   - `apps/frontend`
   - `apps/api`
   - `apps/whatsapp-connector`
   - `packages/shared`
   - `infra/sql`
-- [ ] Preserve current working apps while migration happens incrementally.
-- [ ] Add root workspace scripts aligned to the target app names.
+- [x] Preserve current working apps while migration happens incrementally.
+- [x] Add root workspace scripts aligned to the target app names.
 - [ ] Add shared TypeScript base config and path conventions.
-- [ ] Add migration notes that map current files to target destinations.
-- [ ] Keep local run instructions valid throughout the migration.
+- [x] Add migration notes that map current files to target destinations.
+- [x] Keep local run instructions valid throughout the migration.
 
 ## Phase 1: Database and Tenancy Model
 
-Status: in progress
+Status: completed
 
-- [ ] Replace starter schema with SaaS schema in versioned SQL migrations.
-- [ ] Create migrations for:
-  - [ ] organizations
-  - [ ] organization_users
-  - [ ] platform_super_admins
-  - [ ] role_permissions
-  - [ ] organization_user_permissions
-  - [ ] subscriptions
-  - [ ] usage_daily
-  - [ ] whatsapp_accounts
-  - [ ] whatsapp_account_sessions
-  - [ ] whatsapp_connection_events
-  - [ ] raw_channel_events
-  - [ ] processed_event_keys
-  - [ ] contacts
-  - [ ] contact_identities
-  - [ ] contact_owners
-  - [ ] contact_merge_history
-  - [ ] merge_candidates
-  - [ ] conversations
-  - [ ] conversation_assignments
-  - [ ] media_assets
-  - [ ] messages
-  - [ ] message_status_events
-  - [ ] leads
-  - [ ] activities
-  - [ ] sales_orders
-  - [ ] sales_order_items
-  - [ ] inbox_thread_summary
-  - [ ] contact_summary
-  - [ ] dashboard_metrics_daily
-- [ ] Add indexes for all hot paths in the prompt.
-- [ ] Add seed script for default `role_permissions`.
-- [ ] Add starter RLS policies and helper functions.
+- [x] Replace starter schema with SaaS schema in versioned SQL migrations.
+- [x] Create migrations for:
+  - [x] organizations
+  - [x] organization_users
+  - [x] platform_super_admins
+  - [x] role_permissions
+  - [x] organization_user_permissions
+  - [x] subscriptions
+  - [x] usage_daily
+  - [x] whatsapp_accounts
+  - [x] whatsapp_account_sessions
+  - [x] whatsapp_connection_events
+  - [x] raw_channel_events
+  - [x] processed_event_keys
+  - [x] contacts
+  - [x] contact_identities
+  - [x] contact_owners
+  - [x] contact_merge_history
+  - [x] merge_candidates
+  - [x] conversations
+  - [x] conversation_assignments
+  - [x] media_assets
+  - [x] messages
+  - [x] message_status_events
+  - [x] leads
+  - [x] activities
+  - [x] sales_orders
+  - [x] sales_order_items
+  - [x] inbox_thread_summary
+  - [x] contact_summary
+  - [x] dashboard_metrics_daily
+- [x] Add indexes for all hot paths in the prompt.
+- [x] Add seed script for default `role_permissions`.
+- [x] Add starter RLS policies and helper functions.
+- [x] Add legacy-compatibility migrations for CRM v1 tables that still coexist during rollout:
+  - [x] WhatsApp accounts compatibility backfill (`006_whatsapp_accounts_legacy_compat.sql`)
 
 ## Phase 2: Authentication and Authorization
 
-- [ ] Replace custom JWT-first auth with Supabase Auth-backed identity resolution.
-- [ ] Build current-organization-user resolver middleware.
-- [ ] Add super admin bypass logic.
-- [ ] Add permission checker middleware.
-- [ ] Add role + permission enforcement for query endpoints.
-- [ ] Add role + permission enforcement for command endpoints.
-- [ ] Define dashboard visibility rules per role:
-  - [ ] super_admin
-  - [ ] org_admin
-  - [ ] manager
-  - [ ] agent
-  - [ ] user
+Status: completed
+
+- [x] Replace custom JWT-first auth with Supabase Auth-backed identity resolution.
+- [x] Build current-organization-user resolver middleware.
+- [x] Add super admin bypass logic.
+- [x] Add permission checker middleware.
+- [x] Add role + permission enforcement for query endpoints.
+- [x] Add role + permission enforcement for command endpoints.
+- [x] Define dashboard visibility rules per role:
+  - [x] super_admin
+  - [x] org_admin
+  - [x] manager
+  - [x] agent
+  - [x] user
 
 ## Phase 3: API Server Modularization
 
+Status: completed
+
 - [ ] Restructure API into modules:
-  - [ ] auth
-  - [ ] organizations
-  - [ ] users
-  - [ ] permissions
-  - [ ] contacts
-  - [ ] conversations
-  - [ ] messages
-  - [ ] activities
-  - [ ] leads
-  - [ ] sales
-  - [ ] whatsapp
-  - [ ] dashboard
-  - [ ] platform
-- [ ] Standardize repository/service/controller/route layering.
-- [ ] Add centralized error handling and structured logging conventions.
-- [ ] Add request validation via Zod in every module.
-- [ ] Add worker entrypoints under `apps/api/src/workers`.
+  - [x] auth
+  - [x] organizations
+  - [x] users
+  - [x] permissions
+  - [x] contacts
+  - [x] conversations
+  - [x] messages
+  - [x] activities
+  - [x] leads
+  - [x] sales
+  - [x] whatsapp
+  - [x] dashboard
+  - [x] platform
+- [x] Standardize repository/service/controller/route layering.
+- [x] Add centralized error handling and structured logging conventions.
+- [x] Add request validation via Zod in every module.
+- [x] Add worker entrypoints under `apps/api/src/workers`.
 
 ## Phase 4: WhatsApp Connector Service
 
-- [ ] Extract Baileys session management into `apps/whatsapp-connector`.
-- [ ] Keep WhatsApp connection state isolated from API CRUD concerns.
-- [ ] Add session ownership / heartbeat strategy for one logical connector owner per account.
-- [ ] Persist connection events to `whatsapp_connection_events`.
-- [ ] Persist session lifecycle to `whatsapp_account_sessions`.
-- [ ] Expose controlled internal ingestion handoff into raw event storage.
-- [ ] Add reconnect and health-check commands.
+Status: completed
+
+- [x] Extract Baileys session management into `apps/whatsapp-connector`.
+- [x] Keep WhatsApp connection state isolated from API CRUD concerns.
+- [x] Add session ownership / heartbeat strategy for one logical connector owner per account.
+- [x] Persist connection events to `whatsapp_connection_events`.
+- [x] Persist session lifecycle to `whatsapp_account_sessions`.
+- [x] Expose controlled internal ingestion handoff into raw event storage.
+- [x] Add reconnect and health-check commands.
 
 ## Phase 5: Raw Event Ingestion and Workers
 
-- [ ] Write inbound events to `raw_channel_events` only.
-- [ ] Build deterministic `event_key` generation.
-- [ ] Add idempotent worker claim/process/retry loop.
-- [ ] Add `processed_event_keys` dedup checks.
-- [ ] Normalize JID and phone identities safely.
-- [ ] Upsert `contact_identities`.
-- [ ] Find or create canonical contacts using anchor-quality rules.
-- [ ] Find or create conversations using:
-  - [ ] organization
-  - [ ] channel
-  - [ ] whatsapp account
-  - [ ] external thread key
-- [ ] Insert messages idempotently.
-- [ ] Update conversation timestamps and unread counters.
-- [ ] Mark events as processed, failed, or ignored.
-- [ ] Add reconciliation and replay worker.
+Status: in progress
+
+- [x] Write inbound events to `raw_channel_events` only.
+- [x] Build deterministic `event_key` generation.
+- [x] Add idempotent worker claim/process/retry loop.
+- [x] Add `processed_event_keys` dedup checks.
+- [x] Normalize JID and phone identities safely.
+- [x] Upsert `contact_identities`.
+- [x] Find or create canonical contacts using anchor-quality rules.
+- [x] Find or create conversations using:
+  - [x] organization
+  - [x] channel
+  - [x] whatsapp account
+  - [x] external thread key
+- [x] Insert messages idempotently.
+- [x] Update conversation timestamps and unread counters.
+- [x] Mark events as processed, failed, or ignored.
+- [x] Add reconciliation and replay worker.
 
 ## Phase 6: Projection Tables and Query Models
 
-- [ ] Populate `inbox_thread_summary`.
-- [ ] Populate `contact_summary`.
-- [ ] Populate `dashboard_metrics_daily`.
-- [ ] Ensure frontend reads projection/query endpoints instead of raw tables.
-- [ ] Add dirty-thread projection refresh strategy after message ingestion.
-- [ ] Add repair/rebuild scripts for projections.
+Status: completed
+
+- [x] Populate `inbox_thread_summary`.
+- [x] Populate `contact_summary`.
+- [x] Populate `dashboard_metrics_daily`.
+- [x] Ensure frontend reads projection/query endpoints instead of raw tables.
+- [x] Add dirty-thread projection refresh strategy after message ingestion.
+- [x] Add repair/rebuild scripts for projections.
 
 ## Phase 7: Role-Based Dashboards
 
+Status: in progress
+
 - [ ] Implement:
-  - [ ] `GET /dashboard/agent`
-  - [ ] `GET /dashboard/admin`
-  - [ ] `GET /dashboard/super-admin`
+  - [x] `GET /dashboard/agent`
+  - [x] `GET /dashboard/admin`
+  - [x] `GET /dashboard/super-admin`
 - [ ] Implement:
-  - [ ] `GET /inbox/threads`
-  - [ ] `GET /inbox/threads/:conversationId/messages`
-  - [ ] `GET /contacts`
-  - [ ] `GET /contacts/:contactId`
-  - [ ] `GET /platform/organizations`
-  - [ ] `GET /platform/usage`
-- [ ] Ensure agent/user dashboards are assignment-scoped.
-- [ ] Ensure org admin dashboards are organization-wide.
-- [ ] Ensure super admin dashboards are cross-tenant.
+  - [x] `GET /inbox/threads`
+  - [x] `GET /inbox/threads/:conversationId/messages`
+  - [x] `GET /contacts`
+  - [x] `GET /contacts/:contactId`
+  - [x] `GET /platform/organizations`
+  - [x] `GET /platform/usage`
+- [x] Ensure agent/user dashboards are assignment-scoped.
+- [x] Ensure org admin dashboards are organization-wide.
+- [x] Ensure super admin dashboards are cross-tenant.
 
 ## Phase 8: Command Endpoints and Operational Flows
 
+Status: in progress
+
 - [ ] Implement:
-  - [ ] `POST /contacts`
-  - [ ] `PATCH /contacts/:contactId`
-  - [ ] `POST /conversations/:conversationId/assign`
-  - [ ] `POST /messages/send`
-  - [ ] `POST /whatsapp/accounts`
-  - [ ] `POST /whatsapp/accounts/:id/reconnect`
-  - [ ] `POST /organizations`
-  - [ ] `POST /organizations/:id/users`
-- [ ] Add outbox/dispatch flow for outgoing messages.
-- [ ] Update ack statuses and `message_status_events`.
-- [ ] Add admin UI for organization/user/account management.
+  - [x] `POST /contacts`
+  - [x] `PATCH /contacts/:contactId`
+  - [x] `POST /conversations/:conversationId/assign`
+  - [x] `POST /messages/send`
+  - [x] `POST /whatsapp/accounts`
+  - [x] `POST /whatsapp/accounts/:id/reconnect`
+  - [x] `POST /organizations`
+  - [x] `POST /organizations/:id/users`
+- [x] Add first-pass assignment actions for contacts and conversations in the active frontend surfaces.
+- [x] Add outbox/dispatch flow for outgoing messages.
+- [x] Update ack statuses and `message_status_events`.
+- [x] Add admin UI for organization/user/account management.
 
 ## Phase 9: Frontend Product Surfaces
 
-- [ ] Move frontend into `apps/frontend`.
-- [ ] Replace starter dashboard data flow with role-scoped query endpoints.
+Status: in progress
+
+- [x] Move frontend into `apps/frontend`.
+- [x] Replace starter dashboard data flow with role-scoped query endpoints.
 - [ ] Build:
-  - [ ] agent dashboard
-  - [ ] org admin dashboard
-  - [ ] super admin dashboard
-- [ ] Build inbox from projection endpoints.
-- [ ] Build contact detail and ownership UI.
-- [ ] Build WhatsApp account health and reconnect UI.
-- [ ] Build platform organizations/usage UI for super admin.
+  - [x] agent dashboard
+  - [x] org admin dashboard
+  - [x] super admin dashboard
+- [x] Build inbox from projection endpoints.
+- [x] Build contact detail and ownership UI.
+- [x] Build WhatsApp account health and reconnect UI.
+- [x] Build platform organizations/usage UI for super admin.
 
 ## Phase 10: Ops, Deployment, and Hardening
 
+Status: in progress
+
 - [ ] Prepare env contracts for:
-  - [ ] Vercel frontend
-  - [ ] Railway API
-  - [ ] Railway connector
-  - [ ] Supabase
-- [ ] Add usage aggregation jobs.
-- [ ] Add audit logging strategy.
-- [ ] Add health monitoring and connector diagnostics.
-- [ ] Add README deployment guidance for multi-service rollout.
-- [ ] Add smoke tests for auth, role scope, inbox query flow, and ingestion idempotency.
+  - [x] Vercel frontend
+  - [x] Railway API
+  - [x] Railway connector
+  - [x] Supabase
+- [x] Add usage aggregation jobs.
+- [x] Add audit logging strategy.
+- [x] Add health monitoring and connector diagnostics.
+- [x] Add README deployment guidance for multi-service rollout.
+- [x] Add smoke tests for auth, role scope, inbox query flow, and ingestion idempotency.
+- [x] Verify local runtime stack with active processes:
+  - [x] API healthy on `:4000`
+  - [x] Connector healthy on `:4010`
+  - [x] Raw event worker running
+  - [x] Message outbox worker running
+  - [x] Super-admin login verified against live Supabase Auth
+  - [x] `GET /platform/organizations` verified against legacy-compatible organizations schema
+
+## Current Execution Status
+
+- Current phase: Phase 10, Ops, Deployment, and Hardening
+- Current completed step: local runtime verification for API, connector, workers, auth, and platform organization queries
+- Next highest-impact step: connect at least one live WhatsApp account and run an end-to-end inbound/outbound message verification through `raw_channel_events`, projections, and the outbox dispatcher
 
 ## Recommended Immediate Execution Order
 

@@ -4,8 +4,11 @@ This document maps the current working scaffold into the target architecture fro
 
 ## Current State
 
-- `frontend/`: working Vite React app with login, dashboard shell, setup page, inbox/contact placeholders
-- `backend/`: working Express API with custom JWT auth, admin setup endpoints, and embedded Baileys session logic
+- `apps/frontend/`: active Vite React app with login, dashboard shell, setup page, inbox, contacts, platform diagnostics, and role-scoped dashboards
+- `apps/api/`: active Express API with Supabase Auth, SaaS schema integration, projection-backed queries, workers, and admin/platform flows
+- `apps/whatsapp-connector/`: active Baileys connector service with runtime persistence and lease ownership
+- `frontend/`: legacy compatibility copy of the old frontend root
+- `backend/`: legacy compatibility copy of the old backend root
 - `database/schema.sql`: starter schema for current app model
 
 ## Target State
@@ -55,4 +58,4 @@ This document maps the current working scaffold into the target architecture fro
 
 ## Migration Rule
 
-The existing `frontend/` and `backend/` folders remain operational until the new `apps/*` structure is ready to replace them. During this phase, no destructive moves are performed.
+The repository now runs from `apps/*`. The existing `frontend/` and `backend/` folders are retained as non-workspace legacy copies until cleanup is explicitly approved. During this phase, no destructive moves are performed.
