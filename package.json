@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "dev:backend": "npm --workspace apps/api run dev",
+    "start": "npm --workspace apps/api start",
     "dev:frontend": "npm --workspace apps/frontend run dev",
     "dev:connector": "npm --workspace apps/whatsapp-connector run dev",
     "create:user": "npm --workspace apps/api run create:user --",
