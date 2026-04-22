@@ -1,6 +1,14 @@
 import { config } from "./config";
 import { clearAuthSession, getAuthToken } from "./auth";
 
+function getNetworkErrorMessage() {
+  if (config.apiBaseUrl.includes("localhost")) {
+    return "Unable to reach the login API. Set VITE_API_BASE_URL to your live backend URL before deploying the frontend.";
+  }
+
+  return "Unable to reach the server. Check that the backend is running and that its CORS FRONTEND_URL matches this site URL.";
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
     clearAuthSession();
@@ -34,28 +42,46 @@ function buildHeaders(includeAuth = true) {
 }
 
 export async function apiGet<T>(path: string, includeAuth = true): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    headers: buildHeaders(includeAuth)
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.apiBaseUrl}${path}`, {
+      headers: buildHeaders(includeAuth)
+    });
+  } catch {
+    throw new Error(getNetworkErrorMessage());
+  }
 
   return parseResponse<T>(response);
 }
 
 export async function apiPost<T>(path: string, body: unknown, includeAuth = true): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    method: "POST",
-    headers: buildHeaders(includeAuth),
-    body: JSON.stringify(body)
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: buildHeaders(includeAuth),
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw new Error(getNetworkErrorMessage());
+  }
 
   return parseResponse<T>(response);
 }
 
 export async function apiDelete<T>(path: string, includeAuth = true): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    method: "DELETE",
-    headers: buildHeaders(includeAuth)
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.apiBaseUrl}${path}`, {
+      method: "DELETE",
+      headers: buildHeaders(includeAuth)
+    });
+  } catch {
+    throw new Error(getNetworkErrorMessage());
+  }
 
   return parseResponse<T>(response);
 }
