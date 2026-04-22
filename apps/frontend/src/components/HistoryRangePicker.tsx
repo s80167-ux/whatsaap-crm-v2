@@ -24,15 +24,15 @@ export function HistoryRangePicker({
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="min-w-[128px]">
+    <div className="grid grid-cols-2 gap-3">
+      <div className="min-w-0">
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
         <Select value={range.unit} onChange={(event) => handleUnitChange(event.target.value as HistoryRangeUnit)} className="h-11">
           <option value="days">Days</option>
           <option value="months">Months</option>
         </Select>
       </div>
-      <div className="min-w-[128px]">
+      <div className="min-w-0">
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Window</p>
         <Select
           value={String(range.value)}

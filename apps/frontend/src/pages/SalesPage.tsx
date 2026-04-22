@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { convertLeadToOrder, createLead, createSalesOrder, createSalesOrderItem, updateLead, updateSalesOrder } from "../api/crm";
+import {
+  convertLeadToOrder,
+  createLead,
+  createSalesOrder,
+  createSalesOrderItem,
+  recordSalesShareLinkAudit,
+  updateLead,
+  updateSalesOrder
+} from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
@@ -11,6 +19,9 @@ import { useContacts } from "../hooks/useContacts";
 import { useLeadDetail, useLeadHistory, useLeads } from "../hooks/useLeads";
 import { useSalesOrderDetail, useSalesOrderHistory, useSalesOrders, useSalesSummary } from "../hooks/useSales";
 import { getStoredUser } from "../lib/auth";
+
+const ORDER_TABLE_SCROLL_KEY = "sales-orders-table-scroll-top";
+const LEAD_TABLE_SCROLL_KEY = "sales-leads-table-scroll-top";
 
 const SALES_STATUSES = [
   { value: "open", label: "Open" },
@@ -35,6 +46,13 @@ const LEAD_TEMPERATURES = [
 
 type TimelineEntityType = "lead" | "sales_order" | "sales_order_item";
 type SalesSection = "order-detail" | "lead-detail" | "timeline";
+type SalesShareSource =
+  | "sales_order_row"
+  | "sales_lead_row"
+  | "sales_order_detail"
+  | "sales_lead_detail"
+  | "sales_timeline_panel"
+  | "sales_timeline_entry";
 
 type TimelineEntry = {
   id: string;
@@ -74,11 +92,11 @@ export function SalesPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-  const { data: selectedOrderDetail, isLoading: detailLoading } = useSalesOrderDetail(selectedOrderId ?? undefined);
+  const { data: selectedOrderDetail, isLoading: detailLoading, error: orderDetailError } = useSalesOrderDetail(selectedOrderId ?? undefined);
   const { data: selectedOrderHistory = [], isLoading: orderHistoryLoading } = useSalesOrderHistory(selectedOrderId ?? undefined);
 
   const activeLeadId = selectedLeadId ?? selectedOrderDetail?.order.lead_id ?? null;
-  const { data: selectedLeadDetail, isLoading: leadDetailLoading } = useLeadDetail(activeLeadId ?? undefined);
+  const { data: selectedLeadDetail, isLoading: leadDetailLoading, error: leadDetailError } = useLeadDetail(activeLeadId ?? undefined);
   const { data: selectedLeadHistory = [], isLoading: leadHistoryLoading } = useLeadHistory(activeLeadId ?? undefined);
 
   const [selectedContactId, setSelectedContactId] = useState("");
@@ -115,6 +133,10 @@ export function SalesPage() {
   const orderDetailRef = useRef<HTMLElement | null>(null);
   const leadDetailRef = useRef<HTMLElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const ordersTableContainerRef = useRef<HTMLDivElement | null>(null);
+  const leadsTableContainerRef = useRef<HTMLDivElement | null>(null);
+  const orderRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const leadRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const [shareToastMessage, setShareToastMessage] = useState<string | null>(null);
   const shareToastTimeoutRef = useRef<number | null>(null);
 
@@ -231,7 +253,14 @@ export function SalesPage() {
     }, 2200);
   }
 
-  async function copyShareLink(input: { orderId?: string | null; leadId?: string | null; section: SalesSection }) {
+  async function copyShareLink(input: {
+    orderId?: string | null;
+    leadId?: string | null;
+    section: SalesSection;
+    entityType: "sales_order" | "sales_order_item" | "lead" | "sales_timeline";
+    entityId?: string | null;
+    source: SalesShareSource;
+  }) {
     if (typeof window === "undefined") {
       return;
     }
@@ -258,6 +287,15 @@ export function SalesPage() {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
       }
+      void recordSalesShareLinkAudit({
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        orderId: input.orderId ?? null,
+        leadId: input.leadId ?? null,
+        section: input.section,
+        source: input.source,
+        href: `${window.location.pathname}?${nextParams.toString()}`
+      }).catch(() => undefined);
       showShareToast("Share link copied.");
     } catch {
       showShareToast("Unable to copy share link.");
@@ -286,6 +324,70 @@ export function SalesPage() {
 
     return () => window.cancelAnimationFrame(frameId);
   }, [salesFilters.section, selectedOrderId, activeLeadId, selectedOrderHistory.length, selectedLeadHistory.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const container = ordersTableContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const savedScrollTop = window.sessionStorage.getItem(ORDER_TABLE_SCROLL_KEY);
+    if (savedScrollTop) {
+      container.scrollTop = Number(savedScrollTop);
+    }
+
+    const handleScroll = () => {
+      window.sessionStorage.setItem(ORDER_TABLE_SCROLL_KEY, String(container.scrollTop));
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [orders.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const container = leadsTableContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const savedScrollTop = window.sessionStorage.getItem(LEAD_TABLE_SCROLL_KEY);
+    if (savedScrollTop) {
+      container.scrollTop = Number(savedScrollTop);
+    }
+
+    const handleScroll = () => {
+      window.sessionStorage.setItem(LEAD_TABLE_SCROLL_KEY, String(container.scrollTop));
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [leads.length]);
+
+  useEffect(() => {
+    if (!salesFilters.orderId) {
+      return;
+    }
+
+    const row = orderRowRefs.current[salesFilters.orderId];
+    row?.scrollIntoView({ block: "nearest" });
+  }, [salesFilters.orderId, orders.length]);
+
+  useEffect(() => {
+    if (!salesFilters.leadId) {
+      return;
+    }
+
+    const row = leadRowRefs.current[salesFilters.leadId];
+    row?.scrollIntoView({ block: "nearest" });
+  }, [salesFilters.leadId, leads.length]);
 
   useEffect(() => {
     return () => {
@@ -373,6 +475,23 @@ export function SalesPage() {
     }
   }
 
+  function clearDeepLink(kind: "order" | "lead") {
+    if (kind === "order") {
+      setSelectedOrderId(null);
+      updateSelectionSearch({
+        orderId: null,
+        section: salesFilters.leadId ? "lead-detail" : null
+      });
+      return;
+    }
+
+    setSelectedLeadId(null);
+    updateSelectionSearch({
+      leadId: null,
+      section: salesFilters.orderId ? "order-detail" : null
+    });
+  }
+
   return (
     <section className="space-y-6">
       <Card elevated>
@@ -396,6 +515,36 @@ export function SalesPage() {
           <p className="mt-3 text-sm leading-6 text-text-muted">
             {buildSalesFilterSummary(salesFilters)}
           </p>
+        </Card>
+      ) : null}
+
+      {(salesFilters.orderId && orderDetailError) || (salesFilters.leadId && leadDetailError) ? (
+        <Card elevated className="border-coral/20 bg-coral/5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-coral">Shared Link Notice</p>
+          <div className="mt-3 space-y-3 text-sm leading-6 text-text-muted">
+            {salesFilters.orderId && orderDetailError ? (
+              <p>
+                The shared order link could not be opened. It may no longer exist, or it may be outside your access scope.
+              </p>
+            ) : null}
+            {salesFilters.leadId && leadDetailError ? (
+              <p>
+                The shared lead link could not be opened. It may no longer exist, or it may be outside your access scope.
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {salesFilters.orderId && orderDetailError ? (
+              <Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => clearDeepLink("order")}>
+                Clear order link
+              </Button>
+            ) : null}
+            {salesFilters.leadId && leadDetailError ? (
+              <Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => clearDeepLink("lead")}>
+                Clear lead link
+              </Button>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
@@ -484,7 +633,7 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{orders.length} records</p>
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white/80">
+          <div ref={ordersTableContainerRef} className="mt-6 max-h-[520px] overflow-auto rounded-2xl border border-border bg-white/80">
             <table className="min-w-full bg-white/80">
               <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
                 <tr>
@@ -513,6 +662,9 @@ export function SalesPage() {
                   orders.map((order) => (
                     <tr
                       key={order.id}
+                      ref={(element) => {
+                        orderRowRefs.current[order.id] = element;
+                      }}
                       className={`cursor-pointer border-t border-border/80 text-sm text-text-muted transition hover:bg-background-tint/40 ${
                         selectedOrderId === order.id ? "bg-background-tint/50" : ""
                       }`}
@@ -543,7 +695,10 @@ export function SalesPage() {
                             void copyShareLink({
                               orderId: order.id,
                               leadId: order.lead_id ?? null,
-                              section: "order-detail"
+                              section: "order-detail",
+                              entityType: "sales_order",
+                              entityId: order.id,
+                              source: "sales_order_row"
                             });
                           }}
                         >
@@ -674,7 +829,7 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{leads.length} leads</p>
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white/80">
+          <div ref={leadsTableContainerRef} className="mt-6 max-h-[520px] overflow-auto rounded-2xl border border-border bg-white/80">
             <table className="min-w-full bg-white/80">
               <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
                 <tr>
@@ -705,6 +860,9 @@ export function SalesPage() {
                   leads.map((lead) => (
                     <tr
                       key={lead.id}
+                      ref={(element) => {
+                        leadRowRefs.current[lead.id] = element;
+                      }}
                       className={`cursor-pointer border-t border-border/80 text-sm text-text-muted transition hover:bg-background-tint/30 ${
                         activeLeadId === lead.id ? "bg-background-tint/40" : ""
                       }`}
@@ -821,7 +979,10 @@ export function SalesPage() {
                               void copyShareLink({
                                 leadId: lead.id,
                                 orderId: selectedOrderId,
-                                section: "lead-detail"
+                                section: "lead-detail",
+                                entityType: "lead",
+                                entityId: lead.id,
+                                source: "sales_lead_row"
                               });
                             }}
                           >
@@ -944,7 +1105,10 @@ export function SalesPage() {
                     copyShareLink({
                       orderId: selectedOrderDetail.order.id,
                       leadId: selectedOrderDetail.order.lead_id ?? activeLeadId ?? null,
-                      section: "order-detail"
+                      section: "order-detail",
+                      entityType: "sales_order",
+                      entityId: selectedOrderDetail.order.id,
+                      source: "sales_order_detail"
                     })
                   }
                 >
@@ -1166,7 +1330,11 @@ export function SalesPage() {
               </div>
             </div>
           ) : (
-            <p className="mt-5 text-sm leading-6 text-text-muted">Unable to load the selected sales order.</p>
+            <p className="mt-5 text-sm leading-6 text-text-muted">
+              {salesFilters.orderId && orderDetailError
+                ? "This order could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
+                : "Unable to load the selected sales order."}
+            </p>
           )
         ) : (
           <p className="mt-5 text-sm leading-6 text-text-muted">
@@ -1228,7 +1396,10 @@ export function SalesPage() {
                         copyShareLink({
                           leadId: selectedLeadDetail.id,
                           orderId: selectedOrderId,
-                          section: "lead-detail"
+                          section: "lead-detail",
+                          entityType: "lead",
+                          entityId: selectedLeadDetail.id,
+                          source: "sales_lead_detail"
                         })
                       }
                     >
@@ -1246,7 +1417,11 @@ export function SalesPage() {
                   </div>
                 </>
               ) : (
-                <p>Unable to load the selected lead.</p>
+                <p>
+                  {salesFilters.leadId && leadDetailError
+                    ? "This lead could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
+                    : "Unable to load the selected lead."}
+                </p>
               )}
             </div>
 
@@ -1266,7 +1441,10 @@ export function SalesPage() {
                         copyShareLink({
                           leadId: activeLeadId,
                           orderId: selectedOrderId,
-                          section: "timeline"
+                          section: "timeline",
+                          entityType: "sales_timeline",
+                          entityId: activeLeadId ?? selectedOrderId ?? null,
+                          source: "sales_timeline_panel"
                         })
                       }
                     >
@@ -1323,7 +1501,10 @@ export function SalesPage() {
                                 copyShareLink({
                                   leadId: activeLeadId,
                                   orderId: selectedOrderId,
-                                  section: "lead-detail"
+                                  section: "lead-detail",
+                                  entityType: "lead",
+                                  entityId: activeLeadId,
+                                  source: "sales_timeline_entry"
                                 })
                               }
                             >
@@ -1348,7 +1529,10 @@ export function SalesPage() {
                                 copyShareLink({
                                   orderId: selectedOrderId,
                                   leadId: activeLeadId,
-                                  section: "order-detail"
+                                  section: "order-detail",
+                                  entityType: entry.entityType === "sales_order_item" ? "sales_order_item" : "sales_order",
+                                  entityId: selectedOrderId,
+                                  source: "sales_timeline_entry"
                                 })
                               }
                             >

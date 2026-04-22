@@ -216,3 +216,24 @@ export async function convertLeadToOrder(payload: {
     currency: payload.currency ?? "MYR"
   });
 }
+
+export async function recordSalesShareLinkAudit(payload: {
+  entityType: "sales_order" | "sales_order_item" | "lead" | "sales_metric" | "sales_pipeline" | "sales_trend" | "sales_timeline";
+  entityId?: string | null;
+  orderId?: string | null;
+  leadId?: string | null;
+  section: "order-detail" | "lead-detail" | "timeline";
+  source:
+    | "sales_order_row"
+    | "sales_lead_row"
+    | "sales_order_detail"
+    | "sales_lead_detail"
+    | "sales_timeline_panel"
+    | "sales_timeline_entry"
+    | "dashboard_metric_card"
+    | "dashboard_pipeline_card"
+    | "dashboard_trend_bucket";
+  href: string;
+}) {
+  return apiPost<{ data: { recorded: boolean } }>("/sales/share-links/audit", payload);
+}

@@ -266,17 +266,17 @@ Status: completed
 Status: in progress
 
 - [x] Add per-record share actions from timeline entries so users can copy lead or order deep links straight from each audit event.
-- [ ] Add inline share actions on dashboard metric cards without requiring navigation first.
-- [ ] Preserve table scroll position and selected-row highlight when returning from deep-linked Sales views.
+- [x] Add inline share actions on dashboard metric cards without requiring navigation first.
+- [x] Preserve table scroll position and selected-row highlight when returning from deep-linked Sales views.
 - [ ] Add lightweight “copied” feedback standardization across all CRM sharing entry points.
-- [ ] Add deep-link fallback messaging when a shared lead or order no longer exists or is outside the user’s scope.
-- [ ] Add share-entry analytics or audit events for copied Sales deep links.
+- [x] Add deep-link fallback messaging when a shared lead or order no longer exists or is outside the user’s scope.
+- [x] Add share-entry analytics or audit events for copied Sales deep links.
 
 ## Current Execution Status
 
 - Current phase: Phase 12, Post-Sales UX Refinements
-- Current completed step: timeline entries in the Sales workspace now support direct lead and order share actions
-- Next highest-impact step: preserve table scroll position and selected-row highlight when returning from deep-linked Sales views
+- Current completed step: copied Sales and dashboard deep links now emit audit events for share analytics without interrupting the UX
+- Next highest-impact step: standardize lightweight copied-state feedback across all CRM sharing entry points
 
 ## Recommended Immediate Execution Order
 

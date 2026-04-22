@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { recordSalesShareLinkAudit } from "../api/crm";
 import { Card } from "../components/Card";
 import { Toast } from "../components/Toast";
 import { useRoleDashboard } from "../hooks/useDashboard";
@@ -20,17 +21,32 @@ export function DashboardPage() {
         ? "Organization dashboard"
         : "My dashboard";
 
-  async function copyTimelineLink(href?: string) {
+  async function copyTimelineLink(input: {
+    href?: string;
+    entityType: "sales_metric" | "sales_pipeline" | "sales_trend";
+    entityId: string;
+    source: "dashboard_metric_card" | "dashboard_pipeline_card" | "dashboard_trend_bucket";
+  }) {
+    const { href, entityType, entityId, source } = input;
+
     if (!href || typeof window === "undefined") {
       return;
     }
 
     const absoluteUrl = new URL(appendSalesSection(href, "timeline"), window.location.origin).toString();
+    const relativeUrl = appendSalesSection(href, "timeline");
 
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(absoluteUrl);
       }
+      void recordSalesShareLinkAudit({
+        entityType,
+        entityId,
+        section: "timeline",
+        source,
+        href: relativeUrl
+      }).catch(() => undefined);
       showShareToast("Timeline link copied.");
     } catch {
       showShareToast("Unable to copy timeline link.");
@@ -101,7 +117,14 @@ export function DashboardPage() {
                       <button
                         type="button"
                         className="text-xs font-medium text-primary transition hover:opacity-80"
-                        onClick={() => void copyTimelineLink(metric.href)}
+                        onClick={() =>
+                          void copyTimelineLink({
+                            href: metric.href,
+                            entityType: "sales_metric",
+                            entityId: metric.label,
+                            source: "dashboard_metric_card"
+                          })
+                        }
                       >
                         Copy timeline link
                       </button>
@@ -139,7 +162,14 @@ export function DashboardPage() {
                     <button
                       type="button"
                       className="text-xs font-medium text-primary transition hover:opacity-80"
-                      onClick={() => void copyTimelineLink(stage.href ?? "/sales")}
+                      onClick={() =>
+                        void copyTimelineLink({
+                          href: stage.href ?? "/sales",
+                          entityType: "sales_pipeline",
+                          entityId: stage.status,
+                          source: "dashboard_pipeline_card"
+                        })
+                      }
                     >
                       Copy timeline link
                     </button>
@@ -181,7 +211,14 @@ export function DashboardPage() {
                   <button
                     type="button"
                     className="text-xs font-medium text-primary transition hover:opacity-80"
-                    onClick={() => void copyTimelineLink(point.href ?? "/sales")}
+                    onClick={() =>
+                      void copyTimelineLink({
+                        href: point.href ?? "/sales",
+                        entityType: "sales_trend",
+                        entityId: `${point.metric}:${point.range_start}`,
+                        source: "dashboard_trend_bucket"
+                      })
+                    }
                   >
                     Copy timeline link
                   </button>

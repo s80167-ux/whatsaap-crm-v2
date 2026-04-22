@@ -8,6 +8,7 @@ import {
   getSalesOrderHistory,
   getSalesOrders,
   getSalesSummary,
+  recordSalesShareLink,
   updateSalesOrder
 } from "./sales.controller.js";
 
@@ -36,3 +37,8 @@ salesRoutes.get(
 salesRoutes.post("/orders", requirePermission("sales.write"), asyncHandler(createSalesOrder));
 salesRoutes.patch("/orders/:orderId", requirePermission("sales.write"), asyncHandler(updateSalesOrder));
 salesRoutes.post("/orders/:orderId/items", requirePermission("sales.write"), asyncHandler(createSalesOrderItem));
+salesRoutes.post(
+  "/share-links/audit",
+  requireAnyPermission(["sales.read_all", "sales.read_assigned"]),
+  asyncHandler(recordSalesShareLink)
+);

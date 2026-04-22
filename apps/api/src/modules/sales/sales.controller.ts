@@ -55,6 +55,34 @@ const updateSalesOrderSchema = z.object({
   { message: "At least one field must be provided" }
 );
 
+const recordSalesShareLinkSchema = z.object({
+  entityType: z.enum([
+    "sales_order",
+    "sales_order_item",
+    "lead",
+    "sales_metric",
+    "sales_pipeline",
+    "sales_trend",
+    "sales_timeline"
+  ]),
+  entityId: z.string().trim().min(1).max(120).optional().nullable(),
+  orderId: z.string().uuid().optional().nullable(),
+  leadId: z.string().uuid().optional().nullable(),
+  section: z.enum(["order-detail", "lead-detail", "timeline"]),
+  source: z.enum([
+    "sales_order_row",
+    "sales_lead_row",
+    "sales_order_detail",
+    "sales_lead_detail",
+    "sales_timeline_panel",
+    "sales_timeline_entry",
+    "dashboard_metric_card",
+    "dashboard_pipeline_card",
+    "dashboard_trend_bucket"
+  ]),
+  href: z.string().trim().min(1).max(2048)
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -235,4 +263,27 @@ export async function updateSalesOrder(request: Request, response: Response) {
   });
 
   return response.json({ data: order });
+}
+
+export async function recordSalesShareLink(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const input = recordSalesShareLinkSchema.parse(request.body);
+  const organizationId = auth.organizationId ?? requireOrganizationId(request);
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "sales.share_link_copied",
+    entityType: input.entityType,
+    entityId: input.entityId ?? input.orderId ?? input.leadId ?? null,
+    metadata: {
+      source: input.source,
+      section: input.section,
+      href: input.href,
+      order_id: input.orderId ?? null,
+      lead_id: input.leadId ?? null
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(201).json({ data: { recorded: true } });
 }
