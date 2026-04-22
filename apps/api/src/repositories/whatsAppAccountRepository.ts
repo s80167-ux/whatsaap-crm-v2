@@ -130,5 +130,27 @@ export class WhatsAppAccountRepository {
       `,
       params
     );
+
+    // Logging for debug
+    // eslint-disable-next-line no-console
+    console.log(`[updateStatus] accountId=${accountId}, status=${status}, time=${new Date().toISOString()}`);
+  }
+
+  /**
+   * Calculate and update health score for an account.
+   * 100 if connected, 0 if disconnected, 50 otherwise.
+   */
+  async updateHealthScore(client: PoolClient, accountId: string, status: string): Promise<void> {
+    const columns = await this.getColumns(client);
+    if (!columns.health_score) return;
+    let score = 50;
+    if (status === "connected") score = 100;
+    else if (status === "disconnected") score = 0;
+    await client.query(
+      `update whatsapp_accounts set health_score = $2 where id = $1`,
+      [accountId, score]
+    );
+    // eslint-disable-next-line no-console
+    console.log(`[updateHealthScore] accountId=${accountId}, status=${status}, score=${score}`);
   }
 }

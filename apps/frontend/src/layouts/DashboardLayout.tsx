@@ -6,12 +6,15 @@ import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { NavLinkItem } from "../components/NavLinkItem";
+import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
 import { clearAuthSession, getStoredUser } from "../lib/auth";
 
 export function DashboardLayout() {
   const navigate = useNavigate();
   const user = getStoredUser();
   const isSuperAdmin = user?.role === "super_admin";
+  const whatsappStatus = useWhatsAppStatus();
 
   return (
     <div className="min-h-screen bg-hero-grid px-6 py-4">
@@ -32,7 +35,12 @@ export function DashboardLayout() {
 
             <nav className="mt-8 space-y-2">
               <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" />
-              <NavLinkItem to="/" icon={<MessageSquare size={18} />} label="Inbox" />
+              <NavLinkItem
+                to="/"
+                icon={<MessageSquare size={18} />}
+                label="Inbox"
+                badge={<WhatsAppStatusBadge status={whatsappStatus} />}
+              />
               <NavLinkItem to="/contacts" icon={<Users size={18} />} label="Contacts" />
               <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label="Sales" />
               <NavLinkItem to="/setup" icon={<Settings2 size={18} />} label="Setup" />

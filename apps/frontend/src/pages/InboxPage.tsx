@@ -25,32 +25,48 @@ export function InboxPage() {
   const conversationCountLabel = `${conversations.length} threads in ${getHistoryRangeLabel(chatHistoryRange).toLowerCase()}`;
 
   return (
-    <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[300px,minmax(0,1fr)] 2xl:grid-cols-[340px,minmax(0,1.7fr),300px] xl:items-start">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white xl:sticky xl:top-0" elevated>
-          <header className="pb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="section-title">Latest conversations</h2>
-                <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+    <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[300px,minmax(0,1fr)] 2xl:grid-cols-[340px,minmax(0,1.7fr)] xl:items-start">
+      <div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white xl:sticky xl:top-0" elevated>
+            <header className="pb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="section-title">Latest conversations</h2>
+                  <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+                </div>
               </div>
+              <div className="mt-4">
+                <HistoryRangePicker label="Chat history" range={chatHistoryRange} onChange={setChatHistoryRange} />
+              </div>
+            </header>
+            <div className="overflow-y-auto">
+              {isLoading ? (
+                <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+              ) : (
+                <ConversationList
+                  conversations={conversations}
+                  selectedConversationId={stableSelectedConversation?.id}
+                  onSelect={setSelectedConversation}
+                />
+              )}
             </div>
-            <div className="mt-4">
-              <HistoryRangePicker label="Chat history" range={chatHistoryRange} onChange={setChatHistoryRange} />
-            </div>
-          </header>
-          {isLoading ? (
-            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
-          ) : (
-            <ConversationList
-              conversations={conversations}
-              selectedConversationId={stableSelectedConversation?.id}
-              onSelect={setSelectedConversation}
-            />
-          )}
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
+        <div className="mt-3">
+          <ContactInfoPanel
+            className="!p-2 !bg-background-tint !shadow-none !rounded-lg text-xs"
+            conversation={stableSelectedConversation}
+            onAssigned={() => {
+              void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+              void queryClient.invalidateQueries({
+                queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+              });
+            }}
+          />
+        </div>
+      </div>
       <ChatPanel
         conversation={stableSelectedConversation}
         messages={messages}
@@ -60,16 +76,6 @@ export function InboxPage() {
             queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
           });
           void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-        }}
-      />
-      <ContactInfoPanel
-        className="xl:col-span-2 2xl:col-span-1"
-        conversation={stableSelectedConversation}
-        onAssigned={() => {
-          void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-          void queryClient.invalidateQueries({
-            queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-          });
         }}
       />
     </div>

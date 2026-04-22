@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
-export function NavLinkItem({ to, icon, label }: { to: string; icon: ReactNode; label: string }) {
+export function NavLinkItem({ to, icon, label, badge }: { to: string; icon: ReactNode; label: string; badge?: ReactNode }) {
   return (
     <NavLink
       to={to}
@@ -17,7 +17,7 @@ export function NavLinkItem({ to, icon, label }: { to: string; icon: ReactNode; 
       }
     >
       <span className="flex h-8 w-8 items-center justify-center rounded-md text-current">{icon}</span>
-      <span>{label}</span>
+      <span className="flex items-center gap-1">{label}{badge}</span>
     </NavLink>
   );
 }

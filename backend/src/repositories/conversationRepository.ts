@@ -53,7 +53,7 @@ export class ConversationRepository {
           status
         )
         values ($1, 'whatsapp', $2, $3, $4, 'direct', 'open')
-        on conflict (organization_id, channel, whatsapp_account_id, external_thread_key)
+        on conflict (organization_id, whatsapp_account_id, contact_id)
         do update set updated_at = timezone('utc', now())
         returning
           id,

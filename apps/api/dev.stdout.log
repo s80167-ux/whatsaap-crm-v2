@@ -1,0 +1,6 @@
+
+> api@2.0.0 dev
+> tsx watch src/server.ts
+
+[23:21:18.967] [32mINFO[39m (16828): [36mDatabase connection established[39m
+[23:21:18.972] [32mINFO[39m (16828): [36mBackend listening on port 4000[39m

@@ -24,10 +24,8 @@ export function ConversationList({
           transition={{ duration: 0.18 }}
           whileHover={{ scale: 1.005 }}
           className={clsx(
-            "rounded-xl border border-border bg-white p-5 text-left shadow-soft transition duration-200",
-            selectedConversationId === conversation.id
-              ? "border-primary/30 bg-primary-soft/40"
-              : "hover:border-border-strong hover:bg-background-elevated"
+            "conversation-item",
+            selectedConversationId === conversation.id && "conversation-item-active"
           )}
         >
           <div className="flex items-start justify-between gap-3">

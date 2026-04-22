@@ -1,0 +1,1131 @@
+[2m12:11:24 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:24 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:24 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:26 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:11:26 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:29 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:38 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:11:38 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:48 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:50 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:50 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:51 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:11:51 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:52 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+[2m12:11:52 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+[2m12:11:54 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:11:54 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:54 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+[2m12:11:54 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+[2m12:11:56 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:56 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:57 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:11:57 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:07 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:07 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:09 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:09 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:10 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:10 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:11 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:11 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:11 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:12:11 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:20 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:13:20 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+[2m12:13:20 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:21 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:25 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+[2m12:13:25 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+[2m12:13:25 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:13:25 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:35 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:35 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:36 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:36 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:36 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:36 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:37 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:37 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:38 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:13:38 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "../hooks/useWhatsAppStatus" from "src/layouts/DashboardLayout.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/layouts/DashboardLayout.tsx[39m:10:34
+[33m  25 |  import { NavLinkItem } from "../components/NavLinkItem";
+  26 |  import { WhatsAppStatusBadge } from "../components/WhatsAppStatusBadge";
+  27 |  import { useWhatsAppStatus } from "../hooks/useWhatsAppStatus";
+     |                                     ^
+  28 |  import { clearAuthSession, getStoredUser } from "../lib/auth";
+  29 |  export function DashboardLayout() {[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42553:41)
+      at TransformPluginContext.error (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42550:16)
+      at normalizeUrl (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40529:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40648:37
+      at async Promise.all (index 12)
+      at async TransformPluginContext.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:40575:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:14:14 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:14:15 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:14:22 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:14:22 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:14:30 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:14:31 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:14:51 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)
+[2m12:15:00 am[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+[2m12:15:00 am[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css:72:5: The `hover:bg-hover` class does not exist. If `hover:bg-hover` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/SYed Mohd Hatta/whatsapp-crm-v2/apps/frontend/src/styles.css[39m:72:4
+[33m  70 |    /* Button styles */
+  71 |    .btn-primary {
+  72 |      @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-hover focus-visible:ring-4 focus-visible:ring-primary/20;
+     |      ^
+  73 |    }
+  74 |    .btn-secondary {[39m
+      at Input.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async runPostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43878:21)
+      at async compilePostCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43848:18)
+      at async compileCSS (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43703:27)
+      at async TransformPluginContext.handler (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:43019:11)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:42348:18)
+      at async loadAndTransform (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:35740:27)
+      at async viteTransformMiddleware (file:///C:/Users/SYed%20Mohd%20Hatta/whatsapp-crm-v2/node_modules/vite/dist/node/chunks/dep-Dq2t6Dq0.js:37264:24)

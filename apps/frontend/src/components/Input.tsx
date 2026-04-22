@@ -2,8 +2,7 @@ import clsx from "clsx";
 import { forwardRef } from "react";
 import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
 
-const baseInputClassName =
-  "w-full rounded-lg border border-border bg-white px-4 py-3 text-sm text-text outline-none transition duration-200 placeholder:text-text-soft focus:border-primary/50 focus:ring-4 focus:ring-primary/10";
+const baseInputClassName = "input-base";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

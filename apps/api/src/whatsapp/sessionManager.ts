@@ -43,32 +43,41 @@ export class WhatsAppSessionManager {
     try {
       const accounts = await this.accountRepository.listActive(client);
       await Promise.all(accounts.map((account) => this.initializeSession(account)));
-    } finally {
-      client.release();
-    }
-  }
+      if (qr) {
+        await withTransaction(async (client) => {
+          await this.accountRepository.updateStatus(client, account.id, "qr_required");
+          await this.accountRepository.updateHealthScore(client, account.id, "qr_required");
+        });
+        logger.info(
+          { accountId: account.id, qrLength: qr.length },
+          "WhatsApp QR received; handle it from connection.update instead of terminal output"
+        );
+      }
 
-  async reconnectSession(account: {
-    id: string;
-    organization_id: string;
-    label: string | null;
-    connection_status: string;
-    account_jid: string | null;
-    display_name: string | null;
-  }) {
-    this.disabledAccounts.delete(account.id);
+      if (connection === "open") {
+        await withTransaction(async (client) => {
+          await this.accountRepository.updateStatus(client, account.id, "connected");
+          await this.accountRepository.updateHealthScore(client, account.id, "connected");
+        });
+        logger.info({ accountId: account.id }, "WhatsApp session connected");
+      }
 
-    const existingSocket = this.sockets.get(account.id) as
-      | {
-          end?: (error?: unknown) => void;
-          ws?: { close?: () => void };
+      if (connection === "close") {
+        await withTransaction(async (client) => {
+          await this.accountRepository.updateStatus(client, account.id, "disconnected");
+          await this.accountRepository.updateHealthScore(client, account.id, "disconnected");
+        });
+        const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+        logger.warn({ accountId: account.id, statusCode }, "WhatsApp session closed");
+
+        if (shouldReconnect && !this.disabledAccounts.has(account.id)) {
+          setTimeout(() => {
+            void this.initializeSession(account);
+          }, 5000);
         }
-      | undefined;
-
-    this.sockets.delete(account.id);
-
-    try {
-      existingSocket?.end?.();
+      }
     } catch (error) {
       logger.warn({ error, accountId: account.id }, "Failed to end existing WhatsApp socket during reconnect");
     }

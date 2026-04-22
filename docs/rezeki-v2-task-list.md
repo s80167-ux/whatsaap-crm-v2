@@ -268,15 +268,15 @@ Status: in progress
 - [x] Add per-record share actions from timeline entries so users can copy lead or order deep links straight from each audit event.
 - [x] Add inline share actions on dashboard metric cards without requiring navigation first.
 - [x] Preserve table scroll position and selected-row highlight when returning from deep-linked Sales views.
-- [ ] Add lightweight “copied” feedback standardization across all CRM sharing entry points.
+- [x] Add lightweight copied-state feedback standardization across all CRM sharing entry points.
 - [x] Add deep-link fallback messaging when a shared lead or order no longer exists or is outside the user’s scope.
 - [x] Add share-entry analytics or audit events for copied Sales deep links.
 
 ## Current Execution Status
 
 - Current phase: Phase 12, Post-Sales UX Refinements
-- Current completed step: copied Sales and dashboard deep links now emit audit events for share analytics without interrupting the UX
-- Next highest-impact step: standardize lightweight copied-state feedback across all CRM sharing entry points
+- Current completed step: shared CRM copy actions now use one standardized lightweight copied-state feedback flow across Dashboard and Sales
+- Next highest-impact step: review whether Phase 12 should be closed or expanded with any remaining post-Sales UX polish items
 
 ## Recommended Immediate Execution Order
 
@@ -288,3 +288,4 @@ Status: in progress
 6. Projection tables
 7. Connector extraction
 8. Dashboard and admin surfaces
+

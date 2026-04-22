@@ -189,7 +189,7 @@ export function ChatPanel({
   }
 
   return (
-    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0 xl:sticky xl:top-0" elevated>
+    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
       <header className="border-b border-border bg-white px-6 py-5 xl:px-7">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
@@ -239,6 +239,7 @@ export function ChatPanel({
             className="hidden"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,application/*,text/*"
             onChange={handleAttachmentChange}
+            title="Attach a file"
           />
           <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="rounded-xl px-4">
             <Paperclip className="h-4 w-4" />

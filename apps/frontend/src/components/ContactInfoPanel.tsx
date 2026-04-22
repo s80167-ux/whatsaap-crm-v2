@@ -41,61 +41,49 @@ export function ContactInfoPanel({
   }
 
   return (
-    <Card className={`bg-white ${className ?? ""}`} elevated>
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Contact</p>
+    <Card className={`bg-white ${className ?? ""}`} elevated={false}>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Contact</p>
       {conversation ? (
-        <div className="mt-5 space-y-4">
+        <div className="mt-2 space-y-2">
           <div>
-            <p className="text-lg font-semibold text-text">{contact?.display_name ?? conversation.contact_name}</p>
-            <p className="text-sm text-text-muted">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
+            <p className="text-base font-semibold text-text truncate">{contact?.display_name ?? conversation.contact_name}</p>
+            <p className="text-xs text-text-muted truncate">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
             {contact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{contact.primary_phone_e164}</p> : null}
           </div>
-          <div className="rounded-xl border border-border bg-background-tint p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Canonical record</p>
+          <div className="rounded-lg border border-border bg-background-tint p-2 mt-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical</p>
             {contactLoading ? (
               <p className="mt-2 text-sm leading-6 text-text-muted">Loading canonical contact details...</p>
             ) : (
-              <div className="mt-2 space-y-2 text-sm leading-6 text-text-muted">
-                <p>Contact ID: {conversation.contact_id}</p>
-                <p>Owner: {contact?.owner_user_id ? (isContactAssignedToCurrentUser ? "Assigned to you" : contact.owner_user_id) : "Unassigned"}</p>
-                <p>Primary phone: {contact?.primary_phone_e164 ?? "--"}</p>
-                <p>Normalized phone: {contact?.primary_phone_normalized ?? "--"}</p>
+              <div className="mt-1 space-y-1 text-xs leading-5 text-text-muted">
+                <p>ID: {conversation.contact_id}</p>
+                <p>Owner: {contact?.owner_user_id ? (isContactAssignedToCurrentUser ? "You" : contact.owner_user_id) : "Unassigned"}</p>
+                <p>Phone: {contact?.primary_phone_e164 ?? "--"}</p>
+                <p>Norm: {contact?.primary_phone_normalized ?? "--"}</p>
               </div>
             )}
           </div>
           {canAssign ? (
-            <div className="rounded-xl border border-border bg-background-tint p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Assignment</p>
-              <p className="mt-2 text-sm leading-6 text-text-muted">
-                {isAssignedToCurrentUser ? "This conversation is currently assigned to you." : "Assign this conversation to yourself so it appears in assigned-scope inbox views."}
+            <div className="rounded-lg border border-border bg-background-tint p-2 mt-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Assignment</p>
+              <p className="mt-1 text-xs leading-5 text-text-muted">
+                {isAssignedToCurrentUser ? "Assigned to you." : "Assign to yourself."}
               </p>
               <Button
-                className="mt-4 w-full"
+                className="mt-2 w-full !py-1 !text-xs"
                 variant={isAssignedToCurrentUser ? "secondary" : "primary"}
                 onClick={handleAssignToMe}
                 disabled={isAssigning || Boolean(isAssignedToCurrentUser)}
               >
-                {isAssignedToCurrentUser ? "Assigned to you" : isAssigning ? "Assigning..." : "Assign to me"}
+                {isAssignedToCurrentUser ? "Assigned" : isAssigning ? "Assigning..." : "Assign"}
               </Button>
             </div>
           ) : null}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-xl border border-border bg-background-tint p-5"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Stability Guarantees</p>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-text-muted">
-              <li>One canonical contact per normalized phone within the organization.</li>
-              <li>Conversation ordering follows persisted last message metadata.</li>
-              <li>Realtime reflects committed database writes only.</li>
-            </ul>
-          </motion.div>
+          {/* Remove stability guarantees for compact mode */}
         </div>
       ) : (
-        <p className="mt-5 text-sm leading-6 text-text-muted">
-          Select a thread to inspect the canonical contact and conversation metadata.
+        <p className="mt-2 text-xs leading-5 text-text-muted">
+          Select a thread to inspect contact details.
         </p>
       )}
     </Card>

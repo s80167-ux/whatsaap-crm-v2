@@ -41,22 +41,78 @@ body {
 
 @layer components {
   .app-shell {
-    @apply border border-border bg-card shadow-soft;
+    @apply border border-border bg-card shadow-soft rounded-2xl;
   }
 
   .section-title {
-    @apply text-2xl font-semibold tracking-tight text-text;
+    @apply text-2xl font-semibold tracking-tight text-text font-sans;
+    letter-spacing: -0.01em;
   }
 
   .section-copy {
-    @apply text-sm leading-6 text-text-muted;
+    @apply text-sm leading-6 text-text-muted font-normal;
+    letter-spacing: 0.01em;
   }
 
   .table-row {
-    @apply border-t border-border transition-colors hover:bg-secondary-soft/40;
+    @apply border-t border-border transition-colors hover:bg-background-tint;
   }
 
   .brand-badge {
-    @apply inline-flex items-center rounded-full border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
+    @apply inline-flex items-center rounded-full border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary shadow-none;
+  }
+
+  /* Card surfaces */
+  .card-surface {
+    @apply rounded-2xl border border-border bg-white shadow-soft transition duration-300 ease-out hover:shadow-panel hover:-translate-y-0.5 hover:bg-background-tint px-7 py-6;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply rounded-xl bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-primary-deep focus-visible:ring-4 focus-visible:ring-primary/20;
+  }
+  .btn-secondary {
+    @apply rounded-xl border border-border bg-white text-primary font-medium px-5 py-3 transition duration-200 ease-out hover:bg-background-tint focus-visible:ring-4 focus-visible:ring-primary/10;
+  }
+  .btn-ghost {
+    @apply rounded-xl bg-transparent text-text-muted px-5 py-3 transition duration-200 ease-out hover:bg-background-tint hover:text-text focus-visible:ring-4 focus-visible:ring-primary/10;
+  }
+
+  /* Input styles */
+  .input-base {
+    @apply w-full rounded-xl border border-border bg-background-tint px-4 py-3 text-sm text-text outline-none transition duration-200 placeholder:text-text-soft focus:border-primary focus:ring-2 focus:ring-primary/10;
+  }
+
+  /* List/Conversation item */
+  .conversation-item {
+    @apply rounded-2xl border border-border bg-white p-6 text-left shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-background-tint;
+  }
+  .conversation-item-active {
+    @apply border-primary/30 bg-blue-50 shadow-panel;
+  }
+
+  /* Status badge colors */
+  .status-new_lead {
+    @apply border border-border bg-background-tint text-text-soft;
+  }
+  .status-interested {
+    @apply border border-blue-200 bg-blue-50 text-blue-700;
+  }
+  .status-processing {
+    @apply border border-blue-400 bg-blue-100 text-blue-800;
+  }
+  .status-closed_won {
+    @apply border border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+  .status-closed_lost {
+    @apply border border-coral/20 bg-coral/10 text-coral;
+  }
+
+  /* Icon style */
+  .icon-base {
+    @apply text-text-soft align-middle;
+  }
+  .icon-active {
+    @apply text-primary;
   }
 }

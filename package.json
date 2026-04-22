@@ -9,6 +9,7 @@
     "frontend"
   ],
   "scripts": {
+    "dev:all": "concurrently -k -n backend,connector,raw-events,outbox,frontend -c blue,green,yellow,magenta,cyan \"npm run dev:backend\" \"npm run dev:connector\" \"npm run worker:raw-events\" \"npm run worker:message-outbox\" \"npm run dev:frontend\"",
     "dev:backend": "npm --workspace apps/api run dev",
     "start": "npm --workspace apps/api start",
     "dev:frontend": "npm --workspace apps/frontend run dev",
@@ -23,5 +24,8 @@
     "worker:usage-daily": "npm --workspace apps/api run worker:usage-daily --",
     "build": "npm run build --workspace apps/api && npm run build --workspace apps/frontend && npm run build --workspace apps/whatsapp-connector",
     "lint": "npm run lint --workspace apps/api && npm run lint --workspace apps/frontend && npm run lint --workspace apps/whatsapp-connector"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

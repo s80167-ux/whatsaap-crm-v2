@@ -15,6 +15,7 @@ import { Card } from "../components/Card";
 import { Input } from "../components/Input";
 import { Toast } from "../components/Toast";
 import { useOrganizationUsers } from "../hooks/useAdmin";
+import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useContacts } from "../hooks/useContacts";
 import { useLeadDetail, useLeadHistory, useLeads } from "../hooks/useLeads";
 import { useSalesOrderDetail, useSalesOrderHistory, useSalesOrders, useSalesSummary } from "../hooks/useSales";
@@ -137,8 +138,7 @@ export function SalesPage() {
   const leadsTableContainerRef = useRef<HTMLDivElement | null>(null);
   const orderRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const leadRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
-  const [shareToastMessage, setShareToastMessage] = useState<string | null>(null);
-  const shareToastTimeoutRef = useRef<number | null>(null);
+  const { toast: copyToast, copyText } = useCopyFeedback();
 
   const canWriteSales = Boolean(currentUser?.permissionKeys.includes("sales.write"));
 
@@ -240,19 +240,6 @@ export function SalesPage() {
     });
   }
 
-  function showShareToast(message: string) {
-    setShareToastMessage(message);
-
-    if (shareToastTimeoutRef.current) {
-      window.clearTimeout(shareToastTimeoutRef.current);
-    }
-
-    shareToastTimeoutRef.current = window.setTimeout(() => {
-      setShareToastMessage(null);
-      shareToastTimeoutRef.current = null;
-    }, 2200);
-  }
-
   async function copyShareLink(input: {
     orderId?: string | null;
     leadId?: string | null;
@@ -283,10 +270,12 @@ export function SalesPage() {
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?${nextParams.toString()}`;
 
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-      }
+    const copied = await copyText({
+      text: shareUrl,
+      label: input.section === "timeline" ? "Timeline link" : "Share link"
+    });
+
+    if (copied) {
       void recordSalesShareLinkAudit({
         entityType: input.entityType,
         entityId: input.entityId ?? null,
@@ -296,9 +285,6 @@ export function SalesPage() {
         source: input.source,
         href: `${window.location.pathname}?${nextParams.toString()}`
       }).catch(() => undefined);
-      showShareToast("Share link copied.");
-    } catch {
-      showShareToast("Unable to copy share link.");
     }
   }
 
@@ -388,14 +374,6 @@ export function SalesPage() {
     const row = leadRowRefs.current[salesFilters.leadId];
     row?.scrollIntoView({ block: "nearest" });
   }, [salesFilters.leadId, leads.length]);
-
-  useEffect(() => {
-    return () => {
-      if (shareToastTimeoutRef.current) {
-        window.clearTimeout(shareToastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     setLeadSourceById((current) => {
@@ -675,7 +653,9 @@ export function SalesPage() {
                         <p className="mt-1 text-xs text-text-soft">{order.primary_phone_normalized ?? "--"}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(order.status)}`}>
+                        <span
+                          className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(order.status)}`}
+                        >
                           {formatSalesStatus(order.status)}
                         </span>
                       </td>
@@ -1114,7 +1094,9 @@ export function SalesPage() {
                 >
                   Copy order link
                 </Button>
-                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}>
+                <span
+                  className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}
+                >
                   {formatSalesStatus(selectedOrderDetail.order.status)}
                 </span>
               </>
@@ -1554,7 +1536,7 @@ export function SalesPage() {
         )}
       </Card>
       </section>
-      <Toast message={shareToastMessage} />
+      <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </section>
   );
 }

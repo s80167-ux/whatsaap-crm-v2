@@ -15,6 +15,22 @@ export function extractTextContent(payload: any): string | null {
   );
 }
 
+const MESSAGE_TYPE_PRIORITY = [
+  "conversation",
+  "extendedTextMessage",
+  "imageMessage",
+  "videoMessage",
+  "audioMessage",
+  "pttMessage",
+  "documentMessage",
+  "stickerMessage",
+  "locationMessage",
+  "contactMessage",
+  "contactsArrayMessage",
+  "reactionMessage",
+  "protocolMessage"
+] as const;
+
 export function normalizeMessageType(messageType: string | null | undefined): string {
   switch (messageType) {
     case "conversation":
@@ -53,6 +69,13 @@ export function detectMessageType(payload: any): string {
     return "system";
   }
 
-  const [messageType] = Object.keys(payload.message);
+  const message = payload.message;
+  const matchedType = MESSAGE_TYPE_PRIORITY.find((messageType) => Boolean(message?.[messageType]));
+
+  if (matchedType) {
+    return normalizeMessageType(matchedType);
+  }
+
+  const [messageType] = Object.keys(message);
   return normalizeMessageType(messageType);
 }

@@ -3,16 +3,15 @@ import { Link } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
 import { Card } from "../components/Card";
 import { Toast } from "../components/Toast";
+import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useRoleDashboard } from "../hooks/useDashboard";
 import { getStoredUser } from "../lib/auth";
 import type { DashboardMetric } from "../types/dashboard";
-import { useEffect, useRef, useState } from "react";
 
 export function DashboardPage() {
   const user = getStoredUser();
   const { data, isLoading } = useRoleDashboard();
-  const [shareToastMessage, setShareToastMessage] = useState<string | null>(null);
-  const shareToastTimeoutRef = useRef<number | null>(null);
+  const { toast: copyToast, copyText } = useCopyFeedback();
 
   const title =
     user?.role === "super_admin"
@@ -36,10 +35,12 @@ export function DashboardPage() {
     const absoluteUrl = new URL(appendSalesSection(href, "timeline"), window.location.origin).toString();
     const relativeUrl = appendSalesSection(href, "timeline");
 
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(absoluteUrl);
-      }
+    const copied = await copyText({
+      text: absoluteUrl,
+      label: "Timeline link"
+    });
+
+    if (copied) {
       void recordSalesShareLinkAudit({
         entityType,
         entityId,
@@ -47,32 +48,8 @@ export function DashboardPage() {
         source,
         href: relativeUrl
       }).catch(() => undefined);
-      showShareToast("Timeline link copied.");
-    } catch {
-      showShareToast("Unable to copy timeline link.");
     }
   }
-
-  function showShareToast(message: string) {
-    setShareToastMessage(message);
-
-    if (shareToastTimeoutRef.current) {
-      window.clearTimeout(shareToastTimeoutRef.current);
-    }
-
-    shareToastTimeoutRef.current = window.setTimeout(() => {
-      setShareToastMessage(null);
-      shareToastTimeoutRef.current = null;
-    }, 2200);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (shareToastTimeoutRef.current) {
-        window.clearTimeout(shareToastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <section className="space-y-6">
@@ -228,7 +205,7 @@ export function DashboardPage() {
           </div>
         </Card>
       ) : null}
-      <Toast message={shareToastMessage} />
+      <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </section>
   );
 }
