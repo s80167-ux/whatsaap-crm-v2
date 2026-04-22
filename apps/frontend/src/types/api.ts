@@ -52,3 +52,68 @@ export interface Contact {
   primary_phone_normalized: string | null;
   owner_user_id?: string | null;
 }
+
+export interface SalesOrder {
+  id: string;
+  organization_id: string;
+  contact_id: string;
+  lead_id?: string | null;
+  assigned_user_id?: string | null;
+  status: "open" | "closed_won" | "closed_lost";
+  total_amount: string;
+  currency: string;
+  closed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  contact_name?: string | null;
+  primary_phone_normalized?: string | null;
+  lead_status?: string | null;
+}
+
+export interface SalesSummary {
+  total_orders: number;
+  open_orders: number;
+  won_orders: number;
+  lost_orders: number;
+  open_value: string;
+  won_value: string;
+}
+
+export interface SalesOrderItem {
+  id: string;
+  sales_order_id: string;
+  product_type?: string | null;
+  package_name?: string | null;
+  unit_price: string;
+  quantity: number;
+  total_price: string;
+  created_at: string;
+}
+
+export interface SalesOrderDetail {
+  order: SalesOrder;
+  items: SalesOrderItem[];
+}
+
+export interface SalesOrderHistoryEntry {
+  id: string;
+  actor_name?: string | null;
+  actor_role?: string | null;
+  action: string;
+  metadata: unknown;
+  created_at: string;
+}
+
+export interface Lead {
+  id: string;
+  organization_id: string;
+  contact_id: string;
+  source?: string | null;
+  status: "new_lead" | "contacted" | "interested" | "processing" | "closed_won" | "closed_lost";
+  temperature?: "cold" | "warm" | "hot" | null;
+  assigned_user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  contact_name?: string | null;
+  primary_phone_normalized?: string | null;
+}

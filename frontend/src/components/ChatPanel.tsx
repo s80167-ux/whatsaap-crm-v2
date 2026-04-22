@@ -75,13 +75,13 @@ export function ChatPanel({
   }
 
   return (
-    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
+    <Card className="grid min-h-[640px] min-w-0 grid-rows-[auto,1fr,auto] p-0" elevated>
       <header className="border-b border-border bg-white px-6 py-4">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
-      <div className="overflow-y-auto bg-background-elevated px-5 py-4 space-y-3">
+      <div className="bg-background-elevated px-5 py-4 space-y-3">
         {messages.map((message) => (
           <motion.div
             key={message.id}

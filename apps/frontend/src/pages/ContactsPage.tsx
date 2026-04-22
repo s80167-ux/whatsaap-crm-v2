@@ -4,15 +4,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { assignContact } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { HistoryRangePicker } from "../components/HistoryRangePicker";
 import { useContact, useContacts } from "../hooks/useContacts";
 import { getStoredUser } from "../lib/auth";
+import { DEFAULT_CONTACT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
 
 export function ContactsPage() {
   const queryClient = useQueryClient();
   const currentUser = getStoredUser();
   const [assigningContactId, setAssigningContactId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const { data: contacts = [], isLoading } = useContacts();
+  const [contactHistoryRange, setContactHistoryRange] = useState(DEFAULT_CONTACT_HISTORY_RANGE);
+  const { data: contacts = [], isLoading } = useContacts(contactHistoryRange);
   const { data: selectedContact } = useContact(selectedContactId ?? undefined);
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
 
@@ -27,7 +30,7 @@ export function ContactsPage() {
         contactId,
         organizationUserId: currentUser.organizationUserId
       });
-      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.invalidateQueries({ queryKey: ["contacts", contactHistoryRange.unit, contactHistoryRange.value] });
     } finally {
       setAssigningContactId(null);
     }
@@ -41,6 +44,10 @@ export function ContactsPage() {
         <p className="mt-2 max-w-2xl section-copy">
           Every customer is stored once per organization and can fan out into many WhatsApp identities without duplicating the core record.
         </p>
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+          <HistoryRangePicker label="Contact history" range={contactHistoryRange} onChange={setContactHistoryRange} />
+          <p className="text-sm text-text-muted">{contacts.length} contacts in {getHistoryRangeLabel(contactHistoryRange).toLowerCase()}</p>
+        </div>
         <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-white/80">
           <table className="min-w-full bg-white/80">
             <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">

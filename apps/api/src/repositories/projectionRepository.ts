@@ -240,10 +240,14 @@ export class ProjectionRepository {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ): Promise<ConversationSummaryRow[]> {
     const assignedOnly = options?.assignedOnly ?? false;
     const organizationUserId = options?.organizationUserId ?? null;
+    const activitySince = options?.activityRange?.since ?? null;
 
     const result = await client.query<ConversationSummaryRow>(
       `
@@ -269,6 +273,7 @@ export class ProjectionRepository {
         join conversations c on c.id = its.conversation_id
         join contacts ct on ct.id = its.contact_id
         where its.organization_id = $1
+          and ($4::timestamptz is null or its.last_message_at >= $4::timestamptz)
           and (
             not $2::boolean
             or its.assigned_user_id = $3
@@ -281,7 +286,7 @@ export class ProjectionRepository {
           )
         order by its.last_message_at desc nulls last, its.updated_at desc, its.conversation_id desc
       `,
-      [organizationId, assignedOnly, organizationUserId]
+      [organizationId, assignedOnly, organizationUserId, activitySince]
     );
 
     return result.rows;
@@ -293,10 +298,14 @@ export class ProjectionRepository {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ): Promise<ContactRecord[]> {
     const assignedOnly = options?.assignedOnly ?? false;
     const organizationUserId = options?.organizationUserId ?? null;
+    const activitySince = options?.activityRange?.since ?? null;
 
     const result = await client.query<ContactRecord>(
       `
@@ -309,6 +318,7 @@ export class ProjectionRepository {
           cs.owner_user_id
         from contact_summary cs
         where cs.organization_id = $1
+          and ($4::timestamptz is null or cs.last_activity_at >= $4::timestamptz)
           and (
             not $2::boolean
             or cs.owner_user_id = $3
@@ -321,7 +331,7 @@ export class ProjectionRepository {
           )
         order by cs.last_activity_at desc nulls last, cs.updated_at desc, cs.contact_id desc
       `,
-      [organizationId, assignedOnly, organizationUserId]
+      [organizationId, assignedOnly, organizationUserId, activitySince]
     );
 
     return result.rows;

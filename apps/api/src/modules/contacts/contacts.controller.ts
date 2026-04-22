@@ -5,7 +5,7 @@ import { AppError } from "../../lib/errors.js";
 import { ContactAssignmentService } from "../../services/contactAssignmentService.js";
 import { ContactCommandService } from "../../services/contactCommandService.js";
 import { AuditLogService } from "../../services/auditLogService.js";
-import { QueryService } from "../../services/queryService.js";
+import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
 
 const queryService = new QueryService();
@@ -40,6 +40,15 @@ const organizationQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
 
+const historyRangeQuerySchema = z
+  .object({
+    days: z.coerce.number().int().positive().max(365).optional(),
+    months: z.coerce.number().int().positive().max(24).optional()
+  })
+  .refine((input) => !(input.days && input.months), {
+    message: "Choose either days or months, not both"
+  });
+
 function requireOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
@@ -59,10 +68,32 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
+function resolveActivityRange(request: Request): ActivityRangeFilter | undefined {
+  const { days, months } = historyRangeQuerySchema.parse(request.query);
+
+  if (!days && !months) {
+    return undefined;
+  }
+
+  const now = new Date();
+  const since = new Date(now);
+
+  if (days) {
+    since.setUTCDate(since.getUTCDate() - days);
+  } else if (months) {
+    since.setUTCMonth(since.getUTCMonth() - months);
+  }
+
+  return {
+    since: since.toISOString()
+  };
+}
+
 export async function getContacts(request: Request, response: Response) {
   const auth = requireAuth(request);
   const organizationId = requireOrganizationId(request);
-  const contacts = await queryService.listContacts(auth, organizationId);
+  const activityRange = resolveActivityRange(request);
+  const contacts = await queryService.listContacts(auth, organizationId, activityRange);
   return response.json({ data: contacts });
 }
 

@@ -4,6 +4,10 @@ import { ConversationService } from "./conversationService.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import type { AuthUser } from "../types/auth.js";
 
+export interface ActivityRangeFilter {
+  since: string;
+}
+
 export class QueryService {
   constructor(
     private readonly contactRepository = new ContactRepository(),
@@ -22,10 +26,13 @@ export class QueryService {
     };
   }
 
-  async listContacts(authUser: AuthUser, organizationId: string) {
+  async listContacts(authUser: AuthUser, organizationId: string, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
-      return await this.contactRepository.list(client, organizationId, this.getScope(authUser));
+      return await this.contactRepository.list(client, organizationId, {
+        ...this.getScope(authUser),
+        activityRange
+      });
     } finally {
       client.release();
     }
@@ -40,19 +47,25 @@ export class QueryService {
     }
   }
 
-  async listConversations(authUser: AuthUser, organizationId: string) {
+  async listConversations(authUser: AuthUser, organizationId: string, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
-      return await this.conversationService.list(client, organizationId, this.getScope(authUser));
+      return await this.conversationService.list(client, organizationId, {
+        ...this.getScope(authUser),
+        activityRange
+      });
     } finally {
       client.release();
     }
   }
 
-  async listMessages(authUser: AuthUser, organizationId: string, conversationId: string) {
+  async listMessages(authUser: AuthUser, organizationId: string, conversationId: string, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
-      return await this.messageRepository.listByConversation(client, organizationId, conversationId, this.getScope(authUser));
+      return await this.messageRepository.listByConversation(client, organizationId, conversationId, {
+        ...this.getScope(authUser),
+        activityRange
+      });
     } finally {
       client.release();
     }

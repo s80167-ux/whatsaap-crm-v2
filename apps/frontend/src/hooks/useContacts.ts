@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchContact, fetchContacts } from "../api/crm";
+import type { HistoryRange } from "../lib/historyRange";
 
-export function useContacts() {
+export function useContacts(range?: HistoryRange) {
   return useQuery({
-    queryKey: ["contacts"],
-    queryFn: fetchContacts
+    queryKey: ["contacts", range?.unit, range?.value],
+    queryFn: () => fetchContacts(range)
   });
 }
 

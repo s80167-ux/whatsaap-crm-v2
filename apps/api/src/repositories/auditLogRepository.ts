@@ -5,6 +5,7 @@ export interface AuditLogRecord {
   organization_id: string | null;
   actor_auth_user_id: string | null;
   actor_organization_user_id: string | null;
+  actor_name?: string | null;
   actor_role: string | null;
   action: string;
   entity_type: string;
@@ -66,6 +67,9 @@ export class AuditLogRepository {
     client: PoolClient,
     input?: {
       organizationId?: string | null;
+      entityType?: string | null;
+      entityId?: string | null;
+      actionPrefix?: string | null;
       limit?: number;
     }
   ): Promise<AuditLogRecord[]> {
@@ -77,14 +81,32 @@ export class AuditLogRepository {
       conditions.push(`organization_id = $${values.length}`);
     }
 
+    if (input?.entityType) {
+      values.push(input.entityType);
+      conditions.push(`entity_type = $${values.length}`);
+    }
+
+    if (input?.entityId) {
+      values.push(input.entityId);
+      conditions.push(`entity_id = $${values.length}`);
+    }
+
+    if (input?.actionPrefix) {
+      values.push(`${input.actionPrefix}%`);
+      conditions.push(`action like $${values.length}`);
+    }
+
     values.push(input?.limit ?? 100);
 
     const result = await client.query<AuditLogRecord>(
       `
-        select *
-        from audit_logs
-        where ${conditions.join(" and ")}
-        order by created_at desc, id desc
+        select
+          al.*,
+          ou.full_name as actor_name
+        from audit_logs al
+        left join organization_users ou on ou.id = al.actor_organization_user_id
+        where ${conditions.map((condition) => condition.replaceAll("organization_id", "al.organization_id").replaceAll("entity_type", "al.entity_type").replaceAll("entity_id", "al.entity_id").replaceAll("action", "al.action")).join(" and ")}
+        order by al.created_at desc, al.id desc
         limit $${values.length}
       `,
       values

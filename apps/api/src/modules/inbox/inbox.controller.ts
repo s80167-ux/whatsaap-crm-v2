@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { AppError } from "../../lib/errors.js";
-import { QueryService } from "../../services/queryService.js";
+import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
 
 const queryService = new QueryService();
 
@@ -12,6 +12,15 @@ const conversationParamsSchema = z.object({
 const organizationQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
+
+const historyRangeQuerySchema = z
+  .object({
+    days: z.coerce.number().int().positive().max(365).optional(),
+    months: z.coerce.number().int().positive().max(24).optional()
+  })
+  .refine((input) => !(input.days && input.months), {
+    message: "Choose either days or months, not both"
+  });
 
 function requireOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
@@ -32,10 +41,32 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
+function resolveActivityRange(request: Request): ActivityRangeFilter | undefined {
+  const { days, months } = historyRangeQuerySchema.parse(request.query);
+
+  if (!days && !months) {
+    return undefined;
+  }
+
+  const now = new Date();
+  const since = new Date(now);
+
+  if (days) {
+    since.setUTCDate(since.getUTCDate() - days);
+  } else if (months) {
+    since.setUTCMonth(since.getUTCMonth() - months);
+  }
+
+  return {
+    since: since.toISOString()
+  };
+}
+
 export async function getInboxThreads(request: Request, response: Response) {
   const auth = requireAuth(request);
   const organizationId = requireOrganizationId(request);
-  const conversations = await queryService.listConversations(auth, organizationId);
+  const activityRange = resolveActivityRange(request);
+  const conversations = await queryService.listConversations(auth, organizationId, activityRange);
   return response.json({ data: conversations });
 }
 
@@ -43,6 +74,7 @@ export async function getInboxThreadMessages(request: Request, response: Respons
   const auth = requireAuth(request);
   const organizationId = requireOrganizationId(request);
   const { conversationId } = conversationParamsSchema.parse(request.params);
-  const messages = await queryService.listMessages(auth, organizationId, conversationId);
+  const activityRange = resolveActivityRange(request);
+  const messages = await queryService.listMessages(auth, organizationId, conversationId, activityRange);
   return response.json({ data: messages });
 }

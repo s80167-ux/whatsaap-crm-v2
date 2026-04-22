@@ -228,11 +228,31 @@ Status: in progress
   - [x] persist `server_ack` for outbound delivery
 - [x] Verify end-to-end recipient read receipts on a real device after the new `messages.update` ack pipeline.
 
+## Phase 11: Sales Module
+
+Status: in progress
+
+- [x] Add a dedicated Sales phase to the roadmap.
+- [x] Replace the Sales placeholder page with live role-scoped sales data.
+- [x] Implement first-pass sales query endpoints:
+  - [x] `GET /sales/orders`
+  - [x] `GET /sales/summary`
+- [x] Implement first-pass sales command endpoint:
+  - [x] `POST /sales/orders`
+- [x] Scope sales visibility by role:
+  - [x] admin and manager can read all organization sales
+  - [x] agent and user read assigned sales only
+- [x] Add quick-create sales order workflow using canonical contacts.
+- [x] Add sales order detail view and item lines from `sales_order_items`.
+- [x] Add lead-to-order conversion workflow.
+- [x] Add sales updates, reassignment, and close-out actions.
+- [x] Add revenue and pipeline widgets into role-specific dashboards.
+
 ## Current Execution Status
 
-- Current phase: Phase 10, Ops, Deployment, and Hardening
-- Current completed step: Inbox now supports outbound one-file media send through the live queue and connector flow
-- Next highest-impact step: storage-backed media persistence and true preview/download support, followed by any remaining shared TypeScript workspace cleanup
+- Current phase: Phase 11, Sales Module
+- Current completed step: revenue and pipeline widgets are now live in the role-specific dashboards for agent, admin, and super admin views
+- Next highest-impact step: add sales update history and dashboard drill-down links so pipeline metrics can open the underlying orders directly
 
 ## Recommended Immediate Execution Order
 

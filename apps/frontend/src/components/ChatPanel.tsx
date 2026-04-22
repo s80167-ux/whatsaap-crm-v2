@@ -85,10 +85,12 @@ function getMessageTypeIcon(messageType: string) {
 export function ChatPanel({
   conversation,
   messages,
+  historyRangeLabel,
   onMessageSent
 }: {
   conversation?: Conversation;
   messages: Message[];
+  historyRangeLabel: string;
   onMessageSent: () => void;
 }) {
   const [text, setText] = useState("");
@@ -187,7 +189,7 @@ export function ChatPanel({
   }
 
   return (
-    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto] overflow-hidden p-0 xl:sticky xl:top-0" elevated>
+    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0 xl:sticky xl:top-0" elevated>
       <header className="border-b border-border bg-white px-6 py-5 xl:px-7">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
@@ -202,9 +204,13 @@ export function ChatPanel({
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
       <div className="space-y-4 overflow-y-auto bg-background-elevated px-3 py-5 sm:px-4 xl:px-5 2xl:px-7">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
+        {messages.length > 0 ? (
+          messages.map((message) => <MessageBubble key={message.id} message={message} />)
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border bg-white/80 px-5 py-8 text-center text-sm leading-6 text-text-muted">
+            No chat history found in {historyRangeLabel.toLowerCase()}.
+          </div>
+        )}
       </div>
       <footer className="border-t border-border bg-white px-3 py-4 sm:px-4 xl:px-5 2xl:px-7">
         {attachment ? (

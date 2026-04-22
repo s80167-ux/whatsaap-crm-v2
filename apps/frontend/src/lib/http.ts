@@ -71,6 +71,22 @@ export async function apiPost<T>(path: string, body: unknown, includeAuth = true
   return parseResponse<T>(response);
 }
 
+export async function apiPatch<T>(path: string, body: unknown, includeAuth = true): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.apiBaseUrl}${path}`, {
+      method: "PATCH",
+      headers: buildHeaders(includeAuth),
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw new Error(getNetworkErrorMessage());
+  }
+
+  return parseResponse<T>(response);
+}
+
 export async function apiDelete<T>(path: string, includeAuth = true): Promise<T> {
   let response: Response;
 

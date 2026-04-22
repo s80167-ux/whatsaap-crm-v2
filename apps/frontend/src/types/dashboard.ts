@@ -2,11 +2,22 @@ export interface DashboardMetric {
   label: string;
   value: number | string;
   hint: string;
+  href?: string;
 }
 
 export interface DashboardSummary {
   scope: "agent" | "admin" | "super_admin";
   metrics: DashboardMetric[];
+  sales?: {
+    title: string;
+    stats: DashboardMetric[];
+    pipeline: Array<{
+      status: string;
+      count: number;
+      value: string;
+      href?: string;
+    }>;
+  };
 }
 
 export interface PlatformOrganization {

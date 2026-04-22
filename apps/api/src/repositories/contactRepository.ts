@@ -193,6 +193,9 @@ export class ContactRepository {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ): Promise<ContactRecord[]> {
     return this.projectionRepository.listContactSummaries(client, organizationId, options);

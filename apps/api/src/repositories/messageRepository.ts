@@ -301,10 +301,14 @@ export class MessageRepository {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ): Promise<MessageRecord[]> {
     const assignedOnly = options?.assignedOnly ?? false;
     const organizationUserId = options?.organizationUserId ?? null;
+    const activitySince = options?.activityRange?.since ?? null;
     const result = await client.query<MessageRecord>(
       `
         select
@@ -326,6 +330,7 @@ export class MessageRepository {
         from messages
         where organization_id = $1
           and conversation_id = $2
+          and ($5::timestamptz is null or sent_at >= $5::timestamptz)
           and (
             not $3::boolean
             or exists (
@@ -345,7 +350,7 @@ export class MessageRepository {
           )
         order by sent_at asc, id asc
       `,
-      [organizationId, conversationId, assignedOnly, organizationUserId]
+      [organizationId, conversationId, assignedOnly, organizationUserId, activitySince]
     );
 
     return result.rows;

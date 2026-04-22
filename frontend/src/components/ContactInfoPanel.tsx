@@ -39,7 +39,7 @@ export function ContactInfoPanel({
   }
 
   return (
-    <Card className="bg-white xl:max-h-[calc(100vh-9.5rem)] xl:overflow-auto" elevated>
+    <Card className="bg-white" elevated>
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Contact</p>
       {conversation ? (
         <div className="mt-5 space-y-4">

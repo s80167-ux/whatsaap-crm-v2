@@ -62,5 +62,8 @@ The repository now runs from `apps/*`. The existing `frontend/` and `backend/` f
 
 ## Known Deferred Work
 
-- Inbox media rendering and outbound media sending remain intentionally deferred to the next implementation phase.
-- Full end-to-end read receipt verification now depends on a real recipient device opening the message after the new `messages.update` path was wired.
+- Storage-backed media preview and download still need a dedicated persistence pass on top of the new outbound/inbound media flow.
+- Sales has now moved beyond placeholder state, but deeper workflows remain deferred:
+  - sales order detail and item lines
+  - lead-to-order conversion
+  - dashboard-level pipeline and revenue widgets

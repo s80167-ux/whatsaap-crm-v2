@@ -22,44 +22,50 @@ export function InboxPage() {
   const conversationCountLabel = `${conversations.length} active threads`;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[340px,minmax(0,1fr),300px] xl:items-start">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white" elevated>
-          <header className="pb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="section-title">Latest conversations</h2>
-                <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+    <div className="space-y-5">
+      <div className="grid gap-5 xl:grid-cols-[340px,minmax(0,1fr)] xl:items-start">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <Card className="grid max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr] bg-white" elevated>
+            <header className="pb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="section-title">Latest conversations</h2>
+                  <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+                </div>
               </div>
-            </div>
-          </header>
-          {isLoading ? (
-            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
-          ) : (
-            <ConversationList
-              conversations={conversations}
-              selectedConversationId={stableSelectedConversation?.id}
-              onSelect={setSelectedConversation}
-            />
-          )}
-        </Card>
-      </motion.div>
-      <ChatPanel
-        conversation={stableSelectedConversation}
-        messages={messages}
-        onMessageSent={() => {
-          void queryClient.invalidateQueries({ queryKey: ["messages", stableSelectedConversation?.id] });
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
-        }}
-      />
-      <ContactInfoPanel
-        conversation={stableSelectedConversation}
-        onAssigned={() => {
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
-          void queryClient.invalidateQueries({ queryKey: ["messages", stableSelectedConversation?.id] });
-        }}
-      />
+            </header>
+            {isLoading ? (
+              <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+            ) : (
+              <ConversationList
+                conversations={conversations}
+                selectedConversationId={stableSelectedConversation?.id}
+                onSelect={setSelectedConversation}
+              />
+            )}
+          </Card>
+        </motion.div>
+        <div className="min-w-0">
+          <ChatPanel
+            conversation={stableSelectedConversation}
+            messages={messages}
+            onMessageSent={() => {
+              void queryClient.invalidateQueries({ queryKey: ["messages", stableSelectedConversation?.id] });
+              void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            }}
+          />
+        </div>
+      </div>
+      <div className="xl:max-w-[340px]">
+        <ContactInfoPanel
+          conversation={stableSelectedConversation}
+          onAssigned={() => {
+            void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            void queryClient.invalidateQueries({ queryKey: ["messages", stableSelectedConversation?.id] });
+          }}
+        />
+      </div>
     </div>
   );
 }

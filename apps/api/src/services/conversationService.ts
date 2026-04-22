@@ -27,6 +27,9 @@ export class ConversationService {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ) {
     return this.repository.list(client, organizationId, options);

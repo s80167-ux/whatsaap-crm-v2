@@ -162,6 +162,9 @@ export class ConversationRepository {
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
     }
   ): Promise<any[]> {
     return this.projectionRepository.listConversationSummaries(client, organizationId, options);

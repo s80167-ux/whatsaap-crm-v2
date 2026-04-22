@@ -37,7 +37,13 @@ export class AuditLogService {
     );
   }
 
-  async list(input?: { organizationId?: string | null; limit?: number }) {
+  async list(input?: {
+    organizationId?: string | null;
+    entityType?: string | null;
+    entityId?: string | null;
+    actionPrefix?: string | null;
+    limit?: number;
+  }) {
     const client = await pool.connect();
     try {
       return this.repository.list(client, input);
