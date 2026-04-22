@@ -1,10 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchSalesOrderDetail, fetchSalesOrderHistory, fetchSalesOrders, fetchSalesSummary } from "../api/crm";
 
-export function useSalesOrders(status?: "open" | "closed_won" | "closed_lost") {
+export function useSalesOrders(filters?: {
+  status?: "open" | "closed_won" | "closed_lost";
+  createdFrom?: string;
+  createdTo?: string;
+  closedFrom?: string;
+  closedTo?: string;
+}) {
   return useQuery({
-    queryKey: ["sales-orders", status ?? "all"],
-    queryFn: () => fetchSalesOrders(status)
+    queryKey: [
+      "sales-orders",
+      filters?.status ?? "all",
+      filters?.createdFrom ?? null,
+      filters?.createdTo ?? null,
+      filters?.closedFrom ?? null,
+      filters?.closedTo ?? null
+    ],
+    queryFn: () => fetchSalesOrders(filters)
   });
 }
 

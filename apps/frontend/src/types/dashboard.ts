@@ -17,6 +17,14 @@ export interface DashboardSummary {
       value: string;
       href?: string;
     }>;
+    trends?: Array<{
+      label: string;
+      metric: "created_orders" | "won_revenue";
+      value: number | string;
+      range_start: string;
+      range_end: string;
+      href?: string;
+    }>;
   };
 }
 

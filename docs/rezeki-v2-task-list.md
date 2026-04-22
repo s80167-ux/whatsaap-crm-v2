@@ -230,7 +230,7 @@ Status: in progress
 
 ## Phase 11: Sales Module
 
-Status: in progress
+Status: completed
 
 - [x] Add a dedicated Sales phase to the roadmap.
 - [x] Replace the Sales placeholder page with live role-scoped sales data.
@@ -247,12 +247,36 @@ Status: in progress
 - [x] Add lead-to-order conversion workflow.
 - [x] Add sales updates, reassignment, and close-out actions.
 - [x] Add revenue and pipeline widgets into role-specific dashboards.
+- [x] Add lead detail and lead history visibility in the Sales workspace.
+- [x] Add a unified sales-and-lead audit timeline inside the Sales workspace.
+- [x] Add inline lead source and temperature editing.
+- [x] Add one-click jumps from timeline entries to the linked lead or order record.
+- [x] Add inline lead status editing and reassignment controls.
+- [x] Add dashboard trend-point drill-down into filtered Sales order views.
+- [x] Add lead and order timeline deep-link preselection in the Sales workspace.
+- [x] Add copyable share links for focused sales and lead records.
+- [x] Preserve section focus and scroll when opening deep-linked Sales timelines.
+- [x] Add direct dashboard-to-timeline share actions.
+- [x] Add order-row share actions in the Sales workspace.
+- [x] Add lead-row share actions in the Sales workspace.
+- [x] Add lightweight share-link feedback toasts across Dashboard and Sales views.
+
+## Phase 12: Post-Sales UX Refinements
+
+Status: in progress
+
+- [x] Add per-record share actions from timeline entries so users can copy lead or order deep links straight from each audit event.
+- [ ] Add inline share actions on dashboard metric cards without requiring navigation first.
+- [ ] Preserve table scroll position and selected-row highlight when returning from deep-linked Sales views.
+- [ ] Add lightweight “copied” feedback standardization across all CRM sharing entry points.
+- [ ] Add deep-link fallback messaging when a shared lead or order no longer exists or is outside the user’s scope.
+- [ ] Add share-entry analytics or audit events for copied Sales deep links.
 
 ## Current Execution Status
 
-- Current phase: Phase 11, Sales Module
-- Current completed step: revenue and pipeline widgets are now live in the role-specific dashboards for agent, admin, and super admin views
-- Next highest-impact step: add sales update history and dashboard drill-down links so pipeline metrics can open the underlying orders directly
+- Current phase: Phase 12, Post-Sales UX Refinements
+- Current completed step: timeline entries in the Sales workspace now support direct lead and order share actions
+- Next highest-impact step: preserve table scroll position and selected-row highlight when returning from deep-linked Sales views
 
 ## Recommended Immediate Execution Order
 

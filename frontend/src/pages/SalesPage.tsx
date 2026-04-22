@@ -7,13 +7,13 @@ export function SalesPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Sales</p>
         <h2 className="mt-3 section-title">Pipeline workspace</h2>
         <p className="mt-2 section-copy">
-          This surface is reserved for the next CRM pass: lead progression, sales orders, and owner-based revenue views on top of the SaaS schema.
+          This is the legacy compatibility frontend. The live Sales dashboard now runs from the monorepo app under <code>apps/frontend</code>.
         </p>
       </Card>
       <Card elevated>
         <p className="text-sm leading-6 text-text-muted">
-          The underlying `leads`, `sales_orders`, and `sales_order_items` tables are already part of the migration track. What remains is role-scoped query
-          endpoints and workflow UI.
+          If you are seeing this page in local development, you started the old app from <code>frontend/</code>. Start the current frontend from the repo root
+          with <code>npm run dev:frontend</code> so Sales loads the live leads, orders, and summary data.
         </p>
       </Card>
     </section>

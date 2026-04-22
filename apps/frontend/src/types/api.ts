@@ -104,6 +104,15 @@ export interface SalesOrderHistoryEntry {
   created_at: string;
 }
 
+export interface AuditHistoryEntry {
+  id: string;
+  actor_name?: string | null;
+  actor_role?: string | null;
+  action: string;
+  metadata: unknown;
+  created_at: string;
+}
+
 export interface Lead {
   id: string;
   organization_id: string;

@@ -23,8 +23,34 @@ type DashboardSummary = {
       value: string;
       href?: string;
     }>;
+    trends?: Array<{
+      label: string;
+      metric: "created_orders" | "won_revenue";
+      value: number | string;
+      range_start: string;
+      range_end: string;
+      href?: string;
+    }>;
   };
 };
+
+function buildDailyRanges(days: number) {
+  const now = new Date();
+  const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  return Array.from({ length: days }, (_, index) => {
+    const start = new Date(startOfTodayUtc);
+    start.setUTCDate(start.getUTCDate() - (days - index - 1));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+
+    return {
+      label: start.toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "UTC" }),
+      range_start: start.toISOString(),
+      range_end: end.toISOString()
+    };
+  });
+}
 
 export class DashboardService {
   private readonly organizationAdminRepository = new OrganizationAdminRepository();
@@ -111,6 +137,38 @@ export class DashboardService {
       ]);
 
       const salesByStatus = new Map(salesRows.rows.map((row) => [row.status, row]));
+      const createdOrderTrendRows = await client.query<{ bucket_start: string; count: string }>(
+        `
+          select
+            date_trunc('day', so.created_at) as bucket_start,
+            count(*)::text as count
+          from sales_orders so
+          where so.organization_id = $1
+            and so.assigned_user_id = $2
+            and so.created_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `,
+        [authUser.organizationId, authUser.organizationUserId]
+      );
+      const wonRevenueTrendRows = await client.query<{ bucket_start: string; value: string }>(
+        `
+          select
+            date_trunc('day', so.closed_at) as bucket_start,
+            coalesce(sum(so.total_amount), 0)::text as value
+          from sales_orders so
+          where so.organization_id = $1
+            and so.assigned_user_id = $2
+            and so.status = 'closed_won'
+            and so.closed_at is not null
+            and so.closed_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `,
+        [authUser.organizationId, authUser.organizationUserId]
+      );
+      const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
+      const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
 
       return {
         scope: "agent",
@@ -158,7 +216,25 @@ export class DashboardService {
             count: Number(salesByStatus.get(status)?.count ?? 0),
             value: String(salesByStatus.get(status)?.value ?? "0"),
             href: `/sales?status=${status}`
-          }))
+          })),
+          trends: buildDailyRanges(7).flatMap((range) => [
+            {
+              label: `${range.label} created`,
+              metric: "created_orders" as const,
+              value: createdByDay.get(range.range_start) ?? 0,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?created_from=${encodeURIComponent(range.range_start)}&created_to=${encodeURIComponent(range.range_end)}`
+            },
+            {
+              label: `${range.label} won`,
+              metric: "won_revenue" as const,
+              value: `MYR ${Number(wonRevenueByDay.get(range.range_start) ?? 0).toFixed(2)}`,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
+            }
+          ])
         }
       };
     } finally {
@@ -227,6 +303,36 @@ export class DashboardService {
 
       const salesByStatus = new Map(salesRows.rows.map((row) => [row.status, row]));
       const leadsByStatus = new Map(leadRows.rows.map((row) => [row.status, row]));
+      const createdOrderTrendRows = await client.query<{ bucket_start: string; count: string }>(
+        `
+          select
+            date_trunc('day', so.created_at) as bucket_start,
+            count(*)::text as count
+          from sales_orders so
+          where so.organization_id = $1
+            and so.created_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `,
+        [authUser.organizationId]
+      );
+      const wonRevenueTrendRows = await client.query<{ bucket_start: string; value: string }>(
+        `
+          select
+            date_trunc('day', so.closed_at) as bucket_start,
+            coalesce(sum(so.total_amount), 0)::text as value
+          from sales_orders so
+          where so.organization_id = $1
+            and so.status = 'closed_won'
+            and so.closed_at is not null
+            and so.closed_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `,
+        [authUser.organizationId]
+      );
+      const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
+      const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
 
       return {
         scope: "admin",
@@ -282,7 +388,25 @@ export class DashboardService {
             count: Number(salesByStatus.get(status)?.count ?? 0),
             value: String(salesByStatus.get(status)?.value ?? "0"),
             href: `/sales?status=${status}`
-          }))
+          })),
+          trends: buildDailyRanges(7).flatMap((range) => [
+            {
+              label: `${range.label} created`,
+              metric: "created_orders" as const,
+              value: createdByDay.get(range.range_start) ?? 0,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?created_from=${encodeURIComponent(range.range_start)}&created_to=${encodeURIComponent(range.range_end)}`
+            },
+            {
+              label: `${range.label} won`,
+              metric: "won_revenue" as const,
+              value: `MYR ${Number(wonRevenueByDay.get(range.range_start) ?? 0).toFixed(2)}`,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
+            }
+          ])
         }
       };
     } finally {
@@ -316,6 +440,32 @@ export class DashboardService {
         ["active", "trial"].includes(organization.status)
       ).length;
       const salesByStatus = new Map(salesRows.rows.map((row) => [row.status, row]));
+      const createdOrderTrendRows = await client.query<{ bucket_start: string; count: string }>(
+        `
+          select
+            date_trunc('day', so.created_at) as bucket_start,
+            count(*)::text as count
+          from sales_orders so
+          where so.created_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `
+      );
+      const wonRevenueTrendRows = await client.query<{ bucket_start: string; value: string }>(
+        `
+          select
+            date_trunc('day', so.closed_at) as bucket_start,
+            coalesce(sum(so.total_amount), 0)::text as value
+          from sales_orders so
+          where so.status = 'closed_won'
+            and so.closed_at is not null
+            and so.closed_at >= date_trunc('day', timezone('utc', now())) - interval '6 days'
+          group by 1
+          order by 1 asc
+        `
+      );
+      const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
+      const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
 
       return {
         scope: "super_admin",
@@ -368,7 +518,25 @@ export class DashboardService {
             count: Number(salesByStatus.get(status)?.count ?? 0),
             value: String(salesByStatus.get(status)?.value ?? "0"),
             href: `/sales?status=${status}`
-          }))
+          })),
+          trends: buildDailyRanges(7).flatMap((range) => [
+            {
+              label: `${range.label} created`,
+              metric: "created_orders" as const,
+              value: createdByDay.get(range.range_start) ?? 0,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?created_from=${encodeURIComponent(range.range_start)}&created_to=${encodeURIComponent(range.range_end)}`
+            },
+            {
+              label: `${range.label} won`,
+              metric: "won_revenue" as const,
+              value: `MYR ${Number(wonRevenueByDay.get(range.range_start) ?? 0).toFixed(2)}`,
+              range_start: range.range_start,
+              range_end: range.range_end,
+              href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
+            }
+          ])
         }
       };
     } finally {

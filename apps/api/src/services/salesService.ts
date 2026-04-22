@@ -20,13 +20,27 @@ export class SalesService {
     };
   }
 
-  async listOrders(authUser: AuthUser, organizationId: string, filters?: { status?: string }) {
+  async listOrders(
+    authUser: AuthUser,
+    organizationId: string,
+    filters?: {
+      status?: string;
+      createdFrom?: string;
+      createdTo?: string;
+      closedFrom?: string;
+      closedTo?: string;
+    }
+  ) {
     const client = await pool.connect();
     try {
       return await this.salesRepository.listOrders(client, {
         organizationId,
         ...this.getScope(authUser),
-        status: filters?.status
+        status: filters?.status,
+        createdFrom: filters?.createdFrom,
+        createdTo: filters?.createdTo,
+        closedFrom: filters?.closedFrom,
+        closedTo: filters?.closedTo
       });
     } finally {
       client.release();

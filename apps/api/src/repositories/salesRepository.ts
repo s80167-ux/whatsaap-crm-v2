@@ -54,6 +54,10 @@ export class SalesRepository {
       assignedOnly: boolean;
       organizationUserId?: string | null;
       status?: string | null;
+      createdFrom?: string | null;
+      createdTo?: string | null;
+      closedFrom?: string | null;
+      closedTo?: string | null;
     }
   ): Promise<SalesOrderRow[]> {
     const result = await client.query<SalesOrderRow>(
@@ -78,13 +82,26 @@ export class SalesRepository {
         left join leads ld on ld.id = so.lead_id
         where so.organization_id = $1
           and ($4::text is null or so.status = $4)
+          and ($5::timestamptz is null or so.created_at >= $5::timestamptz)
+          and ($6::timestamptz is null or so.created_at < $6::timestamptz)
+          and ($7::timestamptz is null or so.closed_at >= $7::timestamptz)
+          and ($8::timestamptz is null or so.closed_at < $8::timestamptz)
           and (
             not $2::boolean
             or so.assigned_user_id = $3
           )
         order by so.updated_at desc, so.created_at desc, so.id desc
       `,
-      [input.organizationId, input.assignedOnly, input.organizationUserId ?? null, input.status ?? null]
+      [
+        input.organizationId,
+        input.assignedOnly,
+        input.organizationUserId ?? null,
+        input.status ?? null,
+        input.createdFrom ?? null,
+        input.createdTo ?? null,
+        input.closedFrom ?? null,
+        input.closedTo ?? null
+      ]
     );
 
     return result.rows;

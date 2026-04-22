@@ -10,7 +10,11 @@ const auditLogService = new AuditLogService();
 
 const organizationQuerySchema = z.object({
   organization_id: z.string().uuid().optional(),
-  status: z.enum(["open", "closed_won", "closed_lost"]).optional()
+  status: z.enum(["open", "closed_won", "closed_lost"]).optional(),
+  created_from: z.string().datetime({ offset: true }).optional(),
+  created_to: z.string().datetime({ offset: true }).optional(),
+  closed_from: z.string().datetime({ offset: true }).optional(),
+  closed_to: z.string().datetime({ offset: true }).optional()
 });
 
 const salesHistoryQuerySchema = z.object({
@@ -72,9 +76,15 @@ function requireOrganizationId(request: Request) {
 
 export async function getSalesOrders(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const { status } = organizationQuerySchema.parse(request.query);
+  const { status, created_from, created_to, closed_from, closed_to } = organizationQuerySchema.parse(request.query);
   const organizationId = requireOrganizationId(request);
-  const orders = await salesService.listOrders(auth, organizationId, { status });
+  const orders = await salesService.listOrders(auth, organizationId, {
+    status,
+    createdFrom: created_from,
+    createdTo: created_to,
+    closedFrom: closed_from,
+    closedTo: closed_to
+  });
   return response.json({ data: orders });
 }
 

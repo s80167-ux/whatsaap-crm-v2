@@ -1,6 +1,7 @@
 import { apiGet, apiPatch, apiPost } from "../lib/http";
 import type { HistoryRange } from "../lib/historyRange";
 import type {
+  AuditHistoryEntry,
   Contact,
   Conversation,
   Lead,
@@ -51,11 +52,33 @@ export async function fetchContact(contactId: string) {
   return response.data;
 }
 
-export async function fetchSalesOrders(status?: "open" | "closed_won" | "closed_lost") {
+export async function fetchSalesOrders(filters?: {
+  status?: "open" | "closed_won" | "closed_lost";
+  createdFrom?: string;
+  createdTo?: string;
+  closedFrom?: string;
+  closedTo?: string;
+}) {
   const searchParams = new URLSearchParams();
 
-  if (status) {
-    searchParams.set("status", status);
+  if (filters?.status) {
+    searchParams.set("status", filters.status);
+  }
+
+  if (filters?.createdFrom) {
+    searchParams.set("created_from", filters.createdFrom);
+  }
+
+  if (filters?.createdTo) {
+    searchParams.set("created_to", filters.createdTo);
+  }
+
+  if (filters?.closedFrom) {
+    searchParams.set("closed_from", filters.closedFrom);
+  }
+
+  if (filters?.closedTo) {
+    searchParams.set("closed_to", filters.closedTo);
   }
 
   const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
@@ -80,6 +103,16 @@ export async function fetchSalesOrderHistory(orderId: string) {
 
 export async function fetchLeads() {
   const response = await apiGet<{ data: Lead[] }>("/leads");
+  return response.data;
+}
+
+export async function fetchLead(leadId: string) {
+  const response = await apiGet<{ data: Lead }>(`/leads/${leadId}`);
+  return response.data;
+}
+
+export async function fetchLeadHistory(leadId: string) {
+  const response = await apiGet<{ data: AuditHistoryEntry[] }>(`/leads/${leadId}/history`);
   return response.data;
 }
 
@@ -154,6 +187,21 @@ export async function createLead(payload: {
   assignedUserId?: string | null;
 }) {
   return apiPost<{ data: Lead }>("/leads", payload);
+}
+
+export async function updateLead(payload: {
+  leadId: string;
+  source?: string | null;
+  status?: Lead["status"];
+  temperature?: Lead["temperature"];
+  assignedUserId?: string | null;
+}) {
+  return apiPatch<{ data: Lead }>(`/leads/${payload.leadId}`, {
+    source: payload.source,
+    status: payload.status,
+    temperature: payload.temperature,
+    assignedUserId: payload.assignedUserId
+  });
 }
 
 export async function convertLeadToOrder(payload: {

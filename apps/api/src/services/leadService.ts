@@ -145,4 +145,128 @@ export class LeadService {
   }) {
     return withTransaction((client) => this.convertToOrder(client, input));
   }
+
+  async getDetail(authUser: AuthUser, organizationId: string, leadId: string) {
+    const client = await pool.connect();
+    try {
+      const lead = await this.leadRepository.findById(client, {
+        organizationId,
+        leadId,
+        ...this.getScope(authUser)
+      });
+
+      if (!lead) {
+        throw new AppError("Lead not found", 404, "lead_not_found");
+      }
+
+      return lead;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getHistory(authUser: AuthUser, organizationId: string, leadId: string, limit = 50) {
+    const client = await pool.connect();
+    try {
+      const lead = await this.leadRepository.findById(client, {
+        organizationId,
+        leadId,
+        ...this.getScope(authUser)
+      });
+
+      if (!lead) {
+        throw new AppError("Lead not found", 404, "lead_not_found");
+      }
+
+      return this.leadRepository.listHistory(client, { leadId, limit });
+    } finally {
+      client.release();
+    }
+  }
+
+  async update(
+    client: PoolClient,
+    input: {
+      authUser: AuthUser;
+      organizationId: string;
+      leadId: string;
+      source?: string | null;
+      status?: string;
+      temperature?: string | null;
+      assignedUserId?: string | null;
+    }
+  ) {
+    if (
+      input.source === undefined &&
+      input.status === undefined &&
+      input.temperature === undefined &&
+      input.assignedUserId === undefined
+    ) {
+      throw new AppError("At least one lead field must be provided", 400, "lead_update_required");
+    }
+
+    if (input.status !== undefined && !VALID_LEAD_STATUSES.has(input.status)) {
+      throw new AppError("Invalid lead status", 400, "invalid_lead_status");
+    }
+
+    if (input.temperature && !VALID_TEMPERATURES.has(input.temperature)) {
+      throw new AppError("Invalid lead temperature", 400, "invalid_lead_temperature");
+    }
+
+    const lead = await this.leadRepository.findById(client, {
+      organizationId: input.organizationId,
+      leadId: input.leadId,
+      ...this.getScope(input.authUser)
+    });
+
+    if (!lead) {
+      throw new AppError("Lead not found", 404, "lead_not_found");
+    }
+
+    const canAssignToOthers =
+      input.authUser.role === "super_admin" || input.authUser.permissionKeys.includes("sales.read_all");
+
+    const assignedUserId =
+      input.assignedUserId === undefined
+        ? undefined
+        : canAssignToOthers
+          ? input.assignedUserId
+          : input.authUser.organizationUserId ?? null;
+
+    await this.leadRepository.update(client, {
+      leadId: input.leadId,
+      source: input.source,
+      status: input.status,
+      temperature: input.temperature,
+      assignedUserId
+    });
+
+    const updatedLead = await this.leadRepository.findById(client, {
+      organizationId: input.organizationId,
+      leadId: input.leadId,
+      assignedOnly: false,
+      organizationUserId: input.authUser.organizationUserId
+    });
+
+    if (!updatedLead) {
+      throw new AppError("Updated lead not found", 404, "lead_not_found");
+    }
+
+    return {
+      previousLead: lead,
+      lead: updatedLead
+    };
+  }
+
+  async updateInNewTransaction(input: {
+    authUser: AuthUser;
+    organizationId: string;
+    leadId: string;
+    source?: string | null;
+    status?: string;
+    temperature?: string | null;
+    assignedUserId?: string | null;
+  }) {
+    return withTransaction((client) => this.update(client, input));
+  }
 }

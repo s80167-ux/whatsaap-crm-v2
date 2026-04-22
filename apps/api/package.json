@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "lint": "tsc --noEmit -p tsconfig.json",
     "create:user": "tsx src/scripts/createUser.ts",
+    "seed:sales-demo": "tsx src/scripts/seedSalesDemo.ts",
     "worker:raw-events": "tsx src/workers/processRawEvents.ts",
     "worker:raw-events:once": "tsx src/workers/processRawEvents.ts --once",
     "worker:message-outbox": "tsx src/workers/processMessageOutbox.ts",

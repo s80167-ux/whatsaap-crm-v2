@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node -e \"console.warn('\\n[legacy frontend] This app is kept only for compatibility. Use `npm run dev:frontend` from the repo root to run apps/frontend.\\n')\" && vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit"

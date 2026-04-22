@@ -14,6 +14,15 @@ export interface LeadRow {
   primary_phone_normalized: string | null;
 }
 
+export interface LeadHistoryRow {
+  id: string;
+  actor_name: string | null;
+  actor_role: string | null;
+  action: string;
+  metadata: unknown;
+  created_at: string;
+}
+
 export class LeadRepository {
   async list(
     client: PoolClient,
@@ -155,5 +164,74 @@ export class LeadRepository {
       `,
       [input.leadId, input.status]
     );
+  }
+
+  async update(
+    client: PoolClient,
+    input: {
+      leadId: string;
+      source?: string | null;
+      status?: string;
+      temperature?: string | null;
+      assignedUserId?: string | null;
+    }
+  ): Promise<void> {
+    await client.query(
+      `
+        update leads
+        set source = case
+              when $2::boolean then $3
+              else source
+            end,
+            status = case
+              when $4::boolean then $5
+              else status
+            end,
+            temperature = case
+              when $6::boolean then $7
+              else temperature
+            end,
+            assigned_user_id = case
+              when $8::boolean then $9
+              else assigned_user_id
+            end,
+            updated_at = timezone('utc', now())
+        where id = $1
+      `,
+      [
+        input.leadId,
+        input.source !== undefined,
+        input.source ?? null,
+        input.status !== undefined,
+        input.status ?? null,
+        input.temperature !== undefined,
+        input.temperature ?? null,
+        input.assignedUserId !== undefined,
+        input.assignedUserId ?? null
+      ]
+    );
+  }
+
+  async listHistory(client: PoolClient, input: { leadId: string; limit?: number }): Promise<LeadHistoryRow[]> {
+    const result = await client.query<LeadHistoryRow>(
+      `
+        select
+          al.id,
+          ou.full_name as actor_name,
+          al.actor_role,
+          al.action,
+          al.metadata,
+          al.created_at
+        from audit_logs al
+        left join organization_users ou on ou.id = al.actor_organization_user_id
+        where al.entity_type = 'lead'
+          and al.entity_id = $1
+        order by al.created_at desc, al.id desc
+        limit $2
+      `,
+      [input.leadId, input.limit ?? 50]
+    );
+
+    return result.rows;
   }
 }

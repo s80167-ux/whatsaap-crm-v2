@@ -8,10 +8,41 @@ import { apiRouter } from "./routes/index.js";
 
 export const app = express();
 
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) {
+    return true;
+  }
+
+  if (origin === env.FRONTEND_URL) {
+    return true;
+  }
+
+  if (env.NODE_ENV !== "production") {
+    try {
+      const parsedOrigin = new URL(origin);
+      return (
+        parsedOrigin.protocol === "http:" &&
+        (parsedOrigin.hostname === "localhost" || parsedOrigin.hostname === "127.0.0.1")
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 app.use(helmet());
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin ?? "unknown"}`));
+    },
     credentials: true
   })
 );

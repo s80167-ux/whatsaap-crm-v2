@@ -12,10 +12,11 @@ export function useOrganizations() {
   });
 }
 
-export function useOrganizationUsers(organizationId?: string | null) {
+export function useOrganizationUsers(organizationId?: string | null, enabled = true) {
   return useQuery({
     queryKey: ["admin-users", organizationId ?? "all"],
-    queryFn: () => fetchUsers(organizationId)
+    queryFn: () => fetchUsers(organizationId),
+    enabled
   });
 }
 
