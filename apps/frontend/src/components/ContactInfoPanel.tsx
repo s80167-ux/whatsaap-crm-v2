@@ -7,6 +7,15 @@ import { getStoredUser } from "../lib/auth";
 import { Button } from "./Button";
 import { Card } from "./Card";
 
+function getContactInitials(name: string | null | undefined) {
+  return (name ?? "Unknown")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+}
+
 export function ContactInfoPanel({
   className,
   conversation,
@@ -22,6 +31,8 @@ export function ContactInfoPanel({
   const canAssign = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("conversations.assign"));
   const isAssignedToCurrentUser = currentUser?.organizationUserId && conversation?.assigned_user_id === currentUser.organizationUserId;
   const isContactAssignedToCurrentUser = currentUser?.organizationUserId && contact?.owner_user_id === currentUser.organizationUserId;
+  const displayName = contact?.display_name ?? conversation?.contact_name ?? null;
+  const avatarUrl = contact?.primary_avatar_url ?? conversation?.contact_avatar_url ?? null;
 
   async function handleAssignToMe() {
     if (!conversation || !currentUser?.organizationUserId) {
@@ -45,10 +56,24 @@ export function ContactInfoPanel({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Contact</p>
       {conversation ? (
         <div className="mt-2 space-y-2">
-          <div>
-            <p className="text-base font-semibold text-text truncate">{contact?.display_name ?? conversation.contact_name}</p>
-            <p className="text-xs text-text-muted truncate">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
-            {contact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{contact.primary_phone_e164}</p> : null}
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border bg-primary/10 text-lg font-semibold text-primary">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName ? `${displayName} profile` : "Contact profile"}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center">{getContactInitials(displayName)}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-text">{displayName ?? "Unknown"}</p>
+              <p className="truncate text-xs text-text-muted">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
+              {contact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{contact.primary_phone_e164}</p> : null}
+            </div>
           </div>
           <div className="rounded-lg border border-border bg-background-tint p-2 mt-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical</p>

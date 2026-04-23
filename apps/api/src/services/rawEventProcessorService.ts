@@ -4,6 +4,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { ProcessedEventKeyRepository } from "../repositories/processedEventKeyRepository.js";
 import { RawEventRepository, type RawChannelEventRecord } from "../repositories/rawEventRepository.js";
+import { bestPhoneFromWhatsAppPayload } from "../utils/phone.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
 
@@ -14,6 +15,7 @@ type WhatsAppMessageEventPayload = {
   remoteJid: string;
   phoneRaw: string | null;
   profileName: string | null;
+  profileAvatarUrl?: string | null;
   textBody: string | null;
   messageType: string;
   direction: "incoming" | "outgoing";
@@ -165,13 +167,17 @@ export class RawEventProcessorService {
           return "ignored" as const;
         }
 
+        const payloadPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload);
+        const phoneRaw = payloadPhone?.startsWith("+60") ? payloadPhone : payload.phoneRaw ?? payloadPhone;
+
         await this.messageIngestionService.ingest({
           organizationId: payload.organizationId,
           whatsappAccountId: payload.whatsappAccountId,
           externalMessageId: payload.externalMessageId,
           remoteJid: payload.remoteJid,
-          phoneRaw: payload.phoneRaw,
+          phoneRaw,
           profileName: payload.profileName,
+          profileAvatarUrl: payload.profileAvatarUrl ?? null,
           textBody: payload.textBody,
           messageType: payload.messageType,
           direction: payload.direction,

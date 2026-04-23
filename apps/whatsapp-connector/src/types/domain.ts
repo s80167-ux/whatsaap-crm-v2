@@ -7,6 +7,7 @@ export interface WhatsAppAccountRecord {
   connection_status: string;
   account_jid: string | null;
   display_name: string | null;
+  history_sync_lookback_days?: number | null;
   connector_owner_id?: string | null;
   connector_claimed_at?: string | null;
   connector_heartbeat_at?: string | null;

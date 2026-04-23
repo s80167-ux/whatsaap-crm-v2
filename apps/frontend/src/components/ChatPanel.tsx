@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import {
   AudioLines,
   Paperclip,
+  Smile,
+  Sparkles,
   X,
   FileText,
   Image as ImageIcon,
@@ -13,11 +15,19 @@ import {
 import type { Conversation, Message, OutboundAttachmentInput } from "../types/api";
 import { sendMessage } from "../api/crm";
 import { getMessagePresentation } from "../lib/messageContent";
+import { useQuickReplies } from "../hooks/useQuickReplies";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { Input } from "./Input";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
+const QUICK_REPLIES = [
+  "Hi, thanks for reaching out. How can I help you today?",
+  "Noted, let me check and get back to you shortly.",
+  "Can you share a little more detail so I can assist better?",
+  "Thank you. We have received your message and will update you soon.",
+  "Would you like me to arrange the next step for you?"
+];
+const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
 
 type ComposerAttachment = OutboundAttachmentInput;
 
@@ -97,10 +107,45 @@ export function ChatPanel({
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendNotice, setSendNotice] = useState<string | null>(null);
+  const [isQuickReplyOpen, setIsQuickReplyOpen] = useState(false);
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [quickReplySearch, setQuickReplySearch] = useState("");
+  const [selectedQuickReplyCategory, setSelectedQuickReplyCategory] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const latestOutgoingMessage = [...messages].reverse().find((message) => message.direction === "outgoing");
   const latestOutgoingStatus = latestOutgoingMessage?.ack_status;
   const latestOutgoingStatusLabel = formatAckStatus(latestOutgoingStatus);
+  const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
+    enabled: Boolean(conversation)
+  });
+  const quickReplies = organizationQuickReplies.length > 0
+    ? organizationQuickReplies.map((template) => ({
+        id: template.id,
+        title: template.title,
+        body: template.body,
+        category: template.category
+      }))
+    : QUICK_REPLIES.map((reply) => ({
+        id: reply,
+        title: reply,
+        body: reply,
+        category: "Starter"
+      }));
+  const quickReplyCategories = Array.from(
+    new Set(quickReplies.map((reply) => reply.category).filter((category): category is string => Boolean(category)))
+  ).sort((left, right) => left.localeCompare(right));
+  const normalizedQuickReplySearch = quickReplySearch.trim().toLowerCase();
+  const filteredQuickReplies = quickReplies.filter((reply) => {
+    const matchesCategory = !selectedQuickReplyCategory || reply.category === selectedQuickReplyCategory;
+    const matchesSearch =
+      !normalizedQuickReplySearch ||
+      reply.title.toLowerCase().includes(normalizedQuickReplySearch) ||
+      reply.body.toLowerCase().includes(normalizedQuickReplySearch) ||
+      (reply.category ?? "").toLowerCase().includes(normalizedQuickReplySearch);
+
+    return matchesCategory && matchesSearch;
+  });
 
   async function handleSend() {
     if (!conversation || (!text.trim() && !attachment)) {
@@ -175,6 +220,22 @@ export function ChatPanel({
     }
   }
 
+  function insertComposerText(value: string) {
+    setText((current) => {
+      const needsSpace = current.length > 0 && !current.endsWith(" ") && !value.startsWith(" ");
+      return `${current}${needsSpace ? " " : ""}${value}`;
+    });
+    textareaRef.current?.focus();
+  }
+
+  function applyQuickReply(reply: string) {
+    setText(reply);
+    setIsQuickReplyOpen(false);
+    setQuickReplySearch("");
+    setSelectedQuickReplyCategory(null);
+    textareaRef.current?.focus();
+  }
+
   if (!conversation) {
     return (
       <Card className="flex min-h-[420px] items-center justify-center p-10" elevated>
@@ -213,26 +274,112 @@ export function ChatPanel({
         )}
       </div>
       <footer className="border-t border-border bg-white px-3 py-4 sm:px-4 xl:px-5 2xl:px-7">
-        {attachment ? (
-          <div className="mb-3 flex items-center justify-between rounded-xl border border-border bg-background-tint px-3 py-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{attachment.kind}</p>
-              <p className="truncate text-sm font-medium text-text">{attachment.fileName}</p>
-              <p className="text-xs text-text-muted">
-                {attachment.mimeType} • {formatBytes(attachment.fileSizeBytes)}
-              </p>
+        {isQuickReplyOpen ? (
+          <div className="mb-3 rounded-2xl border border-border bg-background-tint p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Quick replies</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  {organizationQuickReplies.length > 0
+                    ? "Approved organization replies"
+                    : "Starter replies until your admin creates organization templates"}
+                </p>
+              </div>
+              <button
+                type="button"
+                title="Close quick replies"
+                className="text-xs font-medium text-text-soft hover:text-text"
+                onClick={() => setIsQuickReplyOpen(false)}
+              >
+                Close
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleClearAttachment}
-              className="rounded-full border border-border p-2 text-text-soft transition hover:bg-white hover:text-text"
-              aria-label="Remove attachment"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="mb-3 space-y-3">
+              <input
+                value={quickReplySearch}
+                onChange={(event) => setQuickReplySearch(event.target.value)}
+                placeholder="Search quick replies..."
+                className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-text outline-none transition focus:border-primary/30"
+              />
+              {quickReplyCategories.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    title="Show all quick replies"
+                    onClick={() => setSelectedQuickReplyCategory(null)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      selectedQuickReplyCategory
+                        ? "border-border bg-white text-text-muted hover:text-text"
+                        : "border-primary/30 bg-primary/10 text-primary"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {quickReplyCategories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      title={`Filter quick replies by ${category}`}
+                      onClick={() => setSelectedQuickReplyCategory(category)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        selectedQuickReplyCategory === category
+                          ? "border-primary/30 bg-primary/10 text-primary"
+                          : "border-border bg-white text-text-muted hover:text-text"
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {quickRepliesLoading ? (
+                <p className="rounded-xl border border-border bg-white px-3 py-2 text-xs text-text-muted">
+                  Loading organization replies...
+                </p>
+              ) : null}
+              {!quickRepliesLoading && filteredQuickReplies.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border bg-white px-3 py-4 text-xs leading-5 text-text-muted">
+                  No quick replies match your search or selected category.
+                </p>
+              ) : null}
+              {filteredQuickReplies.map((reply) => (
+                <button
+                  key={reply.id}
+                  type="button"
+                  title={`Insert quick reply: ${reply.title}`}
+                  onClick={() => applyQuickReply(reply.body)}
+                  className="rounded-xl border border-border bg-white px-3 py-2 text-left text-xs leading-5 text-text-muted transition hover:border-primary/30 hover:text-text"
+                >
+                  <span className="block font-semibold text-text">{reply.title}</span>
+                  {reply.category ? <span className="mt-1 block text-[11px] uppercase tracking-[0.16em] text-text-soft">{reply.category}</span> : null}
+                  <span className="mt-1 block">{reply.body}</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
-        <div className="flex items-stretch gap-3">
+        {isEmojiOpen ? (
+          <div className="mb-3 flex flex-wrap gap-2 rounded-2xl border border-border bg-background-tint p-3">
+            {EMOJI_CHOICES.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                title={`Insert ${emoji}`}
+                onClick={() => insertComposerText(emoji)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-lg transition hover:border-primary/30 hover:bg-primary/5"
+                aria-label={`Insert ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {attachment ? (
+          <AttachmentPreview attachment={attachment} onClear={handleClearAttachment} />
+        ) : null}
+        <div className="flex flex-wrap items-stretch gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -241,21 +388,62 @@ export function ChatPanel({
             onChange={handleAttachmentChange}
             title="Attach a file"
           />
-          <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="rounded-xl px-4">
+          <Button
+            type="button"
+            variant="ghost"
+            title="Attach a file"
+            aria-label="Attach a file"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+          >
             <Paperclip className="h-4 w-4" />
           </Button>
-          <Input
+          <Button
+            type="button"
+            variant="ghost"
+            title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+            aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+            onClick={() => {
+              setIsEmojiOpen((current) => !current);
+              setIsQuickReplyOpen(false);
+            }}
+            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+          >
+            <Smile className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+            aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+            onClick={() => {
+              setIsQuickReplyOpen((current) => !current);
+              setIsEmojiOpen(false);
+            }}
+            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+          <textarea
+            ref={textareaRef}
             value={text}
             onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                event.preventDefault();
+                void handleSend();
+              }
+            }}
             placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
-            className="h-14 flex-1 rounded-xl px-5 text-[15px] shadow-[0_12px_30px_rgba(20,32,51,0.06)]"
+            rows={1}
+            className="min-h-7 flex-1 resize-none rounded-xl border border-border bg-white px-5 py-2 text-[15px] text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
           />
           <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="min-w-[112px] rounded-xl px-6">
             {isSending ? "Sending..." : "Send"}
           </Button>
         </div>
         <p className="mt-2 text-xs leading-5 text-text-soft">
-          Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow.
+          Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow.
         </p>
       </footer>
     </Card>
@@ -332,6 +520,68 @@ function MessageBubble({ message }: { message: Message }) {
       ) : null}
     </motion.div>
   );
+}
+
+function AttachmentPreview({
+  attachment,
+  onClear
+}: {
+  attachment: ComposerAttachment;
+  onClear: () => void;
+}) {
+  return (
+    <div className="mb-3 rounded-2xl border border-border bg-background-tint p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {attachment.kind === "image" ? (
+            <img
+              src={`data:${attachment.mimeType};base64,${attachment.dataBase64}`}
+              alt={attachment.fileName}
+              className="h-20 w-20 shrink-0 rounded-xl border border-border object-cover"
+            />
+          ) : (
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-border bg-white">
+              <AttachmentPreviewIcon kind={attachment.kind} />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{attachment.kind} preview</p>
+            <p className="mt-1 truncate text-sm font-medium text-text">{attachment.fileName}</p>
+            <p className="mt-1 text-xs text-text-muted">
+              {attachment.mimeType} / {formatBytes(attachment.fileSizeBytes)}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-text-soft">
+              {attachment.kind === "image"
+                ? "Image preview is ready. Add a caption below or send it as-is."
+                : "Preview card is ready. Full file preview and download will come with storage-backed media persistence."}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          title="Remove attachment"
+          onClick={onClear}
+          className="rounded-full border border-border bg-white p-2 text-text-soft transition hover:text-text"
+          aria-label="Remove attachment"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentPreviewIcon({ kind }: { kind: ComposerAttachment["kind"] }) {
+  switch (kind) {
+    case "video":
+      return <Video className="h-7 w-7 text-text-soft" />;
+    case "audio":
+      return <AudioLines className="h-7 w-7 text-text-soft" />;
+    case "document":
+      return <FileText className="h-7 w-7 text-text-soft" />;
+    default:
+      return <ImageIcon className="h-7 w-7 text-text-soft" />;
+  }
 }
 
 function detectAttachmentKind(mimeType: string): ComposerAttachment["kind"] | null {

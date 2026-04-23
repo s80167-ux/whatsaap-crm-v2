@@ -13,7 +13,7 @@ export function ConversationList({
   onSelect: (conversation: Conversation) => void;
 }) {
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto pr-1">
+    <div className="flex min-h-0 flex-col gap-3 pr-1">
       {conversations.map((conversation) => (
         <motion.button
           key={conversation.id}

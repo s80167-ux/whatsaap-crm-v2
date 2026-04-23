@@ -11,7 +11,8 @@ const auditLogService = new AuditLogService();
 const createWhatsAppAccountSchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().min(2),
-  phoneNumber: z.string().min(6).optional().nullable()
+  phoneNumber: z.string().min(6).optional().nullable(),
+  historySyncLookbackDays: z.coerce.number().int().min(0).max(365).default(7)
 });
 
 function requireAuth(request: Request) {
@@ -25,6 +26,7 @@ function requireAuth(request: Request) {
 function mapWhatsAppAccount(account: {
   id: string;
   organization_id: string;
+  created_by?: string | null;
   label: string | null;
   account_phone_e164: string | null;
   account_phone_normalized: string | null;
@@ -32,17 +34,20 @@ function mapWhatsAppAccount(account: {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  history_sync_lookback_days?: number | null;
 }) {
   return {
     id: account.id,
     organization_id: account.organization_id,
+    created_by: account.created_by ?? null,
     name: account.label,
     phone_number: account.account_phone_e164,
     phone_number_normalized: account.account_phone_normalized,
     status: account.connection_status,
     last_connected_at: account.last_connected_at ?? null,
     last_disconnected_at: account.last_disconnected_at ?? null,
-    health_score: account.health_score ?? null
+    health_score: account.health_score ?? null,
+    history_sync_lookback_days: account.history_sync_lookback_days ?? 7
   };
 }
 
@@ -51,7 +56,8 @@ export async function createWhatsAppAccount(request: Request, response: Response
   const input = createWhatsAppAccountSchema.parse(request.body);
   const account = await adminService.createWhatsAppAccount(auth, {
     ...input,
-    phoneNumber: input.phoneNumber ?? null
+    phoneNumber: input.phoneNumber ?? null,
+    historySyncLookbackDays: input.historySyncLookbackDays
   });
 
   await auditLogService.record(auth, {

@@ -10,7 +10,7 @@ export function Card({ children, className, elevated = false, ...props }: CardPr
   return (
     <div
       className={clsx(
-        "rounded-xl border border-border bg-card p-5 shadow-soft transition duration-300",
+        "rounded-xl border border-border bg-card p-3 shadow-soft transition duration-300",
         elevated && "shadow-panel",
         className
       )}

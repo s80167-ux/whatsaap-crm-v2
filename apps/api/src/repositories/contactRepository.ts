@@ -80,6 +80,7 @@ export class ContactRepository {
       displayName: string | null;
       primaryPhoneE164: string | null;
       primaryPhoneNormalized: string | null;
+      primaryAvatarUrl?: string | null;
     }
   ): Promise<ContactRecord> {
     const result = await client.query<ContactRecord>(
@@ -88,18 +89,26 @@ export class ContactRepository {
           organization_id,
           display_name,
           primary_phone_e164,
-          primary_phone_normalized
+          primary_phone_normalized,
+          primary_avatar_url
         )
-        values ($1, nullif(trim($2), ''), $3, $4)
+        values ($1, nullif(trim($2), ''), $3, $4, $5)
         returning
           id,
           organization_id,
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          primary_avatar_url,
           owner_user_id
       `,
-      [input.organizationId, input.displayName, input.primaryPhoneE164, input.primaryPhoneNormalized]
+      [
+        input.organizationId,
+        input.displayName,
+        input.primaryPhoneE164,
+        input.primaryPhoneNormalized,
+        input.primaryAvatarUrl ?? null
+      ]
     );
 
     return result.rows[0];
@@ -112,14 +121,26 @@ export class ContactRepository {
       displayName: string | null;
       primaryPhoneE164: string | null;
       primaryPhoneNormalized: string | null;
+      primaryAvatarUrl?: string | null;
     }
   ): Promise<ContactRecord> {
     const result = await client.query<ContactRecord>(
       `
         update contacts
         set display_name = coalesce(nullif(trim(display_name), ''), nullif(trim($2), '')),
-            primary_phone_e164 = coalesce(primary_phone_e164, $3),
-            primary_phone_normalized = coalesce(primary_phone_normalized, $4)
+            primary_phone_e164 = case
+              when nullif(trim($3), '') is null then primary_phone_e164
+              when primary_phone_normalized is null then $3
+              when $4 like '+60%' and primary_phone_normalized not like '+60%' then $3
+              else primary_phone_e164
+            end,
+            primary_phone_normalized = case
+              when $4::text is null then primary_phone_normalized
+              when primary_phone_normalized is null then $4
+              when $4 like '+60%' and primary_phone_normalized not like '+60%' then $4
+              else primary_phone_normalized
+            end,
+            primary_avatar_url = coalesce(primary_avatar_url, nullif(trim($5), ''))
         where id = $1
         returning
           id,
@@ -127,9 +148,16 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          primary_avatar_url,
           owner_user_id
       `,
-      [input.contactId, input.displayName, input.primaryPhoneE164, input.primaryPhoneNormalized]
+      [
+        input.contactId,
+        input.displayName,
+        input.primaryPhoneE164,
+        input.primaryPhoneNormalized,
+        input.primaryAvatarUrl ?? null
+      ]
     );
 
     return result.rows[0];

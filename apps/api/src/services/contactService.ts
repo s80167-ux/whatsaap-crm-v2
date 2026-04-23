@@ -18,26 +18,40 @@ export class ContactService {
       whatsappJid: string;
       phoneRaw: string | null;
       profileName: string | null;
+      profileAvatarUrl?: string | null;
     }
   ): Promise<{ contact: ContactRecord; identity: ContactIdentityRecord }> {
     const normalizedPhone = normalizePhoneNumber(input.phoneRaw);
+    const primaryPhone = normalizedPhone ?? input.phoneRaw;
+    const existingIdentity = await this.identityRepository.findByJid(
+      client,
+      input.organizationId,
+      input.whatsappAccountId,
+      input.whatsappJid
+    );
     let contact =
       normalizedPhone &&
       (await this.contactRepository.findByNormalizedPhone(client, input.organizationId, normalizedPhone));
+
+    if (!contact && existingIdentity) {
+      contact = await this.contactRepository.findById(client, input.organizationId, existingIdentity.contact_id);
+    }
 
     if (!contact) {
       contact = await this.contactRepository.create(client, {
         organizationId: input.organizationId,
         displayName: input.profileName,
-        primaryPhoneE164: input.phoneRaw,
-        primaryPhoneNormalized: normalizedPhone
+        primaryPhoneE164: primaryPhone,
+        primaryPhoneNormalized: normalizedPhone,
+        primaryAvatarUrl: input.profileAvatarUrl ?? null
       });
     } else {
       contact = await this.contactRepository.anchor(client, {
         contactId: contact.id,
         displayName: input.profileName,
-        primaryPhoneE164: input.phoneRaw,
-        primaryPhoneNormalized: normalizedPhone
+        primaryPhoneE164: primaryPhone,
+        primaryPhoneNormalized: normalizedPhone,
+        primaryAvatarUrl: input.profileAvatarUrl ?? null
       });
     }
 
@@ -46,9 +60,10 @@ export class ContactService {
       contactId: contact.id,
       whatsappAccountId: input.whatsappAccountId,
       whatsappJid: input.whatsappJid,
-      phoneE164: input.phoneRaw,
+      phoneE164: primaryPhone,
       phoneNormalized: normalizedPhone,
-      profileName: input.profileName
+      profileName: input.profileName,
+      profileAvatarUrl: input.profileAvatarUrl ?? null
     });
 
     return { contact, identity };

@@ -11,7 +11,7 @@ export function Card({ children, className, elevated = false, ...props }: CardPr
     <div
       className={clsx(
         "card-surface",
-        elevated && "shadow-panel hover:-translate-y-0.5 hover:bg-background-tint",
+        elevated && "shadow-panel hover:-translate-y-0.5",
         className
       )}
       {...props}

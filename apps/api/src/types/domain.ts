@@ -20,6 +20,7 @@ export interface ContactIdentityRecord {
   phone_normalized: string | null;
   profile_name: string | null;
   profile_push_name?: string | null;
+  profile_avatar_url?: string | null;
 }
 
 export interface ConversationRecord {
@@ -57,12 +58,14 @@ export interface MessageRecord {
 export interface WhatsAppAccountRecord {
   id: UUID;
   organization_id: UUID;
+  created_by?: UUID | null;
   label: string | null;
   account_phone_e164: string | null;
   account_phone_normalized: string | null;
   connection_status: string;
   account_jid: string | null;
   display_name: string | null;
+  history_sync_lookback_days?: number | null;
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
@@ -75,6 +78,7 @@ export interface InboundMessageInput {
   remoteJid: string;
   phoneRaw: string | null;
   profileName: string | null;
+  profileAvatarUrl?: string | null;
   textBody: string | null;
   messageType: string;
   direction: "incoming" | "outgoing";

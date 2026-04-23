@@ -25,6 +25,25 @@ export interface DashboardSummary {
       range_end: string;
       href?: string;
     }>;
+    leaderboard?: Array<{
+      id: string;
+      name: string;
+      role?: string | null;
+      order_count: number;
+      won_count: number;
+      won_value: string;
+      open_value: string;
+    }>;
+    leaderboard_attention?: Array<{
+      id: string;
+      name: string;
+      role?: string | null;
+      order_count: number;
+      won_count: number;
+      won_value: string;
+      open_value: string;
+    }>;
+    leaderboard_average_won_count?: number;
   };
 }
 

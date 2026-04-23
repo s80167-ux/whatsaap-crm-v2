@@ -11,6 +11,7 @@ export class RawEventIngestionService {
     remoteJid: string;
     phoneRaw: string | null;
     profileName: string | null;
+    profileAvatarUrl?: string | null;
     textBody: string | null;
     messageType: string;
     direction: "incoming" | "outgoing";
@@ -32,6 +33,7 @@ export class RawEventIngestionService {
           remoteJid: input.remoteJid,
           phoneRaw: input.phoneRaw,
           profileName: input.profileName,
+          profileAvatarUrl: input.profileAvatarUrl ?? null,
           textBody: input.textBody,
           messageType: input.messageType,
           direction: input.direction,

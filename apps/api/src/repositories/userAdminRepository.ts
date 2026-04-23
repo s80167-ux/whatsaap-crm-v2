@@ -12,6 +12,8 @@ export interface UserSummaryRecord {
   created_at: string;
 }
 
+type EditableUserRole = Exclude<UserRole, "super_admin">;
+
 export class UserAdminRepository {
   async listAll(client: PoolClient): Promise<UserSummaryRecord[]> {
     const result = await client.query<UserSummaryRecord>(
@@ -50,6 +52,32 @@ export class UserAdminRepository {
         limit 1
       `,
       [userId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async updateById(
+    client: PoolClient,
+    userId: string,
+    input: {
+      organizationId: string;
+      fullName: string | null;
+      role: EditableUserRole;
+      status: UserSummaryRecord["status"];
+    }
+  ): Promise<UserSummaryRecord | null> {
+    const result = await client.query<UserSummaryRecord>(
+      `
+        update organization_users
+        set organization_id = $2,
+            full_name = $3,
+            role = $4,
+            status = $5
+        where id = $1
+        returning id, organization_id, auth_user_id, email, full_name, role, status, created_at
+      `,
+      [userId, input.organizationId, input.fullName, input.role, input.status]
     );
 
     return result.rows[0] ?? null;

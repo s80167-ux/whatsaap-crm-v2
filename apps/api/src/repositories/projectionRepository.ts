@@ -310,26 +310,52 @@ export class ProjectionRepository {
     const result = await client.query<ContactRecord>(
       `
         select
-          cs.contact_id as id,
-          cs.organization_id,
-          cs.display_name,
-          cs.primary_phone as primary_phone_e164,
-          cs.primary_phone as primary_phone_normalized,
-          cs.owner_user_id
-        from contact_summary cs
-        where cs.organization_id = $1
-          and ($4::timestamptz is null or cs.last_activity_at >= $4::timestamptz)
+          ct.id,
+          ct.organization_id,
+          coalesce(ct.display_name, cs.display_name) as display_name,
+          ct.primary_phone_e164,
+          ct.primary_phone_normalized,
+          coalesce(ct.primary_avatar_url, cs.avatar_url) as primary_avatar_url,
+          ct.owner_user_id
+        from contacts ct
+        left join contact_summary cs on cs.contact_id = ct.id
+        left join lateral (
+          select
+            max(last_incoming_at) as last_incoming_at,
+            max(last_outgoing_at) as last_outgoing_at
+          from conversations
+          where contact_id = ct.id
+        ) conv on true
+        where ct.organization_id = $1
+          and (
+            $4::timestamptz is null
+            or greatest(
+              coalesce(cs.last_activity_at, to_timestamp(0)),
+              coalesce(conv.last_incoming_at, to_timestamp(0)),
+              coalesce(conv.last_outgoing_at, to_timestamp(0)),
+              coalesce(ct.last_activity_at, to_timestamp(0)),
+              coalesce(ct.updated_at, ct.created_at)
+            ) >= $4::timestamptz
+          )
           and (
             not $2::boolean
-            or cs.owner_user_id = $3
+            or ct.owner_user_id = $3
             or exists (
               select 1
               from contact_owners co
-              where co.contact_id = cs.contact_id
+              where co.contact_id = ct.id
                 and co.organization_user_id = $3
             )
           )
-        order by cs.last_activity_at desc nulls last, cs.updated_at desc, cs.contact_id desc
+        order by greatest(
+          coalesce(cs.last_activity_at, to_timestamp(0)),
+          coalesce(conv.last_incoming_at, to_timestamp(0)),
+          coalesce(conv.last_outgoing_at, to_timestamp(0)),
+          coalesce(ct.last_activity_at, to_timestamp(0)),
+          coalesce(ct.updated_at, ct.created_at)
+        ) desc,
+        coalesce(cs.updated_at, ct.updated_at, ct.created_at) desc,
+        ct.id desc
       `,
       [organizationId, assignedOnly, organizationUserId, activitySince]
     );

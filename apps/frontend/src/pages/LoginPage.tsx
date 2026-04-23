@@ -36,7 +36,7 @@ export function LoginPage() {
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="w-full max-w-5xl">
         <Card className="grid overflow-hidden border-primary/10 bg-white p-0 shadow-lift md:grid-cols-[1.1fr,0.9fr]" elevated>
           <div className="hidden border-r border-border bg-gradient-to-br from-sand via-white to-secondary-soft/40 p-4 md:flex md:min-h-[620px] md:items-center md:justify-center">
-            <img src={brandBanner} alt="Rezeki Dashboard banner" className="max-h-full w-full object-contain" />
+            <img src={brandBanner} alt="Rezeki Dashboard banner" className="h-4/5 w-4/5 object-contain" />
           </div>
 
           <div className="p-8 md:p-10">

@@ -20,6 +20,7 @@ export interface UserSummary {
 export interface WhatsAppAccountSummary {
   id: string;
   organization_id: string;
+  created_by?: string | null;
   name: string;
   phone_number: string | null;
   phone_number_normalized: string | null;
@@ -29,4 +30,5 @@ export interface WhatsAppAccountSummary {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  history_sync_lookback_days?: number | null;
 }

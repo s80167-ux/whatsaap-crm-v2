@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from "../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
 import type { HistoryRange } from "../lib/historyRange";
 import type {
   AuditHistoryEntry,
@@ -7,6 +7,7 @@ import type {
   Lead,
   Message,
   OutboundAttachmentInput,
+  QuickReplyTemplate,
   SalesOrder,
   SalesOrderDetail,
   SalesOrderHistoryEntry,
@@ -18,16 +19,18 @@ type ConversationApiRecord = Conversation;
 type MessageApiRecord = Message;
 type ContactApiRecord = Contact;
 
-function buildHistoryRangeQuery(range?: HistoryRange) {
-  if (!range) {
-    return "";
+function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | null) {
+  const searchParams = new URLSearchParams();
+
+  if (range) {
+    searchParams.set(range.unit, String(range.value));
   }
 
-  const searchParams = new URLSearchParams({
-    [range.unit]: String(range.value)
-  });
+  if (organizationId) {
+    searchParams.set("organization_id", organizationId);
+  }
 
-  return `?${searchParams.toString()}`;
+  return searchParams.size > 0 ? `?${searchParams.toString()}` : "";
 }
 
 export async function fetchConversations(range?: HistoryRange) {
@@ -42,13 +45,14 @@ export async function fetchMessages(conversationId: string, range?: HistoryRange
   return response.data;
 }
 
-export async function fetchContacts(range?: HistoryRange) {
-  const response = await apiGet<{ data: ContactApiRecord[] }>(`/contacts${buildHistoryRangeQuery(range)}`);
+export async function fetchContacts(range?: HistoryRange, organizationId?: string | null) {
+  const response = await apiGet<{ data: ContactApiRecord[] }>(`/contacts${buildHistoryRangeQuery(range, organizationId)}`);
   return response.data;
 }
 
-export async function fetchContact(contactId: string) {
-  const response = await apiGet<{ data: ContactApiRecord }>(`/contacts/${contactId}`);
+export async function fetchContact(contactId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: ContactApiRecord }>(`/contacts/${contactId}${suffix}`);
   return response.data;
 }
 
@@ -114,6 +118,59 @@ export async function fetchLead(leadId: string) {
 export async function fetchLeadHistory(leadId: string) {
   const response = await apiGet<{ data: AuditHistoryEntry[] }>(`/leads/${leadId}/history`);
   return response.data;
+}
+
+export async function fetchQuickReplies(input?: { organizationId?: string | null; includeInactive?: boolean }) {
+  const searchParams = new URLSearchParams();
+
+  if (input?.organizationId) {
+    searchParams.set("organization_id", input.organizationId);
+  }
+
+  if (input?.includeInactive) {
+    searchParams.set("include_inactive", "true");
+  }
+
+  const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+  const response = await apiGet<{ data: QuickReplyTemplate[] }>(`/quick-replies${suffix}`);
+  return response.data;
+}
+
+export async function createQuickReply(payload: {
+  organizationId?: string | null;
+  title: string;
+  body: string;
+  category?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}) {
+  const response = await apiPost<{ data: QuickReplyTemplate }>("/quick-replies", payload);
+  return response.data;
+}
+
+export async function updateQuickReply(payload: {
+  templateId: string;
+  organizationId?: string | null;
+  title?: string;
+  body?: string;
+  category?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}) {
+  const response = await apiPatch<{ data: QuickReplyTemplate }>(`/quick-replies/${payload.templateId}`, {
+    organizationId: payload.organizationId,
+    title: payload.title,
+    body: payload.body,
+    category: payload.category,
+    isActive: payload.isActive,
+    sortOrder: payload.sortOrder
+  });
+  return response.data;
+}
+
+export async function deleteQuickReply(payload: { templateId: string; organizationId?: string | null }) {
+  const suffix = payload.organizationId ? `?organization_id=${encodeURIComponent(payload.organizationId)}` : "";
+  return apiDelete<{ ok: true }>(`/quick-replies/${payload.templateId}${suffix}`);
 }
 
 export async function assignContact(payload: { contactId: string; organizationUserId: string }) {

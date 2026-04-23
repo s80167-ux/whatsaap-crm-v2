@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
-import { requirePermission, requireRole } from "../../middleware/authMiddleware.js";
+import { requirePermission } from "../../middleware/authMiddleware.js";
 import {
   createWhatsAppAccount,
   deleteWhatsAppAccount,
@@ -8,16 +8,18 @@ import {
   listRawEvents,
   listWhatsAppAccounts,
   reconnectWhatsAppAccount,
-  replayRawEvents
+  replayRawEvents,
+  updateWhatsAppAccount
 } from "./admin.controller.js";
 
 export const adminRoutes = Router();
 
-adminRoutes.get("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listWhatsAppAccounts));
-adminRoutes.post("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
-adminRoutes.get("/whatsapp-accounts/:accountId/qr", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(getWhatsAppAccountQr));
-adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
-adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(deleteWhatsAppAccount));
+adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
+adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));
+adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAccountQr));
+adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));
+adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
+adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppAccount));
 
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));

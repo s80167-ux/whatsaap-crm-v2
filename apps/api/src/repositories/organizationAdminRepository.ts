@@ -4,7 +4,7 @@ export interface OrganizationRecord {
   id: string;
   name: string;
   slug: string;
-  status: string;
+  status: "active" | "trial" | "suspended" | "closed";
   created_at: string;
 }
 
@@ -137,6 +137,65 @@ export class OrganizationAdminRepository {
         limit 1
       `,
       [organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async update(
+    client: PoolClient,
+    organizationId: string,
+    input: {
+      name: string;
+      slug: string;
+      status?: OrganizationRecord["status"];
+    }
+  ): Promise<OrganizationRecord | null> {
+    const columns = await this.getColumns(client);
+    const assignments = ["name = $2", "slug = $3"];
+    const params: Array<string | boolean> = [organizationId, input.name, input.slug];
+
+    if (columns.status && input.status) {
+      params.push(input.status);
+      assignments.push(`status = $${params.length}`);
+    }
+
+    if (columns.is_active && input.status) {
+      params.push(input.status === "active" || input.status === "trial");
+      assignments.push(`is_active = $${params.length}`);
+    }
+
+    if (columns.deleted_at && input.status && input.status !== "closed") {
+      assignments.push("deleted_at = null");
+    }
+
+    if (columns.deleted_at && input.status === "closed") {
+      assignments.push("deleted_at = timezone('utc', now())");
+    }
+
+    if (columns.updated_at) {
+      assignments.push("updated_at = timezone('utc', now())");
+    }
+
+    const result = await client.query<OrganizationRecord>(
+      `
+        update organizations
+        set ${assignments.join(",\n            ")}
+        where id = $1
+        returning
+          id,
+          name,
+          slug,
+          ${columns.status
+            ? "status"
+            : columns.deleted_at && columns.is_active
+              ? "case when deleted_at is not null then 'closed' when coalesce(is_active, true) then 'active' else 'suspended' end"
+              : columns.is_active
+                ? "case when coalesce(is_active, true) then 'active' else 'suspended' end"
+                : "'active'"} as status,
+          created_at
+      `,
+      params
     );
 
     return result.rows[0] ?? null;

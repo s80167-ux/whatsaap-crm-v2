@@ -41,7 +41,7 @@ body {
 
 @layer components {
   .app-shell {
-    @apply border border-border bg-card shadow-soft;
+    @apply rounded-none border border-border bg-card shadow-soft;
   }
 
   .section-title {
@@ -57,6 +57,10 @@ body {
   }
 
   .brand-badge {
-    @apply inline-flex items-center rounded-full border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
+    @apply inline-flex items-center rounded-none border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
   }
+}
+
+:where([class*="rounded"]) {
+  border-radius: 0 !important;
 }

@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost } from "../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
 import type { OrganizationSummary, UserSummary, WhatsAppAccountSummary } from "../types/admin";
 
 type OrganizationApiRecord = {
@@ -24,6 +24,7 @@ type UserCreateApiRecord = {
 type WhatsAppAccountApiRecord = {
   id: string;
   organization_id: string;
+  created_by?: string | null;
   name: string | null;
   phone_number: string | null;
   phone_number_normalized: string | null;
@@ -33,6 +34,7 @@ type WhatsAppAccountApiRecord = {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  history_sync_lookback_days?: number | null;
 };
 
 function mapOrganization(record: OrganizationApiRecord): OrganizationSummary {
@@ -66,6 +68,7 @@ function mapWhatsAppAccount(record: WhatsAppAccountApiRecord): WhatsAppAccountSu
   return {
     id: record.id,
     organization_id: record.organization_id,
+    created_by: record.created_by ?? null,
     name: record.name ?? record.display_name ?? "Untitled account",
     phone_number: record.phone_number,
     phone_number_normalized: record.phone_number_normalized,
@@ -74,7 +77,8 @@ function mapWhatsAppAccount(record: WhatsAppAccountApiRecord): WhatsAppAccountSu
     account_jid: record.account_jid ?? null,
     last_connected_at: record.last_connected_at ?? null,
     last_disconnected_at: record.last_disconnected_at ?? null,
-    health_score: record.health_score ?? null
+    health_score: record.health_score ?? null,
+    history_sync_lookback_days: record.history_sync_lookback_days ?? 7
   };
 }
 
@@ -85,6 +89,14 @@ export async function fetchOrganizations() {
 
 export async function createOrganization(payload: { name: string; slug?: string | null }) {
   const response = await apiPost<{ data: OrganizationApiRecord }>("/organizations", payload);
+  return mapOrganization(response.data);
+}
+
+export async function updateOrganization(
+  organizationId: string,
+  payload: { name: string; slug?: string | null; status?: OrganizationSummary["status"] }
+) {
+  const response = await apiPatch<{ data: OrganizationApiRecord }>(`/organizations/${organizationId}`, payload);
   return mapOrganization(response.data);
 }
 
@@ -114,8 +126,25 @@ export async function createUser(payload: {
   return mapUser(response.data);
 }
 
+export async function updateUser(
+  userId: string,
+  payload: {
+    organizationId?: string | null;
+    fullName?: string | null;
+    role: Exclude<UserSummary["role"], "super_admin">;
+    status: UserSummary["status"];
+  }
+) {
+  const response = await apiPatch<{ data: UserListApiRecord }>(`/users/${userId}`, payload);
+  return mapUser(response.data);
+}
+
 export async function deleteUser(userId: string) {
   return apiDelete<{ ok: true }>(`/users/${userId}`);
+}
+
+export async function resetUserPassword(userId: string, payload: { password: string }) {
+  return apiPost<{ ok: true }>(`/users/${userId}/reset-password`, payload);
 }
 
 export async function fetchWhatsAppAccounts(organizationId?: string | null) {
@@ -128,6 +157,7 @@ export async function createWhatsAppAccount(payload: {
   organizationId?: string | null;
   name: string;
   phoneNumber?: string | null;
+  historySyncLookbackDays?: number | null;
 }) {
   const response = await apiPost<{ data: WhatsAppAccountApiRecord }>("/whatsapp/accounts", payload);
   return mapWhatsAppAccount(response.data);
@@ -135,6 +165,19 @@ export async function createWhatsAppAccount(payload: {
 
 export async function reconnectWhatsAppAccount(accountId: string) {
   const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/whatsapp/accounts/${accountId}/reconnect`, {});
+  return mapWhatsAppAccount(response.data);
+}
+
+export async function updateWhatsAppAccount(
+  accountId: string,
+  payload: {
+    organizationId?: string | null;
+    name: string;
+    phoneNumber?: string | null;
+    historySyncLookbackDays?: number | null;
+  }
+) {
+  const response = await apiPatch<{ data: WhatsAppAccountApiRecord }>(`/admin/whatsapp-accounts/${accountId}`, payload);
   return mapWhatsAppAccount(response.data);
 }
 

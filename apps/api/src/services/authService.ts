@@ -132,6 +132,16 @@ export class AuthService {
     }
   }
 
+  async updatePassword(authUserId: string, password: string) {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+      password
+    });
+
+    if (error) {
+      throw new Error(error.message ?? "Unable to update password");
+    }
+  }
+
   private async resolveAuthUser(input: {
     authUserId: string;
     email: string;

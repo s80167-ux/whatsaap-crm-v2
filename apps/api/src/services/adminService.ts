@@ -18,6 +18,26 @@ function slugifyOrganizationName(name: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function canManageOrganizationWhatsAppAccounts(authUser: AuthUser) {
+  return authUser.role === "super_admin" || authUser.role === "org_admin";
+}
+
+function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id: string; created_by?: string | null }) {
+  if (authUser.role === "super_admin") {
+    return true;
+  }
+
+  if (account.organization_id !== authUser.organizationId) {
+    return false;
+  }
+
+  if (authUser.role === "org_admin") {
+    return true;
+  }
+
+  return Boolean(authUser.organizationUserId && account.created_by === authUser.organizationUserId);
+}
+
 export class AdminService {
   constructor(
     private readonly organizationRepository = new OrganizationAdminRepository(),
@@ -45,6 +65,27 @@ export class AdminService {
         name: input.name.trim(),
         slug
       });
+    });
+  }
+
+  async updateOrganization(input: {
+    organizationId: string;
+    name: string;
+    slug?: string | null;
+    status?: "active" | "trial" | "suspended" | "closed";
+  }) {
+    return withTransaction(async (client) => {
+      const organization = await this.organizationRepository.update(client, input.organizationId, {
+        name: input.name.trim(),
+        slug: input.slug?.trim() || slugifyOrganizationName(input.name),
+        status: input.status
+      });
+
+      if (!organization) {
+        throw new AppError("Organization not found", 404, "organization_not_found");
+      }
+
+      return organization;
     });
   }
 
@@ -108,6 +149,92 @@ export class AdminService {
     });
   }
 
+  async updateUser(
+    authUser: AuthUser,
+    userId: string,
+    input: {
+      organizationId?: string | null;
+      fullName: string | null;
+      role: Exclude<UserRole, "super_admin">;
+      status: "invited" | "active" | "disabled";
+    }
+  ) {
+    return withTransaction(async (client) => {
+      const existingUser = await this.userRepository.findById(client, userId);
+
+      if (!existingUser) {
+        throw new AppError("User not found", 404, "user_not_found");
+      }
+
+      if (authUser.role !== "super_admin" && existingUser.organization_id !== authUser.organizationId) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      if (existingUser.auth_user_id && existingUser.auth_user_id === authUser.authUserId && input.status !== "active") {
+        throw new AppError("You cannot disable your own user", 400, "cannot_disable_self");
+      }
+
+      const resolvedOrganizationId = authUser.role === "super_admin"
+        ? input.organizationId ?? existingUser.organization_id
+        : existingUser.organization_id;
+
+      if (!resolvedOrganizationId) {
+        throw new AppError("organization_id is required", 400, "organization_required");
+      }
+
+      const updatedUser = await this.userRepository.updateById(client, userId, {
+        organizationId: resolvedOrganizationId,
+        fullName: input.fullName,
+        role: input.role,
+        status: input.status
+      });
+
+      if (!updatedUser) {
+        throw new AppError("User not found", 404, "user_not_found");
+      }
+
+      return updatedUser;
+    });
+  }
+
+  async resetUserPassword(authUser: AuthUser, userId: string, password: string) {
+    const existingUser = await withTransaction(async (client) => {
+      const user = await this.userRepository.findById(client, userId);
+
+      if (!user || user.status === "disabled") {
+        throw new AppError("User not found", 404, "user_not_found");
+      }
+
+      if (!user.auth_user_id) {
+        throw new AppError("User does not have an auth account", 400, "auth_user_missing");
+      }
+
+      if (user.auth_user_id === authUser.authUserId) {
+        throw new AppError("Use the current user password reset action for your own account", 400, "use_self_password_reset");
+      }
+
+      if (authUser.role === "super_admin") {
+        return user;
+      }
+
+      if (authUser.role !== "org_admin" || user.organization_id !== authUser.organizationId || user.role === "org_admin") {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      return user;
+    });
+
+    const targetAuthUserId = existingUser.auth_user_id;
+
+    if (!targetAuthUserId) {
+      throw new AppError("User does not have an auth account", 400, "auth_user_missing");
+    }
+
+    await this.authService.updatePassword(targetAuthUserId, password);
+
+    return existingUser;
+  }
+
   async deleteUser(authUser: AuthUser, userId: string) {
     const deletedUser = await withTransaction(async (client) => {
       const existingUser = await this.userRepository.findById(client, userId);
@@ -158,6 +285,18 @@ export class AdminService {
         throw new Error("organization_id is required");
       }
 
+      if (!canManageOrganizationWhatsAppAccounts(authUser)) {
+        if (!authUser.organizationUserId) {
+          throw new AppError("Organization user context is required", 403, "organization_user_required");
+        }
+
+        return await this.whatsappRepository.listByOrganizationAndCreator(
+          client,
+          resolvedOrganizationId,
+          authUser.organizationUserId
+        );
+      }
+
       return await this.whatsappRepository.listByOrganization(client, resolvedOrganizationId);
     } finally {
       client.release();
@@ -170,6 +309,7 @@ export class AdminService {
       organizationId?: string | null;
       name: string;
       phoneNumber: string | null;
+      historySyncLookbackDays?: number | null;
     }
   ) {
     const resolvedOrganizationId = authUser.role === "super_admin" ? input.organizationId ?? null : authUser.organizationId;
@@ -178,11 +318,21 @@ export class AdminService {
       throw new Error("organization_id is required");
     }
 
+    if (!canManageOrganizationWhatsAppAccounts(authUser) && resolvedOrganizationId !== authUser.organizationId) {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    if (!canManageOrganizationWhatsAppAccounts(authUser) && !authUser.organizationUserId) {
+      throw new AppError("Organization user context is required", 403, "organization_user_required");
+    }
+
     const account = await withTransaction(async (client) => {
       return this.whatsappRepository.create(client, {
         organizationId: resolvedOrganizationId,
         name: input.name.trim(),
-        phoneNumber: input.phoneNumber
+        phoneNumber: input.phoneNumber,
+        createdBy: authUser.organizationUserId,
+        historySyncLookbackDays: input.historySyncLookbackDays ?? 7
       });
     });
 
@@ -193,6 +343,56 @@ export class AdminService {
     return account;
   }
 
+  async updateWhatsAppAccount(
+    authUser: AuthUser,
+    accountId: string,
+    input: {
+      organizationId?: string | null;
+      name: string;
+      phoneNumber: string | null;
+      historySyncLookbackDays?: number | null;
+    }
+  ) {
+    return withTransaction(async (client) => {
+      const existingAccount = await this.whatsappRepository.findById(client, accountId);
+
+      if (!existingAccount) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (!canManageWhatsAppAccount(authUser, existingAccount)) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      const resolvedOrganizationId = authUser.role === "super_admin"
+        ? input.organizationId ?? existingAccount.organization_id
+        : authUser.role === "org_admin"
+          ? input.organizationId ?? existingAccount.organization_id
+          : existingAccount.organization_id;
+
+      if (!resolvedOrganizationId) {
+        throw new AppError("organization_id is required", 400, "organization_required");
+      }
+
+      if (authUser.role === "org_admin" && resolvedOrganizationId !== authUser.organizationId) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      const updatedAccount = await this.whatsappRepository.update(client, accountId, {
+        organizationId: resolvedOrganizationId,
+        name: input.name.trim(),
+        phoneNumber: input.phoneNumber,
+        historySyncLookbackDays: input.historySyncLookbackDays ?? existingAccount.history_sync_lookback_days ?? 7
+      });
+
+      if (!updatedAccount) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      return updatedAccount;
+    });
+  }
+
   async reconnectWhatsAppAccount(authUser: AuthUser, accountId: string) {
     const account = await withTransaction(async (client) => {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);
@@ -201,7 +401,7 @@ export class AdminService {
         throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
       }
 
-      if (authUser.role !== "super_admin" && existingAccount.organization_id !== authUser.organizationId) {
+      if (!canManageWhatsAppAccount(authUser, existingAccount)) {
         throw new AppError("Insufficient permissions", 403, "forbidden");
       }
 
@@ -234,7 +434,7 @@ export class AdminService {
         throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
       }
 
-      if (authUser.role !== "super_admin" && account.organization_id !== authUser.organizationId) {
+      if (!canManageWhatsAppAccount(authUser, account)) {
         throw new AppError("Insufficient permissions", 403, "forbidden");
       }
 
@@ -256,7 +456,7 @@ export class AdminService {
         throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
       }
 
-      if (authUser.role !== "super_admin" && existingAccount.organization_id !== authUser.organizationId) {
+      if (!canManageWhatsAppAccount(authUser, existingAccount)) {
         throw new AppError("Insufficient permissions", 403, "forbidden");
       }
 

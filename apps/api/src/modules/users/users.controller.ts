@@ -16,6 +16,17 @@ const createUserSchema = z.object({
   role: z.enum(["super_admin", "org_admin", "manager", "agent", "user"])
 });
 
+const updateUserSchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  fullName: z.string().min(1).optional().nullable(),
+  role: z.enum(["org_admin", "manager", "agent", "user"]),
+  status: z.enum(["invited", "active", "disabled"])
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8)
+});
+
 const listUsersQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
@@ -72,6 +83,53 @@ export async function createOrganizationUser(request: Request, response: Respons
       status: user.status
     }
   });
+}
+
+export async function updateOrganizationUser(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const userId = z.string().uuid().parse(request.params.userId);
+  const input = updateUserSchema.parse(request.body);
+  const user = await adminService.updateUser(auth, userId, {
+    organizationId: input.organizationId ?? null,
+    fullName: input.fullName ?? null,
+    role: input.role,
+    status: input.status
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: user.organization_id,
+    action: "organization_user.updated",
+    entityType: "organization_user",
+    entityId: user.id,
+    metadata: {
+      role: user.role,
+      status: user.status
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: user });
+}
+
+export async function resetOrganizationUserPassword(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const userId = z.string().uuid().parse(request.params.userId);
+  const input = resetPasswordSchema.parse(request.body);
+  const user = await adminService.resetUserPassword(auth, userId, input.password);
+
+  await auditLogService.record(auth, {
+    organizationId: user.organization_id,
+    action: "organization_user.password_reset",
+    entityType: "organization_user",
+    entityId: user.id,
+    metadata: {
+      email: user.email,
+      role: user.role
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ ok: true });
 }
 
 export async function deleteOrganizationUser(request: Request, response: Response) {

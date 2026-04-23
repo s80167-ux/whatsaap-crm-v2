@@ -272,11 +272,27 @@ Status: in progress
 - [x] Add deep-link fallback messaging when a shared lead or order no longer exists or is outside the user’s scope.
 - [x] Add share-entry analytics or audit events for copied Sales deep links.
 
+## Phase 13: Inbox Composer Enhancements
+
+Status: in progress
+
+- [x] Add a dedicated Inbox Composer Enhancements phase to the roadmap.
+- [x] Add first-pass emoji insertion in the outbound chat composer.
+- [x] Add first-pass quick replies / canned response buttons in the outbound chat composer.
+- [x] Add multiline composer support with Ctrl+Enter send shortcut.
+- [x] Persist organization-scoped quick reply templates in the database.
+- [x] Allow org admins to compose and manage organization quick replies.
+- [x] Allow users and agents to select approved organization quick replies from their chat editor.
+- [x] Add admin management UI for quick reply templates.
+- [x] Add quick reply search and categories.
+- [x] Add attachment preview before sending.
+- [ ] Add richer composer actions such as saved templates, variables, and follow-up prompts.
+
 ## Current Execution Status
 
-- Current phase: Phase 12, Post-Sales UX Refinements
-- Current completed step: shared CRM copy actions now use one standardized lightweight copied-state feedback flow across Dashboard and Sales
-- Next highest-impact step: review whether Phase 12 should be closed or expanded with any remaining post-Sales UX polish items
+- Current phase: Phase 13, Inbox Composer Enhancements
+- Current completed step: outbound attachments now show an image preview or file preview card before sending
+- Next highest-impact step: add richer composer actions such as saved templates, variables, and follow-up prompts
 
 ## Recommended Immediate Execution Order
 

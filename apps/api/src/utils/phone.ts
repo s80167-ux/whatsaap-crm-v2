@@ -20,11 +20,43 @@ export function normalizePhoneNumber(input: string | null | undefined): string |
   return `+${digits}`;
 }
 
+export function isWhatsAppPhoneJid(jid: string | null | undefined): boolean {
+  return Boolean(jid?.includes("@s.whatsapp.net"));
+}
+
 export function jidToPhone(jid: string | null | undefined): string | null {
-  if (!jid) {
+  if (!jid || !isWhatsAppPhoneJid(jid)) {
     return null;
   }
 
-  const phone = jid.split("@")[0];
+  const phone = jid.split("@")[0].split(":")[0];
   return normalizePhoneNumber(phone);
+}
+
+export function bestPhoneFromWhatsAppPayload(payload: unknown): string | null {
+  const key =
+    payload && typeof payload === "object" && "key" in payload
+      ? (payload as { key?: Record<string, unknown> }).key
+      : null;
+
+  const candidates = [
+    key?.senderPn,
+    key?.participantPn,
+    key?.participant,
+    key?.remoteJid
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") {
+      continue;
+    }
+
+    const phone = jidToPhone(candidate);
+
+    if (phone) {
+      return phone;
+    }
+  }
+
+  return null;
 }

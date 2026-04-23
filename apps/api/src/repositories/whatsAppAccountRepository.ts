@@ -15,6 +15,8 @@ type WhatsAppAccountColumns = {
   created_at: boolean;
   last_connected_at: boolean;
   last_disconnected_at: boolean;
+  health_score: boolean;
+  history_sync_lookback_days: boolean;
 };
 
 export class WhatsAppAccountRepository {
@@ -48,7 +50,9 @@ export class WhatsAppAccountRepository {
       account_jid: names.has("account_jid"),
       created_at: names.has("created_at"),
       last_connected_at: names.has("last_connected_at"),
-      last_disconnected_at: names.has("last_disconnected_at")
+      last_disconnected_at: names.has("last_disconnected_at"),
+      health_score: names.has("health_score"),
+      history_sync_lookback_days: names.has("history_sync_lookback_days")
     };
 
     WhatsAppAccountRepository.cachedColumns = columns;
@@ -65,7 +69,8 @@ export class WhatsAppAccountRepository {
         ${columns.account_phone_normalized ? "account_phone_normalized" : columns.phone_number_normalized ? "phone_number_normalized" : "null"} as account_phone_normalized,
         ${columns.connection_status ? "connection_status" : columns.status ? "status" : "'disconnected'"} as connection_status,
         ${columns.account_jid ? "account_jid" : "null"} as account_jid,
-        ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name
+        ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
+        ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days
       from whatsapp_accounts
     `;
   }

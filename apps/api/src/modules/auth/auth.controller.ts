@@ -10,6 +10,10 @@ const loginSchema = z.object({
   password: z.string().min(8)
 });
 
+const updatePasswordSchema = z.object({
+  password: z.string().min(8)
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -28,4 +32,11 @@ export async function getMe(request: Request, response: Response) {
   const auth = requireAuth(request);
   const profile = await authService.getProfile(auth);
   return response.json({ data: profile });
+}
+
+export async function updateMyPassword(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const input = updatePasswordSchema.parse(request.body);
+  await authService.updatePassword(auth.authUserId, input.password);
+  return response.json({ ok: true });
 }

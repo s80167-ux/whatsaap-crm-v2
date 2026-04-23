@@ -10,3 +10,7 @@ export async function fetchMe() {
   const response = await apiGet<{ data: AuthProfile }>("/auth/me");
   return response.data;
 }
+
+export async function updateMyPassword(payload: { password: string }) {
+  return apiPost<{ ok: true }>("/auth/me/password", payload);
+}

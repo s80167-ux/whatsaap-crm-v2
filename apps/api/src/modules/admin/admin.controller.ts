@@ -24,7 +24,15 @@ const createUserSchema = z.object({
 const createWhatsAppAccountSchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().min(2),
-  phoneNumber: z.string().min(6).optional().nullable()
+  phoneNumber: z.string().min(6).optional().nullable(),
+  historySyncLookbackDays: z.coerce.number().int().min(0).max(365).default(7)
+});
+
+const updateWhatsAppAccountSchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  name: z.string().min(2),
+  phoneNumber: z.string().min(6).optional().nullable(),
+  historySyncLookbackDays: z.coerce.number().int().min(0).max(365).optional().nullable()
 });
 
 const rawEventStatusSchema = z.enum(["pending", "processing", "processed", "failed", "ignored"]);
@@ -60,6 +68,7 @@ function requireAuth(request: Request) {
 function mapWhatsAppAccount(account: {
   id: string;
   organization_id: string;
+  created_by?: string | null;
   label: string | null;
   account_phone_e164: string | null;
   account_phone_normalized: string | null;
@@ -67,17 +76,20 @@ function mapWhatsAppAccount(account: {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  history_sync_lookback_days?: number | null;
 }) {
   return {
     id: account.id,
     organization_id: account.organization_id,
+    created_by: account.created_by ?? null,
     name: account.label,
     phone_number: account.account_phone_e164,
     phone_number_normalized: account.account_phone_normalized,
     status: account.connection_status,
     last_connected_at: account.last_connected_at ?? null,
     last_disconnected_at: account.last_disconnected_at ?? null,
-    health_score: account.health_score ?? null
+    health_score: account.health_score ?? null,
+    history_sync_lookback_days: account.history_sync_lookback_days ?? 7
   };
 }
 
@@ -188,7 +200,8 @@ export async function createWhatsAppAccount(request: Request, response: Response
   const input = createWhatsAppAccountSchema.parse(request.body);
   const account = await adminService.createWhatsAppAccount(auth, {
     ...input,
-    phoneNumber: input.phoneNumber ?? null
+    phoneNumber: input.phoneNumber ?? null,
+    historySyncLookbackDays: input.historySyncLookbackDays
   });
 
   await auditLogService.record(auth, {
@@ -203,6 +216,31 @@ export async function createWhatsAppAccount(request: Request, response: Response
   });
 
   return response.status(201).json({ data: mapWhatsAppAccount(account) });
+}
+
+export async function updateWhatsAppAccount(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const input = updateWhatsAppAccountSchema.parse(request.body);
+  const account = await adminService.updateWhatsAppAccount(auth, accountId, {
+    ...input,
+    phoneNumber: input.phoneNumber ?? null,
+    historySyncLookbackDays: input.historySyncLookbackDays
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: account.organization_id,
+    action: "whatsapp_account.updated",
+    entityType: "whatsapp_account",
+    entityId: account.id,
+    metadata: {
+      label: account.label,
+      phone_number: account.account_phone_e164
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: mapWhatsAppAccount(account) });
 }
 
 export async function reconnectWhatsAppAccount(request: Request, response: Response) {
@@ -235,10 +273,10 @@ export async function getWhatsAppAccountQr(request: Request, response: Response)
 export async function deleteWhatsAppAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const accountId = z.string().uuid().parse(request.params.accountId);
-  await adminService.deleteWhatsAppAccount(auth, accountId);
+  const account = await adminService.deleteWhatsAppAccount(auth, accountId);
 
   await auditLogService.record(auth, {
-    organizationId: auth.organizationId,
+    organizationId: account.organization_id,
     action: "whatsapp_account.deleted",
     entityType: "whatsapp_account",
     entityId: accountId,

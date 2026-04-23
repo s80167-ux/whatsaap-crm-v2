@@ -16,9 +16,13 @@ export class QueryService {
   ) {}
 
   private getScope(authUser: AuthUser) {
+    const canReadAll =
+      authUser.permissionKeys.includes("contacts.read_all") ||
+      authUser.permissionKeys.includes("conversations.read_all");
     const assignedOnly =
-      authUser.permissionKeys.includes("contacts.read_assigned") ||
-      authUser.permissionKeys.includes("conversations.read_assigned");
+      !canReadAll &&
+      (authUser.permissionKeys.includes("contacts.read_assigned") ||
+        authUser.permissionKeys.includes("conversations.read_assigned"));
 
     return {
       assignedOnly,

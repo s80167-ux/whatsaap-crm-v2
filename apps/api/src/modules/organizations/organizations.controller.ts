@@ -12,6 +12,10 @@ const createOrganizationSchema = z.object({
   slug: z.string().min(2).optional().nullable()
 });
 
+const updateOrganizationSchema = createOrganizationSchema.extend({
+  status: z.enum(["active", "trial", "suspended", "closed"]).optional()
+});
+
 export async function listOrganizations(_request: Request, response: Response) {
   const organizations = await adminService.listOrganizations();
   return response.json({ data: organizations });
@@ -34,6 +38,30 @@ export async function createOrganization(request: Request, response: Response) {
   });
 
   return response.status(201).json({ data: organization });
+}
+
+export async function updateOrganization(request: Request, response: Response) {
+  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const input = updateOrganizationSchema.parse(request.body);
+  const organization = await adminService.updateOrganization({
+    organizationId,
+    ...input
+  });
+
+  await auditLogService.record(request.auth ?? null, {
+    organizationId,
+    action: "organization.updated",
+    entityType: "organization",
+    entityId: organizationId,
+    metadata: {
+      name: organization.name,
+      slug: organization.slug,
+      status: organization.status
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: organization });
 }
 
 export async function deleteOrganization(request: Request, response: Response) {

@@ -19,7 +19,7 @@ export function WhatsAppStatusBadge({ status }: { status: WhatsAppStatus }) {
 
   return (
     <span
-      className={`ml-2 inline-block h-3 w-3 rounded-full border border-white shadow ${color}`}
+      className={`whatsapp-connection-dot ml-2 inline-block h-3 w-3 rounded-full border border-white shadow ${color}`}
       title={tooltip}
       aria-label={tooltip}
     />

@@ -50,6 +50,7 @@ export interface Contact {
   display_name: string | null;
   primary_phone_e164: string | null;
   primary_phone_normalized: string | null;
+  primary_avatar_url?: string | null;
   owner_user_id?: string | null;
 }
 
@@ -125,4 +126,17 @@ export interface Lead {
   updated_at: string;
   contact_name?: string | null;
   primary_phone_normalized?: string | null;
+}
+
+export interface QuickReplyTemplate {
+  id: string;
+  organization_id: string;
+  title: string;
+  body: string;
+  category?: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
 }

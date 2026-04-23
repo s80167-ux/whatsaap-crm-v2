@@ -23,7 +23,8 @@ export class MessageIngestionService {
         whatsappAccountId: input.whatsappAccountId,
         whatsappJid: input.remoteJid,
         phoneRaw: input.phoneRaw,
-        profileName: input.profileName
+        profileName: input.profileName,
+        profileAvatarUrl: input.profileAvatarUrl ?? null
       });
 
       const conversation = await this.conversationService.findOrCreateConversation(client, {

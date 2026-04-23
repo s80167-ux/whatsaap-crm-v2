@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import { pool } from "../config/database.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import type { AuthUser } from "../types/auth.js";
@@ -31,7 +32,36 @@ type DashboardSummary = {
       range_end: string;
       href?: string;
     }>;
+    leaderboard?: Array<{
+      id: string;
+      name: string;
+      role?: string | null;
+      order_count: number;
+      won_count: number;
+      won_value: string;
+      open_value: string;
+    }>;
+    leaderboard_attention?: Array<{
+      id: string;
+      name: string;
+      role?: string | null;
+      order_count: number;
+      won_count: number;
+      won_value: string;
+      open_value: string;
+    }>;
+    leaderboard_average_won_count?: number;
   };
+};
+
+type SalesLeaderboardEntry = {
+  id: string;
+  name: string;
+  role?: string | null;
+  order_count: number;
+  won_count: number;
+  won_value: string;
+  open_value: string;
 };
 
 function buildDailyRanges(days: number) {
@@ -50,6 +80,80 @@ function buildDailyRanges(days: number) {
       range_end: end.toISOString()
     };
   });
+}
+
+async function getSalesLeaderboard(
+  client: PoolClient,
+  input: { organizationId?: string; organizationUserId?: string }
+) {
+  const filters = ["ou.status = 'active'", "ou.role in ('org_admin', 'manager', 'agent', 'user')"];
+  const params: string[] = [];
+
+  if (input.organizationId) {
+    params.push(input.organizationId);
+    filters.push(`ou.organization_id = $${params.length}`);
+  }
+
+  if (input.organizationUserId) {
+    params.push(input.organizationUserId);
+    filters.push(`ou.id = $${params.length}`);
+  }
+
+  const result = await client.query<{
+    id: string;
+    name: string;
+    role: string | null;
+    order_count: string;
+    won_count: string;
+    won_value: string;
+    open_value: string;
+  }>(
+    `
+      select
+        ou.id::text as id,
+        coalesce(nullif(trim(ou.full_name), ''), ou.email, 'Unassigned') as name,
+        ou.role,
+        count(so.id)::text as order_count,
+        count(so.id) filter (where so.status = 'closed_won')::text as won_count,
+        coalesce(sum(so.total_amount) filter (where so.status = 'closed_won'), 0)::text as won_value,
+        coalesce(sum(so.total_amount) filter (where so.status = 'open'), 0)::text as open_value
+      from organization_users ou
+      left join sales_orders so
+        on so.assigned_user_id = ou.id
+        and so.organization_id = ou.organization_id
+      where ${filters.join(" and ")}
+      group by ou.id, ou.full_name, ou.email, ou.role
+      order by
+        coalesce(sum(so.total_amount) filter (where so.status = 'closed_won'), 0) desc,
+        count(so.id) filter (where so.status = 'closed_won') desc,
+        count(so.id) desc
+    `,
+    params
+  );
+
+  const performers: SalesLeaderboardEntry[] = result.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    order_count: Number(row.order_count),
+    won_count: Number(row.won_count),
+    won_value: row.won_value,
+    open_value: row.open_value
+  }));
+
+  const averageWonCount =
+    performers.length > 0
+      ? performers.reduce((total, performer) => total + performer.won_count, 0) / performers.length
+      : 0;
+
+  return {
+    topPerformers: performers.slice(0, 5),
+    needsAttention: [...performers]
+      .filter((performer) => performer.won_count < averageWonCount)
+      .sort((left, right) => left.won_count - right.won_count || Number(left.won_value) - Number(right.won_value))
+      .slice(0, 5),
+    averageWonCount
+  };
 }
 
 export class DashboardService {
@@ -169,6 +273,12 @@ export class DashboardService {
       );
       const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
       const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
+      const leaderboard = authUser.role === "user"
+        ? await getSalesLeaderboard(client, {
+            organizationId: authUser.organizationId,
+            organizationUserId: authUser.organizationUserId
+          })
+        : null;
 
       return {
         scope: "agent",
@@ -234,7 +344,14 @@ export class DashboardService {
               range_end: range.range_end,
               href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
             }
-          ])
+          ]),
+          ...(leaderboard
+            ? {
+                leaderboard: leaderboard.topPerformers,
+                leaderboard_attention: leaderboard.needsAttention,
+                leaderboard_average_won_count: leaderboard.averageWonCount
+              }
+            : {})
         }
       };
     } finally {
@@ -333,6 +450,9 @@ export class DashboardService {
       );
       const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
       const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
+      const leaderboard = authUser.role === "org_admin"
+        ? await getSalesLeaderboard(client, { organizationId: authUser.organizationId })
+        : null;
 
       return {
         scope: "admin",
@@ -406,7 +526,14 @@ export class DashboardService {
               range_end: range.range_end,
               href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
             }
-          ])
+          ]),
+          ...(leaderboard
+            ? {
+                leaderboard: leaderboard.topPerformers,
+                leaderboard_attention: leaderboard.needsAttention,
+                leaderboard_average_won_count: leaderboard.averageWonCount
+              }
+            : {})
         }
       };
     } finally {
@@ -466,7 +593,6 @@ export class DashboardService {
       );
       const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
       const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
-
       return {
         scope: "super_admin",
         metrics: [
@@ -536,7 +662,7 @@ export class DashboardService {
               range_end: range.range_end,
               href: `/sales?status=closed_won&closed_from=${encodeURIComponent(range.range_start)}&closed_to=${encodeURIComponent(range.range_end)}`
             }
-          ])
+          ]),
         }
       };
     } finally {

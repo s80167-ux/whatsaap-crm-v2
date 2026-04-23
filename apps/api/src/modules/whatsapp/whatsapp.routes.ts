@@ -7,6 +7,6 @@ import { createWhatsAppAccount, getWhatsAppAccountQr, reconnectWhatsAppAccount }
 export const whatsappRoutes = Router();
 
 whatsappRoutes.post("/send", requirePermission("messages.send"), asyncHandler(sendWhatsAppMessage));
-whatsappRoutes.post("/accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
-whatsappRoutes.post("/accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
-whatsappRoutes.get("/:accountId/qr", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(getWhatsAppAccountQr));
+whatsappRoutes.post("/accounts", asyncHandler(createWhatsAppAccount));
+whatsappRoutes.post("/accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
+whatsappRoutes.get("/:accountId/qr", asyncHandler(getWhatsAppAccountQr));

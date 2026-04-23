@@ -2,6 +2,7 @@ import {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  type WAMessage,
   WAMessageStatus,
   useMultiFileAuthState
 } from "baileys";
@@ -16,7 +17,7 @@ import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountReposi
 import { WhatsAppRuntimeRepository } from "../repositories/whatsAppRuntimeRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
-import { jidToPhone } from "../utils/phone.js";
+import { bestPhoneFromWhatsAppMessageKey, jidToPhone } from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 type SessionRuntimeState = {
@@ -30,6 +31,14 @@ type OutboundMediaAttachment = {
   mimeType: string;
   dataBase64: string;
 };
+
+const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+function isWithinHistorySyncWindow(sentAt: Date, lookbackDays: number | null | undefined) {
+  const days = Math.max(0, lookbackDays ?? 7);
+  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000 - HISTORY_SYNC_CLOCK_SKEW_MS;
+  return sentAt.getTime() >= cutoffMs;
+}
 
 function mapBaileysStatusToAckStatus(status: number | null | undefined) {
   switch (status) {
@@ -68,6 +77,8 @@ export class WhatsAppSessionManager {
   private readonly accountRepository = new WhatsAppAccountRepository();
   private readonly runtimeRepository = new WhatsAppRuntimeRepository();
   private readonly rawEventIngestionService = new RawEventIngestionService();
+  private readonly phoneJidByLid = new Map<string, string>();
+  private readonly avatarUrlByJid = new Map<string, string>();
 
   getSocket(accountId: string) {
     return this.sockets.get(accountId);
@@ -90,6 +101,7 @@ export class WhatsAppSessionManager {
     connection_status: string;
     account_jid: string | null;
     display_name: string | null;
+    history_sync_lookback_days?: number | null;
   }) {
     this.disabledAccounts.delete(account.id);
 
@@ -106,6 +118,7 @@ export class WhatsAppSessionManager {
     connection_status: string;
     account_jid: string | null;
     display_name: string | null;
+    history_sync_lookback_days?: number | null;
   }) {
     if (this.disabledAccounts.has(account.id)) {
       return;
@@ -275,36 +288,64 @@ export class WhatsAppSessionManager {
         }
       });
 
+      const handleWhatsAppMessage = async (message: WAMessage) => {
+        if (!message.key?.id || !message.key?.remoteJid) {
+          return;
+        }
+
+        const direction = message.key.fromMe ? "outgoing" : "incoming";
+        const sentAt = new Date(Number(message.messageTimestamp) * 1000 || Date.now());
+
+        if (!isWithinHistorySyncWindow(sentAt, account.history_sync_lookback_days)) {
+          return;
+        }
+
+        const messageKey = message.key as Record<string, unknown>;
+        const phoneRaw =
+          bestPhoneFromWhatsAppMessageKey(messageKey) ??
+          this.lookupPhoneFromLid(message.key.remoteJid) ??
+          jidToPhone(message.key.remoteJid);
+        const profileAvatarUrl = await this.resolveProfileAvatarUrl(socket, message.key.remoteJid, messageKey);
+
+        try {
+          await this.rawEventIngestionService.enqueueMessageEvent({
+            organizationId: account.organization_id,
+            whatsappAccountId: account.id,
+            externalMessageId: message.key.id,
+            remoteJid: message.key.remoteJid,
+            phoneRaw,
+            profileName: message.pushName ?? null,
+            profileAvatarUrl,
+            textBody: extractTextContent(message),
+            messageType: detectMessageType(message),
+            direction,
+            sentAt,
+            rawPayload: message
+          });
+        } catch (error) {
+          logger.error({ error, accountId: account.id, messageId: message.key.id }, "Failed to enqueue raw event");
+        }
+      };
+
       socket.ev.on("messages.upsert", async ({ messages, type }) => {
-        if (type !== "notify") {
+        if (type !== "notify" && type !== "append") {
           return;
         }
 
         for (const message of messages) {
-          if (!message.key?.id || !message.key?.remoteJid) {
-            continue;
-          }
+          await handleWhatsAppMessage(message);
+        }
+      });
 
-          const direction = message.key.fromMe ? "outgoing" : "incoming";
-          const sentAt = new Date(Number(message.messageTimestamp) * 1000 || Date.now());
+      socket.ev.on("messaging-history.set", async ({ messages }) => {
+        for (const message of messages) {
+          await handleWhatsAppMessage(message);
+        }
+      });
 
-          try {
-            await this.rawEventIngestionService.enqueueMessageEvent({
-              organizationId: account.organization_id,
-              whatsappAccountId: account.id,
-              externalMessageId: message.key.id,
-              remoteJid: message.key.remoteJid,
-              phoneRaw: jidToPhone(message.key.remoteJid),
-              profileName: message.pushName ?? null,
-              textBody: extractTextContent(message),
-              messageType: detectMessageType(message),
-              direction,
-              sentAt,
-              rawPayload: message
-            });
-          } catch (error) {
-            logger.error({ error, accountId: account.id, messageId: message.key.id }, "Failed to enqueue raw event");
-          }
+      socket.ev.on("chats.phoneNumberShare", ({ lid, jid }) => {
+        if (lid && jid) {
+          this.phoneJidByLid.set(lid, jid);
         }
       });
 
@@ -413,6 +454,46 @@ export class WhatsAppSessionManager {
       clearInterval(runtime.heartbeat);
       this.runtimes.delete(accountId);
     }
+  }
+
+  private lookupPhoneFromLid(jid: string | null | undefined) {
+    if (!jid?.includes("@lid")) {
+      return null;
+    }
+
+    return jidToPhone(this.phoneJidByLid.get(jid));
+  }
+
+  private async resolveProfileAvatarUrl(socket: ReturnType<typeof makeWASocket>, jid: string, key: Record<string, unknown>) {
+    const candidates = [
+      key.senderPn,
+      key.participantPn,
+      key.participant,
+      this.phoneJidByLid.get(jid),
+      jid
+    ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
+
+    for (const candidate of candidates) {
+      const cached = this.avatarUrlByJid.get(candidate);
+
+      if (cached) {
+        return cached;
+      }
+
+      try {
+        const avatarUrl = await socket.profilePictureUrl(candidate, "image", 1_500);
+
+        if (avatarUrl) {
+          this.avatarUrlByJid.set(candidate, avatarUrl);
+          this.avatarUrlByJid.set(jid, avatarUrl);
+          return avatarUrl;
+        }
+      } catch (error) {
+        logger.debug({ error, jid: candidate }, "Unable to fetch WhatsApp profile picture");
+      }
+    }
+
+    return null;
   }
 
   private async sendHeartbeat(accountId: string, sessionId: string) {

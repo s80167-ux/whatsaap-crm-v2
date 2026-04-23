@@ -18,11 +18,13 @@ type WhatsAppAccountColumns = {
   baileys_session_key: boolean;
   auth_path: boolean;
   account_jid: boolean;
+  created_by: boolean;
   created_at: boolean;
   deleted_at: boolean;
   last_connected_at: boolean;
   last_disconnected_at: boolean;
   health_score: boolean;
+  history_sync_lookback_days: boolean;
 };
 
 export type WhatsAppAccountQrRecord = {
@@ -63,11 +65,13 @@ export class WhatsAppAdminRepository {
       baileys_session_key: names.has("baileys_session_key"),
       auth_path: names.has("auth_path"),
       account_jid: names.has("account_jid"),
+      created_by: names.has("created_by"),
       created_at: names.has("created_at"),
       deleted_at: names.has("deleted_at"),
       last_connected_at: names.has("last_connected_at"),
       last_disconnected_at: names.has("last_disconnected_at"),
-      health_score: names.has("health_score")
+      health_score: names.has("health_score"),
+      history_sync_lookback_days: names.has("history_sync_lookback_days")
     };
 
     WhatsAppAdminRepository.cachedColumns = columns;
@@ -79,6 +83,7 @@ export class WhatsAppAdminRepository {
       select
         id,
         organization_id,
+        ${columns.created_by ? "created_by" : "null"} as created_by,
         ${columns.label ? "label" : columns.name ? "name" : "null"} as label,
         ${columns.account_phone_e164 ? "account_phone_e164" : columns.phone_number ? "phone_number" : "null"} as account_phone_e164,
         ${columns.account_phone_normalized ? "account_phone_normalized" : columns.phone_number_normalized ? "phone_number_normalized" : "null"} as account_phone_normalized,
@@ -87,7 +92,8 @@ export class WhatsAppAdminRepository {
         ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
         ${columns.last_connected_at ? "last_connected_at" : "null"} as last_connected_at,
         ${columns.last_disconnected_at ? "last_disconnected_at" : "null"} as last_disconnected_at,
-        ${columns.health_score ? "health_score" : "null"} as health_score
+        ${columns.health_score ? "health_score" : "null"} as health_score,
+        ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days
       from whatsapp_accounts
     `;
   }
@@ -120,12 +126,39 @@ export class WhatsAppAdminRepository {
     return result.rows;
   }
 
+  async listByOrganizationAndCreator(
+    client: PoolClient,
+    organizationId: string,
+    createdBy: string
+  ): Promise<WhatsAppAccountRecord[]> {
+    const columns = await this.getColumns(client);
+
+    if (!columns.created_by) {
+      return [];
+    }
+
+    const result = await client.query<WhatsAppAccountRecord>(
+      `
+        ${this.buildSelect(columns)}
+        where organization_id = $1
+          and created_by = $2
+          ${columns.deleted_at ? "and deleted_at is null" : ""}
+        order by ${columns.created_at ? "created_at" : "id"} desc
+      `,
+      [organizationId, createdBy]
+    );
+
+    return result.rows;
+  }
+
   async create(
     client: PoolClient,
     input: {
       organizationId: string;
       name: string;
       phoneNumber: string | null;
+      createdBy: string | null;
+      historySyncLookbackDays?: number | null;
     }
   ): Promise<WhatsAppAccountRecord> {
     const columns = await this.getColumns(client);
@@ -133,9 +166,9 @@ export class WhatsAppAdminRepository {
     const accountId = randomUUID();
     const insertColumns = ["id", "organization_id"];
     const insertValues = ["$1", "$2"];
-    const params: Array<string | null> = [accountId, input.organizationId];
+    const params: Array<string | number | null> = [accountId, input.organizationId];
 
-    const pushValue = (column: string, value: string | null) => {
+    const pushValue = (column: string, value: string | number | null) => {
       insertColumns.push(column);
       params.push(value);
       insertValues.push(`$${params.length}`);
@@ -185,6 +218,14 @@ export class WhatsAppAdminRepository {
       pushValue("auth_path", accountId);
     }
 
+    if (columns.created_by) {
+      pushValue("created_by", input.createdBy);
+    }
+
+    if (columns.history_sync_lookback_days) {
+      pushValue("history_sync_lookback_days", input.historySyncLookbackDays ?? 7);
+    }
+
     const result = await client.query<WhatsAppAccountRecord>(
       `
         insert into whatsapp_accounts (
@@ -194,6 +235,7 @@ export class WhatsAppAdminRepository {
         returning
           id,
           organization_id,
+          ${columns.created_by ? "created_by" : "null"} as created_by,
           ${columns.label ? "label" : columns.name ? "name" : "null"} as label,
           ${columns.account_phone_e164 ? "account_phone_e164" : columns.phone_number ? "phone_number" : "null"} as account_phone_e164,
           ${columns.account_phone_normalized ? "account_phone_normalized" : columns.phone_number_normalized ? "phone_number_normalized" : "null"} as account_phone_normalized,
@@ -202,7 +244,8 @@ export class WhatsAppAdminRepository {
           ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
           ${columns.last_connected_at ? "last_connected_at" : "null"} as last_connected_at,
           ${columns.last_disconnected_at ? "last_disconnected_at" : "null"} as last_disconnected_at,
-          ${columns.health_score ? "health_score" : "null"} as health_score
+          ${columns.health_score ? "health_score" : "null"} as health_score,
+          ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days
       `,
       params
     );
@@ -225,6 +268,85 @@ export class WhatsAppAdminRepository {
     return result.rows[0] ?? null;
   }
 
+  async update(
+    client: PoolClient,
+    accountId: string,
+    input: {
+      organizationId: string;
+      name: string;
+      phoneNumber: string | null;
+      historySyncLookbackDays?: number | null;
+    }
+  ): Promise<WhatsAppAccountRecord | null> {
+    const columns = await this.getColumns(client);
+    const normalizedPhone = normalizePhoneNumber(input.phoneNumber);
+    const assignments = ["organization_id = $2"];
+    const params: Array<string | number | null> = [accountId, input.organizationId];
+
+    const pushAssignment = (column: string, value: string | number | null) => {
+      params.push(value);
+      assignments.push(`${column} = $${params.length}`);
+    };
+
+    if (columns.name) {
+      pushAssignment("name", input.name);
+    }
+
+    if (columns.label) {
+      pushAssignment("label", input.name);
+    }
+
+    if (columns.display_name) {
+      pushAssignment("display_name", input.name);
+    }
+
+    if (columns.phone_number) {
+      pushAssignment("phone_number", input.phoneNumber);
+    }
+
+    if (columns.phone_number_normalized) {
+      pushAssignment("phone_number_normalized", normalizedPhone);
+    }
+
+    if (columns.account_phone_e164) {
+      pushAssignment("account_phone_e164", input.phoneNumber);
+    }
+
+    if (columns.account_phone_normalized) {
+      pushAssignment("account_phone_normalized", normalizedPhone);
+    }
+
+    if (columns.history_sync_lookback_days) {
+      pushAssignment("history_sync_lookback_days", input.historySyncLookbackDays ?? 7);
+    }
+
+    const result = await client.query<WhatsAppAccountRecord>(
+      `
+        update whatsapp_accounts
+        set ${assignments.join(",\n            ")}
+        where id = $1
+          ${columns.deleted_at ? "and deleted_at is null" : ""}
+        returning
+          id,
+          organization_id,
+          ${columns.created_by ? "created_by" : "null"} as created_by,
+          ${columns.label ? "label" : columns.name ? "name" : "null"} as label,
+          ${columns.account_phone_e164 ? "account_phone_e164" : columns.phone_number ? "phone_number" : "null"} as account_phone_e164,
+          ${columns.account_phone_normalized ? "account_phone_normalized" : columns.phone_number_normalized ? "phone_number_normalized" : "null"} as account_phone_normalized,
+          ${columns.connection_status ? "connection_status" : columns.status ? "status" : "'disconnected'"} as connection_status,
+          ${columns.account_jid ? "account_jid" : "null"} as account_jid,
+          ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
+          ${columns.last_connected_at ? "last_connected_at" : "null"} as last_connected_at,
+          ${columns.last_disconnected_at ? "last_disconnected_at" : "null"} as last_disconnected_at,
+          ${columns.health_score ? "health_score" : "null"} as health_score,
+          ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days
+      `,
+      params
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async deleteById(client: PoolClient, accountId: string): Promise<WhatsAppAccountRecord | null> {
     const columns = await this.getColumns(client);
     const result = await client.query<WhatsAppAccountRecord>(
@@ -234,6 +356,7 @@ export class WhatsAppAdminRepository {
         returning
           id,
           organization_id,
+          ${columns.created_by ? "created_by" : "null"} as created_by,
           ${columns.label ? "label" : columns.name ? "name" : "null"} as label,
           ${columns.account_phone_e164 ? "account_phone_e164" : columns.phone_number ? "phone_number" : "null"} as account_phone_e164,
           ${columns.account_phone_normalized ? "account_phone_normalized" : columns.phone_number_normalized ? "phone_number_normalized" : "null"} as account_phone_normalized,
@@ -242,7 +365,8 @@ export class WhatsAppAdminRepository {
           ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
           ${columns.last_connected_at ? "last_connected_at" : "null"} as last_connected_at,
           ${columns.last_disconnected_at ? "last_disconnected_at" : "null"} as last_disconnected_at,
-          ${columns.health_score ? "health_score" : "null"} as health_score
+          ${columns.health_score ? "health_score" : "null"} as health_score,
+          ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days
       `,
       [accountId]
     );
