@@ -43,53 +43,9 @@ export class WhatsAppSessionManager {
     try {
       const accounts = await this.accountRepository.listActive(client);
       await Promise.all(accounts.map((account) => this.initializeSession(account)));
-      if (qr) {
-        await withTransaction(async (client) => {
-          await this.accountRepository.updateStatus(client, account.id, "qr_required");
-          await this.accountRepository.updateHealthScore(client, account.id, "qr_required");
-        });
-        logger.info(
-          { accountId: account.id, qrLength: qr.length },
-          "WhatsApp QR received; handle it from connection.update instead of terminal output"
-        );
-      }
-
-      if (connection === "open") {
-        await withTransaction(async (client) => {
-          await this.accountRepository.updateStatus(client, account.id, "connected");
-          await this.accountRepository.updateHealthScore(client, account.id, "connected");
-        });
-        logger.info({ accountId: account.id }, "WhatsApp session connected");
-      }
-
-      if (connection === "close") {
-        await withTransaction(async (client) => {
-          await this.accountRepository.updateStatus(client, account.id, "disconnected");
-          await this.accountRepository.updateHealthScore(client, account.id, "disconnected");
-        });
-        const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-
-        logger.warn({ accountId: account.id, statusCode }, "WhatsApp session closed");
-
-        if (shouldReconnect && !this.disabledAccounts.has(account.id)) {
-          setTimeout(() => {
-            void this.initializeSession(account);
-          }, 5000);
-        }
-      }
-    } catch (error) {
-      logger.warn({ error, accountId: account.id }, "Failed to end existing WhatsApp socket during reconnect");
+    } finally {
+      client.release();
     }
-
-    try {
-      existingSocket?.ws?.close?.();
-    } catch (error) {
-      logger.warn({ error, accountId: account.id }, "Failed to close existing WhatsApp websocket during reconnect");
-    }
-
-    await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "reconnecting"));
-    await this.initializeSession(account);
   }
 
   async initializeSession(account: {

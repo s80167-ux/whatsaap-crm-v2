@@ -3494,3 +3494,622 @@
     [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
     [35mstatusCode[39m: 304
     [35mdurationMs[39m: 987
+[00:06:06.581] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "ba141ffc-6590-45cf-abb6-14f8c09eef24"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:06:06.590] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "4f6b2d72-d1a0-4fdb-a214-adb215124e1f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:06:06.593] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "f1b8a8cb-640a-45ee-bcd3-b8b846a07b28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:06:06.595] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "996e7897-1e31-4b0b-90c4-af22db424198"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:06:06.597] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "af6f4aa5-f1a3-4872-aca5-f75ee7f36952"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[0mGET /api/auth/me [36m304[0m 878.577 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 944.007 ms - -[0m
+[0mGET /api/users [36m304[0m 949.027 ms - -[0m
+[0mGET /api/organizations [36m304[0m 960.852 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 968.164 ms - -[0m
+[00:06:07.460] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "ba141ffc-6590-45cf-abb6-14f8c09eef24"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 879
+[00:06:07.539] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "996e7897-1e31-4b0b-90c4-af22db424198"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 944
+[00:06:07.546] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "af6f4aa5-f1a3-4872-aca5-f75ee7f36952"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 949
+[00:06:07.551] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "4f6b2d72-d1a0-4fdb-a214-adb215124e1f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 961
+[00:06:07.561] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "f1b8a8cb-640a-45ee-bcd3-b8b846a07b28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 968
+[00:06:22.603] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "5759ee14-1e48-4ed9-b181-94d7617e2060"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 744.512 ms - -[0m
+[00:06:23.348] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "5759ee14-1e48-4ed9-b181-94d7617e2060"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 745
+[00:06:38.363] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "6f832a00-2eb2-45d4-804e-8a727023a054"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 752.477 ms - -[0m
+[00:06:39.116] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "6f832a00-2eb2-45d4-804e-8a727023a054"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 753
+[0mGET /api/auth/me [36m304[0m 717.823 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 795.236 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 803.819 ms - -[0m
+[0mGET /api/organizations [36m304[0m 810.250 ms - -[0m
+[0mGET /api/users [36m304[0m 807.359 ms - -[0m
+[00:06:55.978] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "9993a4f3-ef76-47b6-8b52-d82fadf5bcd8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:06:55.980] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "2c97c932-0098-47df-8af9-b4ab4b956d3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:06:55.983] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "16ea0ad2-584d-4f9b-abf7-c40db1bcfd5c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:06:55.987] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "789fa52e-c4af-4895-b4d6-d8e83472ddbc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:06:55.989] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "a4dfb220-80b2-46d0-a6d6-669eb1366d71"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:06:56.692] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "9993a4f3-ef76-47b6-8b52-d82fadf5bcd8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 714
+[00:06:56.779] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "789fa52e-c4af-4895-b4d6-d8e83472ddbc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 792
+[00:06:56.781] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "2c97c932-0098-47df-8af9-b4ab4b956d3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 801
+[00:06:56.790] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "16ea0ad2-584d-4f9b-abf7-c40db1bcfd5c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 807
+[00:06:56.793] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "a4dfb220-80b2-46d0-a6d6-669eb1366d71"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 804
+[00:07:11.837] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "5778f60e-5b37-4a7b-a922-e2f9efa2999a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 747.965 ms - -[0m
+[00:07:12.585] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "5778f60e-5b37-4a7b-a922-e2f9efa2999a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 748
+[0mGET /api/auth/me [36m304[0m 466.558 ms - -[0m
+[00:07:21.955] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "25f4534b-727c-4c78-bbe0-0baa41fd490e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:07:22.422] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "25f4534b-727c-4c78-bbe0-0baa41fd490e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 467
+[00:07:22.763] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "57695294-093c-4e61-9746-1ca1cb56f4fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:07:22.765] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "2f6daec6-c7b6-4362-bb92-b5b4752e60d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:07:22.768] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "9f399b05-e2e3-432c-a5c2-ada777b671b3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:07:22.770] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "19449ef9-3a42-4faf-91e8-bed47f9280f2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/organizations [36m304[0m 385.462 ms - -[0m
+[00:07:23.149] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "57695294-093c-4e61-9746-1ca1cb56f4fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 386
+[0mGET /api/users [36m304[0m 771.503 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 774.224 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 777.585 ms - -[0m
+[00:07:23.537] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "2f6daec6-c7b6-4362-bb92-b5b4752e60d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 772
+[00:07:23.545] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "19449ef9-3a42-4faf-91e8-bed47f9280f2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 775
+[00:07:23.546] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "9f399b05-e2e3-432c-a5c2-ada777b671b3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 778
+[0mGET /api/organizations [36m304[0m 402.751 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 405.591 ms - -[0m
+[00:07:27.890] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "19d9d9e3-fc64-4e47-971a-b5319417d8df"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:07:27.892] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "959cf59d-a9b3-4607-a17f-a42a9742872f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:07:28.293] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "19d9d9e3-fc64-4e47-971a-b5319417d8df"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 403
+[00:07:28.298] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "959cf59d-a9b3-4607-a17f-a42a9742872f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 406
+[00:07:43.306] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "33683ade-dd06-46e9-8be6-d81a93fcffce"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 716.126 ms - -[0m
+[00:07:44.022] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "33683ade-dd06-46e9-8be6-d81a93fcffce"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 716
+[00:07:59.037] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "c9617fae-362a-44f0-8c23-5d163476ffc8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 755.642 ms - -[0m
+[00:07:59.793] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "c9617fae-362a-44f0-8c23-5d163476ffc8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 756
+[00:08:14.814] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "39bc23d1-6b0a-4004-a5e2-8c3c6ecab550"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 739.470 ms - -[0m
+[00:08:15.554] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "39bc23d1-6b0a-4004-a5e2-8c3c6ecab550"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 740
+[0mGET /api/organizations [36m304[0m 382.596 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 830.325 ms - -[0m
+[0mGET /api/users [36m304[0m 898.337 ms - -[0m
+[00:08:17.893] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "4343e961-e564-4064-bd7a-688c1b599007"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:08:17.894] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "77fbf3df-bd7e-4b79-b7c4-6b403fef9ad1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:08:17.897] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "742f79fd-a74a-4e9e-86bb-2b0274dbf8e2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:08:18.276] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "4343e961-e564-4064-bd7a-688c1b599007"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 383
+[00:08:18.728] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "742f79fd-a74a-4e9e-86bb-2b0274dbf8e2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 831
+[00:08:18.793] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "77fbf3df-bd7e-4b79-b7c4-6b403fef9ad1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 899
+[00:08:30.566] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "ccb35285-e433-4a71-a43a-b9d0f42a1714"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 743.974 ms - -[0m
+[00:08:31.310] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "ccb35285-e433-4a71-a43a-b9d0f42a1714"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 744
+[00:08:46.322] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "84844404-9127-4bfb-bce3-a4c8979cc60d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 747.478 ms - -[0m
+[00:08:47.070] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "84844404-9127-4bfb-bce3-a4c8979cc60d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 748
+[00:09:17.002] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "f3463248-0ac0-4afd-82e4-01d7bbee7313"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:09:17.010] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "b2d8c4ed-0922-4e30-a59f-3e9654e7b868"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:09:17.031] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "5bc209be-7fa0-49a4-9715-398677fd5595"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:09:17.042] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "0f29cd3b-2b21-43eb-be34-480622605eda"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:09:17.044] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "69063c57-970f-4081-8177-2466b41e2b4c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[0mGET /api/auth/me [36m304[0m 919.458 ms - -[0m
+[0mGET /api/users [36m304[0m 971.070 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 976.671 ms - -[0m
+[0mGET /api/organizations [36m304[0m 1014.971 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 999.938 ms - -[0m
+[00:09:17.922] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "f3463248-0ac0-4afd-82e4-01d7bbee7313"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 920
+[00:09:18.014] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "0f29cd3b-2b21-43eb-be34-480622605eda"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 972
+[00:09:18.021] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "69063c57-970f-4081-8177-2466b41e2b4c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 977
+[00:09:18.025] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "b2d8c4ed-0922-4e30-a59f-3e9654e7b868"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1016
+[00:09:18.032] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "5bc209be-7fa0-49a4-9715-398677fd5595"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1001
+[00:09:33.070] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "c7df510b-1326-430e-9167-15ef4299debc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 851.566 ms - -[0m
+[00:09:33.922] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "c7df510b-1326-430e-9167-15ef4299debc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 852
+[00:09:48.935] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "d1a3c889-ea2d-4f3c-a474-7e34de09b204"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 1039.042 ms - -[0m
+[00:09:49.975] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "d1a3c889-ea2d-4f3c-a474-7e34de09b204"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1040
+[00:10:04.991] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "937e9c3c-20bd-479f-b8ae-c022f6de81a1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 732.383 ms - -[0m
+[00:10:05.724] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "937e9c3c-20bd-479f-b8ae-c022f6de81a1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 733
+[00:10:20.740] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "79ec11e7-46d4-49b9-98f3-dc34bbba7a20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 780.640 ms - -[0m
+[00:10:21.522] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "79ec11e7-46d4-49b9-98f3-dc34bbba7a20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 782
+[00:10:36.552] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "338977ed-9d86-4341-b103-d1051ea61790"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 747.609 ms - -[0m
+[00:10:37.300] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "338977ed-9d86-4341-b103-d1051ea61790"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 748
+[00:10:49.073] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "0ee1824f-8889-4e8a-9361-bc2e98f2a4cf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:10:49.077] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "beb5ac40-4ad1-4396-88c8-0dadf2495c90"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:10:49.090] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "dfd45bcd-6df6-4ad0-a503-ad4fb2430ae1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:10:49.092] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "65327b12-e3f9-428e-a5c7-2aba61ad51fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:10:49.096] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "5241b52c-b23c-4588-b279-a8907a064b10"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[0mGET /api/auth/me [36m304[0m 699.300 ms - -[0m
+[0mGET /api/organizations [36m304[0m 785.562 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 793.897 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 805.765 ms - -[0m
+[0mGET /api/users [36m304[0m 804.864 ms - -[0m
+[00:10:49.772] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "0ee1824f-8889-4e8a-9361-bc2e98f2a4cf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 699
+[00:10:49.863] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "beb5ac40-4ad1-4396-88c8-0dadf2495c90"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 786
+[00:10:49.890] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "5241b52c-b23c-4588-b279-a8907a064b10"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 794
+[00:10:49.896] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "dfd45bcd-6df6-4ad0-a503-ad4fb2430ae1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 806
+[00:10:49.898] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "65327b12-e3f9-428e-a5c7-2aba61ad51fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 806
+[00:11:05.265] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "4772a016-63e8-4d74-ad17-8998932662dd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 746.475 ms - -[0m
+[00:11:06.012] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "4772a016-63e8-4d74-ad17-8998932662dd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 747
+[00:12:21.481] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "cd3901e9-0652-47c6-8dff-59899458a5fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:12:21.484] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "a90822cf-fea5-4279-900d-a5e80452470c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:12:21.486] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "5e6344e5-0033-4859-85e0-a55618dbfbde"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:12:21.488] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "e2a26992-edbf-446c-b4be-18ad895faf78"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:12:21.490] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "6d720e28-b48a-4ea7-83e6-32dab0266f20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[0mGET /api/auth/me [36m304[0m 1074.407 ms - -[0m
+[00:12:22.556] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "cd3901e9-0652-47c6-8dff-59899458a5fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1075
+[0mGET /api/users [36m304[0m 1152.136 ms - -[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [36m304[0m 1160.545 ms - -[0m
+[00:12:22.640] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "e2a26992-edbf-446c-b4be-18ad895faf78"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1152
+[0mGET /api/organizations [36m304[0m 1165.037 ms - -[0m
+[00:12:22.647] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "5e6344e5-0033-4859-85e0-a55618dbfbde"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1161
+[00:12:22.649] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "a90822cf-fea5-4279-900d-a5e80452470c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1165
+[0mGET /api/admin/whatsapp-accounts [36m304[0m 1164.213 ms - -[0m
+[00:12:22.654] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "6d720e28-b48a-4ea7-83e6-32dab0266f20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 304
+    [35mdurationMs[39m: 1164
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [0m-[0m - ms - -[0m
+[0mGET /api/auth/me [0m-[0m - ms - -[0m
+[0mGET /api/admin/whatsapp-accounts [0m-[0m - ms - -[0m
+[0mGET /api/users [0m-[0m - ms - -[0m
+[0mGET /api/organizations [0m-[0m - ms - -[0m
+[00:13:49.395] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "a8b80353-b1e8-4709-8191-015ae123b2c6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:13:49.398] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "e9fd2a38-3172-49b7-89aa-12a7353ec96d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:13:49.403] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "57c34f07-b5a4-4f2b-b3db-be0e602b991a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[00:13:49.407] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "140b458d-2187-48d2-b667-c0ff960b233f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:13:49.429] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "bad6536d-9d77-40a8-a820-cfd10728552c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[00:13:51.461] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "3423d3d8-529f-415c-8457-9e604d99cb2a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[0mGET /api/auth/me [32m200[0m 287.534 ms - 557[0m
+[00:13:51.749] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "3423d3d8-529f-415c-8457-9e604d99cb2a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 288
+[00:13:52.096] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "545374bd-7a7b-4913-8218-cbbae4c63cf7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[00:13:52.099] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "a00c8eae-f0d8-4ec2-bdff-21c5c47923e1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/organizations [32m200[0m 354.973 ms - 176[0m
+[00:13:52.381] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "629aca22-4b41-42ee-8b33-daf997d7559d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+[00:13:52.382] [32mINFO[39m (16520): [36mRequest started[39m
+    [35mrequestId[39m: "d1b3c1a4-ccfa-4868-a86e-84f519248999"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+[00:13:52.451] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "545374bd-7a7b-4913-8218-cbbae4c63cf7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 355
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 361.895 ms - 781[0m
+[00:13:52.463] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "a00c8eae-f0d8-4ec2-bdff-21c5c47923e1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 364
+[0mGET /api/users [32m200[0m 374.780 ms - 901[0m
+[0mGET /api/admin/whatsapp-accounts [32m200[0m 375.763 ms - 781[0m
+[00:13:52.756] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "629aca22-4b41-42ee-8b33-daf997d7559d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/users"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 375
+[00:13:52.758] [32mINFO[39m (16520): [36mRequest completed[39m
+    [35mrequestId[39m: "d1b3c1a4-ccfa-4868-a86e-84f519248999"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 376
