@@ -374,6 +374,48 @@ export class WhatsAppAdminRepository {
     return result.rows[0] ?? null;
   }
 
+  async updateConnectionStatus(client: PoolClient, accountId: string, status: string): Promise<WhatsAppAccountRecord | null> {
+    const columns = await this.getColumns(client);
+    const assignments = [];
+    const params: string[] = [accountId, status];
+
+    if (columns.connection_status) {
+      assignments.push("connection_status = $2");
+    }
+
+    if (columns.status) {
+      assignments.push("status = $2");
+    }
+
+    if (columns.last_connected_at) {
+      assignments.push("last_connected_at = case when $2 = 'connected' then timezone('utc', now()) else last_connected_at end");
+    }
+
+    if (columns.last_disconnected_at) {
+      assignments.push("last_disconnected_at = case when $2 = 'disconnected' then timezone('utc', now()) else last_disconnected_at end");
+    }
+
+    if (columns.health_score) {
+      assignments.push("health_score = case when $2 = 'connected' then 100 when $2 = 'disconnected' then 0 else 50 end");
+    }
+
+    if (assignments.length === 0) {
+      return this.findById(client, accountId);
+    }
+
+    await client.query(
+      `
+        update whatsapp_accounts
+        set ${assignments.join(",\n            ")}
+        where id = $1
+          ${columns.deleted_at ? "and deleted_at is null" : ""}
+      `,
+      params
+    );
+
+    return this.findById(client, accountId);
+  }
+
   async findLatestQrByAccountId(client: PoolClient, accountId: string): Promise<WhatsAppAccountQrRecord | null> {
     const result = await client.query<WhatsAppAccountQrRecord>(
       `

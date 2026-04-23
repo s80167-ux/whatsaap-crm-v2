@@ -51,8 +51,41 @@ export class ContactRepository {
           c.primary_phone_e164,
           c.primary_phone_normalized,
           c.primary_avatar_url,
-          c.owner_user_id
+          c.owner_user_id,
+          coalesce(src.source_count, 0)::integer as whatsapp_source_count,
+          coalesce(src.sources, '[]'::json) as whatsapp_sources
         from contacts c
+        left join lateral (
+          with source_accounts as (
+            select
+              wa.id,
+              coalesce(wa.label, wa.display_name, wa.account_phone_normalized, wa.account_phone_e164, wa.id::text) as label,
+              max(seen_at) as last_seen_at
+            from (
+              select ci.whatsapp_account_id, ci.last_seen_at as seen_at
+              from contact_identities ci
+              where ci.contact_id = c.id
+                and ci.whatsapp_account_id is not null
+              union all
+              select conv.whatsapp_account_id, greatest(conv.last_message_at, conv.last_incoming_at, conv.last_outgoing_at) as seen_at
+              from conversations conv
+              where conv.contact_id = c.id
+              union all
+              select m.whatsapp_account_id, m.sent_at as seen_at
+              from messages m
+              where m.contact_id = c.id
+            ) source_events
+            join whatsapp_accounts wa on wa.id = source_events.whatsapp_account_id
+            group by wa.id, label
+          )
+          select
+            count(*)::integer as source_count,
+            json_agg(
+              json_build_object('id', id, 'label', label)
+              order by last_seen_at desc nulls last, label asc
+            ) as sources
+          from source_accounts
+        ) src on true
         where c.organization_id = $1
           and c.id = $2
           and (

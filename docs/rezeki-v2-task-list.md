@@ -263,7 +263,7 @@ Status: completed
 
 ## Phase 12: Post-Sales UX Refinements
 
-Status: in progress
+Status: completed
 
 - [x] Add per-record share actions from timeline entries so users can copy lead or order deep links straight from each audit event.
 - [x] Add inline share actions on dashboard metric cards without requiring navigation first.
@@ -286,13 +286,26 @@ Status: in progress
 - [x] Add admin management UI for quick reply templates.
 - [x] Add quick reply search and categories.
 - [x] Add attachment preview before sending.
-- [ ] Add richer composer actions such as saved templates, variables, and follow-up prompts.
+- [x] Add richer composer actions such as saved templates, variables, and follow-up prompts.
+- [x] Add quick reply usage tracking and admin analytics.
+
+## Phase 14: Advanced Template Personalization and Analytics
+
+Status: pending
+
+- [ ] Add named template variables with preview before insertion.
+- [ ] Add admin-defined variable defaults and required/optional variable rules.
+- [ ] Add per-agent quick reply usage analytics.
+- [ ] Add conversion or response outcome tracking for templates.
+- [ ] Add template performance dashboard for org admins.
+- [ ] Add template version history and rollback.
+- [ ] Add template approval workflow for larger organizations.
 
 ## Current Execution Status
 
 - Current phase: Phase 13, Inbox Composer Enhancements
-- Current completed step: outbound attachments now show an image preview or file preview card before sending
-- Next highest-impact step: add richer composer actions such as saved templates, variables, and follow-up prompts
+- Current completed step: migration `011_quick_reply_usage_metrics.sql` is applied, the API is restarted, and Phase 13 is officially complete
+- Next highest-impact step: start Phase 14 with named template variables and preview before insertion
 
 ## Recommended Immediate Execution Order
 

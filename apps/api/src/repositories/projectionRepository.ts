@@ -316,7 +316,9 @@ export class ProjectionRepository {
           ct.primary_phone_e164,
           ct.primary_phone_normalized,
           coalesce(ct.primary_avatar_url, cs.avatar_url) as primary_avatar_url,
-          ct.owner_user_id
+          ct.owner_user_id,
+          coalesce(src.source_count, 0)::integer as whatsapp_source_count,
+          coalesce(src.sources, '[]'::json) as whatsapp_sources
         from contacts ct
         left join contact_summary cs on cs.contact_id = ct.id
         left join lateral (
@@ -326,6 +328,37 @@ export class ProjectionRepository {
           from conversations
           where contact_id = ct.id
         ) conv on true
+        left join lateral (
+          with source_accounts as (
+            select
+              wa.id,
+              coalesce(wa.label, wa.display_name, wa.account_phone_normalized, wa.account_phone_e164, wa.id::text) as label,
+              max(seen_at) as last_seen_at
+            from (
+              select ci.whatsapp_account_id, ci.last_seen_at as seen_at
+              from contact_identities ci
+              where ci.contact_id = ct.id
+                and ci.whatsapp_account_id is not null
+              union all
+              select c.whatsapp_account_id, greatest(c.last_message_at, c.last_incoming_at, c.last_outgoing_at) as seen_at
+              from conversations c
+              where c.contact_id = ct.id
+              union all
+              select m.whatsapp_account_id, m.sent_at as seen_at
+              from messages m
+              where m.contact_id = ct.id
+            ) source_events
+            join whatsapp_accounts wa on wa.id = source_events.whatsapp_account_id
+            group by wa.id, label
+          )
+          select
+            count(*)::integer as source_count,
+            json_agg(
+              json_build_object('id', id, 'label', label)
+              order by last_seen_at desc nulls last, label asc
+            ) as sources
+          from source_accounts
+        ) src on true
         where ct.organization_id = $1
           and (
             $4::timestamptz is null

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { Info, Link2, PlugZap, RefreshCw, Trash2, Unplug, UserCircle, Zap } from "lucide-react";
 import {
   createOrganization,
   createUser,
   createWhatsAppAccount,
+  disconnectWhatsAppAccount,
   deleteOrganization,
   reconnectWhatsAppAccount,
   deleteUser,
@@ -14,14 +16,13 @@ import {
   updateUser,
   updateWhatsAppAccount
 } from "../api/admin";
-import { createQuickReply, deleteQuickReply, updateQuickReply } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
-import { useQuickReplies } from "../hooks/useQuickReplies";
-import { getStoredUser } from "../lib/auth";
+import { getStoredUser, updateStoredUser } from "../lib/auth";
 import type { OrganizationSummary, UserSummary, WhatsAppAccountSummary } from "../types/admin";
 
 function formatTimestamp(value?: string | null) {
@@ -33,6 +34,8 @@ function formatTimestamp(value?: string | null) {
 }
 
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
+const MAX_PROFILE_PICTURE_BYTES = 512 * 1024;
+const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function formatHistorySyncWindow(days: number | null | undefined) {
   if (!days) {
@@ -42,23 +45,72 @@ function formatHistorySyncWindow(days: number | null | undefined) {
   return `Previous ${days} ${days === 1 ? "day" : "days"}`;
 }
 
+function formatConnectionStatus(status: string) {
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getConnectionTone(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "connected") {
+    return { dot: "bg-emerald-500", text: "text-emerald-700" };
+  }
+
+  if (normalized === "pairing" || normalized === "reconnecting" || normalized === "qr_required" || normalized === "new") {
+    return { dot: "bg-amber-400", text: "text-amber-700" };
+  }
+
+  return { dot: "bg-red-500", text: "text-red-700" };
+}
+
+function isConnectedAccount(status: string) {
+  return status.toLowerCase() === "connected";
+}
+
+function readProfilePicture(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Unable to read selected image"));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Unable to read selected image"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function UserAvatarPreview({ src, label }: { src?: string | null; label?: string | null }) {
+  return (
+    <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-white text-text-soft">
+      {src ? (
+        <img src={src} alt={label ? `${label} profile` : "User profile"} className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center">
+          <UserCircle className="h-7 w-7" />
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SetupPage() {
   const queryClient = useQueryClient();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
-  const canManageQuickReplies = Boolean(
-    currentUser?.role === "super_admin" || currentUser?.permissionKeys.includes("org.manage_settings")
-  );
   const { data: organizations = [] } = useOrganizations();
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: users = [] } = useOrganizationUsers(activeOrganizationId);
   const { data: accounts = [], isFetching: isRefreshingAccounts, refetch: refetchAccounts } = useWhatsAppAccounts(activeOrganizationId);
-  const { data: quickReplies = [] } = useQuickReplies({
-    organizationId: activeOrganizationId,
-    includeInactive: true,
-    enabled: canManageQuickReplies && Boolean(activeOrganizationId)
-  });
+  const organizationPagination = usePanelPagination(organizations);
+  const userPagination = usePanelPagination(users);
+  const accountPagination = usePanelPagination(accounts);
 
   const [organizationName, setOrganizationName] = useState("");
   const [organizationSlug, setOrganizationSlug] = useState("");
@@ -79,9 +131,10 @@ export function SetupPage() {
   const [userEdit, setUserEdit] = useState<{
     organizationId: string;
     fullName: string;
+    avatarUrl: string | null;
     role: Exclude<UserSummary["role"], "super_admin">;
     status: UserSummary["status"];
-  }>({ organizationId: "", fullName: "", role: "agent", status: "active" });
+  }>({ organizationId: "", fullName: "", avatarUrl: null, role: "agent", status: "active" });
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
@@ -91,9 +144,6 @@ export function SetupPage() {
     phoneNumber: string;
     historySyncLookbackDays: number;
   }>({ organizationId: "", name: "", phoneNumber: "", historySyncLookbackDays: 7 });
-  const [quickReplyTitle, setQuickReplyTitle] = useState("");
-  const [quickReplyBody, setQuickReplyBody] = useState("");
-  const [quickReplyCategory, setQuickReplyCategory] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const canCreateScopedRecords = !isSuperAdmin || Boolean(activeOrganizationId) || userRole === "super_admin";
@@ -137,6 +187,7 @@ export function SetupPage() {
     setUserEdit({
       organizationId: user.organization_id,
       fullName: user.full_name ?? "",
+      avatarUrl: user.avatar_url ?? null,
       role: user.role,
       status: user.status
     });
@@ -297,12 +348,23 @@ export function SetupPage() {
     setNotice(null);
 
     try {
-      await updateUser(userId, {
+      const updatedUser = await updateUser(userId, {
         organizationId: isSuperAdmin ? userEdit.organizationId : undefined,
         fullName: userEdit.fullName || null,
+        avatarUrl: userEdit.avatarUrl,
         role: userEdit.role,
         status: userEdit.status
       });
+
+      if (updatedUser.auth_user_id && updatedUser.auth_user_id === currentUser?.id) {
+        updateStoredUser((storedUser) => ({
+          ...storedUser,
+          fullName: updatedUser.full_name,
+          avatarUrl: updatedUser.avatar_url,
+          role: updatedUser.role
+        }));
+      }
+
       setEditingUserId(null);
       setNotice("User updated.");
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -310,6 +372,36 @@ export function SetupPage() {
       setNotice(error instanceof Error ? error.message : "Unable to update user");
     } finally {
       setIsWorking(false);
+    }
+  }
+
+  async function handleProfilePictureChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!PROFILE_PICTURE_TYPES.has(file.type)) {
+      setNotice("Profile picture must be a JPG, PNG, WebP, or GIF image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_PICTURE_BYTES) {
+      setNotice("Profile picture is too large. Please choose an image under 512 KB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const avatarUrl = await readProfilePicture(file);
+      setUserEdit((draft) => ({ ...draft, avatarUrl }));
+      setNotice(null);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to read selected image");
+    } finally {
+      event.target.value = "";
     }
   }
 
@@ -386,80 +478,28 @@ export function SetupPage() {
     }
   }
 
+  async function handleDisconnectAccount(accountId: string, label: string) {
+    if (!window.confirm(`Disconnect WhatsApp account "${label}"?`)) {
+      return;
+    }
+
+    setIsWorking(true);
+    setNotice(null);
+
+    try {
+      await disconnectWhatsAppAccount(accountId);
+      setNotice(`Disconnect requested for "${label}".`);
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to disconnect WhatsApp account");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   async function handleRefreshAccounts() {
     setNotice(null);
     await refetchAccounts();
-  }
-
-  async function handleCreateQuickReply(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!activeOrganizationId) {
-      setNotice("Select an organization before creating quick replies.");
-      return;
-    }
-
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await createQuickReply({
-        organizationId: activeOrganizationId,
-        title: quickReplyTitle,
-        body: quickReplyBody,
-        category: quickReplyCategory || null
-      });
-      setQuickReplyTitle("");
-      setQuickReplyBody("");
-      setQuickReplyCategory("");
-      setNotice("Quick reply created. Users and agents can select it in their chat composer.");
-      await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create quick reply");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleToggleQuickReply(templateId: string, nextActive: boolean) {
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await updateQuickReply({
-        templateId,
-        organizationId: activeOrganizationId,
-        isActive: nextActive
-      });
-      setNotice(nextActive ? "Quick reply activated." : "Quick reply hidden from chat composers.");
-      await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to update quick reply");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleDeleteQuickReply(templateId: string, title: string) {
-    if (!window.confirm(`Delete quick reply "${title}"?`)) {
-      return;
-    }
-
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await deleteQuickReply({
-        templateId,
-        organizationId: activeOrganizationId
-      });
-      setNotice("Quick reply deleted.");
-      await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to delete quick reply");
-    } finally {
-      setIsWorking(false);
-    }
   }
 
   return (
@@ -610,7 +650,7 @@ export function SetupPage() {
           <Card elevated>
             <h3 className="text-lg font-semibold text-text">Organizations</h3>
             <div className="mt-4 space-y-3 text-sm text-text-muted">
-              {organizations.map((organization) => (
+              {organizationPagination.visibleItems.map((organization) => (
                 <div key={organization.id} className="rounded-lg border border-border bg-background-tint p-4">
                   {editingOrganizationId === organization.id ? (
                     <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
@@ -679,17 +719,53 @@ export function SetupPage() {
                 </div>
               ))}
             </div>
+            <PanelPagination
+              className="mt-4"
+              page={organizationPagination.page}
+              pageCount={organizationPagination.pageCount}
+              totalItems={organizationPagination.totalItems}
+              onPageChange={organizationPagination.setPage}
+            />
           </Card>
         ) : null}
 
         <Card elevated>
           <h3 className="text-lg font-semibold text-text">Users</h3>
           <div className="mt-4 space-y-3 text-sm text-text-muted">
-            {users.map((user) => (
+            {userPagination.visibleItems.map((user) => (
               <div key={user.id} className="rounded-lg border border-border bg-background-tint p-4">
                 {editingUserId === user.id ? (
                   <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
                     <p className="text-xs uppercase tracking-[0.16em] text-text-soft">{user.email}</p>
+                    <div className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
+                      <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Profile picture</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-border bg-background-tint px-3 py-2 text-xs font-semibold text-text transition hover:border-primary/30 hover:text-primary">
+                            Upload image
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="sr-only"
+                              onChange={handleProfilePictureChange}
+                            />
+                          </label>
+                          {userEdit.avatarUrl ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-3 py-2 text-xs"
+                              disabled={isWorking}
+                              onClick={() => setUserEdit((draft) => ({ ...draft, avatarUrl: null }))}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
+                      </div>
+                    </div>
                     {isSuperAdmin ? (
                       <Select
                         value={userEdit.organizationId}
@@ -746,8 +822,13 @@ export function SetupPage() {
                   </form>
                 ) : (
                   <>
-                    <p className="font-medium text-text">{user.full_name ?? user.email}</p>
-                    <p className="mt-1">{user.email}</p>
+                    <div className="flex items-center gap-3">
+                      <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-text">{user.full_name ?? user.email}</p>
+                        <p className="mt-1 truncate">{user.email}</p>
+                      </div>
+                    </div>
                     {isSuperAdmin ? <p className="mt-1">{getOrganizationName(user.organization_id)}</p> : null}
                     <p className="mt-1">{user.role}</p>
                     <p className="mt-1 uppercase tracking-[0.16em] text-text-soft">{user.status}</p>
@@ -816,210 +897,181 @@ export function SetupPage() {
               </div>
             ))}
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={userPagination.page}
+            pageCount={userPagination.pageCount}
+            totalItems={userPagination.totalItems}
+            onPageChange={userPagination.setPage}
+          />
         </Card>
 
-        <Card elevated>
+        <Card elevated className="min-w-0 xl:col-span-3">
           <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
-          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-text-soft">
-            <p>Auto-refreshes every 15 seconds while an organization is selected.</p>
-            <Button variant="ghost" className="px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
+            <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
+            <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
               {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
             </Button>
           </div>
-          <div className="mt-4 space-y-3 text-sm text-text-muted">
-            {accounts.map((account) => (
-              <div key={account.id} className="rounded-lg border border-border bg-background-tint p-4">
-                {editingAccountId === account.id ? (
-                  <form className="space-y-3" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
-                    {isSuperAdmin ? (
-                      <Select
-                        value={accountEdit.organizationId}
-                        onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                        required
-                      >
-                        {organizations.map((organization) => (
-                          <option key={organization.id} value={organization.id}>
-                            {organization.name}
-                          </option>
-                        ))}
-                      </Select>
-                    ) : null}
-                    <Input
-                      value={accountEdit.name}
-                      onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}
-                      placeholder="Account name"
-                      required
-                    />
-                    <Input
-                      value={accountEdit.phoneNumber}
-                      onChange={(event) => setAccountEdit((draft) => ({ ...draft, phoneNumber: event.target.value }))}
-                      placeholder="+60123456789"
-                    />
-                    <Select
-                      value={String(accountEdit.historySyncLookbackDays)}
-                      onChange={(event) => setAccountEdit((draft) => ({ ...draft, historySyncLookbackDays: Number(event.target.value) }))}
-                    >
-                      {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
-                        <option key={days} value={days}>
-                          {formatHistorySyncWindow(days)}
-                        </option>
-                      ))}
-                    </Select>
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1" disabled={isWorking || (isSuperAdmin && !accountEdit.organizationId)}>
-                        Save changes
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={isWorking}
-                        onClick={() => setEditingAccountId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <p className="font-medium text-text">{account.name}</p>
-                    <p className="mt-1">{account.phone_number_normalized ?? account.phone_number ?? "No phone set"}</p>
-                    <p className="mt-1 uppercase tracking-[0.16em] text-text-soft">{account.status}</p>
-                    <div className="mt-3 space-y-1 text-xs text-text-soft">
-                      <p>Last connected: {formatTimestamp(account.last_connected_at)}</p>
-                      <p>Last disconnected: {formatTimestamp(account.last_disconnected_at)}</p>
-                      <p>Health score: {account.health_score ?? "--"}</p>
-                      <p>History sync: {formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}</p>
-                    </div>
-                    {account.status?.toLowerCase() === "qr_required" ? (
-                      <div className="mt-4">
-                        <WhatsAppQrDisplay accountId={account.id} />
-                      </div>
-                    ) : null}
-                    <div className="mt-3 space-y-2">
-                      <Button
-                        variant="secondary"
-                        className="w-full"
-                        disabled={isWorking}
-                        onClick={() => beginEditAccount(account)}
-                      >
-                        Edit account
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="w-full"
-                        disabled={isWorking}
-                        onClick={() => handleReconnectAccount(account.id, account.name)}
-                      >
-                        Reconnect account
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="w-full text-coral"
-                        disabled={isWorking}
-                        onClick={() => handleDeleteAccount(account.id, account.name)}
-                      >
-                        Delete account
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+          <div className="mt-4 overflow-hidden border border-border bg-white text-sm shadow-soft">
+            <div className="hidden grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] gap-3 border-b border-border bg-background-tint px-4 py-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-text-soft lg:grid">
+              <p>Device Name</p>
+              <p>Status</p>
+              <p>Phone Number</p>
+              <p>Device Info</p>
+              <p>Actions</p>
+            </div>
+            <div className="divide-y divide-border">
+              {accountPagination.visibleItems.map((account) => {
+                const statusTone = getConnectionTone(account.status);
+                const connected = isConnectedAccount(account.status);
+                const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
+
+                return (
+                  <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
+                    {editingAccountId === account.id ? (
+                      <form className="space-y-3 lg:col-span-5" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
+                        {isSuperAdmin ? (
+                          <Select
+                            value={accountEdit.organizationId}
+                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                            required
+                          >
+                            {organizations.map((organization) => (
+                              <option key={organization.id} value={organization.id}>
+                                {organization.name}
+                              </option>
+                            ))}
+                          </Select>
+                        ) : null}
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <Input
+                            value={accountEdit.name}
+                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}
+                            placeholder="Account name"
+                            required
+                          />
+                          <Input
+                            value={accountEdit.phoneNumber}
+                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, phoneNumber: event.target.value }))}
+                            placeholder="+60123456789"
+                          />
+                          <Select
+                            value={String(accountEdit.historySyncLookbackDays)}
+                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, historySyncLookbackDays: Number(event.target.value) }))}
+                          >
+                            {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
+                              <option key={days} value={days}>
+                                {formatHistorySyncWindow(days)}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="submit" className="min-w-32" disabled={isWorking || (isSuperAdmin && !accountEdit.organizationId)}>
+                            Save changes
+                          </Button>
+                          <Button variant="secondary" className="min-w-32" disabled={isWorking} onClick={() => setEditingAccountId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Name</p>
+                          <p className="break-words font-semibold leading-5 text-text">{account.name}</p>
+                          {isSuperAdmin ? <p className="mt-1 text-xs text-text-soft">{getOrganizationName(account.organization_id)}</p> : null}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Status</p>
+                          <span className={`inline-flex min-w-0 items-center gap-2 font-medium ${statusTone.text}`}>
+                            <span className={`h-3 w-3 shrink-0 rounded-full ${statusTone.dot}`} />
+                            {formatConnectionStatus(account.status)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Phone Number</p>
+                          <p className="truncate font-mono text-sm tracking-wide text-text" title={phoneNumber}>
+                            {phoneNumber}
+                          </p>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Info</p>
+                          <div className="flex flex-wrap gap-2">
+                            <span title={`Last connected: ${formatTimestamp(account.last_connected_at)}. Last disconnected: ${formatTimestamp(account.last_disconnected_at)}.`} className="inline-flex items-center gap-1.5 bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                              <Info className="h-3.5 w-3.5" />
+                              Device Info
+                            </span>
+                            <span title={`Health score: ${account.health_score ?? "--"}`} className="inline-flex items-center gap-1.5 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                              <PlugZap className="h-3.5 w-3.5" />
+                              Readiness
+                            </span>
+                            <span title={`History sync: ${formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}`} className="inline-flex items-center gap-1.5 bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
+                              <Zap className="h-3.5 w-3.5" />
+                              Webhooks
+                            </span>
+                          </div>
+                          {account.status?.toLowerCase() === "qr_required" ? (
+                            <div className="mt-4">
+                              <WhatsAppQrDisplay accountId={account.id} />
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Actions</p>
+                          <div className="flex flex-wrap gap-2">
+                            {connected ? (
+                              <Button
+                                className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
+                                disabled={isWorking}
+                                onClick={() => handleDisconnectAccount(account.id, account.name)}
+                              >
+                                <Unplug className="h-3.5 w-3.5" />
+                                Disconnect
+                              </Button>
+                            ) : (
+                              <Button
+                                className="gap-1.5 bg-[#78bd2b] px-3 py-2 text-xs text-white hover:bg-[#64a421]"
+                                disabled={isWorking}
+                                onClick={() => handleReconnectAccount(account.id, account.name)}
+                              >
+                                <Link2 className="h-3.5 w-3.5" />
+                                Pair as New Device
+                              </Button>
+                            )}
+                            <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
+                              <RefreshCw className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                            <Button
+                              className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
+                              disabled={isWorking}
+                              onClick={() => handleDeleteAccount(account.id, account.name)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={accountPagination.page}
+            pageCount={accountPagination.pageCount}
+            totalItems={accountPagination.totalItems}
+            onPageChange={accountPagination.setPage}
+          />
         </Card>
       </div>
 
-      {canManageQuickReplies ? (
-        <div className="grid gap-6 xl:grid-cols-[380px,minmax(0,1fr)]">
-          <motion.form onSubmit={handleCreateQuickReply} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-            <Card elevated>
-              <h3 className="text-lg font-semibold text-text">Quick replies</h3>
-              <p className="mt-2 text-sm leading-6 text-text-muted">
-                Org admins compose approved replies here. Agents and users can select active replies in the Inbox chat editor.
-              </p>
-              <div className="mt-4 space-y-3">
-                {isSuperAdmin && !activeOrganizationId ? (
-                  <p className="rounded-lg border border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
-                    Select an organization above before creating quick replies.
-                  </p>
-                ) : null}
-                <Input
-                  value={quickReplyTitle}
-                  onChange={(event) => setQuickReplyTitle(event.target.value)}
-                  placeholder="Reply title"
-                  required
-                />
-                <Input
-                  value={quickReplyCategory}
-                  onChange={(event) => setQuickReplyCategory(event.target.value)}
-                  placeholder="Category (optional)"
-                />
-                <textarea
-                  value={quickReplyBody}
-                  onChange={(event) => setQuickReplyBody(event.target.value)}
-                  placeholder="Write the message agents can insert..."
-                  required
-                  rows={5}
-                  className="w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-text outline-none transition focus:border-primary/30"
-                />
-                <Button type="submit" disabled={isWorking || !activeOrganizationId}>
-                  Create quick reply
-                </Button>
-              </div>
-            </Card>
-          </motion.form>
-
-          <Card elevated>
-            <h3 className="text-lg font-semibold text-text">Organization reply library</h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {quickReplies.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border bg-background-tint px-4 py-6 text-sm leading-6 text-text-muted">
-                  No quick replies yet for this organization.
-                </p>
-              ) : (
-                quickReplies.map((reply) => (
-                  <div key={reply.id} className="rounded-xl border border-border bg-background-tint p-4 text-sm text-text-muted">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-text">{reply.title}</p>
-                        {reply.category ? (
-                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-text-soft">{reply.category}</p>
-                        ) : null}
-                      </div>
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                        reply.is_active
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-border bg-white text-text-soft"
-                      }`}>
-                        {reply.is_active ? "Active" : "Hidden"}
-                      </span>
-                    </div>
-                    <p className="mt-3 leading-6">{reply.body}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        variant="secondary"
-                        className="px-3 py-2 text-xs"
-                        disabled={isWorking}
-                        onClick={() => handleToggleQuickReply(reply.id, !reply.is_active)}
-                      >
-                        {reply.is_active ? "Hide from agents" : "Make active"}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="px-3 py-2 text-xs text-coral"
-                        disabled={isWorking}
-                        onClick={() => handleDeleteQuickReply(reply.id, reply.title)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
-      ) : null}
     </section>
   );
 }

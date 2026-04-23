@@ -20,10 +20,11 @@ export function useOrganizationUsers(organizationId?: string | null, enabled = t
   });
 }
 
-export function useWhatsAppAccounts(organizationId?: string | null) {
+export function useWhatsAppAccounts(organizationId?: string | null, enabled = true) {
   return useQuery({
     queryKey: ["whatsapp-accounts", organizationId ?? "all"],
     queryFn: () => fetchWhatsAppAccounts(organizationId),
+    enabled,
     refetchInterval: organizationId ? 15000 : false
   });
 }

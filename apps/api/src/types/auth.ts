@@ -7,5 +7,6 @@ export interface AuthUser {
   role: UserRole;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
   permissionKeys: string[];
 }

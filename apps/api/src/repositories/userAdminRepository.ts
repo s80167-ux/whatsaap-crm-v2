@@ -7,6 +7,7 @@ export interface UserSummaryRecord {
   auth_user_id: string | null;
   email: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: Exclude<UserRole, "super_admin">;
   status: "invited" | "active" | "disabled";
   created_at: string;
@@ -18,7 +19,7 @@ export class UserAdminRepository {
   async listAll(client: PoolClient): Promise<UserSummaryRecord[]> {
     const result = await client.query<UserSummaryRecord>(
       `
-        select id, organization_id, auth_user_id, email, full_name, role, status, created_at
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
         from organization_users
         where status <> 'disabled'
         order by created_at desc
@@ -31,7 +32,7 @@ export class UserAdminRepository {
   async listByOrganization(client: PoolClient, organizationId: string): Promise<UserSummaryRecord[]> {
     const result = await client.query<UserSummaryRecord>(
       `
-        select id, organization_id, auth_user_id, email, full_name, role, status, created_at
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
         from organization_users
         where organization_id = $1
           and status <> 'disabled'
@@ -46,7 +47,7 @@ export class UserAdminRepository {
   async findById(client: PoolClient, userId: string): Promise<UserSummaryRecord | null> {
     const result = await client.query<UserSummaryRecord>(
       `
-        select id, organization_id, auth_user_id, email, full_name, role, status, created_at
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
         from organization_users
         where id = $1
         limit 1
@@ -63,6 +64,7 @@ export class UserAdminRepository {
     input: {
       organizationId: string;
       fullName: string | null;
+      avatarUrl: string | null;
       role: EditableUserRole;
       status: UserSummaryRecord["status"];
     }
@@ -72,12 +74,13 @@ export class UserAdminRepository {
         update organization_users
         set organization_id = $2,
             full_name = $3,
-            role = $4,
-            status = $5
+            avatar_url = $4,
+            role = $5,
+            status = $6
         where id = $1
-        returning id, organization_id, auth_user_id, email, full_name, role, status, created_at
+        returning id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
       `,
-      [userId, input.organizationId, input.fullName, input.role, input.status]
+      [userId, input.organizationId, input.fullName, input.avatarUrl, input.role, input.status]
     );
 
     return result.rows[0] ?? null;
@@ -96,7 +99,7 @@ export class UserAdminRepository {
       `
         delete from organization_users
         where id = $1
-        returning id, organization_id, auth_user_id, email, full_name, role, status, created_at
+        returning id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
       `,
       [userId]
     );

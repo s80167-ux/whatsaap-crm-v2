@@ -7,6 +7,7 @@
   background:
     linear-gradient(180deg, #ffffff 0%, #f5f7fa 44%, #f1f5f9 100%);
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  overflow-x: clip;
 }
 
 body {
@@ -15,14 +16,32 @@ body {
   color: #07111f;
   background:
     linear-gradient(180deg, #ffffff 0%, #f5f7fa 44%, #f1f5f9 100%);
+  overflow-x: clip;
 }
 
 * {
   box-sizing: border-box;
 }
 
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
 #root {
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  :root,
+  body,
+  #root {
+    overflow-x: hidden;
+  }
 }
 
 @layer base {
@@ -149,6 +168,14 @@ body {
 
   .dashboard-sidebar .sidebar-user-input {
     @apply border-white/10 bg-slate-100/95 text-slate-900 placeholder:text-slate-500 hover:bg-white focus:bg-white;
+  }
+
+  .dashboard-sidebar .sidebar-org-select {
+    @apply border-0 border-b border-white/15 bg-transparent text-white shadow-none outline-none focus:border-white/50 focus:ring-0;
+  }
+
+  .dashboard-sidebar .sidebar-org-select option {
+    color: #07111f;
   }
 
   .dashboard-sidebar .user-panel p {

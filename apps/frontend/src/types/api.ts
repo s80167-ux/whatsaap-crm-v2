@@ -52,6 +52,11 @@ export interface Contact {
   primary_phone_normalized: string | null;
   primary_avatar_url?: string | null;
   owner_user_id?: string | null;
+  whatsapp_source_count?: number;
+  whatsapp_sources?: Array<{
+    id: string;
+    label: string | null;
+  }>;
 }
 
 export interface SalesOrder {
@@ -136,6 +141,8 @@ export interface QuickReplyTemplate {
   category?: string | null;
   is_active: boolean;
   sort_order: number;
+  usage_count?: number;
+  last_used_at?: string | null;
   created_by?: string | null;
   created_at: string;
   updated_at: string;

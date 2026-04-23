@@ -4,6 +4,7 @@ export interface AuthProfile {
   organizationId: string | null;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
   role: "super_admin" | "org_admin" | "manager" | "agent" | "user";
   permissionKeys: string[];
 }

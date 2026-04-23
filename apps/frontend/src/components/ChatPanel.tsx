@@ -5,6 +5,7 @@ import {
   Paperclip,
   Smile,
   Sparkles,
+  Wand2,
   X,
   FileText,
   Image as ImageIcon,
@@ -13,11 +14,12 @@ import {
   Video
 } from "lucide-react";
 import type { Conversation, Message, OutboundAttachmentInput } from "../types/api";
-import { sendMessage } from "../api/crm";
+import { recordQuickReplyUsage, sendMessage } from "../api/crm";
 import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
 import { Button } from "./Button";
 import { Card } from "./Card";
+import { PanelPagination, usePanelPagination } from "./PanelPagination";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
 const QUICK_REPLIES = [
@@ -28,6 +30,25 @@ const QUICK_REPLIES = [
   "Would you like me to arrange the next step for you?"
 ];
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
+
+const FOLLOW_UP_PROMPTS = [
+  {
+    title: "Confirm next step",
+    body: "Just to confirm, would you like me to proceed with the next step?"
+  },
+  {
+    title: "Ask for details",
+    body: "Could you share your preferred date, location, and any special requirements?"
+  },
+  {
+    title: "Payment reminder",
+    body: "A gentle reminder that payment is still pending. Let me know once it has been completed."
+  },
+  {
+    title: "Follow-up check",
+    body: "Hi, just checking in. Do you still need help with this?"
+  }
+];
 
 type ComposerAttachment = OutboundAttachmentInput;
 
@@ -96,11 +117,13 @@ export function ChatPanel({
   conversation,
   messages,
   historyRangeLabel,
+  organizationId,
   onMessageSent
 }: {
   conversation?: Conversation;
   messages: Message[];
   historyRangeLabel: string;
+  organizationId?: string | null;
   onMessageSent: () => void;
 }) {
   const [text, setText] = useState("");
@@ -109,6 +132,7 @@ export function ChatPanel({
   const [sendNotice, setSendNotice] = useState<string | null>(null);
   const [isQuickReplyOpen, setIsQuickReplyOpen] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [quickReplySearch, setQuickReplySearch] = useState("");
   const [selectedQuickReplyCategory, setSelectedQuickReplyCategory] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -117,6 +141,7 @@ export function ChatPanel({
   const latestOutgoingStatus = latestOutgoingMessage?.ack_status;
   const latestOutgoingStatusLabel = formatAckStatus(latestOutgoingStatus);
   const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
+    organizationId,
     enabled: Boolean(conversation)
   });
   const quickReplies = organizationQuickReplies.length > 0
@@ -124,13 +149,15 @@ export function ChatPanel({
         id: template.id,
         title: template.title,
         body: template.body,
-        category: template.category
+        category: template.category,
+        isOrganizationTemplate: true
       }))
     : QUICK_REPLIES.map((reply) => ({
         id: reply,
         title: reply,
         body: reply,
-        category: "Starter"
+        category: "Starter",
+        isOrganizationTemplate: false
       }));
   const quickReplyCategories = Array.from(
     new Set(quickReplies.map((reply) => reply.category).filter((category): category is string => Boolean(category)))
@@ -146,6 +173,7 @@ export function ChatPanel({
 
     return matchesCategory && matchesSearch;
   });
+  const quickReplyPagination = usePanelPagination(filteredQuickReplies);
 
   async function handleSend() {
     if (!conversation || (!text.trim() && !attachment)) {
@@ -228,12 +256,35 @@ export function ChatPanel({
     textareaRef.current?.focus();
   }
 
-  function applyQuickReply(reply: string) {
-    setText(reply);
+  function insertVariable(value: string) {
+    insertComposerText(value);
+    setIsActionsOpen(false);
+  }
+
+  function applyFollowUpPrompt(value: string) {
+    setText((current) => current.trim() ? `${current.trim()}\n\n${value}` : value);
+    setIsActionsOpen(false);
+    textareaRef.current?.focus();
+  }
+
+  function applyQuickReply(reply: {
+    id: string;
+    body: string;
+    isOrganizationTemplate: boolean;
+  }) {
+    setText(reply.body);
     setIsQuickReplyOpen(false);
     setQuickReplySearch("");
     setSelectedQuickReplyCategory(null);
     textareaRef.current?.focus();
+
+    if (reply.isOrganizationTemplate) {
+      void recordQuickReplyUsage({
+        templateId: reply.id,
+        organizationId,
+        conversationId: conversation?.id
+      }).catch(() => undefined);
+    }
   }
 
   if (!conversation) {
@@ -344,12 +395,12 @@ export function ChatPanel({
                   No quick replies match your search or selected category.
                 </p>
               ) : null}
-              {filteredQuickReplies.map((reply) => (
+              {quickReplyPagination.visibleItems.map((reply) => (
                 <button
                   key={reply.id}
                   type="button"
                   title={`Insert quick reply: ${reply.title}`}
-                  onClick={() => applyQuickReply(reply.body)}
+                  onClick={() => applyQuickReply(reply)}
                   className="rounded-xl border border-border bg-white px-3 py-2 text-left text-xs leading-5 text-text-muted transition hover:border-primary/30 hover:text-text"
                 >
                   <span className="block font-semibold text-text">{reply.title}</span>
@@ -358,6 +409,12 @@ export function ChatPanel({
                 </button>
               ))}
             </div>
+            <PanelPagination
+              page={quickReplyPagination.page}
+              pageCount={quickReplyPagination.pageCount}
+              totalItems={quickReplyPagination.totalItems}
+              onPageChange={quickReplyPagination.setPage}
+            />
           </div>
         ) : null}
         {isEmojiOpen ? (
@@ -374,6 +431,66 @@ export function ChatPanel({
                 {emoji}
               </button>
             ))}
+          </div>
+        ) : null}
+        {isActionsOpen ? (
+          <div className="mb-3 rounded-2xl border border-border bg-background-tint p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Composer actions</p>
+                <p className="mt-1 text-xs text-text-muted">Insert customer variables or add a guided follow-up prompt.</p>
+              </div>
+              <button
+                type="button"
+                title="Close composer actions"
+                className="text-xs font-medium text-text-soft hover:text-text"
+                onClick={() => setIsActionsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[300px,minmax(0,1fr)]">
+              <div className="rounded-xl border border-border bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Variables</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    title="Insert contact name"
+                    onClick={() => insertVariable(conversation.contact_name ?? "customer")}
+                    className="rounded-full border border-border bg-background-tint px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-primary/30 hover:text-text"
+                  >
+                    Contact name
+                  </button>
+                  {conversation.phone_number_normalized ? (
+                    <button
+                      type="button"
+                      title="Insert phone number"
+                      onClick={() => insertVariable(conversation.phone_number_normalized ?? "")}
+                      className="rounded-full border border-border bg-background-tint px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-primary/30 hover:text-text"
+                    >
+                      Phone number
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Follow-up prompts</p>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {FOLLOW_UP_PROMPTS.map((prompt) => (
+                    <button
+                      key={prompt.title}
+                      type="button"
+                      title={`Insert follow-up prompt: ${prompt.title}`}
+                      onClick={() => applyFollowUpPrompt(prompt.body)}
+                      className="rounded-xl border border-border bg-background-tint px-3 py-2 text-left text-xs leading-5 text-text-muted transition hover:border-primary/30 hover:text-text"
+                    >
+                      <span className="block font-semibold text-text">{prompt.title}</span>
+                      <span className="mt-1 block">{prompt.body}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
         {attachment ? (
@@ -406,6 +523,7 @@ export function ChatPanel({
             onClick={() => {
               setIsEmojiOpen((current) => !current);
               setIsQuickReplyOpen(false);
+              setIsActionsOpen(false);
             }}
             className="h-14 px-3 text-primary hover:bg-primary-soft/50"
           >
@@ -419,10 +537,25 @@ export function ChatPanel({
             onClick={() => {
               setIsQuickReplyOpen((current) => !current);
               setIsEmojiOpen(false);
+              setIsActionsOpen(false);
             }}
             className="h-14 px-3 text-primary hover:bg-primary-soft/50"
           >
             <Sparkles className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+            aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+            onClick={() => {
+              setIsActionsOpen((current) => !current);
+              setIsEmojiOpen(false);
+              setIsQuickReplyOpen(false);
+            }}
+            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+          >
+            <Wand2 className="h-4 w-4" />
           </Button>
           <textarea
             ref={textareaRef}

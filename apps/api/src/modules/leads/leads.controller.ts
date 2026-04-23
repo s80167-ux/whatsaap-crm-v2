@@ -56,9 +56,23 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
-function requireOrganizationId(request: Request) {
+function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+
+  if (!organizationId && request.auth?.role === "super_admin") {
+    return null;
+  }
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  return organizationId;
+}
+
+function requireOrganizationId(request: Request) {
+  const organizationId = resolveReadOrganizationId(request);
 
   if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -69,14 +83,14 @@ function requireOrganizationId(request: Request) {
 
 export async function getLeads(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const leads = await leadService.list(auth, organizationId);
   return response.json({ data: leads });
 }
 
 export async function getLeadDetail(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { leadId } = leadParamsSchema.parse(request.params);
   const lead = await leadService.getDetail(auth, organizationId, leadId);
   return response.json({ data: lead });
@@ -84,7 +98,7 @@ export async function getLeadDetail(request: Request, response: Response) {
 
 export async function getLeadHistory(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { leadId } = leadParamsSchema.parse(request.params);
   const { limit = 50 } = leadHistoryQuerySchema.parse(request.query);
   const history = await leadService.getHistory(auth, organizationId, leadId, limit);

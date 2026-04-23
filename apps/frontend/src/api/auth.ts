@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "../lib/http";
+import { apiGet, apiPatch, apiPost } from "../lib/http";
 import type { AuthProfile, LoginResponse } from "../types/auth";
 
 export async function login(payload: { email: string; password: string }) {
@@ -13,4 +13,9 @@ export async function fetchMe() {
 
 export async function updateMyPassword(payload: { password: string }) {
   return apiPost<{ ok: true }>("/auth/me/password", payload);
+}
+
+export async function updateMyProfile(payload: { fullName?: string | null; avatarUrl?: string | null }) {
+  const response = await apiPatch<{ data: AuthProfile }>("/auth/me", payload);
+  return response.data;
 }

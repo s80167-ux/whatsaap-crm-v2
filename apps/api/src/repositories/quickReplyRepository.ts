@@ -8,6 +8,8 @@ export interface QuickReplyTemplateRow {
   category: string | null;
   is_active: boolean;
   sort_order: number;
+  usage_count: number;
+  last_used_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -31,6 +33,8 @@ export class QuickReplyRepository {
           category,
           is_active,
           sort_order,
+          usage_count,
+          last_used_at,
           created_by,
           created_at,
           updated_at
@@ -77,6 +81,8 @@ export class QuickReplyRepository {
           category,
           is_active,
           sort_order,
+          usage_count,
+          last_used_at,
           created_by,
           created_at,
           updated_at
@@ -125,6 +131,8 @@ export class QuickReplyRepository {
           category,
           is_active,
           sort_order,
+          usage_count,
+          last_used_at,
           created_by,
           created_at,
           updated_at
@@ -161,5 +169,40 @@ export class QuickReplyRepository {
     );
 
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async recordUsage(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      templateId: string;
+    }
+  ): Promise<QuickReplyTemplateRow | null> {
+    const result = await client.query<QuickReplyTemplateRow>(
+      `
+        update quick_reply_templates
+        set usage_count = usage_count + 1,
+            last_used_at = now()
+        where organization_id = $1
+          and id = $2
+          and is_active
+        returning
+          id,
+          organization_id,
+          title,
+          body,
+          category,
+          is_active,
+          sort_order,
+          usage_count,
+          last_used_at,
+          created_by,
+          created_at,
+          updated_at
+      `,
+      [input.organizationId, input.templateId]
+    );
+
+    return result.rows[0] ?? null;
   }
 }

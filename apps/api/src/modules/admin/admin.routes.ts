@@ -7,6 +7,7 @@ import {
   getWhatsAppAccountQr,
   listRawEvents,
   listWhatsAppAccounts,
+  disconnectWhatsAppAccount,
   reconnectWhatsAppAccount,
   replayRawEvents,
   updateWhatsAppAccount
@@ -18,6 +19,7 @@ adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));
 adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAccountQr));
 adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));
+adminRoutes.post("/whatsapp-accounts/:accountId/disconnect", asyncHandler(disconnectWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
 adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppAccount));
 

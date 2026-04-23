@@ -17,6 +17,7 @@ type UserCreateApiRecord = {
   authUserId: string | null;
   email: string | null;
   fullName: string | null;
+  avatarUrl?: string | null;
   role: UserSummary["role"] | "super_admin";
   status: UserSummary["status"];
 };
@@ -58,6 +59,7 @@ function mapUser(record: UserListApiRecord | UserCreateApiRecord): UserSummary {
     auth_user_id: record.authUserId,
     email: record.email,
     full_name: record.fullName,
+    avatar_url: record.avatarUrl ?? null,
     role: record.role,
     status: record.status,
     created_at: new Date().toISOString()
@@ -116,6 +118,7 @@ export async function createUser(payload: {
   organizationId?: string | null;
   email: string;
   fullName?: string | null;
+  avatarUrl?: string | null;
   password: string;
   role: "super_admin" | "org_admin" | "manager" | "user" | "agent";
 }) {
@@ -131,6 +134,7 @@ export async function updateUser(
   payload: {
     organizationId?: string | null;
     fullName?: string | null;
+    avatarUrl?: string | null;
     role: Exclude<UserSummary["role"], "super_admin">;
     status: UserSummary["status"];
   }
@@ -165,6 +169,11 @@ export async function createWhatsAppAccount(payload: {
 
 export async function reconnectWhatsAppAccount(accountId: string) {
   const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/whatsapp/accounts/${accountId}/reconnect`, {});
+  return mapWhatsAppAccount(response.data);
+}
+
+export async function disconnectWhatsAppAccount(accountId: string) {
+  const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/admin/whatsapp-accounts/${accountId}/disconnect`, {});
   return mapWhatsAppAccount(response.data);
 }
 

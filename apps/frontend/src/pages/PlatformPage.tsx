@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { retryPlatformOutboundDispatch } from "../api/dashboard";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { usePlatformAuditLogs, usePlatformHealth, usePlatformOrganizations, usePlatformOutboundDispatch, usePlatformUsage } from "../hooks/useDashboard";
 
 function formatAckStatusLabel(status: string) {
@@ -32,6 +33,12 @@ export function PlatformPage() {
   const { data: outboundDispatch, isLoading: outboundDispatchLoading } = usePlatformOutboundDispatch();
   const [outboundNotice, setOutboundNotice] = useState<string | null>(null);
   const [isRetryingOutbound, setIsRetryingOutbound] = useState(false);
+  const organizationPagination = usePanelPagination(organizations);
+  const connectorAccountPagination = usePanelPagination(health?.accounts ?? []);
+  const connectorEventPagination = usePanelPagination(health?.recent_events ?? []);
+  const outboundJobPagination = usePanelPagination(outboundDispatch?.jobs ?? []);
+  const outboundReceiptPagination = usePanelPagination(outboundDispatch?.receipts ?? []);
+  const auditLogPagination = usePanelPagination(auditLogs);
 
   async function handleRetryFailedOutbound() {
     setIsRetryingOutbound(true);
@@ -144,7 +151,7 @@ export function PlatformPage() {
                   </td>
                 </tr>
               ) : (
-                organizations.map((organization) => (
+                organizationPagination.visibleItems.map((organization) => (
                   <tr key={organization.id} className="table-row text-sm text-text-muted">
                     <td className="px-5 py-4 font-medium text-text">{organization.name}</td>
                     <td className="px-5 py-4">{organization.slug}</td>
@@ -156,6 +163,13 @@ export function PlatformPage() {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="mt-4"
+          page={organizationPagination.page}
+          pageCount={organizationPagination.pageCount}
+          totalItems={organizationPagination.totalItems}
+          onPageChange={organizationPagination.setPage}
+        />
       </Card>
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
@@ -180,7 +194,7 @@ export function PlatformPage() {
                     </td>
                   </tr>
                 ) : (
-                  (health?.accounts ?? []).map((account) => (
+                  connectorAccountPagination.visibleItems.map((account) => (
                     <tr key={account.id} className="table-row text-sm text-text-muted">
                       <td className="px-5 py-4 font-medium text-text">{account.label ?? account.id}</td>
                       <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{account.connection_status}</td>
@@ -201,6 +215,13 @@ export function PlatformPage() {
               </tbody>
             </table>
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={connectorAccountPagination.page}
+            pageCount={connectorAccountPagination.pageCount}
+            totalItems={connectorAccountPagination.totalItems}
+            onPageChange={connectorAccountPagination.setPage}
+          />
         </Card>
 
         <Card elevated>
@@ -209,7 +230,7 @@ export function PlatformPage() {
             {healthLoading ? (
               <p className="text-sm text-text-muted">Loading connector events...</p>
             ) : (
-              (health?.recent_events ?? []).slice(0, 8).map((event, index) => (
+              connectorEventPagination.visibleItems.map((event, index) => (
                 <div key={`${event.whatsapp_account_id}-${event.created_at}-${index}`} className="rounded-2xl border border-border bg-white/80 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-text">{event.event_type}</p>
@@ -221,6 +242,13 @@ export function PlatformPage() {
               ))
             )}
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={connectorEventPagination.page}
+            pageCount={connectorEventPagination.pageCount}
+            totalItems={connectorEventPagination.totalItems}
+            onPageChange={connectorEventPagination.setPage}
+          />
         </Card>
       </div>
 
@@ -254,7 +282,7 @@ export function PlatformPage() {
                   </td>
                 </tr>
               ) : (
-                (outboundDispatch?.jobs ?? []).slice(0, 12).map((job) => (
+                outboundJobPagination.visibleItems.map((job) => (
                   <tr key={job.id} className="table-row text-sm text-text-muted">
                     <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{job.processing_status}</td>
                     <td className="px-5 py-4 font-medium text-text">{job.recipient_jid}</td>
@@ -268,6 +296,13 @@ export function PlatformPage() {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="mt-4"
+          page={outboundJobPagination.page}
+          pageCount={outboundJobPagination.pageCount}
+          totalItems={outboundJobPagination.totalItems}
+          onPageChange={outboundJobPagination.setPage}
+        />
       </Card>
 
       <Card elevated>
@@ -291,7 +326,7 @@ export function PlatformPage() {
                   </td>
                 </tr>
               ) : (
-                (outboundDispatch?.receipts ?? []).slice(0, 12).map((receipt) => (
+                outboundReceiptPagination.visibleItems.map((receipt) => (
                   <tr key={receipt.id} className="table-row text-sm text-text-muted">
                     <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">
                       {formatAckStatusLabel(receipt.ack_status)}
@@ -306,6 +341,13 @@ export function PlatformPage() {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="mt-4"
+          page={outboundReceiptPagination.page}
+          pageCount={outboundReceiptPagination.pageCount}
+          totalItems={outboundReceiptPagination.totalItems}
+          onPageChange={outboundReceiptPagination.setPage}
+        />
       </Card>
 
       <Card elevated>
@@ -329,7 +371,7 @@ export function PlatformPage() {
                   </td>
                 </tr>
               ) : (
-                auditLogs.slice(0, 12).map((log) => (
+                auditLogPagination.visibleItems.map((log) => (
                   <tr key={log.id} className="table-row text-sm text-text-muted">
                     <td className="px-5 py-4 font-medium text-text">{log.action}</td>
                     <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{log.actor_role ?? "--"}</td>
@@ -345,6 +387,13 @@ export function PlatformPage() {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="mt-4"
+          page={auditLogPagination.page}
+          pageCount={auditLogPagination.pageCount}
+          totalItems={auditLogPagination.totalItems}
+          onPageChange={auditLogPagination.setPage}
+        />
       </Card>
     </section>
   );

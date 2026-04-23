@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search } from "lucide-react";
 import { assignContact } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
-import { useOrganizations } from "../hooks/useAdmin";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
+import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useContact, useContacts } from "../hooks/useContacts";
+import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 import type { Contact } from "../types/api";
 
@@ -26,18 +29,29 @@ function getContactLabel(contact: Contact) {
   return contact.display_name ?? contact.primary_phone_normalized ?? contact.primary_phone_e164 ?? "";
 }
 
+function getPrimarySourceLabel(contact: Contact) {
+  return contact.whatsapp_sources?.[0]?.label ?? null;
+}
+
+function getUserLabel(user: { full_name: string | null; email: string | null; role: string }) {
+  const name = user.full_name?.trim() || user.email || "Unnamed user";
+  return `${name} (${user.role.replace(/_/g, " ")})`;
+}
+
 export function ContactsPage() {
   const queryClient = useQueryClient();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
+  const dashboardContext = useOutletContext<DashboardOutletContext>();
+  const selectedOrganizationId = dashboardContext.selectedOrganizationId;
   const [assigningContactId, setAssigningContactId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
   const [contactSearch, setContactSearch] = useState("");
   const [contactSortMode, setContactSortMode] = useState<ContactSortMode>("latest");
-  const { data: organizations = [] } = useOrganizations();
+  const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const canLoadContacts = !isSuperAdmin || Boolean(activeOrganizationId);
+  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, canLoadContacts);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
     undefined,
     isSuperAdmin ? activeOrganizationId : undefined,
@@ -49,10 +63,23 @@ export function ContactsPage() {
     canLoadContacts
   );
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
+  const canAssignContactsToTeam = Boolean(canAssignContacts && currentUser?.permissionKeys.includes("org.manage_users"));
+  const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canAssignContactsToTeam && (!isSuperAdmin || Boolean(activeOrganizationId))
+  );
+  const assignableUsers = useMemo(
+    () => organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin"),
+    [organizationUsers]
+  );
+  const assignableUserById = useMemo(
+    () => new Map(assignableUsers.map((user) => [user.id, user])),
+    [assignableUsers]
+  );
 
   const visibleContacts = useMemo(() => {
     const normalizedSearch = contactSearch.trim().toLowerCase();
-    const filteredContacts = normalizedSearch
+    let filteredContacts = normalizedSearch
       ? contacts.filter((contact) =>
           [
             contact.display_name,
@@ -66,6 +93,23 @@ export function ContactsPage() {
         )
       : contacts;
 
+    // WhatsApp account filter (if contact has whatsapp_account_id or similar field)
+    if (selectedWhatsAppAccountId) {
+      filteredContacts = filteredContacts.filter((contact) => {
+        // If your contact model has a whatsapp_account_id field, use it here.
+        // Otherwise, adjust this logic as needed.
+        // Example: return contact.whatsapp_account_id === selectedWhatsAppAccountId;
+        // If not available, try to match by phone number if possible.
+        return (
+          whatsappAccounts.find(
+            (wa) =>
+              wa.id === selectedWhatsAppAccountId &&
+              (wa.phone_number === contact.primary_phone_e164 || wa.phone_number_normalized === contact.primary_phone_normalized)
+          )
+        );
+      });
+    }
+
     return filteredContacts
       .map((contact, index) => ({ contact, index }))
       .sort((left, right) => {
@@ -77,22 +121,16 @@ export function ContactsPage() {
         return contactSortMode === "latest" ? newestFirst : -newestFirst;
       })
       .map(({ contact }) => contact);
-  }, [contactSearch, contactSortMode, contacts]);
-
-  useEffect(() => {
-    if (!isSuperAdmin || selectedOrganizationId || organizations.length === 0) {
-      return;
-    }
-
-    setSelectedOrganizationId(organizations[0].id);
-  }, [isSuperAdmin, organizations, selectedOrganizationId]);
+  }, [contactSearch, contactSortMode, contacts, selectedWhatsAppAccountId, whatsappAccounts]);
+  const contactsPagination = usePanelPagination(visibleContacts);
+  const sourcePagination = usePanelPagination(selectedContact?.whatsapp_sources ?? []);
 
   useEffect(() => {
     setSelectedContactId(null);
   }, [activeOrganizationId]);
 
-  async function handleAssignToMe(contactId: string) {
-    if (!currentUser?.organizationUserId) {
+  async function handleAssignContact(contactId: string, organizationUserId: string) {
+    if (!organizationUserId) {
       return;
     }
 
@@ -100,16 +138,17 @@ export function ContactsPage() {
     try {
       await assignContact({
         contactId,
-        organizationUserId: currentUser.organizationUserId
+        organizationUserId
       });
       await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
     } finally {
       setAssigningContactId(null);
     }
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1.15fr)_360px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
       <Card elevated className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Contacts</p>
         <h2 className="mt-3 section-title">Canonical customer records</h2>
@@ -119,20 +158,6 @@ export function ContactsPage() {
 
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-end gap-3">
-            {isSuperAdmin ? (
-              <div className="min-w-[200px]">
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Organization</p>
-                <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="h-10">
-                  <option value="">Choose organization</option>
-                  {organizations.map((organization) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            ) : null}
-
             <div className="min-w-[240px] sm:min-w-[300px]">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Search contact</p>
               <div className="flex h-10 items-stretch border border-border bg-background-tint">
@@ -146,6 +171,23 @@ export function ContactsPage() {
                   className="h-full border-0 bg-transparent px-0 py-0 text-sm focus:ring-0"
                 />
               </div>
+            </div>
+
+            {/* WhatsApp Account Source Filter */}
+            <div className="min-w-[200px] flex flex-col">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp Source</p>
+              <Select
+                value={selectedWhatsAppAccountId}
+                onChange={(e) => setSelectedWhatsAppAccountId(e.target.value)}
+                className="h-10 w-full"
+              >
+                <option value="">All accounts</option>
+                {whatsappAccounts && whatsappAccounts.map((wa) => (
+                  <option key={wa.id} value={wa.id}>
+                    {wa.name || wa.display_name || wa.phone_number || wa.id}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div>
@@ -184,42 +226,43 @@ export function ContactsPage() {
           <p className="text-sm text-text-muted">{visibleContacts.length} of {contacts.length} contacts</p>
         </div>
 
-        <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-white/80">
-          <table className="w-full min-w-[560px] bg-white/80">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white/80">
+          <table className="w-full table-fixed bg-white/80">
             <thead className="bg-background-tint text-left text-[10px] uppercase tracking-[0.18em] text-text-soft">
               <tr>
-                <th className="px-2.5 py-2">Name</th>
-                <th className="px-2.5 py-2">Normalized</th>
-                {canAssignContacts ? <th className="px-2.5 py-2">Owner</th> : null}
+                <th className="w-[34%] px-2.5 py-2">Name</th>
+                <th className="w-[26%] px-2.5 py-2">Normalized</th>
+                <th className="w-[22%] px-2.5 py-2">Source</th>
+                {canAssignContacts ? <th className="w-[18%] px-2.5 py-2">Owner</th> : null}
               </tr>
             </thead>
             <tbody>
               {!canLoadContacts ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 3 : 2}>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
                     Choose an organization to load contacts.
                   </td>
                 </tr>
               ) : isLoading ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 3 : 2}>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
                     Loading contacts...
                   </td>
                 </tr>
               ) : contactsIsError ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-red-600" colSpan={canAssignContacts ? 3 : 2}>
+                  <td className="px-5 py-6 text-sm text-red-600" colSpan={canAssignContacts ? 4 : 3}>
                     {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
                   </td>
                 </tr>
               ) : visibleContacts.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 3 : 2}>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
                     {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
                   </td>
                 </tr>
               ) : (
-                visibleContacts.map((contact) => (
+                contactsPagination.visibleItems.map((contact) => (
                   <motion.tr
                     key={contact.id}
                     initial={{ opacity: 0, y: 6 }}
@@ -244,13 +287,48 @@ export function ContactsPage() {
                             <span className="flex h-full w-full items-center justify-center">{getContactInitials(contact.display_name)}</span>
                           )}
                         </div>
-                        <span className="max-w-[180px] truncate font-medium text-text">{contact.display_name ?? "Unknown"}</span>
+                        <span className="min-w-0 truncate font-medium text-text">{contact.display_name ?? "Unknown"}</span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-2.5 py-1.5">{contact.primary_phone_normalized ?? "--"}</td>
+                    <td className="truncate px-2.5 py-1.5" title={contact.primary_phone_normalized ?? undefined}>
+                      {contact.primary_phone_normalized ?? "--"}
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      {getPrimarySourceLabel(contact) ? (
+                        <span className="inline-flex max-w-[150px] items-center rounded-full border border-border bg-background-tint px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                          <span className="truncate">{getPrimarySourceLabel(contact)}</span>
+                          {(contact.whatsapp_source_count ?? 0) > 1 ? (
+                            <span className="ml-1 text-text-soft">+{(contact.whatsapp_source_count ?? 1) - 1}</span>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span className="text-text-soft">--</span>
+                      )}
+                    </td>
                     {canAssignContacts ? (
                       <td className="px-2.5 py-1.5">
-                        {contact.owner_user_id === currentUser?.organizationUserId ? (
+                        {canAssignContactsToTeam ? (
+                          <Select
+                            value={contact.owner_user_id ?? ""}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => {
+                              event.stopPropagation();
+                              void handleAssignContact(contact.id, event.target.value);
+                            }}
+                            disabled={assigningContactId === contact.id || organizationUsersLoading || assignableUsers.length === 0}
+                            className="h-8 w-full min-w-0 bg-white px-2 py-1 text-[11px]"
+                            aria-label={`Assign ${contact.display_name ?? "contact"} to a team member`}
+                          >
+                            <option value="" disabled>
+                              Unassigned
+                            </option>
+                            {assignableUsers.map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {getUserLabel(user)}
+                              </option>
+                            ))}
+                          </Select>
+                        ) : contact.owner_user_id === currentUser?.organizationUserId ? (
                           <span className="whitespace-nowrap text-text-soft">Assigned to you</span>
                         ) : (
                           <Button
@@ -258,7 +336,7 @@ export function ContactsPage() {
                             className="whitespace-nowrap px-2 py-1 text-[11px]"
                             onClick={(event) => {
                               event.stopPropagation();
-                              void handleAssignToMe(contact.id);
+                              void handleAssignContact(contact.id, currentUser?.organizationUserId ?? "");
                             }}
                             disabled={assigningContactId === contact.id}
                           >
@@ -273,9 +351,16 @@ export function ContactsPage() {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="mt-4"
+          page={contactsPagination.page}
+          pageCount={contactsPagination.pageCount}
+          totalItems={contactsPagination.totalItems}
+          onPageChange={contactsPagination.setPage}
+        />
       </Card>
 
-      <Card elevated className="xl:sticky xl:top-6 xl:self-start">
+      <Card elevated className="border-primary/10 bg-white shadow-panel xl:sticky xl:top-6 xl:self-start">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Detail</p>
         {selectedContact ? (
           <div className="mt-5 space-y-4">
@@ -297,16 +382,43 @@ export function ContactsPage() {
                 {selectedContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{selectedContact.primary_phone_e164}</p> : null}
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+            <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
               <p>Contact ID: {selectedContact.id}</p>
               <p>
                 Owner:{" "}
                 {selectedContact.owner_user_id
                   ? selectedContact.owner_user_id === currentUser?.organizationUserId
                     ? "Assigned to you"
-                    : selectedContact.owner_user_id
+                    : assignableUserById.get(selectedContact.owner_user_id)
+                      ? getUserLabel(assignableUserById.get(selectedContact.owner_user_id)!)
+                      : selectedContact.owner_user_id
                   : "Unassigned"}
               </p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp source</p>
+              {selectedContact.whatsapp_sources?.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sourcePagination.visibleItems.map((source) => (
+                    <span
+                      key={source.id}
+                      className="inline-flex max-w-full items-center rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted"
+                      title={source.id}
+                    >
+                      <span className="truncate">{source.label ?? source.id}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-text-muted">No WhatsApp source recorded yet.</p>
+              )}
+              <PanelPagination
+                className="mt-3"
+                page={sourcePagination.page}
+                pageCount={sourcePagination.pageCount}
+                totalItems={sourcePagination.totalItems}
+                onPageChange={sourcePagination.setPage}
+              />
             </div>
           </div>
         ) : (

@@ -43,6 +43,11 @@ const updateQuickReplySchema = z.object({
   { message: "At least one field must be provided" }
 );
 
+const recordQuickReplyUsageSchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  conversationId: z.string().uuid().optional().nullable()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -128,4 +133,30 @@ export async function deleteQuickReply(request: Request, response: Response) {
   });
 
   return response.json({ ok: true });
+}
+
+export async function recordQuickReplyUsage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { templateId } = quickReplyParamsSchema.parse(request.params);
+  const input = recordQuickReplyUsageSchema.parse(request.body);
+  const template = await quickReplyService.recordUsage(auth, {
+    organizationId: input.organizationId ?? null,
+    templateId
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: template.organization_id,
+    action: "quick_reply.used",
+    entityType: "quick_reply_template",
+    entityId: template.id,
+    metadata: {
+      title: template.title,
+      category: template.category,
+      conversation_id: input.conversationId ?? null,
+      usage_count: template.usage_count
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(202).json({ data: template });
 }

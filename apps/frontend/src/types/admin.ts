@@ -12,6 +12,7 @@ export interface UserSummary {
   auth_user_id: string | null;
   email: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: "super_admin" | "org_admin" | "manager" | "agent" | "user";
   status: "invited" | "active" | "disabled";
   created_at: string;

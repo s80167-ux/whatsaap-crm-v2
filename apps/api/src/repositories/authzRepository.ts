@@ -6,6 +6,7 @@ export interface OrganizationUserAuthRecord {
   organization_id: string;
   auth_user_id: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   email: string | null;
   role: Exclude<UserRole, "super_admin">;
   status: "invited" | "active" | "disabled";
@@ -18,7 +19,7 @@ export class AuthzRepository {
   ): Promise<OrganizationUserAuthRecord | null> {
     const result = await client.query<OrganizationUserAuthRecord>(
       `
-        select id, organization_id, auth_user_id, full_name, email, role, status
+        select id, organization_id, auth_user_id, full_name, avatar_url, email, role, status
         from organization_users
         where auth_user_id = $1
         limit 1

@@ -259,6 +259,22 @@ export async function reconnectWhatsAppAccount(request: Request, response: Respo
   return response.status(202).json({ data: mapWhatsAppAccount(account) });
 }
 
+export async function disconnectWhatsAppAccount(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const account = await adminService.disconnectWhatsAppAccount(auth, accountId);
+
+  await auditLogService.record(auth, {
+    organizationId: account.organization_id,
+    action: "whatsapp_account.disconnected",
+    entityType: "whatsapp_account",
+    entityId: account.id,
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(202).json({ data: mapWhatsAppAccount(account) });
+}
+
 export async function getWhatsAppAccountQr(request: Request, response: Response) {
   const auth = requireAuth(request);
   const accountId = z.string().uuid().parse(request.params.accountId);

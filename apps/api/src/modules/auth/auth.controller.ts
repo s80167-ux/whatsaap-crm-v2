@@ -14,6 +14,18 @@ const updatePasswordSchema = z.object({
   password: z.string().min(8)
 });
 
+const avatarUrlSchema = z
+  .string()
+  .max(750_000)
+  .regex(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/)
+  .optional()
+  .nullable();
+
+const updateProfileSchema = z.object({
+  fullName: z.string().min(1).optional().nullable(),
+  avatarUrl: avatarUrlSchema
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -39,4 +51,15 @@ export async function updateMyPassword(request: Request, response: Response) {
   const input = updatePasswordSchema.parse(request.body);
   await authService.updatePassword(auth.authUserId, input.password);
   return response.json({ ok: true });
+}
+
+export async function updateMe(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const input = updateProfileSchema.parse(request.body);
+  const profile = await authService.updateProfile(auth, {
+    fullName: input.fullName ?? null,
+    avatarUrl: input.avatarUrl ?? null
+  });
+
+  return response.json({ data: profile });
 }

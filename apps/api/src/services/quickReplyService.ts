@@ -108,4 +108,20 @@ export class QuickReplyService {
       throw new AppError("Quick reply not found", 404, "quick_reply_not_found");
     }
   }
+
+  async recordUsage(authUser: AuthUser, input: { organizationId?: string | null; templateId: string }) {
+    const organizationId = this.getOrganizationId(authUser, input.organizationId);
+    const template = await withTransaction((client) =>
+      this.repository.recordUsage(client, {
+        organizationId,
+        templateId: input.templateId
+      })
+    );
+
+    if (!template) {
+      throw new AppError("Quick reply not found or inactive", 404, "quick_reply_not_found");
+    }
+
+    return template;
+  }
 }

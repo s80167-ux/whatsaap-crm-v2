@@ -23,7 +23,7 @@ export class LeadService {
     };
   }
 
-  async list(authUser: AuthUser, organizationId: string) {
+  async list(authUser: AuthUser, organizationId: string | null) {
     const client = await pool.connect();
     try {
       return await this.leadRepository.list(client, {
@@ -146,7 +146,7 @@ export class LeadService {
     return withTransaction((client) => this.convertToOrder(client, input));
   }
 
-  async getDetail(authUser: AuthUser, organizationId: string, leadId: string) {
+  async getDetail(authUser: AuthUser, organizationId: string | null, leadId: string) {
     const client = await pool.connect();
     try {
       const lead = await this.leadRepository.findById(client, {
@@ -165,7 +165,7 @@ export class LeadService {
     }
   }
 
-  async getHistory(authUser: AuthUser, organizationId: string, leadId: string, limit = 50) {
+  async getHistory(authUser: AuthUser, organizationId: string | null, leadId: string, limit = 50) {
     const client = await pool.connect();
     try {
       const lead = await this.leadRepository.findById(client, {

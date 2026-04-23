@@ -8,10 +8,18 @@ import { AdminService } from "../../services/adminService.js";
 const adminService = new AdminService();
 const auditLogService = new AuditLogService();
 
+const avatarUrlSchema = z
+  .string()
+  .max(750_000)
+  .regex(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/)
+  .optional()
+  .nullable();
+
 const createUserSchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   email: z.string().email(),
   fullName: z.string().min(1).optional().nullable(),
+  avatarUrl: avatarUrlSchema,
   password: z.string().min(8),
   role: z.enum(["super_admin", "org_admin", "manager", "agent", "user"])
 });
@@ -19,6 +27,7 @@ const createUserSchema = z.object({
 const updateUserSchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   fullName: z.string().min(1).optional().nullable(),
+  avatarUrl: avatarUrlSchema,
   role: z.enum(["org_admin", "manager", "agent", "user"]),
   status: z.enum(["invited", "active", "disabled"])
 });
@@ -57,7 +66,8 @@ export async function createOrganizationUser(request: Request, response: Respons
   const user = await adminService.createUser(auth, {
     ...input,
     organizationId: organizationIdFromParams ?? input.organizationId ?? null,
-    fullName: input.fullName ?? null
+    fullName: input.fullName ?? null,
+    avatarUrl: input.avatarUrl ?? null
   });
 
   await auditLogService.record(auth, {
@@ -79,6 +89,7 @@ export async function createOrganizationUser(request: Request, response: Respons
       authUserId: user.auth_user_id,
       email: user.email,
       fullName: user.full_name,
+      avatarUrl: user.avatar_url,
       role: user.role,
       status: user.status
     }
@@ -92,6 +103,7 @@ export async function updateOrganizationUser(request: Request, response: Respons
   const user = await adminService.updateUser(auth, userId, {
     organizationId: input.organizationId ?? null,
     fullName: input.fullName ?? null,
+    avatarUrl: input.avatarUrl,
     role: input.role,
     status: input.status
   });

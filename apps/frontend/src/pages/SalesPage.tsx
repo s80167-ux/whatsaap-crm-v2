@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import {
   convertLeadToOrder,
   createLead,
@@ -13,12 +13,14 @@ import {
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
 import { useOrganizationUsers } from "../hooks/useAdmin";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useContacts } from "../hooks/useContacts";
 import { useLeadDetail, useLeadHistory, useLeads } from "../hooks/useLeads";
 import { useSalesOrderDetail, useSalesOrderHistory, useSalesOrders, useSalesSummary } from "../hooks/useSales";
+import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 
 const ORDER_TABLE_SCROLL_KEY = "sales-orders-table-scroll-top";
@@ -70,35 +72,65 @@ export function SalesPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = getStoredUser();
+  const dashboardContext = useOutletContext<DashboardOutletContext>();
+  const isSuperAdmin = currentUser?.role === "super_admin";
+  const activeOrganizationId = isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
+  const canLoadSales = true;
+  const canLoadOrganizationScopedInputs = !isSuperAdmin || Boolean(activeOrganizationId);
   const canManageUsers = Boolean(currentUser?.permissionKeys.includes("org.manage_users"));
   const salesFilters = useMemo(
     () => ({
+      organizationId: isSuperAdmin ? activeOrganizationId : undefined,
       status: (searchParams.get("status") as "open" | "closed_won" | "closed_lost" | null) ?? undefined,
       createdFrom: searchParams.get("created_from") ?? undefined,
       createdTo: searchParams.get("created_to") ?? undefined,
       closedFrom: searchParams.get("closed_from") ?? undefined,
       closedTo: searchParams.get("closed_to") ?? undefined,
+      enabled: canLoadSales,
       orderId: searchParams.get("order_id") ?? undefined,
       leadId: searchParams.get("lead_id") ?? undefined,
       section: (searchParams.get("section") as SalesSection | null) ?? undefined
     }),
-    [searchParams]
+    [activeOrganizationId, canLoadSales, isSuperAdmin, searchParams]
   );
   const { data: orders = [], isLoading: ordersLoading } = useSalesOrders(salesFilters);
-  const { data: summary } = useSalesSummary();
-  const { data: leads = [], isLoading: leadsLoading } = useLeads();
-  const { data: contacts = [] } = useContacts();
-  const { data: organizationUsers = [] } = useOrganizationUsers(currentUser?.organizationId ?? null, canManageUsers);
+  const { data: summary } = useSalesSummary(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
+  const { data: leads = [], isLoading: leadsLoading } = useLeads(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
+  const { data: contacts = [] } = useContacts(
+    undefined,
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canLoadOrganizationScopedInputs
+  );
+  const { data: organizationUsers = [] } = useOrganizationUsers(
+    activeOrganizationId,
+    canManageUsers && canLoadOrganizationScopedInputs
+  );
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-  const { data: selectedOrderDetail, isLoading: detailLoading, error: orderDetailError } = useSalesOrderDetail(selectedOrderId ?? undefined);
-  const { data: selectedOrderHistory = [], isLoading: orderHistoryLoading } = useSalesOrderHistory(selectedOrderId ?? undefined);
+  const { data: selectedOrderDetail, isLoading: detailLoading, error: orderDetailError } = useSalesOrderDetail(
+    selectedOrderId ?? undefined,
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canLoadSales
+  );
+  const { data: selectedOrderHistory = [], isLoading: orderHistoryLoading } = useSalesOrderHistory(
+    selectedOrderId ?? undefined,
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canLoadSales
+  );
 
   const activeLeadId = selectedLeadId ?? selectedOrderDetail?.order.lead_id ?? null;
-  const { data: selectedLeadDetail, isLoading: leadDetailLoading, error: leadDetailError } = useLeadDetail(activeLeadId ?? undefined);
-  const { data: selectedLeadHistory = [], isLoading: leadHistoryLoading } = useLeadHistory(activeLeadId ?? undefined);
+  const { data: selectedLeadDetail, isLoading: leadDetailLoading, error: leadDetailError } = useLeadDetail(
+    activeLeadId ?? undefined,
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canLoadSales
+  );
+  const { data: selectedLeadHistory = [], isLoading: leadHistoryLoading } = useLeadHistory(
+    activeLeadId ?? undefined,
+    isSuperAdmin ? activeOrganizationId : undefined,
+    canLoadSales
+  );
 
   const [selectedContactId, setSelectedContactId] = useState("");
   const [status, setStatus] = useState<(typeof SALES_STATUSES)[number]["value"]>("open");
@@ -140,7 +172,10 @@ export function SalesPage() {
   const leadRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const { toast: copyToast, copyText } = useCopyFeedback();
 
-  const canWriteSales = Boolean(currentUser?.permissionKeys.includes("sales.write"));
+  const canWriteSales = Boolean(
+    currentUser?.permissionKeys.includes("sales.write") &&
+    (!isSuperAdmin || activeOrganizationId)
+  );
 
   const sortedContacts = useMemo(
     () =>
@@ -169,6 +204,9 @@ export function SalesPage() {
       (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
     );
   }, [activeLeadId, selectedLeadHistory, selectedOrderHistory, selectedOrderId]);
+  const orderPagination = usePanelPagination(orders);
+  const leadPagination = usePanelPagination(leads);
+  const timelinePagination = usePanelPagination(timelineEntries);
 
   useEffect(() => {
     if (!salesFilters.orderId && selectedOrderId) {
@@ -526,7 +564,7 @@ export function SalesPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[380px,minmax(0,1fr)]">
+      <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Quick Create</p>
           <div className="mt-5 space-y-4">
@@ -637,7 +675,7 @@ export function SalesPage() {
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => (
+                  orderPagination.visibleItems.map((order) => (
                     <tr
                       key={order.id}
                       ref={(element) => {
@@ -691,10 +729,17 @@ export function SalesPage() {
               </tbody>
             </table>
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={orderPagination.page}
+            pageCount={orderPagination.pageCount}
+            totalItems={orderPagination.totalItems}
+            onPageChange={orderPagination.setPage}
+          />
         </Card>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[380px,minmax(0,1fr)]">
+      <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Intake</p>
           <div className="mt-5 space-y-4">
@@ -837,7 +882,7 @@ export function SalesPage() {
                     </td>
                   </tr>
                 ) : (
-                  leads.map((lead) => (
+                  leadPagination.visibleItems.map((lead) => (
                     <tr
                       key={lead.id}
                       ref={(element) => {
@@ -1063,6 +1108,13 @@ export function SalesPage() {
               </tbody>
             </table>
           </div>
+          <PanelPagination
+            className="mt-4"
+            page={leadPagination.page}
+            pageCount={leadPagination.pageCount}
+            totalItems={leadPagination.totalItems}
+            onPageChange={leadPagination.setPage}
+          />
         </Card>
       </div>
 
@@ -1108,7 +1160,7 @@ export function SalesPage() {
           detailLoading ? (
             <p className="mt-5 text-sm leading-6 text-text-muted">Loading sales order detail...</p>
           ) : selectedOrderDetail ? (
-            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.2fr),340px]">
+            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.2fr),380px]">
               <div className="space-y-4">
                 <div className="rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
                   <p>Order ID: {selectedOrderDetail.order.id}</p>
@@ -1343,7 +1395,7 @@ export function SalesPage() {
         </div>
 
         {activeLeadId ? (
-          <div className="mt-6 grid gap-5 xl:grid-cols-[320px,minmax(0,1fr)]">
+          <div className="mt-6 grid gap-5 xl:grid-cols-[360px,minmax(0,1fr)]">
             <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
               {leadDetailLoading ? (
                 <p>Loading lead detail...</p>
@@ -1444,7 +1496,7 @@ export function SalesPage() {
                 </p>
               ) : (
                 <div className="mt-5 space-y-3">
-                  {timelineEntries.map((entry) => (
+                  {timelinePagination.visibleItems.map((entry) => (
                     <div key={`${entry.entityType}-${entry.id}`} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -1525,6 +1577,12 @@ export function SalesPage() {
                       </div>
                     </div>
                   ))}
+                  <PanelPagination
+                    page={timelinePagination.page}
+                    pageCount={timelinePagination.pageCount}
+                    totalItems={timelinePagination.totalItems}
+                    onPageChange={timelinePagination.setPage}
+                  />
                 </div>
               )}
             </div>

@@ -5,6 +5,7 @@ import { app } from "./app.js";
 
 async function bootstrap() {
   await pool.query("select 1");
+  await pool.query("alter table organization_users add column if not exists avatar_url text");
   logger.info("Database connection established");
 
   app.listen(env.PORT, () => {

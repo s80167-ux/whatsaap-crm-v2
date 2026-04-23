@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
 import { Card } from "../components/Card";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useRoleDashboard } from "../hooks/useDashboard";
@@ -95,7 +96,7 @@ export function DashboardPage() {
       </div>
 
       {data?.sales ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr),340px]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr),380px]">
           <CompactSection title={data.sales.title} eyebrow="Sales Overview" defaultOpen>
             <div className="grid gap-3 md:grid-cols-3">
               {data.sales.stats.map((metric) => (
@@ -322,12 +323,12 @@ function DashboardGraphPanel({
       const leftRate = left.order_count > 0 ? left.won_count / left.order_count : 0;
 
       return rightRate - leftRate;
-    })
-    .slice(0, 5);
+    });
+  const teamWinRatePagination = usePanelPagination(rankedLeaders);
 
   return (
     <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(280px,0.85fr)]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
         <div className="rounded-2xl border border-border bg-gradient-to-br from-background-tint to-white p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -457,7 +458,7 @@ function DashboardGraphPanel({
           <p className="text-sm font-semibold text-text">Team win rate</p>
           {showPerformance && rankedLeaders.length ? (
             <div className="mt-3 space-y-2">
-              {rankedLeaders.map((leader) => {
+              {teamWinRatePagination.visibleItems.map((leader) => {
                 const winRate = leader.order_count > 0 ? Math.round((leader.won_count / leader.order_count) * 100) : 0;
 
                 return (
@@ -472,6 +473,12 @@ function DashboardGraphPanel({
                   </div>
                 );
               })}
+              <PanelPagination
+                page={teamWinRatePagination.page}
+                pageCount={teamWinRatePagination.pageCount}
+                totalItems={teamWinRatePagination.totalItems}
+                onPageChange={teamWinRatePagination.setPage}
+              />
             </div>
           ) : (
             <div className="mt-3 rounded-xl border border-dashed border-border bg-background-tint p-3 text-xs leading-5 text-text-muted">
@@ -585,21 +592,22 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
       const leftRate = left.order_count > 0 ? left.won_count / left.order_count : 0;
 
       return rightRate - leftRate;
-    })
-    .slice(0, 6);
+    });
+  const leaderPagination = usePanelPagination(rankedLeaders);
 
   return (
     <CompactSection title="Team win-rate graph" eyebrow="Performance Graph" summary="Closed-won rate by assignee">
       {rankedLeaders.length ? (
         <div className="space-y-3">
-          {rankedLeaders.map((leader, index) => {
+          {leaderPagination.visibleItems.map((leader, index) => {
             const winRate = leader.order_count > 0 ? Math.round((leader.won_count / leader.order_count) * 100) : 0;
+            const rank = (leaderPagination.page - 1) * leaderPagination.pageSize + index;
 
             return (
               <div key={leader.id} className="grid gap-2 rounded-2xl border border-border bg-background-tint p-3 sm:grid-cols-[160px,minmax(0,1fr),72px] sm:items-center">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-none border text-xs font-bold ${getRankTone(index)}`}>
-                    {index + 1}
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-none border text-xs font-bold ${getRankTone(rank)}`}>
+                    {rank + 1}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-text">{leader.name}</p>
@@ -613,6 +621,12 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
               </div>
             );
           })}
+          <PanelPagination
+            page={leaderPagination.page}
+            pageCount={leaderPagination.pageCount}
+            totalItems={leaderPagination.totalItems}
+            onPageChange={leaderPagination.setPage}
+          />
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-border bg-background-tint p-5 text-sm leading-6 text-text-muted">
@@ -729,8 +743,7 @@ function TeamPerformanceAnalysis({
     ? needsAttention
     : [...leaders]
         .filter((leader) => leader.won_count < averageWonCount)
-        .sort((left, right) => left.won_count - right.won_count)
-        .slice(0, 5);
+        .sort((left, right) => left.won_count - right.won_count);
 
   return (
     <CompactSection title="Team Performance Analysis" eyebrow="Coaching View">
@@ -779,6 +792,7 @@ function PerformancePanel({
   averageWonCount?: number;
 }) {
   const isSuccess = tone === "success";
+  const rowPagination = usePanelPagination(rows);
 
   return (
     <Card elevated className="overflow-hidden p-0">
@@ -798,11 +812,11 @@ function PerformancePanel({
         </div>
 
         <div className="mt-3 divide-y divide-border/60">
-          {rows.length ? rows.map((leader, index) => (
+          {rows.length ? rowPagination.visibleItems.map((leader, index) => (
             <PerformanceRow
               key={leader.id}
               leader={leader}
-              index={index}
+              index={(rowPagination.page - 1) * rowPagination.pageSize + index}
               tone={tone}
               averageWonCount={averageWonCount}
             />
@@ -810,6 +824,13 @@ function PerformancePanel({
             <div className="rounded-2xl border border-dashed border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">{emptyText}</div>
           )}
         </div>
+        <PanelPagination
+          className="mt-3"
+          page={rowPagination.page}
+          pageCount={rowPagination.pageCount}
+          totalItems={rowPagination.totalItems}
+          onPageChange={rowPagination.setPage}
+        />
       </div>
     </Card>
   );
@@ -859,6 +880,7 @@ function PerformanceRow({
 
 function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderboard"]> }) {
   const maxWonValue = Math.max(...leaders.map((leader) => parseNumericValue(leader.won_value)), 1);
+  const leaderPagination = usePanelPagination(leaders);
 
   return (
     <Card elevated>
@@ -868,15 +890,16 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
       </div>
 
       <div className="mt-5 space-y-3">
-        {leaders.length ? leaders.map((leader, index) => {
+        {leaders.length ? leaderPagination.visibleItems.map((leader, index) => {
           const wonValue = parseNumericValue(leader.won_value);
+          const rank = (leaderPagination.page - 1) * leaderPagination.pageSize + index + 1;
 
           return (
             <div key={leader.id} className="rounded-2xl border border-border bg-background-tint p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-bold text-primary shadow-soft">
-                    {index + 1}
+                    {rank}
                   </span>
                   <div>
                     <p className="font-semibold text-text">{leader.name}</p>
@@ -896,6 +919,13 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
           </div>
         )}
       </div>
+      <PanelPagination
+        className="mt-4"
+        page={leaderPagination.page}
+        pageCount={leaderPagination.pageCount}
+        totalItems={leaderPagination.totalItems}
+        onPageChange={leaderPagination.setPage}
+      />
     </Card>
   );
 }

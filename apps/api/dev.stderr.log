@@ -1,0 +1,92 @@
+(node:4584) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:16976) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\express\lib\application.js:635:24)
+    at bootstrap (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api\src\server.ts:10:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1984:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 4000
+}
+
+Node.js v24.14.1
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\express\lib\application.js:635:24)
+    at bootstrap (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api\src\server.ts:10:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1984:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 4000
+}
+
+Node.js v24.14.1
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\express\lib\application.js:635:24)
+    at bootstrap (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api\src\server.ts:10:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1984:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 4000
+}
+
+Node.js v24.14.1
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\express\lib\application.js:635:24)
+    at bootstrap (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api\src\server.ts:11:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1984:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 4000
+}
+
+Node.js v24.14.1

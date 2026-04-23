@@ -50,7 +50,7 @@ export class SalesRepository {
   async listOrders(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId?: string | null;
       assignedOnly: boolean;
       organizationUserId?: string | null;
       status?: string | null;
@@ -80,7 +80,7 @@ export class SalesRepository {
         from sales_orders so
         join contacts ct on ct.id = so.contact_id
         left join leads ld on ld.id = so.lead_id
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and ($4::text is null or so.status = $4)
           and ($5::timestamptz is null or so.created_at >= $5::timestamptz)
           and ($6::timestamptz is null or so.created_at < $6::timestamptz)
@@ -110,7 +110,7 @@ export class SalesRepository {
   async getSummary(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId?: string | null;
       assignedOnly: boolean;
       organizationUserId?: string | null;
     }
@@ -125,7 +125,7 @@ export class SalesRepository {
           coalesce(sum(so.total_amount) filter (where so.status = 'open'), 0)::text as open_value,
           coalesce(sum(so.total_amount) filter (where so.status = 'closed_won'), 0)::text as won_value
         from sales_orders so
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and (
             not $2::boolean
             or so.assigned_user_id = $3
@@ -222,7 +222,7 @@ export class SalesRepository {
   async findOrderById(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId?: string | null;
       orderId: string;
       assignedOnly: boolean;
       organizationUserId?: string | null;
@@ -248,7 +248,7 @@ export class SalesRepository {
         from sales_orders so
         join contacts ct on ct.id = so.contact_id
         left join leads ld on ld.id = so.lead_id
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and so.id = $2
           and (
             not $3::boolean

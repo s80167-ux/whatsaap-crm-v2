@@ -126,6 +126,7 @@ export class AdminService {
       organizationId?: string | null;
       email: string;
       fullName: string | null;
+      avatarUrl?: string | null;
       password: string;
       role: UserRole;
     }
@@ -144,6 +145,7 @@ export class AdminService {
       organizationId: input.role === "super_admin" ? null : resolvedOrganizationId,
       email: input.email,
       fullName: input.fullName,
+      avatarUrl: input.avatarUrl ?? null,
       password: input.password,
       role: input.role
     });
@@ -155,6 +157,7 @@ export class AdminService {
     input: {
       organizationId?: string | null;
       fullName: string | null;
+      avatarUrl?: string | null;
       role: Exclude<UserRole, "super_admin">;
       status: "invited" | "active" | "disabled";
     }
@@ -185,6 +188,7 @@ export class AdminService {
       const updatedUser = await this.userRepository.updateById(client, userId, {
         organizationId: resolvedOrganizationId,
         fullName: input.fullName,
+        avatarUrl: input.avatarUrl === undefined ? existingUser.avatar_url : input.avatarUrl,
         role: input.role,
         status: input.status
       });
@@ -423,6 +427,46 @@ export class AdminService {
     }
 
     return account;
+  }
+
+  async disconnectWhatsAppAccount(authUser: AuthUser, accountId: string) {
+    const existingAccount = await withTransaction(async (client) => {
+      const existingAccount = await this.whatsappRepository.findById(client, accountId);
+
+      if (!existingAccount) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (!canManageWhatsAppAccount(authUser, existingAccount)) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      return existingAccount;
+    });
+
+    try {
+      await this.connectorClient.terminateAccount(existingAccount.id);
+    } catch (error) {
+      logger.warn(
+        { error, accountId: existingAccount.id },
+        "Failed to disconnect WhatsApp account through connector"
+      );
+      throw new AppError(
+        "WhatsApp connector is unavailable or failed to terminate the session",
+        502,
+        "connector_unavailable"
+      );
+    }
+
+    return withTransaction(async (client) => {
+      const account = await this.whatsappRepository.updateConnectionStatus(client, accountId, "disconnected");
+
+      if (!account) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      return account;
+    });
   }
 
   async getWhatsAppAccountQr(authUser: AuthUser, accountId: string) {

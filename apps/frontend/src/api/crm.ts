@@ -33,14 +33,14 @@ function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | 
   return searchParams.size > 0 ? `?${searchParams.toString()}` : "";
 }
 
-export async function fetchConversations(range?: HistoryRange) {
-  const response = await apiGet<{ data: ConversationApiRecord[] }>(`/inbox/threads${buildHistoryRangeQuery(range)}`);
+export async function fetchConversations(range?: HistoryRange, organizationId?: string | null) {
+  const response = await apiGet<{ data: ConversationApiRecord[] }>(`/inbox/threads${buildHistoryRangeQuery(range, organizationId)}`);
   return response.data;
 }
 
-export async function fetchMessages(conversationId: string, range?: HistoryRange) {
+export async function fetchMessages(conversationId: string, range?: HistoryRange, organizationId?: string | null) {
   const response = await apiGet<{ data: MessageApiRecord[] }>(
-    `/inbox/threads/${conversationId}/messages${buildHistoryRangeQuery(range)}`
+    `/inbox/threads/${conversationId}/messages${buildHistoryRangeQuery(range, organizationId)}`
   );
   return response.data;
 }
@@ -62,8 +62,13 @@ export async function fetchSalesOrders(filters?: {
   createdTo?: string;
   closedFrom?: string;
   closedTo?: string;
+  organizationId?: string | null;
 }) {
   const searchParams = new URLSearchParams();
+
+  if (filters?.organizationId) {
+    searchParams.set("organization_id", filters.organizationId);
+  }
 
   if (filters?.status) {
     searchParams.set("status", filters.status);
@@ -90,33 +95,39 @@ export async function fetchSalesOrders(filters?: {
   return response.data;
 }
 
-export async function fetchSalesSummary() {
-  const response = await apiGet<{ data: SalesSummary }>("/sales/summary");
+export async function fetchSalesSummary(organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: SalesSummary }>(`/sales/summary${suffix}`);
   return response.data;
 }
 
-export async function fetchSalesOrderDetail(orderId: string) {
-  const response = await apiGet<{ data: SalesOrderDetail }>(`/sales/orders/${orderId}`);
+export async function fetchSalesOrderDetail(orderId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: SalesOrderDetail }>(`/sales/orders/${orderId}${suffix}`);
   return response.data;
 }
 
-export async function fetchSalesOrderHistory(orderId: string) {
-  const response = await apiGet<{ data: SalesOrderHistoryEntry[] }>(`/sales/orders/${orderId}/history`);
+export async function fetchSalesOrderHistory(orderId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: SalesOrderHistoryEntry[] }>(`/sales/orders/${orderId}/history${suffix}`);
   return response.data;
 }
 
-export async function fetchLeads() {
-  const response = await apiGet<{ data: Lead[] }>("/leads");
+export async function fetchLeads(organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: Lead[] }>(`/leads${suffix}`);
   return response.data;
 }
 
-export async function fetchLead(leadId: string) {
-  const response = await apiGet<{ data: Lead }>(`/leads/${leadId}`);
+export async function fetchLead(leadId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: Lead }>(`/leads/${leadId}${suffix}`);
   return response.data;
 }
 
-export async function fetchLeadHistory(leadId: string) {
-  const response = await apiGet<{ data: AuditHistoryEntry[] }>(`/leads/${leadId}/history`);
+export async function fetchLeadHistory(leadId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: AuditHistoryEntry[] }>(`/leads/${leadId}/history${suffix}`);
   return response.data;
 }
 
@@ -171,6 +182,18 @@ export async function updateQuickReply(payload: {
 export async function deleteQuickReply(payload: { templateId: string; organizationId?: string | null }) {
   const suffix = payload.organizationId ? `?organization_id=${encodeURIComponent(payload.organizationId)}` : "";
   return apiDelete<{ ok: true }>(`/quick-replies/${payload.templateId}${suffix}`);
+}
+
+export async function recordQuickReplyUsage(payload: {
+  templateId: string;
+  organizationId?: string | null;
+  conversationId?: string | null;
+}) {
+  const response = await apiPost<{ data: QuickReplyTemplate }>(`/quick-replies/${payload.templateId}/usage`, {
+    organizationId: payload.organizationId,
+    conversationId: payload.conversationId
+  });
+  return response.data;
 }
 
 export async function assignContact(payload: { contactId: string; organizationUserId: string }) {

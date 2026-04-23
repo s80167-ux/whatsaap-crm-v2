@@ -23,7 +23,8 @@ export class AuthService {
     const resolvedUser = await this.resolveAuthUser({
       authUserId: data.user.id,
       email: data.user.email ?? email,
-      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
     });
 
     return {
@@ -34,6 +35,7 @@ export class AuthService {
         organizationId: resolvedUser.organizationId,
         email: resolvedUser.email,
         fullName: resolvedUser.fullName,
+        avatarUrl: resolvedUser.avatarUrl,
         role: resolvedUser.role,
         permissionKeys: resolvedUser.permissionKeys
       }
@@ -47,6 +49,7 @@ export class AuthService {
       organizationId: authUser.organizationId,
       email: authUser.email,
       fullName: authUser.fullName,
+      avatarUrl: authUser.avatarUrl,
       role: authUser.role,
       permissionKeys: authUser.permissionKeys
     };
@@ -62,7 +65,8 @@ export class AuthService {
     return this.resolveAuthUser({
       authUserId: data.user.id,
       email: data.user.email ?? "",
-      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
     });
   }
 
@@ -70,6 +74,7 @@ export class AuthService {
     organizationId: string | null;
     email: string;
     fullName: string | null;
+    avatarUrl?: string | null;
     password: string;
     role: UserRole;
   }) {
@@ -78,7 +83,8 @@ export class AuthService {
       password: input.password,
       email_confirm: true,
       user_metadata: {
-        full_name: input.fullName
+        full_name: input.fullName,
+        avatar_url: input.avatarUrl ?? null
       }
     });
 
@@ -103,6 +109,7 @@ export class AuthService {
           auth_user_id: data.user.id,
           email: data.user.email ?? input.email,
           full_name: input.fullName,
+          avatar_url: input.avatarUrl ?? null,
           role: "super_admin" as const,
           status: "active" as const,
           created_at: new Date().toISOString()
@@ -118,6 +125,7 @@ export class AuthService {
         authUserId: data.user.id,
         email: data.user.email ?? input.email,
         fullName: input.fullName,
+        avatarUrl: input.avatarUrl ?? null,
         role: input.role,
         status: "active"
       });
@@ -142,10 +150,42 @@ export class AuthService {
     }
   }
 
+  async updateProfile(authUser: AuthUser, input: { fullName: string | null; avatarUrl: string | null }) {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.authUserId, {
+      user_metadata: {
+        full_name: input.fullName,
+        avatar_url: input.avatarUrl
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message ?? "Unable to update profile");
+    }
+
+    if (authUser.organizationUserId) {
+      await pool.query(
+        `
+          update organization_users
+          set full_name = $2,
+              avatar_url = $3
+          where id = $1
+        `,
+        [authUser.organizationUserId, input.fullName, input.avatarUrl]
+      );
+    }
+
+    return this.getProfile({
+      ...authUser,
+      fullName: input.fullName,
+      avatarUrl: input.avatarUrl
+    });
+  }
+
   private async resolveAuthUser(input: {
     authUserId: string;
     email: string;
     fullName: string | null;
+    avatarUrl: string | null;
   }): Promise<AuthUser> {
     const client = await pool.connect();
     try {
@@ -164,6 +204,7 @@ export class AuthService {
           role: "super_admin",
           email: input.email,
           fullName: input.fullName,
+          avatarUrl: input.avatarUrl,
           permissionKeys
         };
       }
@@ -186,6 +227,7 @@ export class AuthService {
         role: organizationUser.role,
         email: organizationUser.email ?? input.email,
         fullName: organizationUser.full_name ?? input.fullName,
+        avatarUrl: organizationUser.avatar_url,
         permissionKeys
       };
     } finally {

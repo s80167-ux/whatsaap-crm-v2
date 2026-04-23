@@ -3,9 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { getStoredUser } from "../lib/auth";
 
-export function useRealtimeInbox() {
+export function useRealtimeInbox(organizationIdOverride?: string | null) {
   const queryClient = useQueryClient();
-  const organizationId = getStoredUser()?.organizationId;
+  const organizationId = organizationIdOverride ?? getStoredUser()?.organizationId;
 
   useEffect(() => {
     const supabaseClient = supabase;

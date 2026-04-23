@@ -27,7 +27,7 @@ export class LeadRepository {
   async list(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId?: string | null;
       assignedOnly: boolean;
       organizationUserId?: string | null;
     }
@@ -48,7 +48,7 @@ export class LeadRepository {
           ct.primary_phone_normalized
         from leads l
         join contacts ct on ct.id = l.contact_id
-        where l.organization_id = $1
+        where ($1::uuid is null or l.organization_id = $1)
           and (
             not $2::boolean
             or l.assigned_user_id = $3
@@ -112,7 +112,7 @@ export class LeadRepository {
   async findById(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId?: string | null;
       leadId: string;
       assignedOnly: boolean;
       organizationUserId?: string | null;
@@ -134,7 +134,7 @@ export class LeadRepository {
           ct.primary_phone_normalized
         from leads l
         join contacts ct on ct.id = l.contact_id
-        where l.organization_id = $1
+        where ($1::uuid is null or l.organization_id = $1)
           and l.id = $2
           and (
             not $3::boolean

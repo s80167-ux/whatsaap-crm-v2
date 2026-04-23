@@ -8,6 +8,11 @@ export interface ContactRecord {
   primary_phone_normalized: string | null;
   primary_avatar_url?: string | null;
   owner_user_id?: UUID | null;
+  whatsapp_source_count?: number;
+  whatsapp_sources?: Array<{
+    id: UUID;
+    label: string | null;
+  }>;
 }
 
 export interface ContactIdentityRecord {

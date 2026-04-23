@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Conversation } from "../types/api";
 import { getConversationPreview } from "../lib/messageContent";
+import { PanelPagination, usePanelPagination } from "./PanelPagination";
 
 export function ConversationList({
   conversations,
@@ -12,9 +13,11 @@ export function ConversationList({
   selectedConversationId?: string;
   onSelect: (conversation: Conversation) => void;
 }) {
+  const conversationsPagination = usePanelPagination(conversations);
+
   return (
     <div className="flex min-h-0 flex-col gap-3 pr-1">
-      {conversations.map((conversation) => (
+      {conversationsPagination.visibleItems.map((conversation) => (
         <motion.button
           key={conversation.id}
           type="button"
@@ -42,6 +45,12 @@ export function ConversationList({
           </p>
         </motion.button>
       ))}
+      <PanelPagination
+        page={conversationsPagination.page}
+        pageCount={conversationsPagination.pageCount}
+        totalItems={conversationsPagination.totalItems}
+        onPageChange={conversationsPagination.setPage}
+      />
     </div>
   );
 }

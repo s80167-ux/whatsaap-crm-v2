@@ -22,7 +22,7 @@ export class SalesService {
 
   async listOrders(
     authUser: AuthUser,
-    organizationId: string,
+    organizationId: string | null,
     filters?: {
       status?: string;
       createdFrom?: string;
@@ -47,7 +47,7 @@ export class SalesService {
     }
   }
 
-  async getSummary(authUser: AuthUser, organizationId: string) {
+  async getSummary(authUser: AuthUser, organizationId: string | null) {
     const client = await pool.connect();
     try {
       return await this.salesRepository.getSummary(client, {
@@ -116,7 +116,7 @@ export class SalesService {
     return withTransaction((client) => this.createOrder(client, input));
   }
 
-  async getOrderDetail(authUser: AuthUser, organizationId: string, orderId: string) {
+  async getOrderDetail(authUser: AuthUser, organizationId: string | null, orderId: string) {
     const client = await pool.connect();
     try {
       const scope = this.getScope(authUser);
@@ -137,7 +137,7 @@ export class SalesService {
     }
   }
 
-  async getOrderHistory(authUser: AuthUser, organizationId: string, orderId: string, limit = 50) {
+  async getOrderHistory(authUser: AuthUser, organizationId: string | null, orderId: string, limit = 50) {
     const client = await pool.connect();
     try {
       const scope = this.getScope(authUser);

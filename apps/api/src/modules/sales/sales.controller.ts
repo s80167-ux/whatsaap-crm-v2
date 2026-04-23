@@ -91,9 +91,23 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
-function requireOrganizationId(request: Request) {
+function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+
+  if (!organizationId && request.auth?.role === "super_admin") {
+    return null;
+  }
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  return organizationId;
+}
+
+function requireOrganizationId(request: Request) {
+  const organizationId = resolveReadOrganizationId(request);
 
   if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -105,7 +119,7 @@ function requireOrganizationId(request: Request) {
 export async function getSalesOrders(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { status, created_from, created_to, closed_from, closed_to } = organizationQuerySchema.parse(request.query);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const orders = await salesService.listOrders(auth, organizationId, {
     status,
     createdFrom: created_from,
@@ -118,7 +132,7 @@ export async function getSalesOrders(request: Request, response: Response) {
 
 export async function getSalesSummary(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const summary = await salesService.getSummary(auth, organizationId);
   return response.json({ data: summary });
 }
@@ -162,7 +176,7 @@ export async function createSalesOrder(request: Request, response: Response) {
 
 export async function getSalesOrderDetail(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { orderId } = orderParamsSchema.parse(request.params);
   const detail = await salesService.getOrderDetail(auth, organizationId, orderId);
   return response.json({ data: detail });
@@ -170,7 +184,7 @@ export async function getSalesOrderDetail(request: Request, response: Response) 
 
 export async function getSalesOrderHistory(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { orderId } = orderParamsSchema.parse(request.params);
   const { limit = 50 } = salesHistoryQuerySchema.parse(request.query);
   const history = await salesService.getOrderHistory(auth, organizationId, orderId, limit);
