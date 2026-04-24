@@ -8,7 +8,7 @@ export function WhatsAppConnectionsBadge({ accounts }: { accounts: WhatsAppAccou
   const extra = accounts.length - maxDots;
 
   return (
-    <span className="ml-2 flex items-center gap-0.5">
+    <span className="flex shrink-0 items-center gap-0.5">
       {shown.map((acc) => {
         let color = "bg-gray-300";
         if (acc.status === "connected") color = "bg-green-500";
@@ -23,7 +23,7 @@ export function WhatsAppConnectionsBadge({ accounts }: { accounts: WhatsAppAccou
         );
       })}
       {extra > 0 && (
-        <span className="ml-1 text-xs text-text-soft font-semibold">+{extra}</span>
+        <span className="ml-1 whitespace-nowrap text-xs font-semibold text-text-soft">+{extra}</span>
       )}
     </span>
   );

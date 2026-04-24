@@ -42,6 +42,7 @@ export class ContactIdentityRepository {
       phoneE164: string | null;
       phoneNormalized: string | null;
       profileName: string | null;
+      profilePushName?: string | null;
       profileAvatarUrl?: string | null;
     }
   ): Promise<ContactIdentityRecord> {
@@ -56,10 +57,11 @@ export class ContactIdentityRepository {
           phone_e164,
           phone_normalized,
           profile_name,
+          profile_push_name,
           profile_avatar_url,
           last_seen_at
         )
-        values ($1, 'whatsapp', $2, $3, $4, $5, $6, nullif(trim($7), ''), nullif(trim($8), ''), timezone('utc', now()))
+        values ($1, 'whatsapp', $2, $3, $4, $5, $6, nullif(trim($7), ''), nullif(trim($8), ''), nullif(trim($9), ''), timezone('utc', now()))
         on conflict (organization_id, whatsapp_account_id, wa_jid)
         where deleted_at is null
         do update set
@@ -77,8 +79,19 @@ export class ContactIdentityRepository {
             when excluded.phone_normalized like '+60%' and contact_identities.phone_normalized not like '+60%' then excluded.phone_normalized
             else contact_identities.phone_normalized
           end,
-          profile_name = coalesce(nullif(trim(contact_identities.profile_name), ''), excluded.profile_name),
-          profile_avatar_url = coalesce(nullif(trim(contact_identities.profile_avatar_url), ''), excluded.profile_avatar_url),
+          profile_name = case
+            when excluded.profile_name is null then contact_identities.profile_name
+            when nullif(trim(contact_identities.profile_name), '') is null then excluded.profile_name
+            when length(trim(excluded.profile_name)) > length(trim(contact_identities.profile_name)) then excluded.profile_name
+            else contact_identities.profile_name
+          end,
+          profile_push_name = case
+            when excluded.profile_push_name is null then contact_identities.profile_push_name
+            when nullif(trim(contact_identities.profile_push_name), '') is null then excluded.profile_push_name
+            when length(trim(excluded.profile_push_name)) > length(trim(contact_identities.profile_push_name)) then excluded.profile_push_name
+            else contact_identities.profile_push_name
+          end,
+          profile_avatar_url = coalesce(excluded.profile_avatar_url, nullif(trim(contact_identities.profile_avatar_url), '')),
           last_seen_at = timezone('utc', now())
         returning
           id,
@@ -89,6 +102,7 @@ export class ContactIdentityRepository {
           phone_e164,
           phone_normalized,
           profile_name,
+          profile_push_name,
           profile_avatar_url
       `,
       [
@@ -99,6 +113,7 @@ export class ContactIdentityRepository {
         input.phoneE164,
         input.phoneNormalized,
         input.profileName,
+        input.profilePushName ?? null,
         input.profileAvatarUrl ?? null
       ]
     );

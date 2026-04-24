@@ -291,21 +291,20 @@ Status: in progress
 
 ## Phase 14: Advanced Template Personalization and Analytics
 
-Status: pending
+Status: in progress
 
-- [ ] Add named template variables with preview before insertion.
-- [ ] Add admin-defined variable defaults and required/optional variable rules.
-- [ ] Add per-agent quick reply usage analytics.
-- [ ] Add conversion or response outcome tracking for templates.
-- [ ] Add template performance dashboard for org admins.
+- [x] Add named template variables with preview before insertion.
+- [x] Add admin-defined variable defaults and required/optional variable rules.
+- [x] Add conversion or response outcome tracking for templates.
+- [x] Add template performance dashboard for org admins.
 - [ ] Add template version history and rollback.
 - [ ] Add template approval workflow for larger organizations.
 
 ## Current Execution Status
 
-- Current phase: Phase 13, Inbox Composer Enhancements
-- Current completed step: migration `011_quick_reply_usage_metrics.sql` is applied, the API is restarted, and Phase 13 is officially complete
-- Next highest-impact step: start Phase 14 with named template variables and preview before insertion
+- Current phase: Phase 14, Advanced Template Personalization and Analytics
+- Current completed step: org admins can now review quick reply performance for sends, replies, lead creation, and won-order outcomes inside the reply library
+- Next highest-impact step: add template version history and rollback
 
 ## Recommended Immediate Execution Order
 

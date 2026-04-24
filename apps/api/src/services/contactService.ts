@@ -18,6 +18,7 @@ export class ContactService {
       whatsappJid: string;
       phoneRaw: string | null;
       profileName: string | null;
+      profilePushName?: string | null;
       profileAvatarUrl?: string | null;
     }
   ): Promise<{ contact: ContactRecord; identity: ContactIdentityRecord }> {
@@ -63,6 +64,7 @@ export class ContactService {
       phoneE164: primaryPhone,
       phoneNormalized: normalizedPhone,
       profileName: input.profileName,
+      profilePushName: input.profilePushName ?? null,
       profileAvatarUrl: input.profileAvatarUrl ?? null
     });
 

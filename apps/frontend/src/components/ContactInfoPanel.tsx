@@ -6,6 +6,8 @@ import { useContact } from "../hooks/useContacts";
 import { getStoredUser } from "../lib/auth";
 import { Button } from "./Button";
 import { Card } from "./Card";
+import { Select } from "./Input";
+import { useOrganizationUsers } from "../hooks/useAdmin";
 
 function getContactInitials(name: string | null | undefined) {
   return (name ?? "Unknown")
@@ -14,6 +16,10 @@ function getContactInitials(name: string | null | undefined) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "U";
+}
+
+function getConversationSourceLabel(conversation: Conversation) {
+  return conversation.whatsapp_account_label ?? conversation.whatsapp_account_id ?? "Unknown connection";
 }
 
 export function ContactInfoPanel({
@@ -34,16 +40,18 @@ export function ContactInfoPanel({
   const displayName = contact?.display_name ?? conversation?.contact_name ?? null;
   const avatarUrl = contact?.primary_avatar_url ?? conversation?.contact_avatar_url ?? null;
 
-  async function handleAssignToMe() {
-    if (!conversation || !currentUser?.organizationUserId) {
-      return;
-    }
+  // Fetch assignable users for org admin
+  const organizationId = currentUser?.organizationId ?? conversation?.organization_id;
+  const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(organizationId);
+  const assignableUsers = organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin");
 
+  async function handleAssign(userId: string) {
+    if (!conversation || !userId) return;
     setIsAssigning(true);
     try {
       await assignConversation({
         conversationId: conversation.id,
-        organizationUserId: currentUser.organizationUserId
+        organizationUserId: userId
       });
       onAssigned?.();
     } finally {
@@ -72,6 +80,7 @@ export function ContactInfoPanel({
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-text">{displayName ?? "Unknown"}</p>
               <p className="truncate text-xs text-text-muted">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
+              <p className="mt-1 truncate text-xs text-text-soft">Source: {getConversationSourceLabel(conversation)}</p>
               {contact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{contact.primary_phone_e164}</p> : null}
             </div>
           </div>
@@ -91,17 +100,28 @@ export function ContactInfoPanel({
           {canAssign ? (
             <div className="rounded-lg border border-border bg-background-tint p-2 mt-1">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Assignment</p>
-              <p className="mt-1 text-xs leading-5 text-text-muted">
-                {isAssignedToCurrentUser ? "Assigned to you." : "Assign to yourself."}
-              </p>
-              <Button
-                className="mt-2 w-full !py-1 !text-xs"
-                variant={isAssignedToCurrentUser ? "secondary" : "primary"}
-                onClick={handleAssignToMe}
-                disabled={isAssigning || Boolean(isAssignedToCurrentUser)}
-              >
-                {isAssignedToCurrentUser ? "Assigned" : isAssigning ? "Assigning..." : "Assign"}
-              </Button>
+              {organizationUsersLoading ? (
+                <p className="mt-2 text-xs text-text-muted">Loading users...</p>
+              ) : assignableUsers.length > 0 ? (
+                <Select
+                  value={conversation.assigned_user_id ?? ""}
+                  onChange={(e) => handleAssign(e.target.value)}
+                  disabled={isAssigning}
+                  className="mt-2 w-full !py-1 !text-xs"
+                  aria-label="Assign conversation to user"
+                >
+                  <option value="" disabled>
+                    Unassigned
+                  </option>
+                  {assignableUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name || user.email || user.id}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <p className="mt-2 text-xs text-text-muted">No assignable users.</p>
+              )}
             </div>
           ) : null}
           {/* Remove stability guarantees for compact mode */}

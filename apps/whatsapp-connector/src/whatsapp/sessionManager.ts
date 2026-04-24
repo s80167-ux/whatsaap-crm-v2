@@ -1,4 +1,5 @@
 import {
+  type Contact,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
@@ -17,7 +18,7 @@ import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountReposi
 import { WhatsAppRuntimeRepository } from "../repositories/whatsAppRuntimeRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
-import { bestPhoneFromWhatsAppMessageKey, jidToPhone } from "../utils/phone.js";
+import { bestPhoneFromWhatsAppMessageKey, isWhatsAppDirectChatJid, jidToPhone } from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 type SessionRuntimeState = {
@@ -31,6 +32,8 @@ type OutboundMediaAttachment = {
   mimeType: string;
   dataBase64: string;
 };
+
+type ContactSnapshot = Pick<Contact, "id" | "jid" | "lid" | "name" | "notify" | "verifiedName" | "imgUrl">;
 
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
@@ -79,6 +82,7 @@ export class WhatsAppSessionManager {
   private readonly rawEventIngestionService = new RawEventIngestionService();
   private readonly phoneJidByLid = new Map<string, string>();
   private readonly avatarUrlByJid = new Map<string, string>();
+  private readonly contactByJid = new Map<string, ContactSnapshot>();
 
   getSocket(accountId: string) {
     return this.sockets.get(accountId);
@@ -288,8 +292,21 @@ export class WhatsAppSessionManager {
         }
       });
 
+      socket.ev.on("contacts.upsert", (contacts) => {
+        this.storeContactSnapshots(contacts);
+      });
+
+      socket.ev.on("contacts.update", (contacts) => {
+        this.storeContactSnapshots(contacts);
+      });
+
       const handleWhatsAppMessage = async (message: WAMessage) => {
         if (!message.key?.id || !message.key?.remoteJid) {
+          return;
+        }
+
+        if (!isWhatsAppDirectChatJid(message.key.remoteJid)) {
+          logger.debug({ accountId: account.id, remoteJid: message.key.remoteJid }, "Skipping unsupported WhatsApp chat target");
           return;
         }
 
@@ -305,6 +322,8 @@ export class WhatsAppSessionManager {
           bestPhoneFromWhatsAppMessageKey(messageKey) ??
           this.lookupPhoneFromLid(message.key.remoteJid) ??
           jidToPhone(message.key.remoteJid);
+        const profileName = this.resolveCanonicalProfileName(message);
+        const profilePushName = this.resolvePushProfileName(message);
         const profileAvatarUrl = await this.resolveProfileAvatarUrl(socket, message.key.remoteJid, messageKey);
 
         try {
@@ -314,7 +333,8 @@ export class WhatsAppSessionManager {
             externalMessageId: message.key.id,
             remoteJid: message.key.remoteJid,
             phoneRaw,
-            profileName: message.pushName ?? null,
+            profileName,
+            profilePushName,
             profileAvatarUrl,
             textBody: extractTextContent(message),
             messageType: detectMessageType(message),
@@ -352,6 +372,10 @@ export class WhatsAppSessionManager {
       socket.ev.on("messages.update", async (updates) => {
         for (const { key, update } of updates) {
           if (!key?.id || !key?.remoteJid || !key.fromMe) {
+            continue;
+          }
+
+          if (!isWhatsAppDirectChatJid(key.remoteJid)) {
             continue;
           }
 
@@ -464,13 +488,100 @@ export class WhatsAppSessionManager {
     return jidToPhone(this.phoneJidByLid.get(jid));
   }
 
+  private storeContactSnapshots(contacts: Array<Partial<Contact>>) {
+    for (const contact of contacts) {
+      const ids = [contact.id, contact.jid, contact.lid].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+      if (ids.length === 0) {
+        continue;
+      }
+
+      const snapshot: ContactSnapshot = {
+        id: contact.id ?? ids[0],
+        jid: contact.jid,
+        lid: contact.lid,
+        name: contact.name,
+        notify: contact.notify,
+        verifiedName: contact.verifiedName,
+        imgUrl: contact.imgUrl
+      };
+
+      for (const id of ids) {
+        const existing = this.contactByJid.get(id);
+        this.contactByJid.set(id, {
+          ...existing,
+          ...snapshot,
+          id: snapshot.id ?? existing?.id ?? id
+        });
+      }
+
+      if (contact.lid && contact.jid) {
+        this.phoneJidByLid.set(contact.lid, contact.jid);
+      }
+
+      if (typeof contact.imgUrl === "string" && contact.imgUrl.length > 0 && contact.imgUrl !== "changed") {
+        for (const id of ids) {
+          this.avatarUrlByJid.set(id, contact.imgUrl);
+        }
+      }
+    }
+  }
+
+  private getStoredContactSnapshot(jid: string, key: Record<string, unknown>) {
+    const candidates = [
+      jid,
+      this.phoneJidByLid.get(jid),
+      key.remoteJid,
+      key.senderPn,
+      key.participantPn,
+      key.participant
+    ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
+
+    for (const candidate of candidates) {
+      const snapshot = this.contactByJid.get(candidate);
+
+      if (snapshot) {
+        return snapshot;
+      }
+    }
+
+    return null;
+  }
+
+  private resolveCanonicalProfileName(message: WAMessage) {
+    if (!message.key?.remoteJid) {
+      return null;
+    }
+
+    const key = message.key as Record<string, unknown>;
+    const snapshot = this.getStoredContactSnapshot(message.key.remoteJid, key);
+    const directVerifiedName = typeof message.verifiedBizName === "string" ? message.verifiedBizName.trim() : "";
+    const cachedVerifiedName = typeof snapshot?.verifiedName === "string" ? snapshot.verifiedName.trim() : "";
+
+    return directVerifiedName || cachedVerifiedName || null;
+  }
+
+  private resolvePushProfileName(message: WAMessage) {
+    if (!message.key?.remoteJid || message.key.fromMe) {
+      return null;
+    }
+
+    const key = message.key as Record<string, unknown>;
+    const snapshot = this.getStoredContactSnapshot(message.key.remoteJid, key);
+    const pushName = typeof message.pushName === "string" ? message.pushName.trim() : "";
+    const notifyName = typeof snapshot?.notify === "string" ? snapshot.notify.trim() : "";
+
+    return pushName || notifyName || null;
+  }
+
   private async resolveProfileAvatarUrl(socket: ReturnType<typeof makeWASocket>, jid: string, key: Record<string, unknown>) {
     const candidates = [
+      jid,
+      this.phoneJidByLid.get(jid),
       key.senderPn,
       key.participantPn,
       key.participant,
-      this.phoneJidByLid.get(jid),
-      jid
+      key.remoteJid
     ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
 
     for (const candidate of candidates) {

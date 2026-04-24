@@ -17,7 +17,7 @@ import {
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { FormEvent, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
@@ -26,6 +26,7 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { NavLinkItem } from "../components/NavLinkItem";
+import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
@@ -148,7 +149,7 @@ export function DashboardLayout() {
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : user?.organizationId ?? null;
   const { data: organizations = [] } = useOrganizations();
   const selectedOrganizationName = organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null;
-  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, !isSuperAdmin || Boolean(activeOrganizationId));
+  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId);
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -160,7 +161,6 @@ export function DashboardLayout() {
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
-  const profilePanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     function handleStoredUserUpdate() {
@@ -203,21 +203,6 @@ export function DashboardLayout() {
       setSelectedOrganizationId("");
     }
   }, [isSuperAdmin, organizations, selectedOrganizationId]);
-
-  useEffect(() => {
-    if (!isProfilePanelOpen) {
-      return;
-    }
-
-    function handleOutsideClick(event: MouseEvent) {
-      if (profilePanelRef.current && !profilePanelRef.current.contains(event.target as Node)) {
-        setIsProfilePanelOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [isProfilePanelOpen]);
 
   async function handleUpdatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -307,7 +292,7 @@ export function DashboardLayout() {
             ) : null}
           </div>
 
-          <div ref={profilePanelRef} className="relative shrink-0">
+          <div className="relative shrink-0">
             <button
               type="button"
               className="inline-flex h-8 max-w-[14rem] items-center gap-2 border border-white/15 bg-white/10 px-2.5 text-xs font-semibold text-white transition duration-200 hover:border-white/30 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"
@@ -320,178 +305,179 @@ export function DashboardLayout() {
                 {user?.fullName ?? user?.email ?? "Profile"}
               </span>
             </button>
-
-            {isProfilePanelOpen ? (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.18 }}
-                className="profile-popover absolute right-0 top-[calc(100%+0.5rem)] w-[min(22rem,calc(100vw-1.5rem))] border border-white/20 bg-slate-950/75 p-4 text-white shadow-panel backdrop-blur-2xl"
-              >
-                <div className="flex items-start gap-3">
-                  <UserAvatar src={user?.avatarUrl} name={user?.fullName ?? user?.email ?? null} size="md" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
-                    <p className="mt-0.5 truncate text-xs text-white/55">{user?.email ?? user?.role ?? "user"}</p>
-                    <p className="mt-2 inline-flex border border-white/15 bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                      {user?.role ?? "user"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <Button
-                    variant="ghost"
-                    className="col-span-2 border border-white/10 bg-white/5 px-3 py-2 text-white hover:bg-white/10 hover:text-white"
-                    aria-label="Edit my profile"
-                    disabled={isUpdatingProfile}
-                    onClick={() => {
-                      setIsProfileFormOpen((isOpen) => !isOpen);
-                      setIsPasswordFormOpen(false);
-                      setProfileNotice(null);
-                    }}
-                  >
-                    <UserCircle size={15} />
-                    <span className="ml-2">Edit profile</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="border border-white/10 bg-white/5 px-3 py-2 text-white hover:bg-white/10 hover:text-white"
-                    aria-label="Reset my password"
-                    disabled={isUpdatingPassword}
-                    onClick={() => {
-                      setIsPasswordFormOpen((isOpen) => !isOpen);
-                      setIsProfileFormOpen(false);
-                      setPasswordNotice(null);
-                      setConfirmPassword("");
-                    }}
-                  >
-                    <KeyRound size={15} />
-                    <span className="ml-2">Password</span>
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      clearAuthSession();
-                      navigate("/login", { replace: true });
-                    }}
-                    variant="secondary"
-                    className="border-white/10 bg-white/90 px-3 py-2 text-slate-900 hover:bg-white"
-                    aria-label="Sign out"
-                  >
-                    <LogOut size={15} />
-                    <span className="ml-2">Sign out</span>
-                  </Button>
-                </div>
-
-                {isProfileFormOpen ? (
-                  <form className="mt-3 space-y-3" onSubmit={handleUpdateProfile}>
-                    <div className="flex items-center gap-3 rounded-none border border-white/10 bg-white/5 p-3">
-                      <UserAvatar src={profileAvatarUrl} name={profileFullName || user?.email || null} size="md" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Profile picture</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <label className="inline-flex cursor-pointer items-center justify-center border border-white/10 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15">
-                            Upload
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/gif"
-                              className="sr-only"
-                              onChange={handleProfilePictureChange}
-                            />
-                          </label>
-                          {profileAvatarUrl ? (
-                            <Button
-                              variant="ghost"
-                              className="border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white hover:bg-white/10 hover:text-white"
-                              disabled={isUpdatingProfile}
-                              onClick={() => setProfileAvatarUrl(null)}
-                            >
-                              Remove
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                    <Input
-                      value={profileFullName}
-                      onChange={(event) => setProfileFullName(event.target.value)}
-                      placeholder="Full name"
-                      aria-label="Full name"
-                      className="border-white/10 bg-white/95 px-3 py-2 text-slate-950 placeholder:text-slate-500"
-                    />
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>
-                        Save profile
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="flex-1 px-3 py-2"
-                        disabled={isUpdatingProfile}
-                        onClick={() => {
-                          setIsProfileFormOpen(false);
-                          setProfileFullName(user?.fullName ?? "");
-                          setProfileAvatarUrl(user?.avatarUrl ?? null);
-                          setProfileNotice(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                ) : null}
-                {profileNotice ? <p className="mt-3 text-xs text-coral">{profileNotice}</p> : null}
-
-                {isPasswordFormOpen ? (
-                  <form className="mt-3 space-y-2" onSubmit={handleUpdatePassword}>
-                    <Input
-                      type="password"
-                      value={newPassword}
-                      onChange={(event) => setNewPassword(event.target.value)}
-                      placeholder="New password"
-                      aria-label="New password"
-                      className="border-white/10 bg-white/95 px-3 py-2 text-slate-950 placeholder:text-slate-500"
-                      minLength={8}
-                      required
-                    />
-                    <Input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder="Confirm password"
-                      aria-label="Confirm new password"
-                      className="border-white/10 bg-white/95 px-3 py-2 text-slate-950 placeholder:text-slate-500"
-                      minLength={8}
-                      required
-                    />
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}>
-                        <Check size={16} />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="flex-1 px-3 py-2"
-                        aria-label="Cancel password reset"
-                        disabled={isUpdatingPassword}
-                        onClick={() => {
-                          setIsPasswordFormOpen(false);
-                          setNewPassword("");
-                          setConfirmPassword("");
-                          setPasswordNotice(null);
-                        }}
-                      >
-                        <X size={16} />
-                      </Button>
-                    </div>
-                  </form>
-                ) : null}
-                {passwordNotice ? <p className="mt-3 text-xs text-coral">{passwordNotice}</p> : null}
-              </motion.div>
-            ) : null}
           </div>
         </div>
       </header>
 
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[224px,minmax(0,1fr)] md:gap-3">
+      <PopupOverlay
+        open={isProfilePanelOpen}
+        onClose={() => setIsProfilePanelOpen(false)}
+        title="Profile"
+        description="Manage your profile, password, and session without leaving the dashboard."
+        panelClassName="max-w-[min(36rem,calc(100vw-2rem))]"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <UserAvatar src={user?.avatarUrl} name={user?.fullName ?? user?.email ?? null} size="md" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
+              <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
+              <p className="mt-2 inline-flex border border-border bg-background-tint px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">
+                {user?.role ?? "user"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="ghost"
+              className="col-span-2 border border-border bg-background-tint px-3 py-2 text-text hover:bg-white hover:text-text"
+              aria-label="Edit my profile"
+              disabled={isUpdatingProfile}
+              onClick={() => {
+                setIsProfileFormOpen((isOpen) => !isOpen);
+                setIsPasswordFormOpen(false);
+                setProfileNotice(null);
+              }}
+            >
+              <UserCircle size={15} />
+              <span className="ml-2">Edit profile</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="border border-border bg-background-tint px-3 py-2 text-text hover:bg-white hover:text-text"
+              aria-label="Reset my password"
+              disabled={isUpdatingPassword}
+              onClick={() => {
+                setIsPasswordFormOpen((isOpen) => !isOpen);
+                setIsProfileFormOpen(false);
+                setPasswordNotice(null);
+                setConfirmPassword("");
+              }}
+            >
+              <KeyRound size={15} />
+              <span className="ml-2">Password</span>
+            </Button>
+            <Button
+              onClick={() => {
+                clearAuthSession();
+                navigate("/login", { replace: true });
+              }}
+              variant="secondary"
+              className="border-border bg-white px-3 py-2 text-text hover:bg-background-tint"
+              aria-label="Sign out"
+            >
+              <LogOut size={15} />
+              <span className="ml-2">Sign out</span>
+            </Button>
+          </div>
+
+          {isProfileFormOpen ? (
+            <form className="space-y-3" onSubmit={handleUpdateProfile}>
+              <div className="flex items-center gap-3 border border-border bg-background-tint p-3">
+                <UserAvatar src={profileAvatarUrl} name={profileFullName || user?.email || null} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">Profile picture</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <label className="inline-flex cursor-pointer items-center justify-center border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text transition hover:bg-background-tint">
+                      Upload
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="sr-only"
+                        onChange={handleProfilePictureChange}
+                      />
+                    </label>
+                    {profileAvatarUrl ? (
+                      <Button
+                        variant="ghost"
+                        className="border border-border bg-white px-2.5 py-1.5 text-xs text-text hover:bg-background-tint hover:text-text"
+                        disabled={isUpdatingProfile}
+                        onClick={() => setProfileAvatarUrl(null)}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              <Input
+                value={profileFullName}
+                onChange={(event) => setProfileFullName(event.target.value)}
+                placeholder="Full name"
+                aria-label="Full name"
+                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
+              />
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>
+                  Save profile
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 px-3 py-2"
+                  disabled={isUpdatingProfile}
+                  onClick={() => {
+                    setIsProfileFormOpen(false);
+                    setProfileFullName(user?.fullName ?? "");
+                    setProfileAvatarUrl(user?.avatarUrl ?? null);
+                    setProfileNotice(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : null}
+          {profileNotice ? <p className="text-xs text-coral">{profileNotice}</p> : null}
+
+          {isPasswordFormOpen ? (
+            <form className="space-y-2" onSubmit={handleUpdatePassword}>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="New password"
+                aria-label="New password"
+                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
+                minLength={8}
+                required
+              />
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Confirm password"
+                aria-label="Confirm new password"
+                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
+                minLength={8}
+                required
+              />
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}>
+                  <Check size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 px-3 py-2"
+                  aria-label="Cancel password reset"
+                  disabled={isUpdatingPassword}
+                  onClick={() => {
+                    setIsPasswordFormOpen(false);
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setPasswordNotice(null);
+                  }}
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+            </form>
+          ) : null}
+          {passwordNotice ? <p className="text-xs text-coral">{passwordNotice}</p> : null}
+        </div>
+      </PopupOverlay>
+
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[246px,minmax(0,1fr)] md:gap-2">
         <motion.aside className="min-w-0" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell dashboard-sidebar flex h-full flex-col rounded-none p-6 md:rounded-2xl" elevated>
             <div>
@@ -557,12 +543,22 @@ export function DashboardLayout() {
                 ]}
               />
               <NavLinkItem to="/setup" icon={<Settings2 size={18} />} label="Setup" />
-              {isSuperAdmin ? <NavLinkItem to="/super-admin-map" icon={<Workflow size={18} />} label="Super Admin Map" /> : null}
+              {isSuperAdmin ? (
+                <SidebarNavGroup
+                  icon={<Workflow size={18} />}
+                  label="Super Admin Map"
+                  items={[
+                    { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
+                    { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
+                    { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
+                  ]}
+                />
+              ) : null}
               {isSuperAdmin ? <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" /> : null}
             </nav>
           </Card>
         </motion.aside>
-        <main className="min-w-0 rounded-2xl bg-transparent px-3 py-4 md:pl-0 md:pr-3 xl:pr-4">
+        <main className="min-w-0 rounded-2xl bg-transparent px-2 py-4 md:pl-0 md:pr-2 xl:pr-3">
           <Outlet
             context={{
               isSuperAdmin,

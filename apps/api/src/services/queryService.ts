@@ -30,7 +30,7 @@ export class QueryService {
     };
   }
 
-  async listContacts(authUser: AuthUser, organizationId: string, activityRange?: ActivityRangeFilter) {
+  async listContacts(authUser: AuthUser, organizationId: string | null, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
       return await this.contactRepository.list(client, organizationId, {
@@ -42,7 +42,7 @@ export class QueryService {
     }
   }
 
-  async getContact(authUser: AuthUser, organizationId: string, contactId: string) {
+  async getContact(authUser: AuthUser, organizationId: string | null, contactId: string) {
     const client = await pool.connect();
     try {
       return await this.contactRepository.findById(client, organizationId, contactId, this.getScope(authUser));
@@ -51,7 +51,7 @@ export class QueryService {
     }
   }
 
-  async listConversations(authUser: AuthUser, organizationId: string, activityRange?: ActivityRangeFilter) {
+  async listConversations(authUser: AuthUser, organizationId: string | null, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
       return await this.conversationService.list(client, organizationId, {
@@ -63,7 +63,7 @@ export class QueryService {
     }
   }
 
-  async listMessages(authUser: AuthUser, organizationId: string, conversationId: string, activityRange?: ActivityRangeFilter) {
+  async listMessages(authUser: AuthUser, organizationId: string | null, conversationId: string, activityRange?: ActivityRangeFilter) {
     const client = await pool.connect();
     try {
       return await this.messageRepository.listByConversation(client, organizationId, conversationId, {

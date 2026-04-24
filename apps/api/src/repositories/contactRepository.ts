@@ -32,7 +32,7 @@ export class ContactRepository {
 
   async findById(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     contactId: string,
     options?: {
       assignedOnly?: boolean;
@@ -47,14 +47,65 @@ export class ContactRepository {
         select
           c.id,
           c.organization_id,
-          c.display_name,
+          case
+            when c.is_anchor_locked and nullif(trim(c.display_name), '') is not null then c.display_name
+            else coalesce(
+              latest_identity.profile_name,
+              case
+                when nullif(trim(c.display_name), '') is null then null
+                when c.anchored_by_source = 'manual' then c.display_name
+                when lower(trim(c.display_name)) = any(blocked_names.blocked_names) then null
+                else c.display_name
+              end,
+              c.primary_phone_e164,
+              c.primary_phone_normalized
+            )
+          end as display_name,
           c.primary_phone_e164,
-          c.primary_phone_normalized,
-          c.primary_avatar_url,
+          coalesce(c.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164) as primary_phone_normalized,
+          coalesce(c.primary_avatar_url, latest_identity.profile_avatar_url) as primary_avatar_url,
           c.owner_user_id,
           coalesce(src.source_count, 0)::integer as whatsapp_source_count,
           coalesce(src.sources, '[]'::json) as whatsapp_sources
         from contacts c
+        left join lateral (
+          with related_accounts as (
+            select ci.whatsapp_account_id
+            from contact_identities ci
+            where ci.contact_id = c.id
+              and ci.whatsapp_account_id is not null
+            union
+            select conv.whatsapp_account_id
+            from conversations conv
+            where conv.contact_id = c.id
+              and conv.whatsapp_account_id is not null
+            union
+            select m.whatsapp_account_id
+            from messages m
+            where m.contact_id = c.id
+              and m.whatsapp_account_id is not null
+          )
+          select coalesce(array_agg(distinct lower(trim(candidate_name))), '{}'::text[]) as blocked_names
+          from related_accounts ra
+          join whatsapp_accounts wa on wa.id = ra.whatsapp_account_id
+          cross join lateral unnest(array[nullif(trim(wa.label), ''), nullif(trim(wa.display_name), '')]) as candidate_name
+        ) blocked_names on true
+        left join lateral (
+          select
+            case
+              when nullif(trim(ci.profile_name), '') is null then null
+              when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              else nullif(trim(ci.profile_name), '')
+            end as profile_name,
+            nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
+            ci.phone_e164,
+            ci.phone_normalized
+          from contact_identities ci
+          where ci.contact_id = c.id
+            and coalesce(ci.is_active, true)
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
         left join lateral (
           with source_accounts as (
             select
@@ -86,7 +137,7 @@ export class ContactRepository {
             ) as sources
           from source_accounts
         ) src on true
-        where c.organization_id = $1
+        where ($1::uuid is null or c.organization_id = $1)
           and c.id = $2
           and (
             not $3::boolean
@@ -160,7 +211,13 @@ export class ContactRepository {
     const result = await client.query<ContactRecord>(
       `
         update contacts
-        set display_name = coalesce(nullif(trim(display_name), ''), nullif(trim($2), '')),
+        set display_name = case
+              when is_anchor_locked then display_name
+              when nullif(trim($2), '') is null then display_name
+              when nullif(trim(display_name), '') is null then nullif(trim($2), '')
+              when length(trim($2)) > length(trim(display_name)) then nullif(trim($2), '')
+              else display_name
+            end,
             primary_phone_e164 = case
               when nullif(trim($3), '') is null then primary_phone_e164
               when primary_phone_normalized is null then $3
@@ -173,7 +230,19 @@ export class ContactRepository {
               when $4 like '+60%' and primary_phone_normalized not like '+60%' then $4
               else primary_phone_normalized
             end,
-            primary_avatar_url = coalesce(primary_avatar_url, nullif(trim($5), ''))
+            primary_avatar_url = coalesce(nullif(trim($5), ''), primary_avatar_url),
+            anchored_at = case
+              when is_anchor_locked or nullif(trim($2), '') is null then anchored_at
+              when nullif(trim(display_name), '') is null then timezone('utc', now())
+              when length(trim($2)) > length(trim(display_name)) then timezone('utc', now())
+              else anchored_at
+            end,
+            anchored_by_source = case
+              when is_anchor_locked or nullif(trim($2), '') is null then anchored_by_source
+              when nullif(trim(display_name), '') is null then 'whatsapp_identity'
+              when length(trim($2)) > length(trim(display_name)) then 'whatsapp_identity'
+              else anchored_by_source
+            end
         where id = $1
         returning
           id,
@@ -224,6 +293,18 @@ export class ContactRepository {
               when nullif(trim($4), '') is null then null
               else $5
             end,
+            is_anchor_locked = case
+              when $3::text is null or nullif(trim($3), '') is null then is_anchor_locked
+              else true
+            end,
+            anchored_at = case
+              when $3::text is null or nullif(trim($3), '') is null then anchored_at
+              else timezone('utc', now())
+            end,
+            anchored_by_source = case
+              when $3::text is null or nullif(trim($3), '') is null then anchored_by_source
+              else 'manual'
+            end,
             updated_at = timezone('utc', now())
         where id = $1
           and organization_id = $2
@@ -250,7 +331,7 @@ export class ContactRepository {
 
   async list(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;

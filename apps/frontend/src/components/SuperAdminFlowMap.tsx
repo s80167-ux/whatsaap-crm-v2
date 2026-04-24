@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, type PanInfo } from "framer-motion";
+import { RotateCcw } from "lucide-react";
 
 type FlowSection = {
   title: string;
@@ -146,9 +147,7 @@ const links: FlowLink[] = [
 ];
 
 export function SuperAdminFlowMap() {
-  const [nodePositions, setNodePositions] = useState(() =>
-    Object.fromEntries(nodes.map((node) => [node.id, { x: node.x, y: node.y }]))
-  );
+  const [nodePositions, setNodePositions] = useState(() => getDefaultNodePositions(nodes));
   const positionedNodes = nodes.map((node) => ({ ...node, ...nodePositions[node.id] }));
 
   function handleDragEnd(node: FlowNode, info: PanInfo) {
@@ -166,6 +165,10 @@ export function SuperAdminFlowMap() {
     });
   }
 
+  function handleResetPositions() {
+    setNodePositions(getDefaultNodePositions(nodes));
+  }
+
   return (
     <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-panel">
       <div className="flex flex-col gap-4 border-b border-border bg-background-elevated px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
@@ -176,8 +179,19 @@ export function SuperAdminFlowMap() {
             A board-style operating map for the platform owner: tenants, setup, connector health, inbox, sales, audit, and automation readiness in one place.
           </p>
         </div>
-        <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
-          Drag cards or scroll to explore
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleResetPositions}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-text-soft transition duration-200 hover:border-slate-300 hover:text-text focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/20"
+            aria-label="Reset map position"
+            title="Reset map position"
+          >
+            <RotateCcw size={16} />
+          </button>
+          <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
+            Drag cards or scroll to explore
+          </div>
         </div>
       </div>
 
@@ -285,6 +299,10 @@ function findNode(flowNodes: FlowNode[], id: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getDefaultNodePositions(flowNodes: FlowNode[]) {
+  return Object.fromEntries(flowNodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 }
 
 function getNodeCenter(node: FlowNode) {

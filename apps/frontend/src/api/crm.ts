@@ -7,7 +7,9 @@ import type {
   Lead,
   Message,
   OutboundAttachmentInput,
+  QuickReplyVariableDefinition,
   QuickReplyTemplate,
+  QuickReplyAnalyticsResponse,
   SalesOrder,
   SalesOrderDetail,
   SalesOrderHistoryEntry,
@@ -147,11 +149,24 @@ export async function fetchQuickReplies(input?: { organizationId?: string | null
   return response.data;
 }
 
+export async function fetchQuickReplyAnalytics(input?: { organizationId?: string | null }) {
+  const searchParams = new URLSearchParams();
+
+  if (input?.organizationId) {
+    searchParams.set("organization_id", input.organizationId);
+  }
+
+  const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+  const response = await apiGet<{ data: QuickReplyAnalyticsResponse }>(`/quick-replies/analytics${suffix}`);
+  return response.data;
+}
+
 export async function createQuickReply(payload: {
   organizationId?: string | null;
   title: string;
   body: string;
   category?: string | null;
+  variableDefinitions?: QuickReplyVariableDefinition[];
   isActive?: boolean;
   sortOrder?: number;
 }) {
@@ -165,6 +180,7 @@ export async function updateQuickReply(payload: {
   title?: string;
   body?: string;
   category?: string | null;
+  variableDefinitions?: QuickReplyVariableDefinition[];
   isActive?: boolean;
   sortOrder?: number;
 }) {
@@ -173,6 +189,7 @@ export async function updateQuickReply(payload: {
     title: payload.title,
     body: payload.body,
     category: payload.category,
+    variableDefinitions: payload.variableDefinitions,
     isActive: payload.isActive,
     sortOrder: payload.sortOrder
   });
@@ -212,10 +229,22 @@ export async function assignConversation(payload: { conversationId: string; orga
 export async function sendMessage(payload: {
   whatsappAccountId: string;
   conversationId: string;
+  quickReplyTemplateId?: string | null;
+  replyToMessageId?: string | null;
   text?: string;
   attachment?: OutboundAttachmentInput | null;
 }) {
   return apiPost<{ data: Message }>("/messages/send", payload);
+}
+
+export async function deleteMessage(payload: { messageId: string }) {
+  return apiDelete<{ ok: true }>(`/messages/${payload.messageId}`);
+}
+
+export async function forwardMessage(payload: { messageId: string; targetConversationId: string }) {
+  return apiPost<{ data: Message }>(`/messages/${payload.messageId}/forward`, {
+    targetConversationId: payload.targetConversationId
+  });
 }
 
 export async function createSalesOrder(payload: {

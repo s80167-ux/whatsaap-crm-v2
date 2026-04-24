@@ -24,7 +24,6 @@ export function InboxPage() {
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const activeOrganizationId = isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
-  const canLoadInbox = !isSuperAdmin || Boolean(activeOrganizationId);
 
   useRealtimeInbox(activeOrganizationId);
 
@@ -32,8 +31,7 @@ export function InboxPage() {
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
   const { data: conversations = [], isLoading } = useConversations(
     chatHistoryRange,
-    isSuperAdmin ? activeOrganizationId : undefined,
-    canLoadInbox
+    isSuperAdmin ? activeOrganizationId : undefined
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const visibleConversations = useMemo(
@@ -133,11 +131,7 @@ export function InboxPage() {
               </div>
             </header>
             <div className="min-h-0 overflow-y-auto">
-              {!canLoadInbox ? (
-                <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-text-muted">
-                  Choose an organization from the sidebar to load conversations.
-                </div>
-              ) : isLoading ? (
+              {isLoading ? (
                 <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
               ) : (
                 <ConversationList
@@ -164,6 +158,7 @@ export function InboxPage() {
       </div>
       <ChatPanel
         conversation={stableSelectedConversation}
+        conversations={visibleConversations}
         messages={messages}
         historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
         organizationId={isSuperAdmin ? activeOrganizationId : undefined}

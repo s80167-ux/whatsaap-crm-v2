@@ -20,6 +20,8 @@ export class MessageRepository {
           whatsapp_account_id,
           external_message_id,
           external_chat_id,
+          reply_to_message_id,
+          is_deleted,
           direction,
           message_type,
           content_text,
@@ -49,6 +51,7 @@ export class MessageRepository {
       whatsappAccountId: string;
       externalMessageId: string;
       externalChatId?: string | null;
+      replyToMessageId?: string | null;
       contentText?: string | null;
       messageType?: string;
       contentJson?: unknown;
@@ -64,6 +67,7 @@ export class MessageRepository {
           whatsapp_account_id,
           external_message_id,
           external_chat_id,
+          reply_to_message_id,
           channel,
           direction,
           message_type,
@@ -72,7 +76,7 @@ export class MessageRepository {
           ack_status,
           sent_at
         )
-        values ($1, $2, $3, $4, $5, $6, 'whatsapp', 'outgoing', $7, nullif($8, ''), $9, 'pending', $10)
+        values ($1, $2, $3, $4, $5, $6, $7, 'whatsapp', 'outgoing', $8, nullif($9, ''), $10, 'pending', $11)
         returning
           id,
           organization_id,
@@ -81,6 +85,8 @@ export class MessageRepository {
           whatsapp_account_id,
           external_message_id,
           external_chat_id,
+          reply_to_message_id,
+          is_deleted,
           direction,
           message_type,
           content_text,
@@ -97,6 +103,7 @@ export class MessageRepository {
         input.whatsappAccountId,
         input.externalMessageId,
         input.externalChatId ?? null,
+        input.replyToMessageId ?? null,
         input.messageType ?? "text",
         input.contentText ?? null,
         input.contentJson ?? null,
@@ -279,7 +286,11 @@ export class MessageRepository {
         update messages
         set external_message_id = $2,
             external_chat_id = coalesce($3, external_chat_id),
-            content_json = coalesce($4, content_json),
+            content_json = case
+              when $4::jsonb is null then content_json
+              when content_json is null then jsonb_build_object('rawPayload', $4::jsonb)
+              else content_json || jsonb_build_object('rawPayload', $4::jsonb)
+            end,
             sent_at = $5,
             updated_at = timezone('utc', now())
         where id = $1
@@ -296,7 +307,7 @@ export class MessageRepository {
 
   async listByConversation(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     conversationId: string,
     options?: {
       assignedOnly?: boolean;
@@ -319,6 +330,8 @@ export class MessageRepository {
           whatsapp_account_id,
           external_message_id,
           external_chat_id,
+          reply_to_message_id,
+          is_deleted,
           direction,
           message_type,
           content_text,
@@ -328,7 +341,7 @@ export class MessageRepository {
           read_at,
           ack_status
         from messages
-        where organization_id = $1
+        where ($1::uuid is null or organization_id = $1)
           and conversation_id = $2
           and ($5::timestamptz is null or sent_at >= $5::timestamptz)
           and (
@@ -354,5 +367,84 @@ export class MessageRepository {
     );
 
     return result.rows;
+  }
+
+  async findById(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      messageId: string;
+    }
+  ): Promise<MessageRecord | null> {
+    const result = await client.query<MessageRecord>(
+      `
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          reply_to_message_id,
+          is_deleted,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+        from messages
+        where organization_id = $1
+          and id = $2
+          and is_deleted = false
+        limit 1
+      `,
+      [input.organizationId, input.messageId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async markDeleted(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      messageId: string;
+    }
+  ): Promise<MessageRecord | null> {
+    const result = await client.query<MessageRecord>(
+      `
+        update messages
+        set is_deleted = true,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+          and is_deleted = false
+        returning
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          reply_to_message_id,
+          is_deleted,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+      `,
+      [input.organizationId, input.messageId]
+    );
+
+    return result.rows[0] ?? null;
   }
 }

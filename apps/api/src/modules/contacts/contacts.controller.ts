@@ -49,9 +49,13 @@ const historyRangeQuerySchema = z
     message: "Choose either days or months, not both"
   });
 
-function requireOrganizationId(request: Request) {
+function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+
+  if (!organizationId && request.auth?.role === "super_admin") {
+    return null;
+  }
 
   if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -91,7 +95,7 @@ function resolveActivityRange(request: Request): ActivityRangeFilter | undefined
 
 export async function getContacts(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const activityRange = resolveActivityRange(request);
   const contacts = await queryService.listContacts(auth, organizationId, activityRange);
   return response.json({ data: contacts });
@@ -99,7 +103,7 @@ export async function getContacts(request: Request, response: Response) {
 
 export async function getContact(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { contactId } = contactParamsSchema.parse(request.params);
   const contact = await queryService.getContact(auth, organizationId, contactId);
 

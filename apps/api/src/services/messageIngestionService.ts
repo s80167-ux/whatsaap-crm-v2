@@ -6,6 +6,7 @@ import { normalizeMessageType } from "../utils/message.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { ProjectionService } from "./projectionService.js";
+import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
 export class MessageIngestionService {
   constructor(
@@ -13,7 +14,8 @@ export class MessageIngestionService {
     private readonly conversationService = new ConversationService(),
     private readonly conversationRepository = new ConversationRepository(),
     private readonly messageRepository = new MessageRepository(),
-    private readonly projectionService = new ProjectionService()
+    private readonly projectionService = new ProjectionService(),
+    private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
   ) {}
 
   async ingest(input: InboundMessageInput) {
@@ -24,6 +26,7 @@ export class MessageIngestionService {
         whatsappJid: input.remoteJid,
         phoneRaw: input.phoneRaw,
         profileName: input.profileName,
+        profilePushName: input.profilePushName ?? null,
         profileAvatarUrl: input.profileAvatarUrl ?? null
       });
 
@@ -62,6 +65,15 @@ export class MessageIngestionService {
         contactId: contact.id,
         sentAt: input.sentAt
       });
+
+      if (inserted && input.direction === "incoming") {
+        await this.quickReplyOutcomeService.markCustomerReply(client, {
+          organizationId: input.organizationId,
+          conversationId: conversation.id,
+          responseMessageId: message.id,
+          responseAt: input.sentAt
+        });
+      }
 
       return { contact, identity, conversation, message, inserted };
     });

@@ -4,7 +4,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { ProcessedEventKeyRepository } from "../repositories/processedEventKeyRepository.js";
 import { RawEventRepository, type RawChannelEventRecord } from "../repositories/rawEventRepository.js";
-import { bestPhoneFromWhatsAppPayload } from "../utils/phone.js";
+import { bestPhoneFromWhatsAppPayload, isWhatsAppDirectChatJid } from "../utils/phone.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
 
@@ -15,6 +15,7 @@ type WhatsAppMessageEventPayload = {
   remoteJid: string;
   phoneRaw: string | null;
   profileName: string | null;
+  profilePushName?: string | null;
   profileAvatarUrl?: string | null;
   textBody: string | null;
   messageType: string;
@@ -147,6 +148,13 @@ export class RawEventProcessorService {
       return;
     }
 
+    if (!isWhatsAppDirectChatJid(payload.remoteJid)) {
+      await withTransaction((client) =>
+        this.rawEventRepository.markIgnored(client, event.id, `Unsupported WhatsApp chat target: ${payload.remoteJid}`)
+      );
+      return;
+    }
+
     const eventKey = this.buildMessageEventKey(event, payload);
 
     try {
@@ -177,6 +185,7 @@ export class RawEventProcessorService {
           remoteJid: payload.remoteJid,
           phoneRaw,
           profileName: payload.profileName,
+          profilePushName: payload.profilePushName ?? null,
           profileAvatarUrl: payload.profileAvatarUrl ?? null,
           textBody: payload.textBody,
           messageType: payload.messageType,

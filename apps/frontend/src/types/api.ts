@@ -2,6 +2,7 @@ export interface Conversation {
   id: string;
   organization_id: string;
   whatsapp_account_id: string;
+  whatsapp_account_label?: string | null;
   contact_id: string;
   assigned_user_id?: string | null;
   channel?: string;
@@ -26,6 +27,8 @@ export interface Message {
   whatsapp_account_id: string;
   external_message_id: string;
   external_chat_id?: string | null;
+  reply_to_message_id?: string | null;
+  is_deleted?: boolean;
   direction: "incoming" | "outgoing" | "system";
   message_type: string;
   content_text: string | null;
@@ -139,6 +142,7 @@ export interface QuickReplyTemplate {
   title: string;
   body: string;
   category?: string | null;
+  variable_definitions?: QuickReplyVariableDefinition[];
   is_active: boolean;
   sort_order: number;
   usage_count?: number;
@@ -146,4 +150,42 @@ export interface QuickReplyTemplate {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface QuickReplyVariableDefinition {
+  key: string;
+  default_value?: string | null;
+  required: boolean;
+}
+
+export interface QuickReplyAnalyticsTemplate {
+  template_id: string;
+  title: string;
+  category?: string | null;
+  usage_count: number;
+  send_count: number;
+  customer_replied_count: number;
+  lead_created_count: number;
+  order_created_count: number;
+  order_closed_won_count: number;
+  order_closed_lost_count: number;
+  response_rate: number;
+  lead_rate: number;
+  win_rate: number;
+  last_used_at?: string | null;
+}
+
+export interface QuickReplyAnalyticsSummary {
+  total_templates: number;
+  total_sends: number;
+  customer_replied_count: number;
+  lead_created_count: number;
+  order_created_count: number;
+  order_closed_won_count: number;
+  order_closed_lost_count: number;
+}
+
+export interface QuickReplyAnalyticsResponse {
+  summary: QuickReplyAnalyticsSummary;
+  templates: QuickReplyAnalyticsTemplate[];
 }

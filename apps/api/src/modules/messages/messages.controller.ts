@@ -5,10 +5,13 @@ import { AppError } from "../../lib/errors.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { QueryService } from "../../services/queryService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
+import { withTransaction } from "../../config/database.js";
+import { MessageRepository } from "../../repositories/messageRepository.js";
 
 const queryService = new QueryService();
 const sendMessageService = new SendMessageService();
 const auditLogService = new AuditLogService();
+const messageRepository = new MessageRepository();
 
 const attachmentSchema = z.object({
   kind: z.enum(["image", "video", "audio", "document"]),
@@ -21,11 +24,21 @@ const attachmentSchema = z.object({
 const sendSchema = z.object({
   whatsappAccountId: z.string().uuid(),
   conversationId: z.string().uuid(),
+  quickReplyTemplateId: z.string().uuid().optional().nullable(),
+  replyToMessageId: z.string().uuid().optional().nullable(),
   text: z.string().trim().max(4000).optional(),
   attachment: attachmentSchema.optional().nullable()
 }).refine((input) => Boolean(input.text?.trim()) || Boolean(input.attachment), {
   message: "Message text or one attachment is required",
   path: ["text"]
+});
+
+const messageParamsSchema = z.object({
+  messageId: z.string().uuid()
+});
+
+const forwardSchema = z.object({
+  targetConversationId: z.string().uuid()
 });
 
 const conversationParamsSchema = z.object({
@@ -73,7 +86,8 @@ export async function sendWhatsAppMessage(request: Request, response: Response) 
 
   const message = await sendMessageService.send({
     ...input,
-    organizationId: auth.organizationId
+    organizationId: auth.organizationId,
+    organizationUserId: auth.organizationUserId ?? null
   });
 
   await auditLogService.record(auth, {
@@ -84,6 +98,8 @@ export async function sendWhatsAppMessage(request: Request, response: Response) 
     metadata: {
       conversation_id: input.conversationId,
       whatsapp_account_id: input.whatsappAccountId,
+      quick_reply_template_id: input.quickReplyTemplateId ?? null,
+      reply_to_message_id: input.replyToMessageId ?? null,
       external_message_id: message.external_message_id,
       message_type: input.attachment?.kind ?? "text",
       attachment_file_name: input.attachment?.fileName ?? null
@@ -92,4 +108,136 @@ export async function sendWhatsAppMessage(request: Request, response: Response) 
   });
 
   return response.status(201).json({ data: message });
+}
+
+export async function deleteMessage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { messageId } = messageParamsSchema.parse(request.params);
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const deletedMessage = await withTransaction(async (client) => {
+    const existingMessage = await messageRepository.findById(client, {
+      organizationId: auth.organizationId!,
+      messageId
+    });
+
+    if (!existingMessage) {
+      throw new AppError("Message not found", 404, "message_not_found");
+    }
+
+    return messageRepository.markDeleted(client, {
+      organizationId: auth.organizationId!,
+      messageId
+    });
+  });
+
+  if (!deletedMessage) {
+    throw new AppError("Message not found", 404, "message_not_found");
+  }
+
+  await auditLogService.record(auth, {
+    organizationId: auth.organizationId,
+    action: "message.deleted",
+    entityType: "message",
+    entityId: deletedMessage.id,
+    metadata: {
+      conversation_id: deletedMessage.conversation_id,
+      whatsapp_account_id: deletedMessage.whatsapp_account_id
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ ok: true });
+}
+
+export async function forwardMessage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { messageId } = messageParamsSchema.parse(request.params);
+  const input = forwardSchema.parse(request.body);
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const sourceMessage = await withTransaction(async (client) => {
+    const existingMessage = await messageRepository.findById(client, {
+      organizationId: auth.organizationId!,
+      messageId
+    });
+
+    if (!existingMessage) {
+      throw new AppError("Message not found", 404, "message_not_found");
+    }
+
+    return existingMessage;
+  });
+
+  const targetConversation = await withTransaction(async (client) => {
+    const result = await client.query<{ id: string; whatsapp_account_id: string }>(
+      `
+        select id, whatsapp_account_id
+        from conversations
+        where organization_id = $1
+          and id = $2
+        limit 1
+      `,
+      [auth.organizationId, input.targetConversationId]
+    );
+
+    return result.rows[0] ?? null;
+  });
+
+  if (!targetConversation) {
+    throw new AppError("Target conversation not found", 404, "conversation_not_found");
+  }
+
+  const sourceContent = sourceMessage.content_json && typeof sourceMessage.content_json === "object"
+    ? (sourceMessage.content_json as Record<string, unknown>)
+    : null;
+  const outboundMedia =
+    sourceContent?.outboundMedia && typeof sourceContent.outboundMedia === "object"
+      ? (sourceContent.outboundMedia as Record<string, unknown>)
+      : null;
+  const attachment = outboundMedia
+    ? {
+        kind: outboundMedia.kind as "image" | "video" | "audio" | "document",
+        fileName: String(outboundMedia.fileName ?? sourceMessage.content_text ?? "attachment"),
+        mimeType: String(outboundMedia.mimeType ?? "application/octet-stream"),
+        dataBase64: String(outboundMedia.dataBase64 ?? ""),
+        fileSizeBytes: Number(outboundMedia.fileSizeBytes ?? 1)
+      }
+    : null;
+
+  if (sourceMessage.message_type !== "text" && (!attachment || !attachment.dataBase64)) {
+    throw new AppError("This message cannot be forwarded because its media payload is unavailable", 400, "forward_unavailable");
+  }
+
+  const forwardedMessage = await sendMessageService.send({
+    organizationId: auth.organizationId,
+    organizationUserId: auth.organizationUserId ?? null,
+    whatsappAccountId: targetConversation.whatsapp_account_id,
+    conversationId: input.targetConversationId,
+    forwardedFromMessageId: sourceMessage.id,
+    text: sourceMessage.message_type === "text" ? sourceMessage.content_text : undefined,
+    attachment
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: auth.organizationId,
+    action: "message.forwarded",
+    entityType: "message",
+    entityId: forwardedMessage.id,
+    metadata: {
+      source_message_id: sourceMessage.id,
+      source_conversation_id: sourceMessage.conversation_id,
+      target_conversation_id: input.targetConversationId,
+      whatsapp_account_id: forwardedMessage.whatsapp_account_id
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(201).json({ data: forwardedMessage });
 }

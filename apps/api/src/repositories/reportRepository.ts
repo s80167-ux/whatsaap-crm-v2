@@ -18,7 +18,7 @@ export class ReportRepository {
   async listActiveUsers(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       assignedOnly: boolean;
       organizationUserId?: string | null;
       team?: string | null;
@@ -33,7 +33,7 @@ export class ReportRepository {
           ou.email,
           ou.role
         from organization_users ou
-        where ou.organization_id = $1
+        where ($1::uuid is null or ou.organization_id = $1)
           and ou.status = 'active'
           and ou.role not in ('org_admin', 'super_admin')
           and (
@@ -59,7 +59,7 @@ export class ReportRepository {
   async listProductTypes(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       assignedOnly: boolean;
       organizationUserId?: string | null;
     }
@@ -69,7 +69,7 @@ export class ReportRepository {
         select distinct trim(soi.product_type) as product_type
         from sales_order_items soi
         join sales_orders so on so.id = soi.sales_order_id
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and soi.product_type is not null
           and trim(soi.product_type) <> ''
           and (
@@ -87,7 +87,7 @@ export class ReportRepository {
   async getSalesAggregates(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       startDate: string;
       endDate: string;
       timezone: string;
@@ -104,7 +104,7 @@ export class ReportRepository {
           count(distinct so.id)::integer as count_value,
           coalesce(sum(so.total_amount), 0)::text as amount_value
         from sales_orders so
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and (so.created_at at time zone $4)::date >= $2::date
           and (so.created_at at time zone $4)::date < $3::date
           and (
@@ -140,7 +140,7 @@ export class ReportRepository {
   async getWonAggregates(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       startDate: string;
       endDate: string;
       timezone: string;
@@ -157,7 +157,7 @@ export class ReportRepository {
           count(distinct so.id)::integer as count_value,
           coalesce(sum(so.total_amount), 0)::text as amount_value
         from sales_orders so
-        where so.organization_id = $1
+        where ($1::uuid is null or so.organization_id = $1)
           and so.status = 'closed_won'
           and (coalesce(so.closed_at, so.updated_at, so.created_at) at time zone $4)::date >= $2::date
           and (coalesce(so.closed_at, so.updated_at, so.created_at) at time zone $4)::date < $3::date
@@ -194,7 +194,7 @@ export class ReportRepository {
   async getLeadAggregates(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       startDate: string;
       endDate: string;
       timezone: string;
@@ -210,7 +210,7 @@ export class ReportRepository {
           count(*)::integer as count_value,
           '0'::text as amount_value
         from leads l
-        where l.organization_id = $1
+        where ($1::uuid is null or l.organization_id = $1)
           and (l.created_at at time zone $4)::date >= $2::date
           and (l.created_at at time zone $4)::date < $3::date
           and (
@@ -236,7 +236,7 @@ export class ReportRepository {
   async getContactedAggregates(
     client: PoolClient,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       startDate: string;
       endDate: string;
       timezone: string;
@@ -252,7 +252,7 @@ export class ReportRepository {
           count(*)::integer as count_value,
           '0'::text as amount_value
         from leads l
-        where l.organization_id = $1
+        where ($1::uuid is null or l.organization_id = $1)
           and l.status in ('contacted', 'interested', 'processing', 'closed_won', 'closed_lost')
           and (l.updated_at at time zone $4)::date >= $2::date
           and (l.updated_at at time zone $4)::date < $3::date

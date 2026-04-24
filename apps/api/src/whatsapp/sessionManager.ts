@@ -14,7 +14,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
-import { jidToPhone } from "../utils/phone.js";
+import { isWhatsAppDirectChatJid, jidToPhone } from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 
@@ -115,6 +115,10 @@ export class WhatsAppSessionManager {
 
       for (const message of messages) {
         if (!message.key?.id || !message.key?.remoteJid) {
+          continue;
+        }
+
+        if (!isWhatsAppDirectChatJid(message.key.remoteJid)) {
           continue;
         }
 

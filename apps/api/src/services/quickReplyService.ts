@@ -47,6 +47,11 @@ export class QuickReplyService {
     title: string;
     body: string;
     category?: string | null;
+    variableDefinitions?: Array<{
+      key: string;
+      default_value?: string | null;
+      required: boolean;
+    }>;
     isActive?: boolean;
     sortOrder?: number;
   }) {
@@ -58,6 +63,7 @@ export class QuickReplyService {
         title: input.title,
         body: input.body,
         category: input.category ?? null,
+        variableDefinitions: input.variableDefinitions ?? [],
         isActive: input.isActive ?? true,
         sortOrder: input.sortOrder ?? 0,
         createdBy: authUser.organizationUserId
@@ -71,6 +77,11 @@ export class QuickReplyService {
     title?: string;
     body?: string;
     category?: string | null;
+    variableDefinitions?: Array<{
+      key: string;
+      default_value?: string | null;
+      required: boolean;
+    }>;
     isActive?: boolean;
     sortOrder?: number;
   }) {
@@ -83,6 +94,7 @@ export class QuickReplyService {
         title: input.title,
         body: input.body,
         category: input.category,
+        variableDefinitions: input.variableDefinitions,
         isActive: input.isActive,
         sortOrder: input.sortOrder
       })
@@ -123,5 +135,16 @@ export class QuickReplyService {
     }
 
     return template;
+  }
+
+  async getAnalytics(authUser: AuthUser, input?: { organizationId?: string | null }) {
+    const organizationId = this.getOrganizationId(authUser, input?.organizationId);
+    const client = await pool.connect();
+
+    try {
+      return await this.repository.getAnalytics(client, { organizationId });
+    } finally {
+      client.release();
+    }
   }
 }

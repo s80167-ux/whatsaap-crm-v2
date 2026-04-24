@@ -24,6 +24,14 @@ export function isWhatsAppPhoneJid(jid: string | null | undefined): boolean {
   return Boolean(jid?.includes("@s.whatsapp.net"));
 }
 
+export function isWhatsAppDirectChatJid(jid: string | null | undefined): boolean {
+  if (!jid) {
+    return false;
+  }
+
+  return jid.endsWith("@s.whatsapp.net") || jid.endsWith("@lid");
+}
+
 export function jidToPhone(jid: string | null | undefined): string | null {
   if (!jid || !isWhatsAppPhoneJid(jid)) {
     return null;
@@ -40,10 +48,10 @@ export function bestPhoneFromWhatsAppPayload(payload: unknown): string | null {
       : null;
 
   const candidates = [
+    key?.remoteJid,
     key?.senderPn,
     key?.participantPn,
-    key?.participant,
-    key?.remoteJid
+    key?.participant
   ];
 
   for (const candidate of candidates) {

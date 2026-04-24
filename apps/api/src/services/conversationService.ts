@@ -23,7 +23,7 @@ export class ConversationService {
 
   async list(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;

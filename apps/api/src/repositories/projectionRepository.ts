@@ -5,6 +5,7 @@ export interface ConversationSummaryRow {
   id: string;
   organization_id: string;
   whatsapp_account_id: string | null;
+  whatsapp_account_label: string | null;
   contact_id: string;
   assigned_user_id: string | null;
   channel: string;
@@ -47,21 +48,64 @@ export class ProjectionRepository {
           c.organization_id,
           c.whatsapp_account_id,
           c.contact_id,
-          ct.display_name,
-          ct.primary_phone_normalized,
-          ct.primary_avatar_url,
+          case
+            when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
+            else coalesce(
+              latest_identity.profile_name,
+              case
+                when nullif(trim(ct.display_name), '') is null then null
+                when ct.anchored_by_source = 'manual' then ct.display_name
+                when lower(trim(ct.display_name)) = any(blocked_names.blocked_names) then null
+                else ct.display_name
+              end,
+              ct.primary_phone_e164,
+              ct.primary_phone_normalized
+            )
+          end,
+          coalesce(ct.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164, ct.primary_phone_e164),
+          coalesce(ct.primary_avatar_url, latest_identity.profile_avatar_url),
           c.assigned_user_id,
           coalesce(m.content_text, m.message_type),
           m.message_type,
           m.direction,
-          c.last_message_at,
+          coalesce(m.sent_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at),
           c.unread_count,
           c.status,
           timezone('utc', now())
         from conversations c
         join contacts ct on ct.id = c.contact_id
         left join lateral (
-          select content_text, message_type, direction
+          select coalesce(
+            array_remove(
+              array[
+                lower(nullif(trim(wa.label), '')),
+                lower(nullif(trim(wa.display_name), ''))
+              ],
+              null
+            ),
+            '{}'::text[]
+          ) as blocked_names
+          from whatsapp_accounts wa
+          where wa.id = c.whatsapp_account_id
+        ) blocked_names on true
+        left join lateral (
+          select
+            case
+              when nullif(trim(ci.profile_name), '') is null then null
+              when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              else nullif(trim(ci.profile_name), '')
+            end as profile_name,
+            nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
+            ci.phone_e164,
+            ci.phone_normalized
+          from contact_identities ci
+          where ci.contact_id = c.contact_id
+            and coalesce(ci.is_active, true)
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
+        left join lateral (
+          select sent_at, content_text, message_type, direction
           from messages
           where conversation_id = c.id
           order by sent_at desc nulls last, created_at desc, id desc
@@ -110,15 +154,29 @@ export class ProjectionRepository {
         select
           ct.id,
           ct.organization_id,
-          ct.display_name,
-          ct.primary_phone_normalized,
-          ct.primary_avatar_url,
+          case
+            when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
+            else coalesce(
+              latest_identity.profile_name,
+              case
+                when nullif(trim(ct.display_name), '') is null then null
+                when ct.anchored_by_source = 'manual' then ct.display_name
+                when lower(trim(ct.display_name)) = any(blocked_names.blocked_names) then null
+                else ct.display_name
+              end,
+              ct.primary_phone_e164,
+              ct.primary_phone_normalized
+            )
+          end,
+          coalesce(ct.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164, ct.primary_phone_e164),
+          coalesce(ct.primary_avatar_url, latest_identity.profile_avatar_url),
           coalesce(conv.total_conversations, 0),
           coalesce(msg.total_messages, 0),
-          conv.last_incoming_at,
-          conv.last_outgoing_at,
+          coalesce(msg.last_incoming_at, conv.last_incoming_at),
+          coalesce(msg.last_outgoing_at, conv.last_outgoing_at),
           nullif(
             greatest(
+              coalesce(msg.last_message_at, to_timestamp(0)),
               coalesce(conv.last_incoming_at, to_timestamp(0)),
               coalesce(conv.last_outgoing_at, to_timestamp(0)),
               coalesce(ct.last_activity_at, to_timestamp(0))
@@ -130,6 +188,44 @@ export class ProjectionRepository {
           timezone('utc', now())
         from contacts ct
         left join lateral (
+          with related_accounts as (
+            select ci.whatsapp_account_id
+            from contact_identities ci
+            where ci.contact_id = ct.id
+              and ci.whatsapp_account_id is not null
+            union
+            select c.whatsapp_account_id
+            from conversations c
+            where c.contact_id = ct.id
+              and c.whatsapp_account_id is not null
+            union
+            select m.whatsapp_account_id
+            from messages m
+            where m.contact_id = ct.id
+              and m.whatsapp_account_id is not null
+          )
+          select coalesce(array_agg(distinct lower(trim(candidate_name))), '{}'::text[]) as blocked_names
+          from related_accounts ra
+          join whatsapp_accounts wa on wa.id = ra.whatsapp_account_id
+          cross join lateral unnest(array[nullif(trim(wa.label), ''), nullif(trim(wa.display_name), '')]) as candidate_name
+        ) blocked_names on true
+        left join lateral (
+          select
+            case
+              when nullif(trim(ci.profile_name), '') is null then null
+              when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              else nullif(trim(ci.profile_name), '')
+            end as profile_name,
+            nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
+            ci.phone_e164,
+            ci.phone_normalized
+          from contact_identities ci
+          where ci.contact_id = ct.id
+            and coalesce(ci.is_active, true)
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
+        left join lateral (
           select
             count(*)::integer as total_conversations,
             max(last_incoming_at) as last_incoming_at,
@@ -138,7 +234,11 @@ export class ProjectionRepository {
           where contact_id = ct.id
         ) conv on true
         left join lateral (
-          select count(*)::integer as total_messages
+          select
+            count(*)::integer as total_messages,
+            max(sent_at) as last_message_at,
+            max(sent_at) filter (where direction = 'incoming') as last_incoming_at,
+            max(sent_at) filter (where direction = 'outgoing') as last_outgoing_at
           from messages
           where contact_id = ct.id
         ) msg on true
@@ -236,7 +336,7 @@ export class ProjectionRepository {
 
   async listConversationSummaries(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
@@ -255,25 +355,84 @@ export class ProjectionRepository {
           its.conversation_id as id,
           its.organization_id,
           its.whatsapp_account_id,
+          coalesce(wa.label, wa.display_name, wa.account_phone_normalized, wa.account_phone_e164, wa.id::text) as whatsapp_account_label,
           its.contact_id,
           its.assigned_user_id,
           'whatsapp'::text as channel,
           c.external_thread_key,
-          its.last_message_at,
+          coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) as last_message_at,
           c.last_incoming_at,
           c.last_outgoing_at,
           its.unread_count,
-          coalesce(its.contact_display_name, ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
-          its.contact_primary_phone as phone_number_normalized,
-          its.contact_avatar_url as contact_avatar_url,
+          case
+            when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
+            else coalesce(
+              latest_identity.profile_name,
+              case
+                when nullif(trim(its.contact_display_name), '') is null then null
+                when lower(trim(its.contact_display_name)) = any(blocked_names.blocked_names) then null
+                else its.contact_display_name
+              end,
+              case
+                when nullif(trim(ct.display_name), '') is null then null
+                when ct.anchored_by_source = 'manual' then ct.display_name
+                when lower(trim(ct.display_name)) = any(blocked_names.blocked_names) then null
+                else ct.display_name
+              end,
+              ct.primary_phone_e164,
+              ct.primary_phone_normalized,
+              'Unknown'
+            )
+          end as contact_name,
+          coalesce(ct.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164, its.contact_primary_phone) as phone_number_normalized,
+          coalesce(ct.primary_avatar_url, latest_identity.profile_avatar_url, its.contact_avatar_url) as contact_avatar_url,
           its.last_message_preview,
           its.last_message_type,
           its.last_message_direction
         from inbox_thread_summary its
         join conversations c on c.id = its.conversation_id
         join contacts ct on ct.id = its.contact_id
-        where its.organization_id = $1
-          and ($4::timestamptz is null or its.last_message_at >= $4::timestamptz)
+        left join whatsapp_accounts wa on wa.id = its.whatsapp_account_id
+        left join lateral (
+          select coalesce(
+            array_remove(
+              array[
+                lower(nullif(trim(wa.label), '')),
+                lower(nullif(trim(wa.display_name), ''))
+              ],
+              null
+            ),
+            '{}'::text[]
+          ) as blocked_names
+        ) blocked_names on true
+        left join lateral (
+          select sent_at
+          from messages
+          where conversation_id = its.conversation_id
+          order by sent_at desc nulls last, created_at desc, id desc
+          limit 1
+        ) latest_message on true
+        left join lateral (
+          select
+            case
+              when nullif(trim(ci.profile_name), '') is null then null
+              when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              else nullif(trim(ci.profile_name), '')
+            end as profile_name,
+            nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
+            ci.phone_e164,
+            ci.phone_normalized
+          from contact_identities ci
+          where ci.contact_id = its.contact_id
+            and coalesce(ci.is_active, true)
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
+        where ($1::uuid is null or its.organization_id = $1)
+          and (
+            $4::timestamptz is null
+            or coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) >= $4::timestamptz
+          )
           and (
             not $2::boolean
             or its.assigned_user_id = $3
@@ -284,7 +443,9 @@ export class ProjectionRepository {
                 and ca.organization_user_id = $3
             )
           )
-        order by its.last_message_at desc nulls last, its.updated_at desc, its.conversation_id desc
+        order by coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) desc nulls last,
+                 its.updated_at desc,
+                 its.conversation_id desc
       `,
       [organizationId, assignedOnly, organizationUserId, activitySince]
     );
@@ -294,7 +455,7 @@ export class ProjectionRepository {
 
   async listContactSummaries(
     client: PoolClient,
-    organizationId: string,
+    organizationId: string | null,
     options?: {
       assignedOnly?: boolean;
       organizationUserId?: string | null;
@@ -312,15 +473,71 @@ export class ProjectionRepository {
         select
           ct.id,
           ct.organization_id,
-          coalesce(ct.display_name, cs.display_name) as display_name,
+          case
+            when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
+            else coalesce(
+              latest_identity.profile_name,
+              case
+                when nullif(trim(ct.display_name), '') is null then null
+                when ct.anchored_by_source = 'manual' then ct.display_name
+                when lower(trim(ct.display_name)) = any(blocked_names.blocked_names) then null
+                else ct.display_name
+              end,
+              case
+                when nullif(trim(cs.display_name), '') is null then null
+                when lower(trim(cs.display_name)) = any(blocked_names.blocked_names) then null
+                else cs.display_name
+              end,
+              ct.primary_phone_e164,
+              ct.primary_phone_normalized
+            )
+          end as display_name,
           ct.primary_phone_e164,
-          ct.primary_phone_normalized,
-          coalesce(ct.primary_avatar_url, cs.avatar_url) as primary_avatar_url,
+          coalesce(ct.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164, cs.primary_phone) as primary_phone_normalized,
+          coalesce(ct.primary_avatar_url, latest_identity.profile_avatar_url, cs.avatar_url) as primary_avatar_url,
           ct.owner_user_id,
           coalesce(src.source_count, 0)::integer as whatsapp_source_count,
           coalesce(src.sources, '[]'::json) as whatsapp_sources
         from contacts ct
         left join contact_summary cs on cs.contact_id = ct.id
+        left join lateral (
+          with related_accounts as (
+            select ci.whatsapp_account_id
+            from contact_identities ci
+            where ci.contact_id = ct.id
+              and ci.whatsapp_account_id is not null
+            union
+            select c.whatsapp_account_id
+            from conversations c
+            where c.contact_id = ct.id
+              and c.whatsapp_account_id is not null
+            union
+            select m.whatsapp_account_id
+            from messages m
+            where m.contact_id = ct.id
+              and m.whatsapp_account_id is not null
+          )
+          select coalesce(array_agg(distinct lower(trim(candidate_name))), '{}'::text[]) as blocked_names
+          from related_accounts ra
+          join whatsapp_accounts wa on wa.id = ra.whatsapp_account_id
+          cross join lateral unnest(array[nullif(trim(wa.label), ''), nullif(trim(wa.display_name), '')]) as candidate_name
+        ) blocked_names on true
+        left join lateral (
+          select
+            case
+              when nullif(trim(ci.profile_name), '') is null then null
+              when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              else nullif(trim(ci.profile_name), '')
+            end as profile_name,
+            nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
+            ci.phone_e164,
+            ci.phone_normalized
+          from contact_identities ci
+          where ci.contact_id = ct.id
+            and coalesce(ci.is_active, true)
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
         left join lateral (
           select
             max(last_incoming_at) as last_incoming_at,
@@ -359,7 +576,7 @@ export class ProjectionRepository {
             ) as sources
           from source_accounts
         ) src on true
-        where ct.organization_id = $1
+        where ($1::uuid is null or ct.organization_id = $1)
           and (
             $4::timestamptz is null
             or greatest(

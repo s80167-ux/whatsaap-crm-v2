@@ -102,7 +102,7 @@ export class ReportService {
   async getDailyReport(
     authUser: AuthUser,
     input: {
-      organizationId: string;
+      organizationId: string | null;
       year: number;
       month: number;
       week?: string | null;

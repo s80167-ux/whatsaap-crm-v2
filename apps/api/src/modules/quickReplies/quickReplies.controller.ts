@@ -22,6 +22,13 @@ const createQuickReplySchema = z.object({
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(1).max(2000),
   category: z.string().trim().max(80).optional().nullable(),
+  variableDefinitions: z.array(
+    z.object({
+      key: z.string().trim().min(1).max(80),
+      default_value: z.string().trim().max(500).optional().nullable(),
+      required: z.boolean().default(false)
+    })
+  ).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.coerce.number().int().min(0).max(100000).optional()
 });
@@ -31,6 +38,13 @@ const updateQuickReplySchema = z.object({
   title: z.string().trim().min(2).max(120).optional(),
   body: z.string().trim().min(1).max(2000).optional(),
   category: z.string().trim().max(80).optional().nullable(),
+  variableDefinitions: z.array(
+    z.object({
+      key: z.string().trim().min(1).max(80),
+      default_value: z.string().trim().max(500).optional().nullable(),
+      required: z.boolean().default(false)
+    })
+  ).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.coerce.number().int().min(0).max(100000).optional()
 }).refine(
@@ -38,6 +52,7 @@ const updateQuickReplySchema = z.object({
     input.title !== undefined ||
     input.body !== undefined ||
     input.category !== undefined ||
+    input.variableDefinitions !== undefined ||
     input.isActive !== undefined ||
     input.sortOrder !== undefined,
   { message: "At least one field must be provided" }
@@ -68,6 +83,13 @@ export async function listQuickReplies(request: Request, response: Response) {
   return response.json({ data: templates });
 }
 
+export async function getQuickReplyAnalytics(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { organization_id: organizationId } = listQuickRepliesQuerySchema.parse(request.query);
+  const analytics = await quickReplyService.getAnalytics(auth, { organizationId });
+  return response.json({ data: analytics });
+}
+
 export async function createQuickReply(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = createQuickReplySchema.parse(request.body);
@@ -81,6 +103,7 @@ export async function createQuickReply(request: Request, response: Response) {
     metadata: {
       title: template.title,
       category: template.category,
+      variable_definitions: template.variable_definitions,
       is_active: template.is_active
     },
     request: getRequestAuditContext(request)
@@ -106,6 +129,7 @@ export async function updateQuickReply(request: Request, response: Response) {
     metadata: {
       title: template.title,
       category: template.category,
+      variable_definitions: template.variable_definitions,
       is_active: template.is_active,
       requested_changes: input
     },

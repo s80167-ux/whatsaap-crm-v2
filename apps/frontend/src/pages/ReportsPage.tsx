@@ -87,6 +87,12 @@ function formatReportValue(value: number, valueType: "count" | "currency") {
   return value > 0 ? String(value) : "-";
 }
 
+function isWeekendDay(day: DailyReportDay) {
+  const [year, month, date] = day.key.split("-").map(Number);
+  const weekdayIndex = new Date(year, month - 1, date).getDay();
+  return weekdayIndex === 0 || weekdayIndex === 6;
+}
+
 export function ReportsPage() {
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
@@ -104,7 +110,6 @@ export function ReportsPage() {
 
   const year = Number(selectedYear);
   const monthIndex = Number(selectedMonth);
-  const canLoadDailyReport = !isSuperAdmin || Boolean(selectedOrganizationId);
   const { data: dailyReport, isLoading, error } = useDailyReport({
     organizationId: isSuperAdmin ? selectedOrganizationId : undefined,
     year,
@@ -114,7 +119,7 @@ export function ReportsPage() {
     team,
     salesRep,
     productType,
-    enabled: canLoadDailyReport
+    enabled: true
   });
 
   const monthDayOptions = useMemo(() => {
@@ -232,7 +237,7 @@ export function ReportsPage() {
           dayOptions={monthDayOptions}
           dailyRows={filteredDailyRows}
           errorMessage={error instanceof Error ? error.message : null}
-          isAwaitingOrganization={isSuperAdmin && !selectedOrganizationId}
+          isAwaitingOrganization={false}
           isLoading={isLoading}
           metricFilter={metricFilter}
           metricOptions={metricOptions}
@@ -314,6 +319,7 @@ function DailyReportDashboard(props: {
 }) {
   const compactActionClassName =
     "inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-text-muted transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
+  const [hoveredDayKey, setHoveredDayKey] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -414,7 +420,7 @@ function DailyReportDashboard(props: {
             <button
               type="button"
               onClick={props.onPrint}
-              disabled={props.isAwaitingOrganization || props.isLoading || props.dailyRows.length === 0}
+              disabled={props.isLoading || props.dailyRows.length === 0}
               className={compactActionClassName}
             >
               <Printer size={14} />
@@ -423,7 +429,7 @@ function DailyReportDashboard(props: {
             <button
               type="button"
               onClick={props.onExport}
-              disabled={props.isAwaitingOrganization || props.isLoading || props.dailyRows.length === 0}
+              disabled={props.isLoading || props.dailyRows.length === 0}
               className={compactActionClassName}
             >
               <Download size={14} />
@@ -451,23 +457,35 @@ function DailyReportDashboard(props: {
                 <th className="w-24 px-2 py-2">Team</th>
                 <th className="w-32 px-2 py-2">Name</th>
                 <th className="w-24 px-2 py-2">Metric</th>
-                {props.reportDays.map((day) => (
-                  <th key={day.key} className="px-1.5 py-2 text-center">
-                    <span className="block text-[11px]">{String(day.day).padStart(2, "0")}</span>
-                    <span className="block text-[9px] normal-case text-slate-300">{day.weekday}</span>
-                  </th>
-                ))}
+                {props.reportDays.map((day) => {
+                  const isWeekend = isWeekendDay(day);
+                  const isHovered = hoveredDayKey === day.key;
+
+                  return (
+                    <th
+                      key={day.key}
+                      className={`px-1.5 py-2 text-center transition-colors ${
+                        isHovered
+                          ? "bg-[rgba(96,165,250,0.28)] text-white"
+                          : isWeekend
+                            ? "bg-[rgba(96,165,250,0.18)] text-white"
+                            : ""
+                      }`}
+                      onMouseEnter={() => setHoveredDayKey(day.key)}
+                      onMouseLeave={() => setHoveredDayKey((current) => (current === day.key ? null : current))}
+                    >
+                      <span className="block text-[11px]">{String(day.day).padStart(2, "0")}</span>
+                      <span className={`block text-[9px] normal-case ${isHovered || isWeekend ? "text-blue-100" : "text-slate-300"}`}>
+                        {day.weekday}
+                      </span>
+                    </th>
+                  );
+                })}
                 <th className="px-2 py-2 text-center">Total</th>
               </tr>
             </thead>
             <tbody>
-              {props.isAwaitingOrganization ? (
-                <tr>
-                  <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-text-muted">
-                    Choose an organization to load this report.
-                  </td>
-                </tr>
-              ) : props.errorMessage ? (
+              {props.errorMessage ? (
                 <tr>
                   <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-coral">
                     {props.errorMessage}
@@ -488,11 +506,28 @@ function DailyReportDashboard(props: {
                     <td className={`px-2 py-2 text-[10px] font-bold uppercase tracking-[0.06em] ${METRIC_TONES[row.metric]}`}>
                       {row.metricLabel}
                     </td>
-                    {row.values.map((value, valueIndex) => (
-                      <td key={`${row.userId}-${row.metric}-${valueIndex}`} className="px-1.5 py-2 text-center text-text-muted">
-                        {formatReportValue(value, row.valueType)}
-                      </td>
-                    ))}
+                    {row.values.map((value, valueIndex) => {
+                      const day = props.reportDays[valueIndex];
+                      const isWeekend = day ? isWeekendDay(day) : false;
+                      const isHovered = day ? hoveredDayKey === day.key : false;
+
+                      return (
+                        <td
+                          key={`${row.userId}-${row.metric}-${valueIndex}`}
+                          className={`px-1.5 py-2 text-center transition-colors ${
+                            isHovered
+                              ? "bg-[rgba(96,165,250,0.18)] text-text"
+                              : isWeekend
+                                ? "bg-[rgba(96,165,250,0.1)] text-text"
+                                : "text-text-muted"
+                          }`}
+                          onMouseEnter={() => day && setHoveredDayKey(day.key)}
+                          onMouseLeave={() => day && setHoveredDayKey((current) => (current === day.key ? null : current))}
+                        >
+                          {formatReportValue(value, row.valueType)}
+                        </td>
+                      );
+                    })}
                     <td className="px-2 py-2 text-center font-bold text-text">{formatReportValue(row.total, row.valueType)}</td>
                   </tr>
                 ))

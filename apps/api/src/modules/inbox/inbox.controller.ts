@@ -22,9 +22,13 @@ const historyRangeQuerySchema = z
     message: "Choose either days or months, not both"
   });
 
-function requireOrganizationId(request: Request) {
+function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+
+  if (!organizationId && request.auth?.role === "super_admin") {
+    return null;
+  }
 
   if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -64,7 +68,7 @@ function resolveActivityRange(request: Request): ActivityRangeFilter | undefined
 
 export async function getInboxThreads(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const activityRange = resolveActivityRange(request);
   const conversations = await queryService.listConversations(auth, organizationId, activityRange);
   return response.json({ data: conversations });
@@ -72,7 +76,7 @@ export async function getInboxThreads(request: Request, response: Response) {
 
 export async function getInboxThreadMessages(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const organizationId = requireOrganizationId(request);
+  const organizationId = resolveReadOrganizationId(request);
   const { conversationId } = conversationParamsSchema.parse(request.params);
   const activityRange = resolveActivityRange(request);
   const messages = await queryService.listMessages(auth, organizationId, conversationId, activityRange);

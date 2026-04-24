@@ -4,13 +4,15 @@ import { AppError } from "../lib/errors.js";
 import { LeadRepository } from "../repositories/leadRepository.js";
 import { SalesRepository } from "../repositories/salesRepository.js";
 import type { AuthUser } from "../types/auth.js";
+import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
 const VALID_SALES_ORDER_STATUSES = new Set(["open", "closed_won", "closed_lost"]);
 
 export class SalesService {
   constructor(
     private readonly salesRepository = new SalesRepository(),
-    private readonly leadRepository = new LeadRepository()
+    private readonly leadRepository = new LeadRepository(),
+    private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
   ) {}
 
   private getScope(authUser: AuthUser) {
@@ -91,7 +93,7 @@ export class SalesService {
 
     const closedAt = input.status === "closed_won" || input.status === "closed_lost" ? new Date().toISOString() : null;
 
-    return this.salesRepository.createOrder(client, {
+    const order = await this.salesRepository.createOrder(client, {
       organizationId: input.organizationId,
       contactId: input.contactId,
       leadId: input.leadId ?? null,
@@ -101,6 +103,22 @@ export class SalesService {
       currency: input.currency?.trim() || "MYR",
       closedAt
     });
+
+    await this.quickReplyOutcomeService.markOrderCreated(client, {
+      organizationId: input.organizationId,
+      contactId: input.contactId,
+      salesOrderId: order.id
+    });
+
+    if (input.status === "closed_won" || input.status === "closed_lost") {
+      await this.quickReplyOutcomeService.markOrderClosed(client, {
+        organizationId: input.organizationId,
+        salesOrderId: order.id,
+        outcomeStatus: input.status === "closed_won" ? "order_closed_won" : "order_closed_lost"
+      });
+    }
+
+    return order;
   }
 
   async createOrderInNewTransaction(input: {
@@ -291,6 +309,14 @@ export class SalesService {
             : input.status === "closed_won"
               ? "closed_won"
               : "closed_lost"
+      });
+    }
+
+    if (input.status === "closed_won" || input.status === "closed_lost") {
+      await this.quickReplyOutcomeService.markOrderClosed(client, {
+        organizationId: input.organizationId,
+        salesOrderId: input.orderId,
+        outcomeStatus: input.status === "closed_won" ? "order_closed_won" : "order_closed_lost"
       });
     }
 

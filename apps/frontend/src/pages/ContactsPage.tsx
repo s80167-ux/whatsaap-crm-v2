@@ -50,23 +50,26 @@ export function ContactsPage() {
   const [contactSortMode, setContactSortMode] = useState<ContactSortMode>("latest");
   const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
-  const canLoadContacts = !isSuperAdmin || Boolean(activeOrganizationId);
-  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, canLoadContacts);
+  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, true);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
     undefined,
     isSuperAdmin ? activeOrganizationId : undefined,
-    canLoadContacts
+    true
   );
   const { data: selectedContact } = useContact(
     selectedContactId ?? undefined,
     isSuperAdmin ? activeOrganizationId : undefined,
-    canLoadContacts
+    true
   );
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
-  const canAssignContactsToTeam = Boolean(canAssignContacts && currentUser?.permissionKeys.includes("org.manage_users"));
+  const canAssignContactsToTeam = Boolean(
+    canAssignContacts &&
+      currentUser?.permissionKeys.includes("org.manage_users") &&
+      (!isSuperAdmin || Boolean(activeOrganizationId))
+  );
   const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(
     isSuperAdmin ? activeOrganizationId : undefined,
-    canAssignContactsToTeam && (!isSuperAdmin || Boolean(activeOrganizationId))
+    canAssignContactsToTeam
   );
   const assignableUsers = useMemo(
     () => organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin"),
@@ -78,6 +81,13 @@ export function ContactsPage() {
   );
 
   const visibleContacts = useMemo(() => {
+    // Gather all WhatsApp account phone numbers (normalized and E164)
+    const ownNumbers = new Set<string>();
+    whatsappAccounts.forEach((wa) => {
+      if (wa.phone_number) ownNumbers.add(wa.phone_number);
+      if (wa.phone_number_normalized) ownNumbers.add(wa.phone_number_normalized);
+    });
+
     const normalizedSearch = contactSearch.trim().toLowerCase();
     let filteredContacts = normalizedSearch
       ? contacts.filter((contact) =>
@@ -93,13 +103,19 @@ export function ContactsPage() {
         )
       : contacts;
 
+    // Exclude contacts whose number matches any WhatsApp account number
+    filteredContacts = filteredContacts.filter(
+      (contact) =>
+        contact.primary_phone_e164 && ownNumbers.has(contact.primary_phone_e164)
+          ? false
+        : contact.primary_phone_normalized && ownNumbers.has(contact.primary_phone_normalized)
+          ? false
+        : true
+    );
+
     // WhatsApp account filter (if contact has whatsapp_account_id or similar field)
     if (selectedWhatsAppAccountId) {
       filteredContacts = filteredContacts.filter((contact) => {
-        // If your contact model has a whatsapp_account_id field, use it here.
-        // Otherwise, adjust this logic as needed.
-        // Example: return contact.whatsapp_account_id === selectedWhatsAppAccountId;
-        // If not available, try to match by phone number if possible.
         return (
           whatsappAccounts.find(
             (wa) =>
@@ -237,13 +253,7 @@ export function ContactsPage() {
               </tr>
             </thead>
             <tbody>
-              {!canLoadContacts ? (
-                <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
-                    Choose an organization to load contacts.
-                  </td>
-                </tr>
-              ) : isLoading ? (
+              {isLoading ? (
                 <tr>
                   <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
                     Loading contacts...

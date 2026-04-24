@@ -5,13 +5,15 @@ import { ConversationRepository } from "../repositories/conversationRepository.j
 import type { SendMessageInput } from "../types/domain.js";
 import { MessageDispatchService } from "./messageDispatchService.js";
 import { ProjectionService } from "./projectionService.js";
+import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
 export class SendMessageService {
   constructor(
     private readonly messageRepository = new MessageRepository(),
     private readonly conversationRepository = new ConversationRepository(),
     private readonly messageDispatchService = new MessageDispatchService(),
-    private readonly projectionService = new ProjectionService()
+    private readonly projectionService = new ProjectionService(),
+    private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
   ) {}
 
   async send(input: SendMessageInput) {
@@ -43,17 +45,70 @@ export class SendMessageService {
         throw new Error("Recipient identity not found for conversation");
       }
 
-      const queuedAt = new Date();
-      const attachmentMetadata = input.attachment
-        ? {
-            outboundMedia: {
-              kind: input.attachment.kind,
-              fileName: input.attachment.fileName,
-              mimeType: input.attachment.mimeType,
-              fileSizeBytes: input.attachment.fileSizeBytes
-            }
+      let replyContextMessage:
+        | {
+            id: string;
+            conversation_id: string;
+            direction: string;
+            content_text: string | null;
+            message_type: string;
           }
-        : null;
+        | null = null;
+
+      if (input.replyToMessageId) {
+        const replyTarget = await this.messageRepository.findById(client, {
+          organizationId: input.organizationId,
+          messageId: input.replyToMessageId
+        });
+
+        if (!replyTarget) {
+          throw new Error("Reply target message not found");
+        }
+
+        if (replyTarget.conversation_id !== input.conversationId) {
+          throw new Error("Reply target must belong to the same conversation");
+        }
+
+        replyContextMessage = {
+          id: replyTarget.id,
+          conversation_id: replyTarget.conversation_id,
+          direction: replyTarget.direction,
+          content_text: replyTarget.content_text,
+          message_type: replyTarget.message_type
+        };
+      }
+
+      const queuedAt = new Date();
+      const contentJson = {
+        ...(input.attachment
+          ? {
+              outboundMedia: {
+                kind: input.attachment.kind,
+                fileName: input.attachment.fileName,
+                mimeType: input.attachment.mimeType,
+                fileSizeBytes: input.attachment.fileSizeBytes,
+                dataBase64: input.attachment.dataBase64
+              }
+            }
+          : {}),
+        ...(replyContextMessage
+          ? {
+              replyContext: {
+                messageId: replyContextMessage.id,
+                direction: replyContextMessage.direction,
+                messageType: replyContextMessage.message_type,
+                previewText: replyContextMessage.content_text
+              }
+            }
+          : {}),
+        ...(input.forwardedFromMessageId
+          ? {
+              forwardedFrom: {
+                messageId: input.forwardedFromMessageId
+              }
+            }
+          : {})
+      };
 
       const messageType = input.attachment?.kind ?? "text";
       const contentText =
@@ -66,9 +121,10 @@ export class SendMessageService {
         whatsappAccountId: input.whatsappAccountId,
         externalMessageId: `queued:${crypto.randomUUID()}`,
         externalChatId: recipientJid,
+        replyToMessageId: input.replyToMessageId ?? null,
         contentText,
         messageType,
-        contentJson: attachmentMetadata,
+        contentJson: Object.keys(contentJson).length > 0 ? contentJson : null,
         sentAt: queuedAt
       });
 
@@ -113,6 +169,18 @@ export class SendMessageService {
         contactId: conversationRow.contact_id,
         sentAt: queuedAt
       });
+
+      if (input.quickReplyTemplateId) {
+        await this.quickReplyOutcomeService.recordTemplateSend(client, {
+          organizationId: input.organizationId,
+          quickReplyTemplateId: input.quickReplyTemplateId,
+          messageId: draft.id,
+          conversationId: input.conversationId,
+          contactId: conversationRow.contact_id,
+          whatsappAccountId: input.whatsappAccountId,
+          usedByOrganizationUserId: input.organizationUserId ?? null
+        });
+      }
 
       return draft;
     });

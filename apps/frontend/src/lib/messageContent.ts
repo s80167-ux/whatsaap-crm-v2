@@ -8,6 +8,9 @@ export interface MessagePresentation {
   caption: string | null;
   details: string[];
   isMedia: boolean;
+  previewUrl: string | null;
+  mimeType: string | null;
+  fileName: string | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -82,6 +85,14 @@ function getOutboundMediaNode(contentJson: unknown) {
   return asRecord(root.outboundMedia);
 }
 
+function toDataUrl(mimeType: string | null, dataBase64: string | null) {
+  if (!mimeType || !dataBase64) {
+    return null;
+  }
+
+  return `data:${mimeType};base64,${dataBase64}`;
+}
+
 function getNodeByKey(node: RawMessageNode | null, key: string) {
   return node ? asRecord(node[key]) : null;
 }
@@ -93,7 +104,10 @@ function buildFallbackPresentation(message: Message): MessagePresentation {
     title: message.content_text ?? (message.message_type === "text" ? "Message" : `${message.message_type} message`),
     caption: message.content_text,
     details: [],
-    isMedia: message.message_type !== "text"
+    isMedia: message.message_type !== "text",
+    previewUrl: null,
+    mimeType: null,
+    fileName: null
   };
 }
 
@@ -108,62 +122,82 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         title: message.content_text ?? "Message",
         caption: null,
         details: [],
-        isMedia: false
+        isMedia: false,
+        previewUrl: null,
+        mimeType: null,
+        fileName: null
       };
     case "image": {
       const node = getNodeByKey(rawMessage, "imageMessage");
+      const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       return {
         label: "Image",
         title: message.content_text ?? asString(outboundMedia?.fileName) ?? "Photo received",
         caption: message.content_text,
         details: [
-          asString(node?.mimetype) ?? asString(outboundMedia?.mimeType),
+          mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes))
         ].filter(Boolean) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        mimeType,
+        fileName: asString(outboundMedia?.fileName)
       };
     }
     case "video": {
       const node = getNodeByKey(rawMessage, "videoMessage");
       const seconds = asNumber(node?.seconds);
+      const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       return {
         label: "Video",
         title: message.content_text ?? asString(outboundMedia?.fileName) ?? "Video received",
         caption: message.content_text,
         details: [
-          asString(node?.mimetype) ?? asString(outboundMedia?.mimeType),
+          mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes)),
           seconds ? `${Math.round(seconds)} sec` : null
         ].filter(Boolean) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        mimeType,
+        fileName: asString(outboundMedia?.fileName)
       };
     }
     case "audio": {
       const node = getNodeByKey(rawMessage, "audioMessage") ?? getNodeByKey(rawMessage, "pttMessage");
       const seconds = asNumber(node?.seconds);
+      const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       return {
         label: "Audio",
         title: asString(outboundMedia?.fileName) ?? "Audio message",
         caption: message.content_text,
         details: [
-          asString(node?.mimetype) ?? asString(outboundMedia?.mimeType),
+          mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes)),
           seconds ? `${Math.round(seconds)} sec` : null
         ].filter(Boolean) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        mimeType,
+        fileName: asString(outboundMedia?.fileName)
       };
     }
     case "document": {
       const node = getNodeByKey(rawMessage, "documentMessage");
+      const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
+      const fileName = asString(node?.fileName) ?? asString(outboundMedia?.fileName);
       return {
         label: "Document",
-        title: asString(node?.fileName) ?? asString(outboundMedia?.fileName) ?? "Document received",
+        title: fileName ?? "Document received",
         caption: message.content_text,
         details: [
-          asString(node?.mimetype) ?? asString(outboundMedia?.mimeType),
+          mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes))
         ].filter(Boolean) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        mimeType,
+        fileName
       };
     }
     case "sticker":
@@ -172,7 +206,10 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         title: "Sticker",
         caption: message.content_text,
         details: [],
-        isMedia: true
+        isMedia: true,
+        previewUrl: null,
+        mimeType: null,
+        fileName: null
       };
     case "location": {
       const node = getNodeByKey(rawMessage, "locationMessage");
@@ -185,7 +222,10 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         details: [
           latitude !== null && longitude !== null ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : null
         ].filter(Boolean) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: null,
+        mimeType: null,
+        fileName: null
       };
     }
     case "contact": {
@@ -197,7 +237,10 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         title: asString(node?.displayName) ?? asString(firstContact?.displayName) ?? "Shared contact",
         caption: null,
         details: [asString(node?.vcard), asString(firstContact?.vcard)].filter(Boolean).slice(0, 1) as string[],
-        isMedia: true
+        isMedia: true,
+        previewUrl: null,
+        mimeType: null,
+        fileName: null
       };
     }
     case "reaction": {
@@ -207,7 +250,10 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         title: asString(node?.text) ?? "Reaction",
         caption: null,
         details: [],
-        isMedia: true
+        isMedia: true,
+        previewUrl: null,
+        mimeType: null,
+        fileName: null
       };
     }
     default:

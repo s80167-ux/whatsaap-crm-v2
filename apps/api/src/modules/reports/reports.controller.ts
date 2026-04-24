@@ -25,8 +25,12 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
-function requireOrganizationId(request: Request, organizationId?: string) {
+function resolveReadOrganizationId(request: Request, organizationId?: string) {
   const resolvedOrganizationId = request.auth?.organizationId ?? organizationId ?? "";
+
+  if (!resolvedOrganizationId && request.auth?.role === "super_admin") {
+    return null;
+  }
 
   if (!resolvedOrganizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -38,7 +42,7 @@ function requireOrganizationId(request: Request, organizationId?: string) {
 export async function getDailyReport(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = dailyReportQuerySchema.parse(request.query);
-  const organizationId = requireOrganizationId(request, input.organization_id);
+  const organizationId = resolveReadOrganizationId(request, input.organization_id);
 
   const report = await reportService.getDailyReport(auth, {
     organizationId,

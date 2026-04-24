@@ -50,6 +50,8 @@ export interface MessageRecord {
   whatsapp_account_id: UUID;
   external_message_id: string;
   external_chat_id?: string | null;
+  reply_to_message_id?: UUID | null;
+  is_deleted?: boolean;
   direction: "incoming" | "outgoing" | "system";
   message_type: string;
   content_text: string | null;
@@ -83,6 +85,7 @@ export interface InboundMessageInput {
   remoteJid: string;
   phoneRaw: string | null;
   profileName: string | null;
+  profilePushName?: string | null;
   profileAvatarUrl?: string | null;
   textBody: string | null;
   messageType: string;
@@ -95,6 +98,10 @@ export interface SendMessageInput {
   organizationId: UUID;
   whatsappAccountId: UUID;
   conversationId: UUID;
+  organizationUserId?: UUID | null;
+  quickReplyTemplateId?: UUID | null;
+  replyToMessageId?: UUID | null;
+  forwardedFromMessageId?: UUID | null;
   text?: string | null;
   attachment?: OutboundMediaAttachmentInput | null;
 }

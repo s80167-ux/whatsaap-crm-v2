@@ -19,6 +19,7 @@ const SetupPage = lazy(() => import("./pages/SetupPage").then((module) => ({ def
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
 );
+const ProfilePage = lazy(() => import("./pages/ProfilePage").then((module) => ({ default: module.default })));
 
 function withRouteFallback(page: ReactElement) {
   return (
@@ -49,7 +50,10 @@ export const router = createBrowserRouter([
           { path: "reports", element: withRouteFallback(<ReportsPage />) },
           { path: "setup", element: withRouteFallback(<SetupPage />) },
           { path: "super-admin-map", element: withRouteFallback(<SuperAdminMapPage />) },
-          { path: "platform", element: withRouteFallback(<PlatformPage />) }
+          { path: "super-admin-map/data-structure", element: withRouteFallback(<SuperAdminMapPage />) },
+          { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },
+          { path: "platform", element: withRouteFallback(<PlatformPage />) },
+          { path: "profile", element: withRouteFallback(<ProfilePage />) }
         ]
       }
     ]
