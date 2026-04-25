@@ -229,12 +229,21 @@ export async function assignConversation(payload: { conversationId: string; orga
 export async function sendMessage(payload: {
   whatsappAccountId: string;
   conversationId: string;
+  organizationId?: string | null;
   quickReplyTemplateId?: string | null;
   replyToMessageId?: string | null;
   text?: string;
   attachment?: OutboundAttachmentInput | null;
 }) {
-  return apiPost<{ data: Message }>("/messages/send", payload);
+  return apiPost<{ data: Message }>("/messages/send", {
+    whatsappAccountId: payload.whatsappAccountId,
+    conversationId: payload.conversationId,
+    organizationId: payload.organizationId,
+    text: payload.text,
+    attachment: payload.attachment,
+    quickReplyTemplateId: payload.quickReplyTemplateId,
+    replyToMessageId: payload.replyToMessageId
+  });
 }
 
 export async function deleteMessage(payload: { messageId: string }) {
