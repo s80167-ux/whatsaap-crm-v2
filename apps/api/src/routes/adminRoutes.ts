@@ -17,6 +17,12 @@ import {
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { requirePermission, requireRole } from "../middleware/authMiddleware.js";
 import { refreshContactIdentity, applyCanonicalOverride } from "../controllers/contactIdentityRepairController.js";
+import {
+  detectContactRepairProposal,
+  listContactRepairProposals,
+  approveContactRepairProposal,
+  rejectContactRepairProposal
+} from "../controllers/contactRepairProposalController.js";
 
 export const adminRoutes = Router();
 
@@ -44,4 +50,26 @@ adminRoutes.post(
   "/contacts/:contactId/corrections/apply",
   requirePermission("contacts.write"),
   asyncHandler(applyCanonicalOverride)
+);
+
+// Repair proposal routes
+adminRoutes.get(
+  "/contact-repair-proposals",
+  requirePermission("contacts.write"),
+  asyncHandler(listContactRepairProposals)
+);
+adminRoutes.post(
+  "/contacts/:contactId/repair-proposal/detect",
+  requirePermission("contacts.write"),
+  asyncHandler(detectContactRepairProposal)
+);
+adminRoutes.post(
+  "/contact-repair-proposals/:proposalId/approve",
+  requirePermission("contacts.write"),
+  asyncHandler(approveContactRepairProposal)
+);
+adminRoutes.post(
+  "/contact-repair-proposals/:proposalId/reject",
+  requirePermission("contacts.write"),
+  asyncHandler(rejectContactRepairProposal)
 );
