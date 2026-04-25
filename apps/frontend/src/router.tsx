@@ -16,6 +16,7 @@ const DashboardLayout = lazy(() =>
   import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout }))
 );
 const ContactsPage = lazy(() => import("./pages/ContactsPage").then((module) => ({ default: module.ContactsPage })));
+const ContactRepairQueuePage = lazy(() => import("./pages/ContactRepairQueuePage").then((m) => ({default: m.ContactRepairQueuePage})));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((module) => ({ default: module.InboxPage })));
 const InboxReplyLibraryPage = lazy(() =>
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
         element: withRouteFallback(<DashboardLayout />),
         errorElement: <GlobalErrorElement />, // Dashboard-level error boundary
         children: [
+          { path: "repair-queue", element: withRouteFallback(<ContactRepairQueuePage />) },
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
           { index: true, element: <Navigate to="/inbox" replace /> },
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
