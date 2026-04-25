@@ -1,6 +1,26 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
 import type { OrganizationSummary, UserSummary, WhatsAppAccountSummary } from "../types/admin";
 
+export type ContactRepairProposal = {
+  id: string;
+  organization_id: string;
+  contact_id: string;
+  status: "pending" | "approved" | "applied" | "rejected" | "cancelled" | string;
+  reason: string;
+  confidence: "high" | "medium" | "low" | string;
+  proposed_action: string;
+  before_snapshot: Record<string, unknown>;
+  proposed_after_snapshot: Record<string, unknown>;
+  repair_plan: Record<string, unknown>;
+  detected_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  review_note?: string | null;
+  contact_display_name?: string | null;
+  primary_phone_normalized?: string | null;
+  primary_phone_e164?: string | null;
+};
+
 type OrganizationApiRecord = {
   id: string;
   name: string;
@@ -114,7 +134,6 @@ export async function fetchUsers(organizationId?: string | null) {
     const response = await apiGet<{ data: UserListApiRecord[] }>(path);
     return response.data.map(mapUser);
   } catch (err: any) {
-    // If 404, treat as empty user list
     if (err && err.status === 404) {
       return [];
     }
@@ -200,4 +219,25 @@ export async function updateWhatsAppAccount(
 
 export async function deleteWhatsAppAccount(accountId: string) {
   return apiDelete<{ ok: true }>(`/admin/whatsapp-accounts/${accountId}`);
+}
+
+export async function fetchContactRepairProposals(status?: string) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const response = await apiGet<{ data: ContactRepairProposal[] }>(`/admin/contact-repair-proposals${query}`);
+  return response.data;
+}
+
+export async function detectContactRepairProposal(contactId: string) {
+  const response = await apiPost<{ data: unknown }>(`/admin/contacts/${contactId}/repair-proposal/detect`, {});
+  return response.data;
+}
+
+export async function approveContactRepairProposal(proposalId: string, note?: string) {
+  const response = await apiPost<{ data: unknown }>(`/admin/contact-repair-proposals/${proposalId}/approve`, { note });
+  return response.data;
+}
+
+export async function rejectContactRepairProposal(proposalId: string, note?: string) {
+  const response = await apiPost<{ data: unknown }>(`/admin/contact-repair-proposals/${proposalId}/reject`, { note });
+  return response.data;
 }
