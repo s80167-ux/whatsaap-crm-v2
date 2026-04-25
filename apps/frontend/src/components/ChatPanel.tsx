@@ -218,8 +218,9 @@ export function ChatPanel({
   const quickReplyPagination = usePanelPagination(filteredQuickReplies);
 
   async function handleSend() {
-    if (!conversation || (!text.trim() && !attachment)) {
-      return;
+    if (!organizationId) {
+  setSendNotice("Organization not set. Please refresh.");
+  return;
     }
 
     setIsSending(true);
