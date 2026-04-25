@@ -8,6 +8,105 @@ function requireReviewer(user: any) {
   }
 }
 
+function extractPhoneFromJid(jid: string | null | undefined): string | null {
+  if (!jid || typeof jid !== "string") return null;
+  if (!jid.includes("@")) return null;
+
+  const phone = jid.split("@")[0]?.replace(/\D/g, "") ?? "";
+  if (!/^\d{8,15}$/.test(phone)) return null;
+
+  return phone;
+}
+
+function normalizeE164FromPhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+async function resolveCandidatePhoneFromContact(client: any, contactId: string) {
+  let candidatePhone: string | null = null;
+  let candidateJid: string | null = null;
+  const checkedSources: string[] = [];
+
+  async function tryJid(jid: unknown, source: string) {
+    if (typeof jid !== "string" || candidatePhone) {
+      return;
+    }
+
+    checkedSources.push(source);
+    const phone = extractPhoneFromJid(jid);
+
+    if (phone) {
+      candidatePhone = phone;
+      candidateJid = jid;
+    }
+  }
+
+  const identityResult = await client.query(
+    `
+      select external_id, profile_name, push_name
+      from contact_identities
+      where contact_id = $1
+      order by updated_at desc nulls last, created_at desc nulls last
+      limit 10
+    `,
+    [contactId]
+  );
+
+  for (const row of identityResult.rows) {
+    await tryJid(row.external_id, "contact_identities.external_id");
+  }
+
+  if (!candidatePhone) {
+    const conversationResult = await client.query(
+      `
+        select id, external_thread_id, external_jid, thread_jid, remote_jid
+        from conversations
+        where contact_id = $1
+        order by last_message_at desc nulls last, updated_at desc nulls last, created_at desc nulls last
+        limit 10
+      `,
+      [contactId]
+    );
+
+    for (const row of conversationResult.rows) {
+      await tryJid(row.external_jid, "conversations.external_jid");
+      await tryJid(row.thread_jid, "conversations.thread_jid");
+      await tryJid(row.remote_jid, "conversations.remote_jid");
+      await tryJid(row.external_thread_id, "conversations.external_thread_id");
+    }
+  }
+
+  if (!candidatePhone) {
+    const messageResult = await client.query(
+      `
+        select external_chat_id, remote_jid, sender_jid, participant_jid
+        from messages
+        where contact_id = $1
+        order by sent_at desc nulls last, created_at desc nulls last
+        limit 20
+      `,
+      [contactId]
+    );
+
+    for (const row of messageResult.rows) {
+      await tryJid(row.remote_jid, "messages.remote_jid");
+      await tryJid(row.sender_jid, "messages.sender_jid");
+      await tryJid(row.participant_jid, "messages.participant_jid");
+      await tryJid(row.external_chat_id, "messages.external_chat_id");
+    }
+  }
+
+  return {
+    candidatePhone,
+    candidateJid,
+    candidatePhoneE164: normalizeE164FromPhone(candidatePhone),
+    checkedSources
+  };
+}
+
 export class ContactRepairProposalService {
   static async ensureTable() {
     await withTransaction(async (client: any) => {
@@ -54,11 +153,78 @@ export class ContactRepairProposalService {
     });
 
     const plan = preview.repairPlan ?? {};
-    const shouldPropose = Boolean(plan.currentNameIsBlocked || (plan.poisonedIdentityCount ?? 0) > 0);
+    let contactRow: any = null;
+    let candidate: {
+      candidatePhone: string | null;
+      candidateJid: string | null;
+      candidatePhoneE164: string | null;
+      checkedSources: string[];
+    } = {
+      candidatePhone: null,
+      candidateJid: null,
+      candidatePhoneE164: null,
+      checkedSources: []
+    };
+
+    await withTransaction(async (client: any) => {
+      const contactResult = await client.query(
+        `
+          select id, organization_id, display_name, primary_phone_normalized, primary_phone_e164
+          from contacts
+          where id = $1
+            and organization_id = $2
+          limit 1
+        `,
+        [contactId, options.user.organizationId]
+      );
+
+      contactRow = contactResult.rows[0] ?? null;
+
+      if (!contactRow) {
+        throw new Error("Contact not found");
+      }
+
+      if (!contactRow.primary_phone_normalized && !contactRow.primary_phone_e164) {
+        candidate = await resolveCandidatePhoneFromContact(client, contactId);
+      }
+    });
+
+    const hasMissingPhoneCandidate = Boolean(
+      !contactRow?.primary_phone_normalized &&
+        !contactRow?.primary_phone_e164 &&
+        candidate.candidatePhone
+    );
+
+    const shouldPropose = Boolean(
+      plan.currentNameIsBlocked ||
+        (plan.poisonedIdentityCount ?? 0) > 0 ||
+        hasMissingPhoneCandidate
+    );
 
     if (!shouldPropose) {
-      return { created: false, status: "clean", preview };
+      return {
+        created: false,
+        status: "clean",
+        preview,
+        candidate
+      };
     }
+
+    const enhancedPlan = {
+      ...plan,
+      issue_type: hasMissingPhoneCandidate ? "missing_phone" : "identity_issue",
+      candidate_phone: candidate.candidatePhone,
+      candidate_phone_e164: candidate.candidatePhoneE164,
+      candidate_jid: candidate.candidateJid,
+      candidate_sources_checked: candidate.checkedSources,
+      proposed_steps: [
+        ...(hasMissingPhoneCandidate ? ["set_primary_phone_from_whatsapp_jid"] : []),
+        ...(plan.currentNameIsBlocked || (plan.poisonedIdentityCount ?? 0) > 0
+          ? ["clear_poisoned_identity_and_wrong_contact_name"]
+          : []),
+        "rebuild_contact_projection"
+      ]
+    };
 
     let proposal: any = null;
     await withTransaction(async (client: any) => {
@@ -98,12 +264,22 @@ export class ContactRepairProposalService {
         [
           options.user.organizationId,
           contactId,
-          "Contact name or identity matches a connected WhatsApp account label/display name.",
-          plan.currentNameIsBlocked ? "high" : "medium",
-          "clear_poisoned_identity_and_wrong_contact_name",
+          hasMissingPhoneCandidate
+            ? "Missing phone detected. Candidate phone resolved from WhatsApp JID."
+            : "Contact name or identity matches a connected WhatsApp account label/display name.",
+          hasMissingPhoneCandidate || plan.currentNameIsBlocked ? "high" : "medium",
+          hasMissingPhoneCandidate
+            ? "set_missing_phone_from_whatsapp_jid"
+            : "clear_poisoned_identity_and_wrong_contact_name",
           preview.before ?? {},
-          preview.after ?? {},
-          plan
+          {
+            ...(preview.after ?? {}),
+            primary_phone_normalized:
+              candidate.candidatePhone ?? (preview.after as any)?.primary_phone_normalized ?? null,
+            primary_phone_e164:
+              candidate.candidatePhoneE164 ?? (preview.after as any)?.primary_phone_e164 ?? null
+          },
+          enhancedPlan
         ]
       );
 
@@ -114,10 +290,10 @@ export class ContactRepairProposalService {
       action: "contact.repair_proposal.detected",
       entityType: "contact",
       entityId: contactId,
-      metadata: { proposalId: proposal?.id, repairPlan: plan }
+      metadata: { proposalId: proposal?.id, repairPlan: enhancedPlan }
     });
 
-    return { created: true, status: "pending", proposal, preview };
+    return { created: true, status: "pending", proposal, preview, candidate };
   }
 
   static async list(options: { user: any; status?: string | null }) {
@@ -174,6 +350,37 @@ export class ContactRepairProposalService {
       throw new Error("Pending repair proposal not found");
     }
 
+    const repairPlan = proposal.repair_plan ?? {};
+    const candidatePhone =
+      typeof repairPlan.candidate_phone === "string" && repairPlan.candidate_phone.trim()
+        ? repairPlan.candidate_phone.trim()
+        : null;
+    const candidatePhoneE164 =
+      typeof repairPlan.candidate_phone_e164 === "string" && repairPlan.candidate_phone_e164.trim()
+        ? repairPlan.candidate_phone_e164.trim()
+        : normalizeE164FromPhone(candidatePhone);
+
+    let appliedPhoneRepair: any = null;
+
+    if (candidatePhone) {
+      await withTransaction(async (client: any) => {
+        const result = await client.query(
+          `
+            update contacts
+            set primary_phone_normalized = coalesce(primary_phone_normalized, $1),
+                primary_phone_e164 = coalesce(primary_phone_e164, $2),
+                updated_at = timezone('utc', now())
+            where id = $3
+              and organization_id = $4
+            returning id, primary_phone_normalized, primary_phone_e164
+          `,
+          [candidatePhone, candidatePhoneE164, proposal.contact_id, options.user.organizationId]
+        );
+
+        appliedPhoneRepair = result.rows[0] ?? null;
+      });
+    }
+
     const applied = await ContactIdentityRepairService.refreshContactIdentity(proposal.contact_id, {
       dry_run: false,
       confirm: true,
@@ -197,10 +404,10 @@ export class ContactRepairProposalService {
       action: "contact.repair_proposal.applied",
       entityType: "contact",
       entityId: proposal.contact_id,
-      metadata: { proposalId, applied }
+      metadata: { proposalId, applied, appliedPhoneRepair }
     });
 
-    return { proposalId, status: "applied", applied };
+    return { proposalId, status: "applied", applied, appliedPhoneRepair };
   }
 
   static async reject(proposalId: string, options: { user: any; note?: string | null }) {
