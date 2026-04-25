@@ -209,23 +209,67 @@ export async function deleteWhatsAppAccount(accountId: string) {
   return apiDelete<{ ok: true }>(`/admin/whatsapp-accounts/${accountId}`);
 }
 
-export async function fetchContactRepairProposals(status?: string) {
-  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+export async function fetchContactRepairProposals(input?: {
+  organizationId?: string | null;
+  status?: string | null;
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (input?.organizationId) {
+    searchParams.set("organization_id", input.organizationId);
+  }
+
+  if (input?.status) {
+    searchParams.set("status", input.status);
+  }
+
+  const query = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
   const response = await apiGet<{ data: ContactRepairProposal[] }>(`/admin/contact-repair-proposals${query}`);
   return response.data;
 }
 
-export async function detectContactRepairProposal(contactId: string) {
-  const response = await apiPost<{ data: unknown }>(`/admin/contacts/${contactId}/repair-proposal/detect`, {});
+export async function detectContactRepairProposal(input: {
+  contactId: string;
+  organizationId?: string | null;
+}) {
+  const response = await apiPost<{ data: unknown }>(
+    `/admin/contacts/${input.contactId}/repair-proposal/detect`,
+    {
+      organizationId: input.organizationId,
+      organization_id: input.organizationId
+    }
+  );
   return response.data;
 }
 
-export async function approveContactRepairProposal(proposalId: string, note?: string) {
-  const response = await apiPost<{ data: unknown }>(`/admin/contact-repair-proposals/${proposalId}/approve`, { note });
+export async function approveContactRepairProposal(input: {
+  proposalId: string;
+  organizationId?: string | null;
+  note?: string | null;
+}) {
+  const response = await apiPost<{ data: unknown }>(
+    `/admin/contact-repair-proposals/${input.proposalId}/approve`,
+    {
+      organizationId: input.organizationId,
+      organization_id: input.organizationId,
+      note: input.note ?? null
+    }
+  );
   return response.data;
 }
 
-export async function rejectContactRepairProposal(proposalId: string, note?: string) {
-  const response = await apiPost<{ data: unknown }>(`/admin/contact-repair-proposals/${proposalId}/reject`, { note });
+export async function rejectContactRepairProposal(input: {
+  proposalId: string;
+  organizationId?: string | null;
+  note?: string | null;
+}) {
+  const response = await apiPost<{ data: unknown }>(
+    `/admin/contact-repair-proposals/${input.proposalId}/reject`,
+    {
+      organizationId: input.organizationId,
+      organization_id: input.organizationId,
+      note: input.note ?? null
+    }
+  );
   return response.data;
 }
