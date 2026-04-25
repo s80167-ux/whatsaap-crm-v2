@@ -77,7 +77,7 @@ type ReplyDraftState = {
   messageId: string;
   previewText: string;
 };
-console.log("ORG ID >>>", organizationId);
+
 function formatAckStatus(status?: string) {
   switch (status) {
     case "queued":
@@ -154,6 +154,10 @@ export function ChatPanel({
   organizationId?: string | null;
   onMessageSent: () => void;
 }) {
+  console.log("ORG ID >>>", organizationId);
+  console.log("CONVERSATION ORG ID >>>", (conversation as any)?.organization_id);
+  console.log("CONVERSATION >>>", conversation);
+  
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
