@@ -154,10 +154,6 @@ export function ChatPanel({
   organizationId?: string | null;
   onMessageSent: () => void;
 }) {
-  console.log("ORG ID >>>", organizationId);
-  console.log("CONVERSATION ORG ID >>>", (conversation as any)?.organization_id);
-  console.log("CONVERSATION >>>", conversation);
-  
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -185,8 +181,9 @@ export function ChatPanel({
   const forwardableConversations = conversations.filter((item) => item.id !== conversation?.id);
   const selectedMessages = selectedMessageIds.map((messageId) => messagesById.get(messageId)).filter((message): message is Message => Boolean(message));
   const { toast: copyToast, copyText } = useCopyFeedback();
+  const resolvedOrganizationId = organizationId ?? (conversation as (Conversation & { organization_id?: string | null }) | undefined)?.organization_id ?? null;
   const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
-    organizationId,
+    organizationId: resolvedOrganizationId,
     enabled: Boolean(conversation)
   });
   const quickReplies: QuickReplyItem[] = organizationQuickReplies.length > 0
@@ -222,46 +219,46 @@ export function ChatPanel({
   const quickReplyPagination = usePanelPagination(filteredQuickReplies);
 
   async function handleSend() {
-  if (!conversation || (!text.trim() && !attachment)) {
-    return;
-  }
-
-  if (!organizationId) {
-    setSendNotice("Organization not set. Please refresh.");
-    return;
-  }
-
-  setIsSending(true);
-  setSendNotice(null);
-
-  try {
-    await sendMessage({
-      whatsappAccountId: conversation.whatsapp_account_id,
-      conversationId: conversation.id,
-      organizationId,
-      quickReplyTemplateId: selectedQuickReplyTemplateId,
-      replyToMessageId: replyDraft?.messageId ?? null,
-      text: text.trim() || undefined,
-      attachment
-    });
-
-    setText("");
-    setAttachment(null);
-    setSelectedQuickReplyTemplateId(null);
-    setReplyDraft(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (!conversation || (!text.trim() && !attachment)) {
+      return;
     }
 
-    setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
-    onMessageSent();
-  } catch (error) {
-    setSendNotice(error instanceof Error ? error.message : "Unable to send message");
-  } finally {
-    setIsSending(false);
+    if (!resolvedOrganizationId) {
+      setSendNotice("Organization not set. Please refresh.");
+      return;
+    }
+
+    setIsSending(true);
+    setSendNotice(null);
+
+    try {
+      await sendMessage({
+        whatsappAccountId: conversation.whatsapp_account_id,
+        conversationId: conversation.id,
+        organizationId: resolvedOrganizationId,
+        quickReplyTemplateId: selectedQuickReplyTemplateId,
+        replyToMessageId: replyDraft?.messageId ?? null,
+        text: text.trim() || undefined,
+        attachment
+      });
+
+      setText("");
+      setAttachment(null);
+      setSelectedQuickReplyTemplateId(null);
+      setReplyDraft(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
+      onMessageSent();
+    } catch (error) {
+      setSendNotice(error instanceof Error ? error.message : "Unable to send message");
+    } finally {
+      setIsSending(false);
+    }
   }
-}
 
   async function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -474,7 +471,7 @@ export function ChatPanel({
     if (reply.isOrganizationTemplate) {
       void recordQuickReplyUsage({
         templateId: reply.id,
-        organizationId,
+        organizationId: resolvedOrganizationId,
         conversationId: conversation?.id
       }).catch(() => undefined);
     }

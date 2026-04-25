@@ -5,8 +5,8 @@
   "workspaces": [
     "apps/api",
     "apps/frontend",
-    "apps/whatsapp-connector",
-    "frontend"
+    "apps/whatsapp-connector"
+    
   ],
   "scripts": {
     "dev:all": "concurrently -k -n backend,connector,raw-events,outbox,frontend -c blue,green,yellow,magenta,cyan \"npm run dev:backend\" \"npm run dev:connector\" \"npm run worker:raw-events\" \"npm run worker:message-outbox\" \"npm run dev:frontend\"",
