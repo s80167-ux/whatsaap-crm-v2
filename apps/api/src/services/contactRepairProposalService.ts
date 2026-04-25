@@ -22,6 +22,40 @@ function extractPhoneFromJid(jid: string | null | undefined): string | null {
   return phone;
 }
 
+async function detectDuplicateContacts(client: any, contactId: string, orgId: string) {
+  const base = await client.query(
+    `
+      select id, display_name
+      from contacts
+      where id = $1 and organization_id = $2
+    `,
+    [contactId, orgId]
+  );
+
+  const contact = base.rows[0];
+  if (!contact) return null;
+
+  const duplicates = await client.query(
+    `
+      select id, display_name
+      from contacts
+      where organization_id = $1
+        and id != $2
+        and lower(display_name) = lower($3)
+        and (status is null or status = 'active')
+      limit 5
+    `,
+    [orgId, contactId, contact.display_name]
+  );
+
+  if (duplicates.rows.length === 0) return null;
+
+  return {
+    target: contact,
+    candidates: duplicates.rows
+  };
+}
+
 function normalizeE164FromPhone(phone: string | null | undefined): string | null {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, "");
@@ -154,6 +188,10 @@ export class ContactRepairProposalService {
       user: previewUser
     });
 
+    const duplicate = await withTransaction(async (client: any) => {
+    return await detectDuplicateContacts(client, contactId, options.user.organizationId);
+    });
+
     const plan = preview.repairPlan ?? {};
     let contactRow: any = null;
     let candidate: {
@@ -197,10 +235,16 @@ export class ContactRepairProposalService {
         candidate.candidatePhone
     );
 
+    const hasDuplicate = Boolean(
+      duplicate && duplicate.candidates.length > 0
+    );
+
     const shouldPropose = Boolean(
       plan.currentNameIsBlocked ||
-        (plan.poisonedIdentityCount ?? 0) > 0 ||
-        hasMissingPhoneCandidate
+      (plan.poisonedIdentityCount ?? 0) > 0 ||
+      hasMissingPhoneCandidate ||
+      hasDuplicate
+
     );
 
     if (!shouldPropose) {
