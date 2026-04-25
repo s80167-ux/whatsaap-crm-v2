@@ -187,16 +187,6 @@ export function SetupPage() {
     setResetPassword("");
   }
 
-  function beginEditAccount(account: WhatsAppAccountSummary) {
-    setEditingAccountId(account.id);
-    setAccountEdit({
-      organizationId: account.organization_id,
-      name: account.name,
-      phoneNumber: account.phone_number ?? "",
-      historySyncLookbackDays: account.history_sync_lookback_days ?? 7
-    });
-  }
-
   async function handleCreateOrganization(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsWorking(true);

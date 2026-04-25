@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { getStoredUser } from "../lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { assignContact } from "../api/crm";
 import { Button } from "../components/Button";
@@ -7,7 +8,6 @@ import { Card } from "../components/Card";
 import { useContact, useContacts } from "../hooks/useContacts";
 import { getStoredUser } from "../lib/auth";
 
-export function ContactsPage() {
   const queryClient = useQueryClient();
   const currentUser = getStoredUser();
   const [assigningContactId, setAssigningContactId] = useState<string | null>(null);
@@ -33,8 +33,11 @@ export function ContactsPage() {
     }
   }
 
+  // Removed Contact Repair Tools admin card
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr),340px]">
+
       <Card elevated>
         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Contacts</p>
         <h2 className="mt-3 section-title">Canonical customer records</h2>
@@ -110,13 +113,23 @@ export function ContactsPage() {
             <div className="rounded-xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
               <p>Contact ID: {selectedContact.id}</p>
               <p>
-                Owner:{" "}
+                Owner: {" "}
                 {selectedContact.owner_user_id
                   ? selectedContact.owner_user_id === currentUser?.organizationUserId
                     ? "Assigned to you"
                     : selectedContact.owner_user_id
                   : "Unassigned"}
               </p>
+              <div className="mt-4">
+                <a
+                  href={`/contact-repair?contactId=${selectedContact.id}`}
+                  className="btn btn-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Contact Repair Tools
+                </a>
+              </div>
             </div>
           </div>
         ) : (

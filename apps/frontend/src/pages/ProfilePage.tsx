@@ -6,7 +6,7 @@ import { Toast } from '../components/Toast';
 
 
 const ProfilePage: React.FC = () => {
-  const [profile, setProfile] = useState({ fullName: '', email: '', avatarUrl: null, phone: '', address: '' });
+  const [profile, setProfile] = useState<{ fullName: string; email: string; avatarUrl: string | null; phone: string; address: string }>({ fullName: '', email: '', avatarUrl: null, phone: '', address: '' });
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -23,7 +23,7 @@ const ProfilePage: React.FC = () => {
       .then((data) => setProfile({
         fullName: data.fullName || '',
         email: data.email,
-        avatarUrl: data.avatarUrl || null,
+        avatarUrl: data.avatarUrl ?? null,
         phone: data.phone || '',
         address: data.address || ''
       }))
@@ -91,7 +91,7 @@ const ProfilePage: React.FC = () => {
             <div className="flex justify-between items-center mb-2">
               <span className="font-semibold">Personal Information</span>
               {!editMode && (
-                <Button size="sm" onClick={() => setEditMode(true)}>
+                <Button onClick={() => setEditMode(true)}>
                   Edit Profile
                 </Button>
               )}

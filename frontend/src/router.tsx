@@ -8,6 +8,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { PlatformPage } from "./pages/PlatformPage";
 import { SalesPage } from "./pages/SalesPage";
 import { SetupPage } from "./pages/SetupPage";
+import ContactRepairTools from "./pages/ContactRepairTools";
 
 export const router = createBrowserRouter([
   {
@@ -26,7 +27,8 @@ export const router = createBrowserRouter([
           { path: "contacts", element: <ContactsPage /> },
           { path: "sales", element: <SalesPage /> },
           { path: "setup", element: <SetupPage /> },
-          { path: "platform", element: <PlatformPage /> }
+          { path: "platform", element: <PlatformPage /> },
+          { path: "contact-repair", element: <ContactRepairTools /> }
         ]
       }
     ]

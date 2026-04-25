@@ -33,6 +33,7 @@ export function DashboardLayout() {
               </div>
             </div>
 
+            <div>DEBUG USER: {JSON.stringify(user)}</div>
             <nav className="mt-8 space-y-2">
               <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" />
               <NavLinkItem
@@ -44,6 +45,9 @@ export function DashboardLayout() {
               <NavLinkItem to="/contacts" icon={<Users size={18} />} label="Contacts" />
               <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label="Sales" />
               <NavLinkItem to="/setup" icon={<Settings2 size={18} />} label="Setup" />
+              {(user?.role === "org_admin" || isSuperAdmin) && (
+                <NavLinkItem to="/contact-repair" icon={<Settings2 size={18} />} label="Contact Repair Tools" />
+              )}
               {isSuperAdmin ? <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" /> : null}
             </nav>
 

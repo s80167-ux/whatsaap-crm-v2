@@ -607,7 +607,7 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
               <div className="mt-3 h-9 overflow-hidden rounded-full bg-background-tint">
                 <div
                   className={`flex h-full items-center justify-end rounded-full px-3 text-xs font-semibold text-white ${getPipelineBarTone(stage.status)}`}
-                  className={getWidthClass(width)}
+                  
                 >
                   {stage.count}
                 </div>
