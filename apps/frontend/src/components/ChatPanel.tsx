@@ -222,38 +222,46 @@ export function ChatPanel({
   const quickReplyPagination = usePanelPagination(filteredQuickReplies);
 
   async function handleSend() {
-    if (!organizationId) {
-  setSendNotice("Organization not set. Please refresh.");
-  return;
+  if (!conversation || (!text.trim() && !attachment)) {
+    return;
+  }
+
+  if (!organizationId) {
+    setSendNotice("Organization not set. Please refresh.");
+    return;
+  }
+
+  setIsSending(true);
+  setSendNotice(null);
+
+  try {
+    await sendMessage({
+      whatsappAccountId: conversation.whatsapp_account_id,
+      conversationId: conversation.id,
+      organizationId,
+      quickReplyTemplateId: selectedQuickReplyTemplateId,
+      replyToMessageId: replyDraft?.messageId ?? null,
+      text: text.trim() || undefined,
+      attachment
+    });
+
+    setText("");
+    setAttachment(null);
+    setSelectedQuickReplyTemplateId(null);
+    setReplyDraft(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
 
-    setIsSending(true);
-    setSendNotice(null);
-    try {
-      await sendMessage({
-  whatsappAccountId: conversation.whatsapp_account_id,
-  conversationId: conversation.id,
-  organizationId: organizationId, // 🔥 ADD THIS
-  quickReplyTemplateId: selectedQuickReplyTemplateId,
-  replyToMessageId: replyDraft?.messageId ?? null,
-  text: text.trim() || undefined,
-  attachment
-});
-      setText("");
-      setAttachment(null);
-      setSelectedQuickReplyTemplateId(null);
-      setReplyDraft(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
-      onMessageSent();
-    } catch (error) {
-      setSendNotice(error instanceof Error ? error.message : "Unable to send message");
-    } finally {
-      setIsSending(false);
-    }
+    setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
+    onMessageSent();
+  } catch (error) {
+    setSendNotice(error instanceof Error ? error.message : "Unable to send message");
+  } finally {
+    setIsSending(false);
   }
+}
 
   async function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
