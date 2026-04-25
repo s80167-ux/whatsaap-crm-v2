@@ -44,25 +44,17 @@ async function resolveCandidatePhoneFromContact(client: any, contactId: string) 
     }
   }
 
-  const identityResult = await client.query(
-    `
-      select external_id, profile_name, push_name
-      from contact_identities
-      where contact_id = $1
-      order by updated_at desc nulls last, created_at desc nulls last
-      limit 10
-    `,
-    [contactId]
-  );
-
-  for (const row of identityResult.rows) {
-    await tryJid(row.external_id, "contact_identities.external_id");
-  }
+  /*
+   * Important:
+   * Do not query contact_identities.external_id here.
+   * Current production schema does not have external_id in contact_identities.
+   * We resolve from conversation/message JID fields only.
+   */
 
   if (!candidatePhone) {
     const conversationResult = await client.query(
       `
-        select id, external_thread_id, external_jid, thread_jid, remote_jid
+        select *
         from conversations
         where contact_id = $1
         order by last_message_at desc nulls last, updated_at desc nulls last, created_at desc nulls last
@@ -76,13 +68,15 @@ async function resolveCandidatePhoneFromContact(client: any, contactId: string) 
       await tryJid(row.thread_jid, "conversations.thread_jid");
       await tryJid(row.remote_jid, "conversations.remote_jid");
       await tryJid(row.external_thread_id, "conversations.external_thread_id");
+      await tryJid(row.chat_jid, "conversations.chat_jid");
+      await tryJid(row.jid, "conversations.jid");
     }
   }
 
   if (!candidatePhone) {
     const messageResult = await client.query(
       `
-        select external_chat_id, remote_jid, sender_jid, participant_jid
+        select *
         from messages
         where contact_id = $1
         order by sent_at desc nulls last, created_at desc nulls last
@@ -96,6 +90,10 @@ async function resolveCandidatePhoneFromContact(client: any, contactId: string) 
       await tryJid(row.sender_jid, "messages.sender_jid");
       await tryJid(row.participant_jid, "messages.participant_jid");
       await tryJid(row.external_chat_id, "messages.external_chat_id");
+      await tryJid(row.chat_jid, "messages.chat_jid");
+      await tryJid(row.jid, "messages.jid");
+      await tryJid(row.from_jid, "messages.from_jid");
+      await tryJid(row.to_jid, "messages.to_jid");
     }
   }
 
