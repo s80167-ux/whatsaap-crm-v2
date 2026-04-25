@@ -4,6 +4,7 @@ import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown } from "lucide-react";
 import { assignContact } from "../api/crm";
+import { detectContactRepairProposal } from "../api/admin";
 import { apiPatch } from "../lib/http";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -48,10 +49,12 @@ function getUserLabel(user: { full_name: string | null; email: string | null; ro
 function CompactRepairTools({
   contact,
   canWrite,
+  organizationId,
   onChanged
 }: {
   contact: Contact;
   canWrite: boolean;
+  organizationId?: string | null;
   onChanged: () => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -67,20 +70,25 @@ function CompactRepairTools({
     setManualOpen(false);
   }, [contact.id, contact.display_name]);
 
-  async function runAction(action: string, handler: () => Promise<void>) {
+  async function runAction(action: string, handler: () => Promise<string | void>) {
     if (!canWrite) {
       setMessage("You do not have permission to repair contacts.");
       return;
+    }
+    if (!organizationId) {
+  setMessage("Select an organization before running contact repair.");
+  return;
     }
 
     setBusyAction(action);
     setMessage(null);
     try {
-      await handler();
+      const resultMessage = await handler();
       await onChanged();
-      setMessage("Contact repair updated.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to complete repair action.");
+      setMessage(resultMessage || "Contact repair updated.");
+      } 
+    catch (error) {
+    setMessage(error instanceof Error ? error.message : "Unable to complete repair action.");
     } finally {
       setBusyAction(null);
     }
@@ -98,9 +106,14 @@ function CompactRepairTools({
     });
 
   const refreshDiagnosis = () =>
-    runAction("refresh", async () => {
-      await Promise.resolve();
+  runAction("refresh", async () => {
+    await detectContactRepairProposal({
+      contactId: contact.id,
+      organizationId
     });
+
+    return "Diagnosis refreshed. Check Repair Queue for pending proposals.";
+  });
 
   const disabled = !canWrite || busyAction !== null;
 
@@ -545,7 +558,12 @@ export function ContactsPage() {
                 {selectedContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{selectedContact.primary_phone_e164}</p> : null}
               </div>
             </div>
-            <CompactRepairTools contact={selectedContact} canWrite={canAssignContacts} onChanged={refreshSelectedContact} />
+            <CompactRepairTools
+            contact={selectedContact}
+            canWrite={canAssignContacts}
+            organizationId={activeOrganizationId}
+            onChanged={refreshSelectedContact}
+            />
             <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
               <p>Contact ID: {selectedContact.id}</p>
               <p>
