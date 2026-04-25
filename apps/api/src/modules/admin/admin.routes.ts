@@ -2,6 +2,12 @@ import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requirePermission } from "../../middleware/authMiddleware.js";
 import {
+  detectContactRepairProposal,
+  listContactRepairProposals,
+  approveContactRepairProposal,
+  rejectContactRepairProposal
+} from "../../controllers/contactRepairProposalController.js";
+import {
   createWhatsAppAccount,
   deleteWhatsAppAccount,
   getWhatsAppAccountQr,
@@ -25,3 +31,27 @@ adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppA
 
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));
+
+adminRoutes.get(
+  "/contact-repair-proposals",
+  requirePermission("contacts.write"),
+  asyncHandler(listContactRepairProposals)
+);
+
+adminRoutes.post(
+  "/contacts/:contactId/repair-proposal/detect",
+  requirePermission("contacts.write"),
+  asyncHandler(detectContactRepairProposal)
+);
+
+adminRoutes.post(
+  "/contact-repair-proposals/:proposalId/approve",
+  requirePermission("contacts.write"),
+  asyncHandler(approveContactRepairProposal)
+);
+
+adminRoutes.post(
+  "/contact-repair-proposals/:proposalId/reject",
+  requirePermission("contacts.write"),
+  asyncHandler(rejectContactRepairProposal)
+);
