@@ -33,7 +33,7 @@ async function detectDuplicateContacts(client: any, contactId: string, orgId: st
   );
 
   const contact = base.rows[0];
-  if (!contact) return null;
+  if (!contact?.display_name) return null;
 
   const duplicates = await client.query(
     `
@@ -189,7 +189,7 @@ export class ContactRepairProposalService {
     });
 
     const duplicate = await withTransaction(async (client: any) => {
-    return await detectDuplicateContacts(client, contactId, options.user.organizationId);
+      return await detectDuplicateContacts(client, contactId, options.user.organizationId);
     });
 
     const plan = preview.repairPlan ?? {};
@@ -235,16 +235,13 @@ export class ContactRepairProposalService {
         candidate.candidatePhone
     );
 
-    const hasDuplicate = Boolean(
-      duplicate && duplicate.candidates.length > 0
-    );
+    const hasDuplicate = Boolean(duplicate && duplicate.candidates.length > 0);
 
     const shouldPropose = Boolean(
       plan.currentNameIsBlocked ||
-      (plan.poisonedIdentityCount ?? 0) > 0 ||
-      hasMissingPhoneCandidate ||
-      hasDuplicate
-
+        (plan.poisonedIdentityCount ?? 0) > 0 ||
+        hasMissingPhoneCandidate ||
+        hasDuplicate
     );
 
     if (!shouldPropose) {
@@ -256,15 +253,34 @@ export class ContactRepairProposalService {
       };
     }
 
+    const duplicateTarget = hasDuplicate ? duplicate!.target : null;
+    const duplicateCandidate = hasDuplicate ? duplicate!.candidates[0] : null;
+
     const enhancedPlan = {
       ...plan,
-      issue_type: hasMissingPhoneCandidate ? "missing_phone" : "identity_issue",
+      issue_type: hasDuplicate
+        ? "duplicate_contact"
+        : hasMissingPhoneCandidate
+          ? "missing_phone"
+          : "identity_issue",
       candidate_phone: candidate.candidatePhone,
       candidate_phone_e164: candidate.candidatePhoneE164,
       candidate_jid: candidate.candidateJid,
       candidate_sources_checked: candidate.checkedSources,
+      duplicate_contact:
+        hasDuplicate && duplicateCandidate && duplicateTarget
+          ? {
+              source_contact_id: duplicateCandidate.id,
+              target_contact_id: duplicateTarget.id,
+              source_display_name: duplicateCandidate.display_name,
+              target_display_name: duplicateTarget.display_name,
+              duplicate_signals: ["same_normalized_name"],
+              merge_mode: "admin_approval_required"
+            }
+          : null,
       proposed_steps: [
         ...(hasMissingPhoneCandidate ? ["set_primary_phone_from_whatsapp_jid"] : []),
+        ...(hasDuplicate ? ["merge_duplicate_contact"] : []),
         ...(plan.currentNameIsBlocked || (plan.poisonedIdentityCount ?? 0) > 0
           ? ["clear_poisoned_identity_and_wrong_contact_name"]
           : []),
@@ -310,20 +326,25 @@ export class ContactRepairProposalService {
         [
           options.user.organizationId,
           contactId,
-          hasMissingPhoneCandidate
-            ? "Missing phone detected. Candidate phone resolved from WhatsApp JID."
-            : "Contact name or identity matches a connected WhatsApp account label/display name.",
-          hasMissingPhoneCandidate || plan.currentNameIsBlocked ? "high" : "medium",
-          hasMissingPhoneCandidate
-            ? "set_missing_phone_from_whatsapp_jid"
-            : "clear_poisoned_identity_and_wrong_contact_name",
+          hasDuplicate
+            ? "Duplicate contact detected. Merge requires admin approval."
+            : hasMissingPhoneCandidate
+              ? "Missing phone detected. Candidate phone resolved from WhatsApp JID."
+              : "Contact name or identity matches a connected WhatsApp account label/display name.",
+          hasDuplicate || hasMissingPhoneCandidate || plan.currentNameIsBlocked ? "high" : "medium",
+          hasDuplicate
+            ? "merge_duplicate_contact"
+            : hasMissingPhoneCandidate
+              ? "set_missing_phone_from_whatsapp_jid"
+              : "clear_poisoned_identity_and_wrong_contact_name",
           preview.before ?? {},
           {
             ...(preview.after ?? {}),
             primary_phone_normalized:
               candidate.candidatePhone ?? (preview.after as any)?.primary_phone_normalized ?? null,
             primary_phone_e164:
-              candidate.candidatePhoneE164 ?? (preview.after as any)?.primary_phone_e164 ?? null
+              candidate.candidatePhoneE164 ?? (preview.after as any)?.primary_phone_e164 ?? null,
+            duplicate_contact: enhancedPlan.duplicate_contact
           },
           enhancedPlan
         ]
