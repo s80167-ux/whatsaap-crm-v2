@@ -13,7 +13,11 @@ function extractPhoneFromJid(jid: string | null | undefined): string | null {
   if (!jid.includes("@")) return null;
 
   const phone = jid.split("@")[0]?.replace(/\D/g, "") ?? "";
-  if (!/^\d{8,15}$/.test(phone)) return null;
+
+  // Only accept Malaysian WhatsApp mobile numbers.
+  // Example accepted: 60123456789, 60139229833
+  // Rejects non-Malaysia numbers, group IDs, broadcast IDs, and invalid JIDs.
+  if (!/^601\d{7,10}$/.test(phone)) return null;
 
   return phone;
 }
