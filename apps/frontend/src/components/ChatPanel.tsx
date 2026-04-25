@@ -29,7 +29,7 @@ import { Card } from "./Card";
 import { PanelPagination, usePanelPagination } from "./PanelPagination";
 import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
-console.log("ORG ID >>>", organizationId);
+
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
 const QUICK_REPLIES = [
   "Hi, thanks for reaching out. How can I help you today?",
@@ -77,7 +77,7 @@ type ReplyDraftState = {
   messageId: string;
   previewText: string;
 };
-
+console.log("ORG ID >>>", organizationId);
 function formatAckStatus(status?: string) {
   switch (status) {
     case "queued":
