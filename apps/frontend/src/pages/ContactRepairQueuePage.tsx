@@ -1,20 +1,40 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
   fetchContactRepairProposals,
   approveContactRepairProposal,
   rejectContactRepairProposal,
   type ContactRepairProposal
 } from "../api/admin";
+import type { DashboardOutletContext } from "../layouts/DashboardLayout";
+import { getStoredUser } from "../lib/auth";
 
 export function ContactRepairQueuePage() {
+  const currentUser = getStoredUser();
+  const dashboardContext = useOutletContext<DashboardOutletContext>();
+  const isSuperAdmin = currentUser?.role === "super_admin";
+
+  const activeOrganizationId = isSuperAdmin
+    ? dashboardContext.selectedOrganizationId || null
+    : currentUser?.organizationId ?? null;
+
   const [items, setItems] = useState<ContactRepairProposal[]>([]);
   const [selected, setSelected] = useState<ContactRepairProposal | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function load() {
+    if (!activeOrganizationId) {
+      setItems([]);
+      setSelected(null);
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await fetchContactRepairProposals("pending");
+      const data = await fetchContactRepairProposals({
+        organizationId: activeOrganizationId,
+        status: "pending"
+      });
       setItems(data);
       setSelected(data[0] ?? null);
     } finally {
@@ -24,24 +44,32 @@ export function ContactRepairQueuePage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [activeOrganizationId]);
 
   async function approve() {
-    if (!selected) return;
-    await approveContactRepairProposal(selected.id);
+    if (!selected || !activeOrganizationId) return;
+    await approveContactRepairProposal({
+      proposalId: selected.id,
+      organizationId: activeOrganizationId
+    });
     await load();
   }
 
   async function reject() {
-    if (!selected) return;
-    await rejectContactRepairProposal(selected.id);
+    if (!selected || !activeOrganizationId) return;
+    await rejectContactRepairProposal({
+      proposalId: selected.id,
+      organizationId: activeOrganizationId
+    });
     await load();
   }
 
   return (
     <div className="grid grid-cols-[320px_1fr] gap-4 p-4">
       <div className="border rounded-xl p-3 space-y-2 overflow-y-auto max-h-[80vh]">
-        {loading ? (
+        {!activeOrganizationId ? (
+          <p className="text-sm text-gray-400">Select organization first</p>
+        ) : loading ? (
           <p className="text-sm text-gray-400">Loading...</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-gray-400">No pending issues</p>
