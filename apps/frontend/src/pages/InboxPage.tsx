@@ -161,7 +161,7 @@ export function InboxPage() {
         conversations={visibleConversations}
         messages={messages}
         historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
-        organizationId={isSuperAdmin ? activeOrganizationId : undefined}
+        organizationId={activeOrganizationId}
         onMessageSent={() => {
           void queryClient.invalidateQueries({
             queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
