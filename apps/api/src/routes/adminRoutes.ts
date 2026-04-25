@@ -16,7 +16,7 @@ import {
 
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { requirePermission, requireRole } from "../middleware/authMiddleware.js";
-import { refreshContactIdentity, applyCanonicalOverride } from "../controllers/contactIdentityRepairController";
+import { refreshContactIdentity, applyCanonicalOverride } from "../controllers/contactIdentityRepairController.js";
 
 export const adminRoutes = Router();
 
@@ -35,14 +35,13 @@ adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manag
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));
 
-// Contact Identity Repair Endpoints
 adminRoutes.post(
   "/contacts/:contactId/refresh",
-  requirePermission("org.manage_contacts"),
+  requirePermission("contacts.write"),
   asyncHandler(refreshContactIdentity)
 );
 adminRoutes.post(
   "/contacts/:contactId/corrections/apply",
-  requirePermission("org.manage_contacts"),
+  requirePermission("contacts.write"),
   asyncHandler(applyCanonicalOverride)
 );
