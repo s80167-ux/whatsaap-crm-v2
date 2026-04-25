@@ -127,18 +127,9 @@ export async function deleteOrganization(organizationId: string) {
 }
 
 export async function fetchUsers(organizationId?: string | null) {
-  const path = organizationId
-    ? `/organizations/${organizationId}/users`
-    : "/users";
-  try {
-    const response = await apiGet<{ data: UserListApiRecord[] }>(path);
-    return response.data.map(mapUser);
-  } catch (err: any) {
-    if (err && err.status === 404) {
-      return [];
-    }
-    throw err;
-  }
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: UserListApiRecord[] }>(`/admin/users${suffix}`);
+  return response.data.map(mapUser);
 }
 
 export async function createUser(payload: {
@@ -149,10 +140,7 @@ export async function createUser(payload: {
   password: string;
   role: "super_admin" | "org_admin" | "manager" | "user" | "agent";
 }) {
-  const path = payload.organizationId
-    ? `/organizations/${payload.organizationId}/users`
-    : "/users";
-  const response = await apiPost<{ data: UserCreateApiRecord }>(path, payload);
+  const response = await apiPost<{ data: UserCreateApiRecord }>("/admin/users", payload);
   return mapUser(response.data);
 }
 
@@ -166,16 +154,16 @@ export async function updateUser(
     status: UserSummary["status"];
   }
 ) {
-  const response = await apiPatch<{ data: UserListApiRecord }>(`/users/${userId}`, payload);
+  const response = await apiPatch<{ data: UserListApiRecord }>(`/admin/users/${userId}`, payload);
   return mapUser(response.data);
 }
 
 export async function deleteUser(userId: string) {
-  return apiDelete<{ ok: true }>(`/users/${userId}`);
+  return apiDelete<{ ok: true }>(`/admin/users/${userId}`);
 }
 
 export async function resetUserPassword(userId: string, payload: { password: string }) {
-  return apiPost<{ ok: true }>(`/users/${userId}/reset-password`, payload);
+  return apiPost<{ ok: true }>(`/admin/users/${userId}/reset-password`, payload);
 }
 
 export async function fetchWhatsAppAccounts(organizationId?: string | null) {
