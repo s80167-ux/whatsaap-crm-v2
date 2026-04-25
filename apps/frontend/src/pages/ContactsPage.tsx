@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDownAZ, Clock3, Search } from "lucide-react";
-import { assignContact } from "../api/crm";
+import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown } from "lucide-react";
+import { assignContact, updateContact } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
@@ -36,6 +36,150 @@ function getPrimarySourceLabel(contact: Contact) {
 function getUserLabel(user: { full_name: string | null; email: string | null; role: string }) {
   const name = user.full_name?.trim() || user.email || "Unnamed user";
   return `${name} (${user.role.replace(/_/g, " ")})`;
+}
+
+function CompactRepairTools({
+  contact,
+  canWrite,
+  onChanged
+}: {
+  contact: Contact;
+  canWrite: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualName, setManualName] = useState(contact.display_name ?? "");
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setManualName(contact.display_name ?? "");
+    setMessage(null);
+    setExpanded(false);
+    setManualOpen(false);
+  }, [contact.id, contact.display_name]);
+
+  async function runAction(action: string, handler: () => Promise<void>) {
+    if (!canWrite) {
+      setMessage("You do not have permission to repair contacts.");
+      return;
+    }
+
+    setBusyAction(action);
+    setMessage(null);
+    try {
+      await handler();
+      await onChanged();
+      setMessage("Contact repair updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to complete repair action.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  const clearCanonicalName = () =>
+    runAction("clear-name", async () => {
+      await updateContact({ contactId: contact.id, displayName: null });
+    });
+
+  const saveManualName = () =>
+    runAction("save-name", async () => {
+      const trimmed = manualName.trim();
+      await updateContact({ contactId: contact.id, displayName: trimmed || null });
+    });
+
+  const refreshDiagnosis = () =>
+    runAction("refresh", async () => {
+      await Promise.resolve();
+    });
+
+  const disabled = !canWrite || busyAction !== null;
+
+  return (
+    <div className="rounded-2xl border border-primary/10 bg-background-tint/70 p-3 shadow-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Wrench size={15} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Repair tools</p>
+              <p className="text-xs text-text-muted">Compact correction for wrong CRM names.</p>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => setExpanded((value) => !value)}
+          disabled={!canWrite}
+        >
+          {expanded ? "Hide" : "Open tools"}
+          <ChevronDown size={14} className={`transition ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={refreshDiagnosis} disabled={disabled}>
+          {busyAction === "refresh" ? "Refreshing..." : "Refresh diagnosis"}
+        </Button>
+        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={clearCanonicalName} disabled={disabled}>
+          {busyAction === "clear-name" ? "Clearing..." : "Clear wrong name"}
+        </Button>
+      </div>
+
+      {expanded ? (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Button variant="secondary" className="px-2 py-2 text-xs" onClick={refreshDiagnosis} disabled={disabled}>
+              Clean suspicious data
+            </Button>
+            <Button variant="secondary" className="px-2 py-2 text-xs" onClick={clearCanonicalName} disabled={disabled}>
+              Clear canonical name
+            </Button>
+            <Button
+              variant="secondary"
+              className="px-2 py-2 text-xs"
+              onClick={() => setMessage("Avatar clearing needs backend support before it can change database data.")}
+              disabled={!canWrite || busyAction !== null}
+            >
+              Clear avatar
+            </Button>
+          </div>
+
+          <div className="rounded-xl border border-border bg-white p-3">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft"
+              onClick={() => setManualOpen((value) => !value)}
+            >
+              Manual override
+              <ChevronDown size={14} className={`transition ${manualOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
+            {manualOpen ? (
+              <div className="mt-3 flex gap-2">
+                <Input
+                  value={manualName}
+                  onChange={(event) => setManualName(event.target.value)}
+                  placeholder="Correct name or leave blank"
+                  className="h-9 min-w-0 flex-1 text-sm"
+                  disabled={disabled}
+                />
+                <Button className="h-9 px-3 text-xs" onClick={saveManualName} disabled={disabled}>
+                  {busyAction === "save-name" ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {message ? <p className="mt-2 text-xs text-text-muted">{message}</p> : null}
+    </div>
+  );
 }
 
 export function ContactsPage() {
@@ -81,7 +225,6 @@ export function ContactsPage() {
   );
 
   const visibleContacts = useMemo(() => {
-    // Gather all WhatsApp account phone numbers (normalized and E164)
     const ownNumbers = new Set<string>();
     whatsappAccounts.forEach((wa) => {
       if (wa.phone_number) ownNumbers.add(wa.phone_number);
@@ -103,7 +246,6 @@ export function ContactsPage() {
         )
       : contacts;
 
-    // Exclude contacts whose number matches any WhatsApp account number
     filteredContacts = filteredContacts.filter(
       (contact) =>
         contact.primary_phone_e164 && ownNumbers.has(contact.primary_phone_e164)
@@ -113,7 +255,6 @@ export function ContactsPage() {
         : true
     );
 
-    // WhatsApp account filter (if contact has whatsapp_account_id or similar field)
     if (selectedWhatsAppAccountId) {
       filteredContacts = filteredContacts.filter((contact) => {
         return (
@@ -163,6 +304,12 @@ export function ContactsPage() {
     }
   }
 
+  async function refreshSelectedContact() {
+    if (!selectedContactId) return;
+    await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    await queryClient.invalidateQueries({ queryKey: ["contact", selectedContactId] });
+  }
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
       <Card elevated className="min-w-0">
@@ -189,7 +336,6 @@ export function ContactsPage() {
               </div>
             </div>
 
-            {/* WhatsApp Account Source Filter */}
             <div className="min-w-[200px] flex flex-col">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp Source</p>
               <Select
@@ -297,7 +443,7 @@ export function ContactsPage() {
                             <span className="flex h-full w-full items-center justify-center">{getContactInitials(contact.display_name)}</span>
                           )}
                         </div>
-                        <span className="min-w-0 truncate font-medium text-text">{contact.display_name ?? "Unknown"}</span>
+                        <span className="min-w-0 truncate font-medium text-text">{contact.display_name ?? contact.primary_phone_normalized ?? "Unknown"}</span>
                       </div>
                     </td>
                     <td className="truncate px-2.5 py-1.5" title={contact.primary_phone_normalized ?? undefined}>
@@ -387,11 +533,12 @@ export function ContactsPage() {
                 )}
               </div>
               <div>
-                <p className="text-lg font-semibold text-text">{selectedContact.display_name ?? "Unknown"}</p>
+                <p className="text-lg font-semibold text-text">{selectedContact.display_name ?? selectedContact.primary_phone_normalized ?? "Unknown"}</p>
                 <p className="text-sm text-text-muted">{selectedContact.primary_phone_normalized ?? "No normalized number yet"}</p>
                 {selectedContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{selectedContact.primary_phone_e164}</p> : null}
               </div>
             </div>
+            <CompactRepairTools contact={selectedContact} canWrite={canAssignContacts} onChanged={refreshSelectedContact} />
             <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
               <p>Contact ID: {selectedContact.id}</p>
               <p>
