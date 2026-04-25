@@ -79,19 +79,27 @@ export async function getMessages(request: Request, response: Response) {
 export async function sendWhatsAppMessage(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = sendSchema.parse(request.body);
+  const bodyOrganizationId =
+    typeof request.body?.organizationId === "string"
+      ? request.body.organizationId
+      : typeof request.body?.organization_id === "string"
+        ? request.body.organization_id
+        : "";
 
-  if (!auth.organizationId) {
+  const organizationId = auth.organizationId ?? bodyOrganizationId;
+
+  if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
   }
 
   const message = await sendMessageService.send({
     ...input,
-    organizationId: auth.organizationId,
+    organizationId,
     organizationUserId: auth.organizationUserId ?? null
   });
 
   await auditLogService.record(auth, {
-    organizationId: auth.organizationId,
+    organizationId,
     action: "message.sent",
     entityType: "message",
     entityId: message.id,
