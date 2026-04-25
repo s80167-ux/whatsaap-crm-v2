@@ -1,0 +1,16 @@
+.pipelineGraphDot {
+  background-color: var(--pipeline-dot-color, #ccc);
+}
+
+.pipelineBar {
+  width: var(--pipeline-bar-width, 0%);
+}
+
+.pipelineGradientBar {
+  width: var(--pipeline-bar-width, 0%);
+}
+
+.buttonNoShadow {
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}

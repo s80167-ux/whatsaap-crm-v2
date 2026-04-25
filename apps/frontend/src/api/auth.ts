@@ -15,7 +15,7 @@ export async function updateMyPassword(payload: { password: string }) {
   return apiPost<{ ok: true }>("/auth/me/password", payload);
 }
 
-export async function updateMyProfile(payload: { fullName?: string | null; avatarUrl?: string | null }) {
+export async function updateMyProfile(payload: { fullName?: string | null; avatarUrl?: string | null; phone?: string | null; address?: string | null }) {
   const response = await apiPatch<{ data: AuthProfile }>("/auth/me", payload);
   return response.data;
 }

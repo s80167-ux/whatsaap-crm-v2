@@ -1,5 +1,15 @@
 import { lazy, Suspense, type ReactElement } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
+
+function GlobalErrorElement() {
+  return (
+    <div className="global-error-element">
+      <h1 className="global-error-title">Something went wrong</h1>
+      <p className="global-error-message">The page you are looking for does not exist or an unexpected error occurred.</p>
+      <a href="/" className="global-error-link">Go to Dashboard</a>
+    </div>
+  );
+}
 import { ProtectedLayout } from "./layouts/ProtectedLayout";
 
 const DashboardLayout = lazy(() =>
@@ -16,6 +26,7 @@ const PlatformPage = lazy(() => import("./pages/PlatformPage").then((module) => 
 const ReportsPage = lazy(() => import("./pages/ReportsPage").then((module) => ({ default: module.ReportsPage })));
 const SalesPage = lazy(() => import("./pages/SalesPage").then((module) => ({ default: module.SalesPage })));
 const SetupPage = lazy(() => import("./pages/SetupPage").then((module) => ({ default: module.SetupPage })));
+const WhatsAppAccountDashboard = lazy(() => import("./pages/WhatsAppAccountDashboard").then((module) => ({ default: module.WhatsAppAccountDashboard })));
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
 );
@@ -35,11 +46,13 @@ export const router = createBrowserRouter([
     element: withRouteFallback(<LoginPage />)
   },
   {
-    element: <ProtectedLayout />,
+    element: <ProtectedLayout />, 
+    errorElement: <GlobalErrorElement />, // Global error boundary
     children: [
       {
         path: "/",
         element: withRouteFallback(<DashboardLayout />),
+        errorElement: <GlobalErrorElement />, // Dashboard-level error boundary
         children: [
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
           { index: true, element: <Navigate to="/inbox" replace /> },
@@ -48,7 +61,12 @@ export const router = createBrowserRouter([
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
           { path: "reports", element: withRouteFallback(<ReportsPage />) },
-          { path: "setup", element: withRouteFallback(<SetupPage />) },
+          {
+            path: "setup",
+            element: withRouteFallback(<SetupPage />)
+          },
+          { path: "setup/whatsapp-accounts", element: <Navigate to="/whatsapp-accounts" replace /> },
+          { path: "whatsapp-accounts", element: withRouteFallback(<WhatsAppAccountDashboard />) },
           { path: "super-admin-map", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/data-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },

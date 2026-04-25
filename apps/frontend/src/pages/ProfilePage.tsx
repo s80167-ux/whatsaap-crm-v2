@@ -6,7 +6,7 @@ import { Toast } from '../components/Toast';
 
 
 const ProfilePage: React.FC = () => {
-  const [profile, setProfile] = useState({ fullName: '', email: '', avatarUrl: null });
+  const [profile, setProfile] = useState({ fullName: '', email: '', avatarUrl: null, phone: '', address: '' });
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -23,7 +23,9 @@ const ProfilePage: React.FC = () => {
       .then((data) => setProfile({
         fullName: data.fullName || '',
         email: data.email,
-        avatarUrl: data.avatarUrl || null
+        avatarUrl: data.avatarUrl || null,
+        phone: data.phone || '',
+        address: data.address || ''
       }))
       .catch(() => setToast({ type: 'error', message: 'Failed to load profile.' }))
       .finally(() => setLoading(false));
@@ -32,7 +34,11 @@ const ProfilePage: React.FC = () => {
   const handleProfileSave = async () => {
     setLoading(true);
     try {
-      await updateMyProfile({ fullName: profile.fullName });
+      await updateMyProfile({
+        fullName: profile.fullName,
+        phone: profile.phone,
+        address: profile.address
+      });
       setToast({ type: 'success', message: 'Profile updated successfully.' });
       setEditMode(false);
     } catch {
@@ -101,6 +107,18 @@ const ProfilePage: React.FC = () => {
                 placeholder="Email Address"
                 value={profile.email}
                 disabled
+              />
+              <Input
+                placeholder="Phone Number"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                disabled={!editMode}
+              />
+              <Input
+                placeholder="Address"
+                value={profile.address}
+                onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                disabled={!editMode}
               />
             </div>
             {editMode && (

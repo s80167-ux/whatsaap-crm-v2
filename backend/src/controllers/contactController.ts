@@ -1,3 +1,24 @@
+import { ContactService } from "../services/contactService.js";
+const contactService = new ContactService();
+export async function mergeContacts(req: Request, res: Response) {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  const organizationId = req.auth.organizationId ?? String(req.body.organization_id || "");
+  if (!organizationId) {
+    return res.status(400).json({ error: "organization_id is required" });
+  }
+  const { sourceContactId, targetContactId } = z
+    .object({
+      sourceContactId: z.string().uuid(),
+      targetContactId: z.string().uuid()
+    })
+    .parse(req.body);
+  await withTransaction((client) =>
+    contactService.mergeContacts(client, organizationId, sourceContactId, targetContactId)
+  );
+  return res.status(200).json({ success: true });
+}
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { withTransaction } from "../config/database.js";

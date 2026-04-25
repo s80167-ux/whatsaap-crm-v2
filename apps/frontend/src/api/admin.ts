@@ -110,8 +110,16 @@ export async function fetchUsers(organizationId?: string | null) {
   const path = organizationId
     ? `/organizations/${organizationId}/users`
     : "/users";
-  const response = await apiGet<{ data: UserListApiRecord[] }>(path);
-  return response.data.map(mapUser);
+  try {
+    const response = await apiGet<{ data: UserListApiRecord[] }>(path);
+    return response.data.map(mapUser);
+  } catch (err: any) {
+    // If 404, treat as empty user list
+    if (err && err.status === 404) {
+      return [];
+    }
+    throw err;
+  }
 }
 
 export async function createUser(payload: {

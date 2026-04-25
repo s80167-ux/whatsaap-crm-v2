@@ -12,7 +12,8 @@ import {
   UserCircle,
   Users,
   Workflow,
-  X
+  X,
+  PlugZap
 } from "lucide-react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
@@ -139,7 +140,6 @@ export function DashboardLayout() {
     if (!isSuperAdmin) {
       return "";
     }
-
     try {
       return localStorage.getItem(SUPER_ADMIN_ORGANIZATION_KEY) ?? "";
     } catch {
@@ -158,6 +158,8 @@ export function DashboardLayout() {
   const [isProfileFormOpen, setIsProfileFormOpen] = useState(false);
   const [profileFullName, setProfileFullName] = useState(user?.fullName ?? "");
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
+  const [profilePhone, setProfilePhone] = useState(user?.phone ?? "");
+  const [profileAddress, setProfileAddress] = useState(user?.address ?? "");
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
@@ -175,8 +177,10 @@ export function DashboardLayout() {
     if (!isProfileFormOpen) {
       setProfileFullName(user?.fullName ?? "");
       setProfileAvatarUrl(user?.avatarUrl ?? null);
+      setProfilePhone(user?.phone ?? "");
+      setProfileAddress(user?.address ?? "");
     }
-  }, [isProfileFormOpen, user?.avatarUrl, user?.fullName]);
+  }, [isProfileFormOpen, user?.avatarUrl, user?.fullName, user?.phone, user?.address]);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -265,7 +269,9 @@ export function DashboardLayout() {
     try {
       const updatedProfile = await updateMyProfile({
         fullName: profileFullName.trim() || null,
-        avatarUrl: profileAvatarUrl
+        avatarUrl: profileAvatarUrl,
+        phone: profilePhone,
+        address: profileAddress
       });
 
       updateStoredUser(() => updatedProfile);
@@ -322,6 +328,12 @@ export function DashboardLayout() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
               <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
+              {user?.phone && (
+                <p className="mt-0.5 truncate text-xs text-text-muted">{user.phone}</p>
+              )}
+              {user?.address && (
+                <p className="mt-0.5 truncate text-xs text-text-muted">{user.address}</p>
+              )}
               <p className="mt-2 inline-flex border border-border bg-background-tint px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">
                 {user?.role ?? "user"}
               </p>
@@ -408,6 +420,20 @@ export function DashboardLayout() {
                 aria-label="Full name"
                 className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
               />
+              <Input
+                value={profilePhone}
+                onChange={(event) => setProfilePhone(event.target.value)}
+                placeholder="Phone number"
+                aria-label="Phone number"
+                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
+              />
+              <Input
+                value={profileAddress}
+                onChange={(event) => setProfileAddress(event.target.value)}
+                placeholder="Address"
+                aria-label="Address"
+                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
+              />
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>
                   Save profile
@@ -420,6 +446,8 @@ export function DashboardLayout() {
                     setIsProfileFormOpen(false);
                     setProfileFullName(user?.fullName ?? "");
                     setProfileAvatarUrl(user?.avatarUrl ?? null);
+                    setProfilePhone(user?.phone ?? "");
+                    setProfileAddress(user?.address ?? "");
                     setProfileNotice(null);
                   }}
                 >
@@ -542,7 +570,14 @@ export function DashboardLayout() {
                   { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
                 ]}
               />
-              <NavLinkItem to="/setup" icon={<Settings2 size={18} />} label="Setup" />
+              <SidebarNavGroup
+                icon={<Settings2 size={18} />}
+                label="Setup"
+                items={[
+                  { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
+                  { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
+                ]}
+              />
               {isSuperAdmin ? (
                 <SidebarNavGroup
                   icon={<Workflow size={18} />}

@@ -5,6 +5,8 @@ export interface AuthProfile {
   email: string;
   fullName: string | null;
   avatarUrl: string | null;
+  phone?: string | null;
+  address?: string | null;
   role: "super_admin" | "org_admin" | "manager" | "agent" | "user";
   permissionKeys: string[];
 }

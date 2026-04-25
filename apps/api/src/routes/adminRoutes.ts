@@ -13,8 +13,10 @@ import {
   replayRawEvents,
   reconnectWhatsAppAccount
 } from "../controllers/adminController.js";
+
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { requirePermission, requireRole } from "../middleware/authMiddleware.js";
+import { refreshContactIdentity, applyCanonicalOverride } from "../controllers/contactIdentityRepairController";
 
 export const adminRoutes = Router();
 
@@ -32,3 +34,15 @@ adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("o
 adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(deleteWhatsAppAccount));
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));
+
+// Contact Identity Repair Endpoints
+adminRoutes.post(
+  "/contacts/:contactId/refresh",
+  requirePermission("org.manage_contacts"),
+  asyncHandler(refreshContactIdentity)
+);
+adminRoutes.post(
+  "/contacts/:contactId/corrections/apply",
+  requirePermission("org.manage_contacts"),
+  asyncHandler(applyCanonicalOverride)
+);

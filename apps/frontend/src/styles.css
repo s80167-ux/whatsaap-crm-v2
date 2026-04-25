@@ -1,3 +1,35 @@
+/* Compact popup for 30% width */
+.popup-compact-30 {
+  width: 30vw !important;
+  min-width: 240px;
+  max-width: 380px;
+  padding: 0 !important;
+  border-radius: 14px !important;
+}
+/* User table column widths */
+.user-table-col-name { width: 20%; min-width: 120px; }
+.user-table-col-email { width: 20%; min-width: 120px; }
+.user-table-col-org { width: 16%; min-width: 100px; }
+.user-table-col-role { width: 12%; min-width: 80px; }
+.user-table-col-role-nosuper { width: 16%; min-width: 100px; }
+.user-table-col-status { width: 12%; min-width: 80px; }
+.user-table-col-actions { width: 20%; min-width: 140px; }
+/* GlobalErrorElement styles moved from inline */
+.global-error-element {
+  padding: 32px;
+  text-align: center;
+}
+.global-error-title {
+  font-size: 32px;
+  color: #d32f2f;
+}
+.global-error-message {
+  margin-top: 16px;
+}
+.global-error-link {
+  color: #1976d2;
+  text-decoration: underline;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -221,6 +253,7 @@ canvas {
     background:
       linear-gradient(180deg, rgba(2, 6, 23, 0.52), rgba(2, 6, 23, 0.72)),
       rgba(15, 23, 42, 0.56);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
     backdrop-filter: blur(14px) saturate(120%);
   }
 

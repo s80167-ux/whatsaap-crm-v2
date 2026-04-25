@@ -17,13 +17,13 @@ import {
   updateWhatsAppAccount
 } from "../api/admin";
 import { Button } from "../components/Button";
+import { PopupOverlay } from "../components/PopupOverlay";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
-import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
-import { useOrganizations, useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
+import { useOrganizations, useOrganizationUsers } from "../hooks/useAdmin";
 import { getStoredUser, updateStoredUser } from "../lib/auth";
-import type { OrganizationSummary, UserSummary, WhatsAppAccountSummary } from "../types/admin";
+import type { OrganizationSummary, UserSummary } from "../types/admin";
 
 function formatTimestamp(value?: string | null) {
   if (!value) {
@@ -107,10 +107,8 @@ export function SetupPage() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: users = [] } = useOrganizationUsers(activeOrganizationId);
-  const { data: accounts = [], isFetching: isRefreshingAccounts, refetch: refetchAccounts } = useWhatsAppAccounts(activeOrganizationId);
   const organizationPagination = usePanelPagination(organizations);
   const userPagination = usePanelPagination(users);
-  const accountPagination = usePanelPagination(accounts);
 
   const [organizationName, setOrganizationName] = useState("");
   const [organizationSlug, setOrganizationSlug] = useState("");
@@ -118,9 +116,9 @@ export function SetupPage() {
   const [userFullName, setUserFullName] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userRole, setUserRole] = useState<"org_admin" | "manager" | "agent" | "user" | "super_admin">("agent");
-  const [accountName, setAccountName] = useState("");
-  const [accountPhone, setAccountPhone] = useState("");
-  const [accountHistorySyncLookbackDays, setAccountHistorySyncLookbackDays] = useState(7);
+  const [showOrgPopup, setShowOrgPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
+  // WhatsApp account state moved to WhatsAppAccountDashboard
   const [editingOrganizationId, setEditingOrganizationId] = useState<string | null>(null);
   const [organizationEdit, setOrganizationEdit] = useState<{
     name: string;
@@ -137,13 +135,7 @@ export function SetupPage() {
   }>({ organizationId: "", fullName: "", avatarUrl: null, role: "agent", status: "active" });
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
-  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [accountEdit, setAccountEdit] = useState<{
-    organizationId: string;
-    name: string;
-    phoneNumber: string;
-    historySyncLookbackDays: number;
-  }>({ organizationId: "", name: "", phoneNumber: "", historySyncLookbackDays: 7 });
+  // WhatsApp account edit state moved to WhatsAppAccountDashboard
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const canCreateScopedRecords = !isSuperAdmin || Boolean(activeOrganizationId) || userRole === "super_admin";
@@ -252,29 +244,7 @@ export function SetupPage() {
     }
   }
 
-  async function handleCreateAccount(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await createWhatsAppAccount({
-        organizationId: activeOrganizationId,
-        name: accountName,
-        phoneNumber: accountPhone || null,
-        historySyncLookbackDays: accountHistorySyncLookbackDays
-      });
-      setAccountName("");
-      setAccountPhone("");
-      setAccountHistorySyncLookbackDays(7);
-      setNotice("WhatsApp account created and session initialization started.");
-      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create WhatsApp account");
-    } finally {
-      setIsWorking(false);
-    }
-  }
+  // WhatsApp account creation handler moved to WhatsAppAccountDashboard
 
   async function handleDeleteOrganization(organizationId: string, organizationName: string) {
     if (!window.confirm(`Delete organization "${organizationName}"?`)) {
@@ -422,85 +392,15 @@ export function SetupPage() {
     }
   }
 
-  async function handleDeleteAccount(accountId: string, label: string) {
-    if (!window.confirm(`Delete WhatsApp account "${label}"?`)) {
-      return;
-    }
+  // WhatsApp account delete handler moved to WhatsAppAccountDashboard
 
-    setIsWorking(true);
-    setNotice(null);
+  // WhatsApp account update handler moved to WhatsAppAccountDashboard
 
-    try {
-      await deleteWhatsAppAccount(accountId);
-      setNotice("WhatsApp account deleted.");
-      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to delete WhatsApp account");
-    } finally {
-      setIsWorking(false);
-    }
-  }
+  // WhatsApp account reconnect handler moved to WhatsAppAccountDashboard
 
-  async function handleUpdateAccount(event: React.FormEvent<HTMLFormElement>, accountId: string) {
-    event.preventDefault();
-    setIsWorking(true);
-    setNotice(null);
+  // WhatsApp account disconnect handler moved to WhatsAppAccountDashboard
 
-    try {
-      await updateWhatsAppAccount(accountId, {
-        organizationId: isSuperAdmin ? accountEdit.organizationId : activeOrganizationId,
-        name: accountEdit.name,
-        phoneNumber: accountEdit.phoneNumber || null,
-        historySyncLookbackDays: accountEdit.historySyncLookbackDays
-      });
-      setEditingAccountId(null);
-      setNotice("WhatsApp account updated.");
-      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to update WhatsApp account");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleReconnectAccount(accountId: string, label: string) {
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await reconnectWhatsAppAccount(accountId);
-      setNotice(`Reconnect requested for "${label}".`);
-      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to reconnect WhatsApp account");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleDisconnectAccount(accountId: string, label: string) {
-    if (!window.confirm(`Disconnect WhatsApp account "${label}"?`)) {
-      return;
-    }
-
-    setIsWorking(true);
-    setNotice(null);
-
-    try {
-      await disconnectWhatsAppAccount(accountId);
-      setNotice(`Disconnect requested for "${label}".`);
-      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to disconnect WhatsApp account");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleRefreshAccounts() {
-    setNotice(null);
-    await refetchAccounts();
-  }
+  // WhatsApp account refresh handler moved to WhatsAppAccountDashboard
 
   return (
     <section className="space-y-6">
@@ -513,389 +413,296 @@ export function SetupPage() {
         {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="space-y-6">
         {isSuperAdmin ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
-            <Card elevated>
-              <h3 className="text-lg font-semibold text-text">Active organization</h3>
-              <div className="mt-4">
-                <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)}>
-                  <option value="">All organizations</option>
-                  {organizations.map((organization) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name}
-                    </option>
-                  ))}
-                </Select>
+            <Card elevated className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold text-text">Organizations</h3>
+                <Button
+                  variant="ghost"
+                  className="z-10"
+                  onClick={() => setShowOrgPopup(true)}
+                >
+                  Add Organization
+                </Button>
               </div>
+              <div className="overflow-hidden rounded-2xl border border-border bg-white/80">
+                <table className="min-w-full bg-white/80">
+                  <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+                    <tr>
+                      <th className="px-5 py-4">Name</th>
+                      <th className="px-5 py-4">Slug</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Created</th>
+                      <th className="px-5 py-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {organizationPagination.visibleItems.map((organization) => (
+                      <tr key={organization.id} className="table-row text-sm text-text-muted">
+                        {editingOrganizationId === organization.id ? (
+                          <td colSpan={5} className="bg-background-tint">
+                            <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
+                              <Input
+                                value={organizationEdit.name}
+                                onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, name: event.target.value }))}
+                                placeholder="Organization name"
+                                required
+                              />
+                              <Input
+                                value={organizationEdit.slug}
+                                onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, slug: event.target.value }))}
+                                placeholder="Slug"
+                              />
+                              <Select
+                                value={organizationEdit.status}
+                                onChange={(event) => setOrganizationEdit((draft) => ({
+                                  ...draft,
+                                  status: event.target.value as OrganizationSummary["status"]
+                                }))}
+                              >
+                                <option value="active">active</option>
+                                <option value="trial">trial</option>
+                                <option value="suspended">suspended</option>
+                                <option value="closed">closed</option>
+                              </Select>
+                              <div className="flex gap-2 mt-2">
+                                <Button type="submit" className="flex-1" disabled={isWorking}>
+                                  Save changes
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  className="flex-1"
+                                  disabled={isWorking}
+                                  onClick={() => setEditingOrganizationId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </td>
+                        ) : (
+                          <>
+                            <td className="px-5 py-4 font-medium text-text">{organization.name}</td>
+                            <td className="px-5 py-4">{organization.slug}</td>
+                            <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{organization.status}</td>
+                            <td className="px-5 py-4">{new Date(organization.created_at).toLocaleDateString()}</td>
+                            <td className="px-5 py-4">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="secondary"
+                                  className=""
+                                  disabled={isWorking}
+                                  onClick={() => beginEditOrganization(organization)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  className="text-coral"
+                                  disabled={isWorking}
+                                  onClick={() => handleDeleteOrganization(organization.id, organization.name)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <PanelPagination
+                className="mt-4"
+                page={organizationPagination.page}
+                pageCount={organizationPagination.pageCount}
+                totalItems={organizationPagination.totalItems}
+                onPageChange={organizationPagination.setPage}
+              />
             </Card>
           </motion.div>
         ) : null}
 
-        {isSuperAdmin ? (
-          <motion.form onSubmit={handleCreateOrganization} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}>
-            <Card elevated>
-              <h3 className="text-lg font-semibold text-text">Create organization</h3>
-              <div className="mt-4 space-y-3">
-                <Input
-                  value={organizationName}
-                  onChange={(event) => setOrganizationName(event.target.value)}
-                  placeholder="Organization name"
-                  required
-                />
-                <Input
-                  value={organizationSlug}
-                  onChange={(event) => setOrganizationSlug(event.target.value)}
-                  placeholder="Slug (optional)"
-                />
-                <Button type="submit" disabled={isWorking}>
-                  Create organization
-                </Button>
-              </div>
-            </Card>
-          </motion.form>
-        ) : null}
-
-        <motion.form onSubmit={handleCreateUser} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26 }}>
-          <Card elevated>
-            <h3 className="text-lg font-semibold text-text">Create user</h3>
-            <div className="mt-4 space-y-3">
-              {isSuperAdmin ? (
-                <p className="rounded-lg border border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
-                  {activeOrganizationId
-                    ? "New user will be created in the selected organization."
-                    : "Select an organization above before creating a non-super-admin user."}
-                </p>
-              ) : null}
-              <Input
-                value={userEmail}
-                onChange={(event) => setUserEmail(event.target.value)}
-                placeholder="user@company.com"
-                required
-              />
-              <Input
-                value={userFullName}
-                onChange={(event) => setUserFullName(event.target.value)}
-                placeholder="Full name"
-              />
-              <Input
-                type="password"
-                value={userPassword}
-                onChange={(event) => setUserPassword(event.target.value)}
-                placeholder="Temporary password"
-                required
-              />
-              <Select
-                value={userRole}
-                onChange={(event) => setUserRole(event.target.value as "org_admin" | "manager" | "agent" | "user" | "super_admin")}
-              >
-                {isSuperAdmin ? <option value="super_admin">super_admin</option> : null}
-                <option value="org_admin">org_admin</option>
-                <option value="manager">manager</option>
-                <option value="agent">agent</option>
-                <option value="user">user</option>
-              </Select>
-              <Button type="submit" disabled={isWorking || !canCreateScopedRecords}>
-                Create user
-              </Button>
-            </div>
-          </Card>
-        </motion.form>
-
-        <motion.form onSubmit={handleCreateAccount} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
-          <Card elevated>
-            <h3 className="text-lg font-semibold text-text">Register WhatsApp account</h3>
-            <div className="mt-4 space-y-3">
-              {isSuperAdmin ? (
-                <p className="rounded-lg border border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
-                  {activeOrganizationId
-                    ? "WhatsApp account will be attached to the selected organization."
-                    : "Select an organization above before creating a WhatsApp account."}
-                </p>
-              ) : null}
-              <Input
-                value={accountName}
-                onChange={(event) => setAccountName(event.target.value)}
-                placeholder="Sales line"
-                required
-              />
-              <Input
-                value={accountPhone}
-                onChange={(event) => setAccountPhone(event.target.value)}
-                placeholder="+60123456789"
-              />
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sync previous messages</p>
-                <Select
-                  value={String(accountHistorySyncLookbackDays)}
-                  onChange={(event) => setAccountHistorySyncLookbackDays(Number(event.target.value))}
-                >
-                  {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
-                    <option key={days} value={days}>
-                      {formatHistorySyncWindow(days)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <Button type="submit" disabled={isWorking || (isSuperAdmin && !activeOrganizationId)}>
-                Create account
-              </Button>
-            </div>
-          </Card>
-        </motion.form>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        {isSuperAdmin ? (
-          <Card elevated>
-            <h3 className="text-lg font-semibold text-text">Organizations</h3>
-            <div className="mt-4 space-y-3 text-sm text-text-muted">
-              {organizationPagination.visibleItems.map((organization) => (
-                <div key={organization.id} className="rounded-lg border border-border bg-background-tint p-4">
-                  {editingOrganizationId === organization.id ? (
-                    <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
-                      <Input
-                        value={organizationEdit.name}
-                        onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, name: event.target.value }))}
-                        placeholder="Organization name"
-                        required
-                      />
-                      <Input
-                        value={organizationEdit.slug}
-                        onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, slug: event.target.value }))}
-                        placeholder="Slug"
-                      />
-                      <Select
-                        value={organizationEdit.status}
-                        onChange={(event) => setOrganizationEdit((draft) => ({
-                          ...draft,
-                          status: event.target.value as OrganizationSummary["status"]
-                        }))}
-                      >
-                        <option value="active">active</option>
-                        <option value="trial">trial</option>
-                        <option value="suspended">suspended</option>
-                        <option value="closed">closed</option>
-                      </Select>
-                      <div className="flex gap-2">
-                        <Button type="submit" className="flex-1" disabled={isWorking}>
-                          Save changes
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="flex-1"
-                          disabled={isWorking}
-                          onClick={() => setEditingOrganizationId(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <p className="font-medium text-text">{organization.name}</p>
-                      <p className="mt-1">{organization.slug}</p>
-                      <p className="mt-1 uppercase tracking-[0.16em] text-text-soft">{organization.status}</p>
-                      <div className="mt-3 space-y-2">
-                        <Button
-                          variant="secondary"
-                          className="w-full"
-                          disabled={isWorking}
-                          onClick={() => beginEditOrganization(organization)}
-                        >
-                          Edit organization
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="w-full text-coral"
-                          disabled={isWorking}
-                          onClick={() => handleDeleteOrganization(organization.id, organization.name)}
-                        >
-                          Delete organization
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-            <PanelPagination
-              className="mt-4"
-              page={organizationPagination.page}
-              pageCount={organizationPagination.pageCount}
-              totalItems={organizationPagination.totalItems}
-              onPageChange={organizationPagination.setPage}
-            />
-          </Card>
-        ) : null}
-
         <Card elevated>
-          <h3 className="text-lg font-semibold text-text">Users</h3>
-          <div className="mt-4 space-y-3 text-sm text-text-muted">
-            {userPagination.visibleItems.map((user) => (
-              <div key={user.id} className="rounded-lg border border-border bg-background-tint p-4">
-                {editingUserId === user.id ? (
-                  <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
-                    <p className="text-xs uppercase tracking-[0.16em] text-text-soft">{user.email}</p>
-                    <div className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
-                      <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Profile picture</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-border bg-background-tint px-3 py-2 text-xs font-semibold text-text transition hover:border-primary/30 hover:text-primary">
-                            Upload image
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/gif"
-                              className="sr-only"
-                              onChange={handleProfilePictureChange}
-                            />
-                          </label>
-                          {userEdit.avatarUrl ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="px-3 py-2 text-xs"
-                              disabled={isWorking}
-                              onClick={() => setUserEdit((draft) => ({ ...draft, avatarUrl: null }))}
-                            >
-                              Remove
-                            </Button>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
-                      </div>
-                    </div>
-                    {isSuperAdmin ? (
-                      <Select
-                        value={userEdit.organizationId}
-                        onChange={(event) => setUserEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                        required
-                      >
-                        {organizations.map((organization) => (
-                          <option key={organization.id} value={organization.id}>
-                            {organization.name}
-                          </option>
-                        ))}
-                      </Select>
-                    ) : null}
-                    <Input
-                      value={userEdit.fullName}
-                      onChange={(event) => setUserEdit((draft) => ({ ...draft, fullName: event.target.value }))}
-                      placeholder="Full name"
-                    />
-                    <Select
-                      value={userEdit.role}
-                      onChange={(event) => setUserEdit((draft) => ({
-                        ...draft,
-                        role: event.target.value as Exclude<UserSummary["role"], "super_admin">
-                      }))}
-                    >
-                      <option value="org_admin">org_admin</option>
-                      <option value="manager">manager</option>
-                      <option value="agent">agent</option>
-                      <option value="user">user</option>
-                    </Select>
-                    <Select
-                      value={userEdit.status}
-                      onChange={(event) => setUserEdit((draft) => ({
-                        ...draft,
-                        status: event.target.value as UserSummary["status"]
-                      }))}
-                    >
-                      <option value="active">active</option>
-                      <option value="invited">invited</option>
-                    </Select>
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1" disabled={isWorking || (isSuperAdmin && !userEdit.organizationId)}>
-                        Save changes
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={isWorking}
-                        onClick={() => setEditingUserId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-text">{user.full_name ?? user.email}</p>
-                        <p className="mt-1 truncate">{user.email}</p>
-                      </div>
-                    </div>
-                    {isSuperAdmin ? <p className="mt-1">{getOrganizationName(user.organization_id)}</p> : null}
-                    <p className="mt-1">{user.role}</p>
-                    <p className="mt-1 uppercase tracking-[0.16em] text-text-soft">{user.status}</p>
-                    <div className="mt-3 space-y-2">
-                      <Button
-                        variant="secondary"
-                        className="w-full"
-                        disabled={isWorking || user.role === "super_admin"}
-                        onClick={() => beginEditUser(user)}
-                      >
-                        Edit user
-                      </Button>
-                      {canResetManagedUser(user) ? (
-                        resetPasswordUserId === user.id ? (
-                          <form className="space-y-2" onSubmit={(event) => handleResetUserPassword(event, user)}>
-                            <Input
-                              type="password"
-                              value={resetPassword}
-                              onChange={(event) => setResetPassword(event.target.value)}
-                              placeholder="New password"
-                              minLength={8}
-                              required
-                            />
-                            <div className="flex gap-2">
-                              <Button type="submit" className="flex-1" disabled={isWorking}>
-                                Reset
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                className="flex-1"
-                                disabled={isWorking}
-                                onClick={() => {
-                                  setResetPasswordUserId(null);
-                                  setResetPassword("");
-                                }}
-                              >
-                                Cancel
-                              </Button>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-text">Users</h3>
+            <Button variant="ghost" className="z-10" onClick={() => setShowUserPopup(true)}>
+              Add User
+            </Button>
+          </div>
+          <div className="rounded-xl border border-border bg-white/90">
+            <table className="w-full text-xs align-middle table-fixed">
+              <colgroup>
+                <col className="user-table-col-name" />
+                <col className="user-table-col-email" />
+                {isSuperAdmin ? <col className="user-table-col-org" /> : null}
+                <col className={isSuperAdmin ? "user-table-col-role" : "user-table-col-role-nosuper"} />
+                <col className="user-table-col-status" />
+                <col className="user-table-col-actions" />
+              </colgroup>
+              <thead className="bg-background-tint text-left font-semibold text-[11px] uppercase tracking-[0.15em] text-text-soft">
+                <tr>
+                  <th className="px-3 py-2 font-semibold truncate">Name</th>
+                  <th className="px-3 py-2 font-semibold truncate">Email</th>
+                  {isSuperAdmin && <th className="px-3 py-2 font-semibold truncate">Organization</th>}
+                  <th className="px-3 py-2 font-semibold truncate">Role</th>
+                  <th className="px-3 py-2 font-semibold truncate">Status</th>
+                  <th className="px-3 py-2 font-semibold truncate">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userPagination.visibleItems.map((user) => (
+                  <tr key={user.id} className="border-b border-border last:border-0 text-[13px] text-text">
+                    {editingUserId === user.id ? (
+                      <td colSpan={isSuperAdmin ? 6 : 5} className="bg-background-tint">
+                        <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
+                          <div className="flex items-center gap-3">
+                            <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
+                            <div className="min-w-0 flex-1">
+                              <Input
+                                value={userEdit.fullName}
+                                onChange={(event) => setUserEdit((draft) => ({ ...draft, fullName: event.target.value }))}
+                                placeholder="Full name"
+                              />
+                              <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
                             </div>
-                          </form>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            className="w-full"
-                            disabled={isWorking}
-                            onClick={() => {
-                              setResetPasswordUserId(user.id);
-                              setResetPassword("");
-                            }}
+                          </div>
+                          {isSuperAdmin ? (
+                            <Select
+                              value={userEdit.organizationId}
+                              onChange={(event) => setUserEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                              required
+                            >
+                              {organizations.map((organization) => (
+                                <option key={organization.id} value={organization.id}>
+                                  {organization.name}
+                                </option>
+                              ))}
+                            </Select>
+                          ) : null}
+                          <Select
+                            value={userEdit.role}
+                            onChange={(event) => setUserEdit((draft) => ({
+                              ...draft,
+                              role: event.target.value as Exclude<UserSummary["role"], "super_admin">
+                            }))}
                           >
-                            Reset password
-                          </Button>
-                        )
-                      ) : null}
-                      <Button
-                        variant="secondary"
-                        className="w-full text-coral"
-                        disabled={isWorking}
-                        onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
-                      >
-                        Delete user
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+                            <option value="org_admin">org_admin</option>
+                            <option value="manager">manager</option>
+                            <option value="agent">agent</option>
+                            <option value="user">user</option>
+                          </Select>
+                          <Select
+                            value={userEdit.status}
+                            onChange={(event) => setUserEdit((draft) => ({
+                              ...draft,
+                              status: event.target.value as UserSummary["status"]
+                            }))}
+                          >
+                            <option value="active">active</option>
+                            <option value="invited">invited</option>
+                          </Select>
+                          <div className="flex gap-2 mt-2">
+                            <Button type="submit" className="flex-1" disabled={isWorking || (isSuperAdmin && !userEdit.organizationId)}>
+                              Save changes
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              className="flex-1"
+                              disabled={isWorking}
+                              onClick={() => setEditingUserId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="px-3 py-2 font-medium text-text truncate">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
+                            <div className="min-w-0">
+                              <span className="truncate font-medium text-text text-[13px]">{user.full_name ?? user.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 truncate">{user.email}</td>
+                        {isSuperAdmin && <td className="px-3 py-2 truncate">{getOrganizationName(user.organization_id)}</td>}
+                        <td className="px-3 py-2 truncate">{user.role}</td>
+                        <td className="px-3 py-2 uppercase tracking-[0.14em] text-text-soft truncate">{user.status}</td>
+                        <td className="px-3 py-2 truncate">
+                          <div className="flex gap-1 flex-row flex-nowrap items-center">
+                            <Button
+                              variant="ghost"
+                              className="px-1 py-0.5 text-xs min-w-0"
+                              disabled={isWorking || user.role === "super_admin"}
+                              onClick={() => beginEditUser(user)}
+                            >
+                              Edit
+                            </Button>
+                            {canResetManagedUser(user) ? (
+                              resetPasswordUserId === user.id ? (
+                                <form className="space-y-1 flex-1" onSubmit={(event) => handleResetUserPassword(event, user)}>
+                                  <Input
+                                    type="password"
+                                    value={resetPassword}
+                                    onChange={(event) => setResetPassword(event.target.value)}
+                                    placeholder="New password"
+                                    minLength={8}
+                                    required
+                                    className="px-2 py-1 text-xs"
+                                  />
+                                  <div className="flex gap-1 mt-1">
+                                    <Button type="submit" className="flex-1 px-2 py-1 text-xs" disabled={isWorking}>
+                                      Reset
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      className="flex-1 px-2 py-1 text-xs"
+                                      disabled={isWorking}
+                                      onClick={() => {
+                                        setResetPasswordUserId(null);
+                                        setResetPassword("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  className="px-1 py-0.5 text-xs min-w-0"
+                                  disabled={isWorking}
+                                  onClick={() => {
+                                    setResetPasswordUserId(user.id);
+                                    setResetPassword("");
+                                  }}
+                                >
+                                  Reset
+                                </Button>
+                              )
+                            ) : null}
+                            <Button
+                              variant="ghost"
+                              className="px-1 py-0.5 text-xs text-coral min-w-0"
+                              disabled={isWorking}
+                              onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <PanelPagination
             className="mt-4"
@@ -905,172 +712,85 @@ export function SetupPage() {
             onPageChange={userPagination.setPage}
           />
         </Card>
+      </div>
 
-        <Card elevated className="min-w-0 xl:col-span-3">
-          <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
-            <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
-            <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
-              {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
+      {/* Popups should be outside the Cards to avoid JSX nesting issues */}
+      <PopupOverlay open={showOrgPopup} onClose={() => setShowOrgPopup(false)} title="Create organization" panelClassName="popup-compact-30">
+        <form onSubmit={handleCreateOrganization}>
+          <div className="space-y-2 p-2">
+            <Input
+              value={organizationName}
+              onChange={(event) => setOrganizationName(event.target.value)}
+              placeholder="Organization name"
+              required
+              className="text-sm px-2 py-1"
+            />
+            <Input
+              value={organizationSlug}
+              onChange={(event) => setOrganizationSlug(event.target.value)}
+              placeholder="Slug (optional)"
+              className="text-sm px-2 py-1"
+            />
+            <Button type="submit" disabled={isWorking} className="w-full text-sm px-2 py-1">
+              Create organization
             </Button>
           </div>
-          <div className="mt-4 overflow-hidden border border-border bg-white text-sm shadow-soft">
-            <div className="hidden grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] gap-3 border-b border-border bg-background-tint px-4 py-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-text-soft lg:grid">
-              <p>Device Name</p>
-              <p>Status</p>
-              <p>Phone Number</p>
-              <p>Device Info</p>
-              <p>Actions</p>
-            </div>
-            <div className="divide-y divide-border">
-              {accountPagination.visibleItems.map((account) => {
-                const statusTone = getConnectionTone(account.status);
-                const connected = isConnectedAccount(account.status);
-                const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
+        </form>
+      </PopupOverlay>
 
-                return (
-                  <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
-                    {editingAccountId === account.id ? (
-                      <form className="space-y-3 lg:col-span-5" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
-                        {isSuperAdmin ? (
-                          <Select
-                            value={accountEdit.organizationId}
-                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                            required
-                          >
-                            {organizations.map((organization) => (
-                              <option key={organization.id} value={organization.id}>
-                                {organization.name}
-                              </option>
-                            ))}
-                          </Select>
-                        ) : null}
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <Input
-                            value={accountEdit.name}
-                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}
-                            placeholder="Account name"
-                            required
-                          />
-                          <Input
-                            value={accountEdit.phoneNumber}
-                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, phoneNumber: event.target.value }))}
-                            placeholder="+60123456789"
-                          />
-                          <Select
-                            value={String(accountEdit.historySyncLookbackDays)}
-                            onChange={(event) => setAccountEdit((draft) => ({ ...draft, historySyncLookbackDays: Number(event.target.value) }))}
-                          >
-                            {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
-                              <option key={days} value={days}>
-                                {formatHistorySyncWindow(days)}
-                              </option>
-                            ))}
-                          </Select>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button type="submit" className="min-w-32" disabled={isWorking || (isSuperAdmin && !accountEdit.organizationId)}>
-                            Save changes
-                          </Button>
-                          <Button variant="secondary" className="min-w-32" disabled={isWorking} onClick={() => setEditingAccountId(null)}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <div>
-                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Name</p>
-                          <p className="break-words font-semibold leading-5 text-text">{account.name}</p>
-                          {isSuperAdmin ? <p className="mt-1 text-xs text-text-soft">{getOrganizationName(account.organization_id)}</p> : null}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Status</p>
-                          <span className={`inline-flex min-w-0 items-center gap-2 font-medium ${statusTone.text}`}>
-                            <span className={`h-3 w-3 shrink-0 rounded-full ${statusTone.dot}`} />
-                            {formatConnectionStatus(account.status)}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Phone Number</p>
-                          <p className="truncate font-mono text-sm tracking-wide text-text" title={phoneNumber}>
-                            {phoneNumber}
-                          </p>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Info</p>
-                          <div className="flex flex-wrap gap-2">
-                            <span title={`Last connected: ${formatTimestamp(account.last_connected_at)}. Last disconnected: ${formatTimestamp(account.last_disconnected_at)}.`} className="inline-flex items-center gap-1.5 bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
-                              <Info className="h-3.5 w-3.5" />
-                              Device Info
-                            </span>
-                            <span title={`Health score: ${account.health_score ?? "--"}`} className="inline-flex items-center gap-1.5 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                              <PlugZap className="h-3.5 w-3.5" />
-                              Readiness
-                            </span>
-                            <span title={`History sync: ${formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}`} className="inline-flex items-center gap-1.5 bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
-                              <Zap className="h-3.5 w-3.5" />
-                              Webhooks
-                            </span>
-                          </div>
-                          {account.status?.toLowerCase() === "qr_required" ? (
-                            <div className="mt-4">
-                              <WhatsAppQrDisplay accountId={account.id} />
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Actions</p>
-                          <div className="flex flex-wrap gap-2">
-                            {connected ? (
-                              <Button
-                                className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
-                                disabled={isWorking}
-                                onClick={() => handleDisconnectAccount(account.id, account.name)}
-                              >
-                                <Unplug className="h-3.5 w-3.5" />
-                                Disconnect
-                              </Button>
-                            ) : (
-                              <Button
-                                className="gap-1.5 bg-[#78bd2b] px-3 py-2 text-xs text-white hover:bg-[#64a421]"
-                                disabled={isWorking}
-                                onClick={() => handleReconnectAccount(account.id, account.name)}
-                              >
-                                <Link2 className="h-3.5 w-3.5" />
-                                Pair as New Device
-                              </Button>
-                            )}
-                            <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
-                              <RefreshCw className="h-3.5 w-3.5" />
-                              Edit
-                            </Button>
-                            <Button
-                              className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
-                              disabled={isWorking}
-                              onClick={() => handleDeleteAccount(account.id, account.name)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+      <PopupOverlay open={showUserPopup} onClose={() => setShowUserPopup(false)} title="Create user" panelClassName="popup-compact-30">
+        <form onSubmit={handleCreateUser}>
+          <div className="space-y-2 p-2">
+            {isSuperAdmin ? (
+              <p className="rounded-lg border border-border bg-background-tint px-2 py-2 text-xs leading-5 text-text-muted">
+                {activeOrganizationId
+                  ? "New user will be created in the selected organization."
+                  : "Select an organization above before creating a non-super-admin user."}
+              </p>
+            ) : null}
+            <Input
+              value={userEmail}
+              onChange={(event) => setUserEmail(event.target.value)}
+              placeholder="user@company.com"
+              required
+              className="text-sm px-2 py-1"
+            />
+            <Input
+              value={userFullName}
+              onChange={(event) => setUserFullName(event.target.value)}
+              placeholder="Full name"
+              className="text-sm px-2 py-1"
+            />
+            <Input
+              type="password"
+              value={userPassword}
+              onChange={(event) => setUserPassword(event.target.value)}
+              placeholder="Temporary password"
+              required
+              className="text-sm px-2 py-1"
+            />
+            <Select
+              value={userRole}
+              onChange={(event) => setUserRole(event.target.value as "org_admin" | "manager" | "agent" | "user" | "super_admin")}
+              className="text-sm px-2 py-1"
+            >
+              {isSuperAdmin ? <option value="super_admin">super_admin</option> : null}
+              <option value="org_admin">org_admin</option>
+              <option value="manager">manager</option>
+              <option value="agent">agent</option>
+              <option value="user">user</option>
+            </Select>
+            <Button type="submit" disabled={isWorking || !canCreateScopedRecords} className="w-full text-sm px-2 py-1">
+              Create user
+            </Button>
           </div>
-          <PanelPagination
-            className="mt-4"
-            page={accountPagination.page}
-            pageCount={accountPagination.pageCount}
-            totalItems={accountPagination.totalItems}
-            onPageChange={accountPagination.setPage}
-          />
-        </Card>
-      </div>
+        </form>
+      </PopupOverlay>
+
+
+
+        {/* WhatsApp account list moved to WhatsAppAccountDashboard */}
+      {/* End of .space-y-6 div */}
 
     </section>
   );

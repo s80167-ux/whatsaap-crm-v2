@@ -3,6 +3,31 @@ import { AlertCircle, ChevronDown, Medal, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
+import styles from "./dashboardPage.module.css";
+
+// Helper to map width percent to Tailwind width class
+function getWidthClass(percent: number) {
+  if (percent >= 95) return "w-full";
+  if (percent >= 80) return "w-5/6";
+  if (percent >= 66) return "w-4/6";
+  if (percent >= 50) return "w-1/2";
+  if (percent >= 33) return "w-1/3";
+  if (percent >= 25) return "w-1/4";
+  if (percent >= 12) return "w-1/6";
+  if (percent > 0) return "w-1/12";
+  return "w-0";
+}
+
+// Helper to map color to a set of Tailwind bg classes (customize as needed)
+function getDotColorClass(color: string) {
+  switch (color) {
+    case "#22c55e": return "bg-emerald-500";
+    case "#f59e42": return "bg-orange-400";
+    case "#ef4444": return "bg-red-500";
+    case "#3b82f6": return "bg-blue-500";
+    default: return "bg-gray-300";
+  }
+}
 import { Card } from "../components/Card";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
@@ -397,7 +422,9 @@ function DashboardGraphPanel({
                 return (
                   <div key={stage.status} className="flex items-center justify-between gap-2 rounded-xl bg-background-tint px-3 py-1.5">
                     <span className="inline-flex items-center gap-2 text-xs font-medium text-text">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getPipelineGraphColor(stage.status) }} />
+                      <span
+                        className={`h-2 w-2 rounded-full ${getDotColorClass(getPipelineGraphColor(stage.status))}`}
+                      />
                       {formatPipelineStatus(stage.status)}
                     </span>
                     <span className="text-xs font-semibold text-text">{percent}%</span>
@@ -424,7 +451,9 @@ function DashboardGraphPanel({
                     <span className="text-text-muted">{stage.count} orders, {share}%</span>
                   </div>
                   <div className="h-6 overflow-hidden rounded-full bg-background-tint">
-                    <div className={`h-full rounded-full ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
+                    <div
+                      className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
+                    />
                   </div>
                 </div>
               );
@@ -446,7 +475,9 @@ function DashboardGraphPanel({
                     <span className="font-semibold text-text">{formatCompactCurrency(value)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-background-tint">
-                    <div className={`h-full rounded-full ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
+                    <div
+                      className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
+                    />
                   </div>
                 </div>
               );
@@ -468,7 +499,9 @@ function DashboardGraphPanel({
                       <span className="font-semibold text-text">{winRate}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-background-tint">
-                      <div className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500" style={{ width: `${Math.max(winRate, winRate > 0 ? 8 : 2)}%` }} />
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                      />
                     </div>
                   </div>
                 );
@@ -535,7 +568,9 @@ function PipelineDonutGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"]
             return (
               <div key={stage.status} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background-tint px-3 py-2">
                 <span className="inline-flex items-center gap-2 text-sm font-medium text-text">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getPipelineGraphColor(stage.status) }} />
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${getDotColorClass(getPipelineGraphColor(stage.status))}`}
+                  />
                   {formatPipelineStatus(stage.status)}
                 </span>
                 <span className="text-sm font-semibold text-text">{percent}%</span>
@@ -572,7 +607,7 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
               <div className="mt-3 h-9 overflow-hidden rounded-full bg-background-tint">
                 <div
                   className={`flex h-full items-center justify-end rounded-full px-3 text-xs font-semibold text-white ${getPipelineBarTone(stage.status)}`}
-                  style={{ width: `${width}%` }}
+                  className={getWidthClass(width)}
                 >
                   {stage.count}
                 </div>
@@ -615,7 +650,9 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
                   </div>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-white">
-                  <div className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500" style={{ width: `${Math.max(winRate, winRate > 0 ? 8 : 2)}%` }} />
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                  />
                 </div>
                 <p className="text-right text-lg font-semibold text-text">{winRate}%</p>
               </div>
@@ -720,7 +757,9 @@ function PipelineAnalysis({ pipeline }: { pipeline: SalesDashboard["pipeline"] }
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(value)}</p>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-background-tint">
-                <div className={`h-full rounded-full ${getPipelineBarTone(stage.status)}`} style={{ width: `${Math.max(percent, value > 0 ? 8 : 2)}%` }} />
+                <div
+                  className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(Math.max(percent, value > 0 ? 8 : 2))}`}
+                />
               </div>
             </div>
           );
@@ -909,7 +948,9 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(wonValue)}</p>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max((wonValue / maxWonValue) * 100, wonValue > 0 ? 8 : 2)}%` }} />
+                <div
+                  className={`h-full rounded-full bg-primary ${getWidthClass(Math.max((wonValue / maxWonValue) * 100, wonValue > 0 ? 8 : 2))}`}
+                />
               </div>
             </div>
           );
