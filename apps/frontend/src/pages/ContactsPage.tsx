@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown } from "lucide-react";
-import { assignContact, updateContact } from "../api/crm";
+import { assignContact } from "../api/crm";
+import { apiPatch } from "../lib/http";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
@@ -27,6 +28,12 @@ function getContactInitials(name: string | null) {
 
 function getContactLabel(contact: Contact) {
   return contact.display_name ?? contact.primary_phone_normalized ?? contact.primary_phone_e164 ?? "";
+}
+
+async function updateContactDisplayName(contactId: string, displayName: string | null) {
+  return apiPatch<{ data: Contact }>(`/contacts/${contactId}`, {
+    displayName
+  });
 }
 
 function getPrimarySourceLabel(contact: Contact) {
@@ -81,13 +88,13 @@ function CompactRepairTools({
 
   const clearCanonicalName = () =>
     runAction("clear-name", async () => {
-      await updateContact({ contactId: contact.id, displayName: null });
+      await updateContactDisplayName(contact.id, null);
     });
 
   const saveManualName = () =>
     runAction("save-name", async () => {
       const trimmed = manualName.trim();
-      await updateContact({ contactId: contact.id, displayName: trimmed || null });
+      await updateContactDisplayName(contact.id, trimmed || null);
     });
 
   const refreshDiagnosis = () =>
