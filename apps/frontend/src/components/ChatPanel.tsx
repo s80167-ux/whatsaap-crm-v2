@@ -226,13 +226,14 @@ export function ChatPanel({
     setSendNotice(null);
     try {
       await sendMessage({
-        whatsappAccountId: conversation.whatsapp_account_id,
-        conversationId: conversation.id,
-        quickReplyTemplateId: selectedQuickReplyTemplateId,
-        replyToMessageId: replyDraft?.messageId ?? null,
-        text: text.trim() || undefined,
-        attachment
-      });
+  whatsappAccountId: conversation.whatsapp_account_id,
+  conversationId: conversation.id,
+  organizationId: organizationId, // 🔥 ADD THIS
+  quickReplyTemplateId: selectedQuickReplyTemplateId,
+  replyToMessageId: replyDraft?.messageId ?? null,
+  text: text.trim() || undefined,
+  attachment
+});
       setText("");
       setAttachment(null);
       setSelectedQuickReplyTemplateId(null);
