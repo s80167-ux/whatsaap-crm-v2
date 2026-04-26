@@ -16,6 +16,7 @@ import { reportRoutes } from "../modules/reports/reports.routes.js";
 import { salesRoutes } from "../modules/sales/sales.routes.js";
 import { userRoutes } from "../modules/users/users.routes.js";
 import { whatsappRoutes } from "../modules/whatsapp/whatsapp.routes.js";
+import { superAdminClearDataRoutes } from "../modules/superAdmin/superAdminClearData.routes.js";
 
 export const apiRouter = Router();
 
@@ -27,6 +28,9 @@ apiRouter.use("/auth", authRoutes);
 
 apiRouter.use(requireAuth);
 
+// SUPER ADMIN ONLY TOOL
+apiRouter.use("/super-admin", superAdminClearDataRoutes);
+
 apiRouter.use("/admin", adminRoutes);
 apiRouter.use("/admin/organizations", organizationRoutes);
 apiRouter.use("/admin/users", userRoutes);
@@ -37,7 +41,7 @@ apiRouter.use("/platform", platformRoutes);
 apiRouter.use("/users", userRoutes);
 
 apiRouter.use((req, res, next) => {
-  if (req.path.startsWith("/admin/organizations")) {
+  if (req.path.startsWith("/admin/organizations") || req.path.startsWith("/super-admin")) {
     return next();
   }
 
