@@ -1,13 +1,15 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
-import type { Conversation } from "../types/api";
+import type { ContactDetailResponse, Conversation, MergedContactRedirect } from "../types/api";
 import { assignConversation } from "../api/crm";
 import { useContact } from "../hooks/useContacts";
 import { getStoredUser } from "../lib/auth";
-import { Button } from "./Button";
 import { Card } from "./Card";
 import { Select } from "./Input";
 import { useOrganizationUsers } from "../hooks/useAdmin";
+
+function isMergedContactRedirect(contact: ContactDetailResponse | undefined | null): contact is MergedContactRedirect {
+  return Boolean(contact && "is_merged" in contact && contact.is_merged === true);
+}
 
 function getContactInitials(name: string | null | undefined) {
   return (name ?? "Unknown")
@@ -33,14 +35,15 @@ export function ContactInfoPanel({
 }) {
   const [isAssigning, setIsAssigning] = useState(false);
   const currentUser = getStoredUser();
-  const { data: contact, isLoading: contactLoading } = useContact(conversation?.contact_id);
+  const { data: contactResponse, isLoading: contactLoading } = useContact(conversation?.contact_id);
+  const activeContact = contactResponse && !isMergedContactRedirect(contactResponse) ? contactResponse : null;
+  const mergedRedirect = isMergedContactRedirect(contactResponse) ? contactResponse : null;
   const canAssign = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("conversations.assign"));
-  const isAssignedToCurrentUser = currentUser?.organizationUserId && conversation?.assigned_user_id === currentUser.organizationUserId;
-  const isContactAssignedToCurrentUser = currentUser?.organizationUserId && contact?.owner_user_id === currentUser.organizationUserId;
-  const displayName = contact?.display_name ?? conversation?.contact_name ?? null;
-  const avatarUrl = contact?.primary_avatar_url ?? conversation?.contact_avatar_url ?? null;
+  const isContactAssignedToCurrentUser =
+    currentUser?.organizationUserId && activeContact?.owner_user_id === currentUser.organizationUserId;
+  const displayName = activeContact?.display_name ?? conversation?.contact_name ?? null;
+  const avatarUrl = activeContact?.primary_avatar_url ?? conversation?.contact_avatar_url ?? null;
 
-  // Fetch assignable users for org admin
   const organizationId = currentUser?.organizationId ?? conversation?.organization_id;
   const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(organizationId);
   const assignableUsers = organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin");
@@ -79,21 +82,28 @@ export function ContactInfoPanel({
             </div>
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-text">{displayName ?? "Unknown"}</p>
-              <p className="truncate text-xs text-text-muted">{contact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}</p>
+              <p className="truncate text-xs text-text-muted">
+                {activeContact?.primary_phone_normalized ?? conversation.phone_number_normalized ?? "No normalized number yet"}
+              </p>
               <p className="mt-1 truncate text-xs text-text-soft">Source: {getConversationSourceLabel(conversation)}</p>
-              {contact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{contact.primary_phone_e164}</p> : null}
+              {activeContact?.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{activeContact.primary_phone_e164}</p> : null}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-background-tint p-2 mt-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical</p>
             {contactLoading ? (
               <p className="mt-2 text-sm leading-6 text-text-muted">Loading canonical contact details...</p>
+            ) : mergedRedirect ? (
+              <div className="mt-1 space-y-1 text-xs leading-5 text-text-muted">
+                <p>This contact was merged into another canonical profile.</p>
+                <p>Target ID: {mergedRedirect.redirect_to_contact_id}</p>
+              </div>
             ) : (
               <div className="mt-1 space-y-1 text-xs leading-5 text-text-muted">
                 <p>ID: {conversation.contact_id}</p>
-                <p>Owner: {contact?.owner_user_id ? (isContactAssignedToCurrentUser ? "You" : contact.owner_user_id) : "Unassigned"}</p>
-                <p>Phone: {contact?.primary_phone_e164 ?? "--"}</p>
-                <p>Norm: {contact?.primary_phone_normalized ?? "--"}</p>
+                <p>Owner: {activeContact?.owner_user_id ? (isContactAssignedToCurrentUser ? "You" : activeContact.owner_user_id) : "Unassigned"}</p>
+                <p>Phone: {activeContact?.primary_phone_e164 ?? "--"}</p>
+                <p>Norm: {activeContact?.primary_phone_normalized ?? "--"}</p>
               </div>
             )}
           </div>
@@ -124,7 +134,6 @@ export function ContactInfoPanel({
               )}
             </div>
           ) : null}
-          {/* Remove stability guarantees for compact mode */}
         </div>
       ) : (
         <p className="mt-2 text-xs leading-5 text-text-muted">
