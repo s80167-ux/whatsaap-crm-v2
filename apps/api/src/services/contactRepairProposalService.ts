@@ -143,6 +143,22 @@ async function resolveCandidatePhoneFromContact(client: any, contactId: string) 
   };
 }
 
+async function tableExists(client: any, tableName: string) {
+  const result = await client.query(
+    `
+      select exists (
+        select 1
+        from information_schema.tables
+        where table_schema = 'public'
+          and table_name = $1
+      ) as exists
+    `,
+    [tableName]
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
 async function applyDuplicateContactMerge(
   client: any,
   input: {
@@ -174,30 +190,152 @@ async function applyDuplicateContactMerge(
     throw new Error("Duplicate merge contacts must belong to the same organization");
   }
 
-  const movedCounts: Record<string, number> = {};
+  const movedCounts: Record<string, number> = {
+    conversations: 0,
+    conversationsMerged: 0,
+    messages: 0
+  };
 
-  const conversations = await client.query(
+  const sourceConversations = await client.query(
     `
-      update conversations
-      set contact_id = $1,
-          updated_at = timezone('utc', now())
-      where contact_id = $2
-      returning id
+      select *
+      from conversations
+      where organization_id = $1
+        and contact_id = $2
+      order by updated_at desc nulls last, created_at desc nulls last
     `,
-    [input.targetContactId, input.sourceContactId]
+    [input.organizationId, input.sourceContactId]
   );
-  movedCounts.conversations = conversations.rowCount ?? 0;
 
-  const messages = await client.query(
+  for (const sourceConversation of sourceConversations.rows) {
+    const targetConversationResult = await client.query(
+      `
+        select *
+        from conversations
+        where organization_id = $1
+          and whatsapp_account_id = $2
+          and contact_id = $3
+          and id != $4
+        order by last_message_at desc nulls last, updated_at desc nulls last
+        limit 1
+      `,
+      [
+        input.organizationId,
+        sourceConversation.whatsapp_account_id,
+        input.targetContactId,
+        sourceConversation.id
+      ]
+    );
+
+    const targetConversation = targetConversationResult.rows[0] ?? null;
+
+    if (targetConversation) {
+      const movedMessages = await client.query(
+        `
+          update messages
+          set conversation_id = $1,
+              contact_id = $2,
+              updated_at = timezone('utc', now())
+          where organization_id = $3
+            and conversation_id = $4
+          returning id
+        `,
+        [targetConversation.id, input.targetContactId, input.organizationId, sourceConversation.id]
+      );
+      movedCounts.messages += movedMessages.rowCount ?? 0;
+
+      await client.query(
+        `
+          update conversations
+          set first_message_at = case
+                when first_message_at is null then $2
+                when $2::timestamptz is null then first_message_at
+                else least(first_message_at, $2::timestamptz)
+              end,
+              last_message_at = greatest(
+                coalesce(last_message_at, '-infinity'::timestamptz),
+                coalesce($3::timestamptz, '-infinity'::timestamptz)
+              ),
+              last_incoming_at = greatest(
+                coalesce(last_incoming_at, '-infinity'::timestamptz),
+                coalesce($4::timestamptz, '-infinity'::timestamptz)
+              ),
+              last_outgoing_at = greatest(
+                coalesce(last_outgoing_at, '-infinity'::timestamptz),
+                coalesce($5::timestamptz, '-infinity'::timestamptz)
+              ),
+              unread_count = coalesce(unread_count, 0) + coalesce($6::integer, 0),
+              updated_at = timezone('utc', now())
+          where id = $1
+            and organization_id = $7
+        `,
+        [
+          targetConversation.id,
+          sourceConversation.first_message_at,
+          sourceConversation.last_message_at,
+          sourceConversation.last_incoming_at,
+          sourceConversation.last_outgoing_at,
+          sourceConversation.unread_count ?? 0,
+          input.organizationId
+        ]
+      );
+
+      await client.query(
+        `
+          delete from conversations
+          where id = $1
+            and organization_id = $2
+        `,
+        [sourceConversation.id, input.organizationId]
+      );
+
+      movedCounts.conversationsMerged += 1;
+    } else {
+      const updatedConversation = await client.query(
+        `
+          update conversations
+          set contact_id = $1,
+              updated_at = timezone('utc', now())
+          where id = $2
+            and organization_id = $3
+          returning id
+        `,
+        [input.targetContactId, sourceConversation.id, input.organizationId]
+      );
+      movedCounts.conversations += updatedConversation.rowCount ?? 0;
+    }
+  }
+
+  const remainingMessages = await client.query(
     `
       update messages
-      set contact_id = $1
-      where contact_id = $2
+      set contact_id = $1,
+          updated_at = timezone('utc', now())
+      where organization_id = $2
+        and contact_id = $3
       returning id
     `,
-    [input.targetContactId, input.sourceContactId]
+    [input.targetContactId, input.organizationId, input.sourceContactId]
   );
-  movedCounts.messages = messages.rowCount ?? 0;
+  movedCounts.messages += remainingMessages.rowCount ?? 0;
+
+  const optionalContactTables = ["leads", "activities", "sales_orders"];
+  for (const tableName of optionalContactTables) {
+    if (!(await tableExists(client, tableName))) continue;
+
+    const result = await client.query(
+      `
+        update ${tableName}
+        set contact_id = $1
+        where organization_id = $2
+          and contact_id = $3
+        returning id
+      `,
+      [input.targetContactId, input.organizationId, input.sourceContactId]
+    );
+
+    movedCounts[tableName] = result.rowCount ?? 0;
+  }
 
   const source = await client.query(
     `
@@ -472,44 +610,39 @@ export class ContactRepairProposalService {
     await this.ensureTable();
 
     let proposal: any = null;
+    let appliedPhoneRepair: any = null;
+    let appliedDuplicateMerge: any = null;
+
     await withTransaction(async (client: any) => {
       const result = await client.query(
         `
-          update contact_repair_proposals
-          set status = 'approved',
-              reviewed_at = timezone('utc', now()),
-              reviewed_by = $3,
-              review_note = $4,
-              updated_at = timezone('utc', now())
+          select *
+          from contact_repair_proposals
           where id = $1
             and organization_id = $2
             and status = 'pending'
-          returning *
+          for update
         `,
-        [proposalId, options.user.organizationId, options.user.organizationUserId ?? null, options.note ?? null]
+        [proposalId, options.user.organizationId]
       );
       proposal = result.rows[0] ?? null;
-    });
 
-    if (!proposal) {
-      throw new Error("Pending repair proposal not found");
-    }
+      if (!proposal) {
+        throw new Error("Pending repair proposal not found");
+      }
 
-    const repairPlan = proposal.repair_plan ?? {};
-    const candidatePhone =
-      typeof repairPlan.candidate_phone === "string" && repairPlan.candidate_phone.trim()
-        ? repairPlan.candidate_phone.trim()
-        : null;
-    const candidatePhoneE164 =
-      typeof repairPlan.candidate_phone_e164 === "string" && repairPlan.candidate_phone_e164.trim()
-        ? repairPlan.candidate_phone_e164.trim()
-        : normalizeE164FromPhone(candidatePhone);
+      const repairPlan = proposal.repair_plan ?? {};
+      const candidatePhone =
+        typeof repairPlan.candidate_phone === "string" && repairPlan.candidate_phone.trim()
+          ? repairPlan.candidate_phone.trim()
+          : null;
+      const candidatePhoneE164 =
+        typeof repairPlan.candidate_phone_e164 === "string" && repairPlan.candidate_phone_e164.trim()
+          ? repairPlan.candidate_phone_e164.trim()
+          : normalizeE164FromPhone(candidatePhone);
 
-    let appliedPhoneRepair: any = null;
-
-    if (candidatePhone) {
-      await withTransaction(async (client: any) => {
-        const result = await client.query(
+      if (candidatePhone) {
+        const phoneResult = await client.query(
           `
             update contacts
             set primary_phone_normalized = coalesce(primary_phone_normalized, $1),
@@ -522,36 +655,46 @@ export class ContactRepairProposalService {
           [candidatePhone, candidatePhoneE164, proposal.contact_id, options.user.organizationId]
         );
 
-        appliedPhoneRepair = result.rows[0] ?? null;
-      });
-    }
-
-    let appliedDuplicateMerge: any = null;
-
-    if (repairPlan.issue_type === "duplicate_contact" && repairPlan.duplicate_contact) {
-      const sourceContactId =
-        typeof repairPlan.duplicate_contact.source_contact_id === "string"
-          ? repairPlan.duplicate_contact.source_contact_id
-          : null;
-
-      const targetContactId =
-        typeof repairPlan.duplicate_contact.target_contact_id === "string"
-          ? repairPlan.duplicate_contact.target_contact_id
-          : null;
-
-      if (!sourceContactId || !targetContactId) {
-        throw new Error("Duplicate merge proposal is missing source or target contact");
+        appliedPhoneRepair = phoneResult.rows[0] ?? null;
       }
 
-      await withTransaction(async (client: any) => {
+      if (repairPlan.issue_type === "duplicate_contact" && repairPlan.duplicate_contact) {
+        const sourceContactId =
+          typeof repairPlan.duplicate_contact.source_contact_id === "string"
+            ? repairPlan.duplicate_contact.source_contact_id
+            : null;
+
+        const targetContactId =
+          typeof repairPlan.duplicate_contact.target_contact_id === "string"
+            ? repairPlan.duplicate_contact.target_contact_id
+            : null;
+
+        if (!sourceContactId || !targetContactId) {
+          throw new Error("Duplicate merge proposal is missing source or target contact");
+        }
+
         appliedDuplicateMerge = await applyDuplicateContactMerge(client, {
           organizationId: options.user.organizationId,
           sourceContactId,
           targetContactId,
           mergedBy: options.user.organizationUserId ?? null
         });
-      });
-    }
+      }
+
+      await client.query(
+        `
+          update contact_repair_proposals
+          set status = 'applied',
+              reviewed_at = timezone('utc', now()),
+              reviewed_by = $3,
+              review_note = $4,
+              updated_at = timezone('utc', now())
+          where id = $1
+            and organization_id = $2
+        `,
+        [proposalId, options.user.organizationId, options.user.organizationUserId ?? null, options.note ?? null]
+      );
+    });
 
     const refreshContactId =
       appliedDuplicateMerge?.targetContactId ?? proposal.contact_id;
@@ -560,19 +703,6 @@ export class ContactRepairProposalService {
       dry_run: false,
       confirm: true,
       user: options.user
-    });
-
-    await withTransaction(async (client: any) => {
-      await client.query(
-        `
-          update contact_repair_proposals
-          set status = 'applied',
-              updated_at = timezone('utc', now())
-          where id = $1
-            and organization_id = $2
-        `,
-        [proposalId, options.user.organizationId]
-      );
     });
 
     await new AuditLogService().record(options.user, {
