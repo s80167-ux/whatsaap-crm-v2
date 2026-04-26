@@ -263,6 +263,16 @@ export async function createSalesOrder(payload: {
   currency?: string;
   assignedUserId?: string | null;
   leadId?: string | null;
+  sourceMessageId?: string | null;
+  sourceConversationId?: string | null;
+  premiseAddress?: string | null;
+  businessType?: string | null;
+  contactPerson?: string | null;
+  emailAddress?: string | null;
+  expectedCloseDate?: string | null;
+  coverageStatus?: string | null;
+  documentStatus?: string | null;
+  notes?: string | null;
 }) {
   return apiPost<{ data: SalesOrder }>("/sales/orders", payload);
 }
