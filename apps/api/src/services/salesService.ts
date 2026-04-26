@@ -8,6 +8,27 @@ import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
 const VALID_SALES_ORDER_STATUSES = new Set(["open", "closed_won", "closed_lost"]);
 
+type CreateSalesOrderInput = {
+  authUser: AuthUser;
+  organizationId: string;
+  contactId: string;
+  leadId?: string | null;
+  assignedUserId?: string | null;
+  status: string;
+  totalAmount: number;
+  currency?: string | null;
+  sourceMessageId?: string | null;
+  sourceConversationId?: string | null;
+  premiseAddress?: string | null;
+  businessType?: string | null;
+  contactPerson?: string | null;
+  emailAddress?: string | null;
+  expectedCloseDate?: string | null;
+  coverageStatus?: string | null;
+  documentStatus?: string | null;
+  notes?: string | null;
+};
+
 export class SalesService {
   constructor(
     private readonly salesRepository = new SalesRepository(),
@@ -61,19 +82,7 @@ export class SalesService {
     }
   }
 
-  async createOrder(
-    client: PoolClient,
-    input: {
-      authUser: AuthUser;
-      organizationId: string;
-      contactId: string;
-      leadId?: string | null;
-      assignedUserId?: string | null;
-      status: string;
-      totalAmount: number;
-      currency?: string | null;
-    }
-  ) {
+  async createOrder(client: PoolClient, input: CreateSalesOrderInput) {
     if (!VALID_SALES_ORDER_STATUSES.has(input.status)) {
       throw new AppError("Invalid sales order status", 400, "invalid_sales_status");
     }
@@ -101,7 +110,17 @@ export class SalesService {
       status: input.status,
       totalAmount: input.totalAmount,
       currency: input.currency?.trim() || "MYR",
-      closedAt
+      closedAt,
+      sourceMessageId: input.sourceMessageId ?? null,
+      sourceConversationId: input.sourceConversationId ?? null,
+      premiseAddress: input.premiseAddress ?? null,
+      businessType: input.businessType ?? null,
+      contactPerson: input.contactPerson ?? null,
+      emailAddress: input.emailAddress ?? null,
+      expectedCloseDate: input.expectedCloseDate ?? null,
+      coverageStatus: input.coverageStatus ?? null,
+      documentStatus: input.documentStatus ?? null,
+      notes: input.notes ?? null
     });
 
     await this.quickReplyOutcomeService.markOrderCreated(client, {
@@ -121,16 +140,7 @@ export class SalesService {
     return order;
   }
 
-  async createOrderInNewTransaction(input: {
-    authUser: AuthUser;
-    organizationId: string;
-    contactId: string;
-    leadId?: string | null;
-    assignedUserId?: string | null;
-    status: string;
-    totalAmount: number;
-    currency?: string | null;
-  }) {
+  async createOrderInNewTransaction(input: CreateSalesOrderInput) {
     return withTransaction((client) => this.createOrder(client, input));
   }
 
