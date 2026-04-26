@@ -14,9 +14,13 @@ import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useContact, useContacts } from "../hooks/useContacts";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
-import type { Contact } from "../types/api";
+import type { Contact, ContactDetailResponse, MergedContactRedirect } from "../types/api";
 
 type ContactSortMode = "alphabetical" | "latest" | "oldest";
+
+function isMergedContactRedirect(contact: ContactDetailResponse | undefined | null): contact is MergedContactRedirect {
+  return Boolean(contact && "is_merged" in contact && contact.is_merged === true);
+}
 
 function getContactInitials(name: string | null) {
   return (name ?? "Unknown")
@@ -91,8 +95,8 @@ function CompactRepairTools({
       return;
     }
     if (!organizationId) {
-  setMessage("Select an organization before running contact repair.");
-  return;
+      setMessage("Select an organization before running contact repair.");
+      return;
     }
 
     setBusyAction(action);
@@ -101,9 +105,8 @@ function CompactRepairTools({
       const resultMessage = await handler();
       await onChanged();
       setMessage(resultMessage || "Contact repair updated.");
-      } 
-    catch (error) {
-    setMessage(error instanceof Error ? error.message : "Unable to complete repair action.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to complete repair action.");
     } finally {
       setBusyAction(null);
     }
@@ -121,14 +124,14 @@ function CompactRepairTools({
     });
 
   const refreshDiagnosis = () =>
-  runAction("refresh", async () => {
-    await detectContactRepairProposal({
-      contactId: contact.id,
-      organizationId
-    });
+    runAction("refresh", async () => {
+      await detectContactRepairProposal({
+        contactId: contact.id,
+        organizationId
+      });
 
-    return "Diagnosis refreshed. Check Repair Queue for pending proposals.";
-  });
+      return "Diagnosis refreshed. Check Repair Queue for pending proposals.";
+    });
 
   const disabled = !canWrite || busyAction !== null;
 
@@ -228,6 +231,7 @@ export function ContactsPage() {
   const [contactSearch, setContactSearch] = useState("");
   const [contactSortMode, setContactSortMode] = useState<ContactSortMode>("latest");
   const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
+  const [redirectMessage, setRedirectMessage] = useState<string | null>(null);
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, true);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
@@ -235,11 +239,12 @@ export function ContactsPage() {
     isSuperAdmin ? activeOrganizationId : undefined,
     true
   );
-  const { data: selectedContact } = useContact(
+  const { data: selectedContactResponse } = useContact(
     selectedContactId ?? undefined,
     isSuperAdmin ? activeOrganizationId : undefined,
     true
   );
+  const activeContact = selectedContactResponse && !isMergedContactRedirect(selectedContactResponse) ? selectedContactResponse : null;
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
   const canAssignContactsToTeam = Boolean(
     canAssignContacts &&
@@ -319,11 +324,21 @@ export function ContactsPage() {
       .map(({ contact }) => contact);
   }, [contactSearch, contactSortMode, contacts, selectedWhatsAppAccountId, whatsappAccounts]);
   const contactsPagination = usePanelPagination(visibleContacts);
-  const sourcePagination = usePanelPagination(selectedContact?.whatsapp_sources ?? []);
+  const sourcePagination = usePanelPagination(activeContact?.whatsapp_sources ?? []);
 
   useEffect(() => {
     setSelectedContactId(null);
+    setRedirectMessage(null);
   }, [activeOrganizationId]);
+
+  useEffect(() => {
+    if (!isMergedContactRedirect(selectedContactResponse)) {
+      return;
+    }
+
+    setRedirectMessage("This contact has been merged. Redirected to the active profile.");
+    setSelectedContactId(selectedContactResponse.redirect_to_contact_id);
+  }, [selectedContactResponse]);
 
   async function handleAssignContact(contactId: string, organizationUserId: string) {
     if (!organizationUserId) {
@@ -357,6 +372,12 @@ export function ContactsPage() {
         <p className="mt-2 max-w-2xl section-copy">
           Every customer is stored once per organization and can fan out into many WhatsApp identities without duplicating the core record.
         </p>
+
+        {redirectMessage ? (
+          <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-sm font-medium text-primary">
+            {redirectMessage}
+          </div>
+        ) : null}
 
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-end gap-3">
@@ -467,7 +488,10 @@ export function ContactsPage() {
                     className={`table-row cursor-pointer text-xs text-text-muted ${
                       selectedContactId === contact.id ? "bg-primary/5" : ""
                     }`}
-                    onClick={() => setSelectedContactId(contact.id)}
+                    onClick={() => {
+                      setRedirectMessage(null);
+                      setSelectedContactId(contact.id);
+                    }}
                   >
                     <td className="px-2.5 py-1.5">
                       <div className="flex items-center gap-2">
@@ -576,26 +600,26 @@ export function ContactsPage() {
 
       <Card elevated className="border-primary/10 bg-white shadow-panel xl:sticky xl:top-6 xl:self-start">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Detail</p>
-        {selectedContact ? (
+        {activeContact ? (
           <div className="mt-5 space-y-4">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 overflow-hidden rounded-2xl border border-border bg-primary/10 text-lg font-semibold text-primary">
-                {selectedContact.primary_avatar_url ? (
+                {activeContact.primary_avatar_url ? (
                   <img
-                    src={selectedContact.primary_avatar_url}
-                    alt={selectedContact.display_name ? `${selectedContact.display_name} profile` : "Contact profile"}
+                    src={activeContact.primary_avatar_url}
+                    alt={activeContact.display_name ? `${activeContact.display_name} profile` : "Contact profile"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center">{getContactInitials(selectedContact.display_name)}</span>
+                  <span className="flex h-full w-full items-center justify-center">{getContactInitials(activeContact.display_name)}</span>
                 )}
               </div>
               <div>
-                <p className="text-lg font-semibold text-text">{selectedContact.display_name ?? selectedContact.primary_phone_normalized ?? "Unknown"}</p>
-                <p className="text-sm text-text-muted">{selectedContact.primary_phone_normalized ?? "No normalized number yet"}</p>
-                {selectedContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{selectedContact.primary_phone_e164}</p> : null}
+                <p className="text-lg font-semibold text-text">{activeContact.display_name ?? activeContact.primary_phone_normalized ?? "Unknown"}</p>
+                <p className="text-sm text-text-muted">{activeContact.primary_phone_normalized ?? "No normalized number yet"}</p>
+                {activeContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{activeContact.primary_phone_e164}</p> : null}
                 {(() => {
-                  const status = getContactStatusInfo(selectedContact, contactsById);
+                  const status = getContactStatusInfo(activeContact, contactsById);
 
                   return (
                     <span
@@ -613,27 +637,27 @@ export function ContactsPage() {
               </div>
             </div>
             <CompactRepairTools
-            contact={selectedContact}
-            canWrite={canAssignContacts}
-            organizationId={activeOrganizationId}
-            onChanged={refreshSelectedContact}
+              contact={activeContact}
+              canWrite={canAssignContacts}
+              organizationId={activeOrganizationId}
+              onChanged={refreshSelectedContact}
             />
             <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
-              <p>Contact ID: {selectedContact.id}</p>
+              <p>Contact ID: {activeContact.id}</p>
               <p>
                 Owner:{" "}
-                {selectedContact.owner_user_id
-                  ? selectedContact.owner_user_id === currentUser?.organizationUserId
+                {activeContact.owner_user_id
+                  ? activeContact.owner_user_id === currentUser?.organizationUserId
                     ? "Assigned to you"
-                    : assignableUserById.get(selectedContact.owner_user_id)
-                      ? getUserLabel(assignableUserById.get(selectedContact.owner_user_id)!)
-                      : selectedContact.owner_user_id
+                    : assignableUserById.get(activeContact.owner_user_id)
+                      ? getUserLabel(assignableUserById.get(activeContact.owner_user_id)!)
+                      : activeContact.owner_user_id
                   : "Unassigned"}
               </p>
             </div>
             <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp source</p>
-              {selectedContact.whatsapp_sources?.length ? (
+              {activeContact.whatsapp_sources?.length ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {sourcePagination.visibleItems.map((source) => (
                     <span
@@ -659,7 +683,9 @@ export function ContactsPage() {
           </div>
         ) : (
           <p className="mt-5 text-sm leading-6 text-text-muted">
-            Select a contact to inspect the canonical record and ownership details.
+            {isMergedContactRedirect(selectedContactResponse)
+              ? "Redirecting to the active contact profile..."
+              : "Select a contact to inspect the canonical record and ownership details."}
           </p>
         )}
       </Card>
