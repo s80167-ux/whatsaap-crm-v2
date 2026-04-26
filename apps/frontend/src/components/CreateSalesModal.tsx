@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { createSalesOrder, createSalesOrderItem } from "../api/crm";
 
 type SalesStatus = "open" | "closed_won" | "closed_lost";
@@ -45,6 +46,7 @@ export function CreateSalesModal({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const resolvedContactId = contactId ?? manualContactId.trim();
   const priceNumber = Number(unitPrice || 0);
@@ -56,7 +58,37 @@ export function CreateSalesModal({
     return priceNumber * quantityNumber;
   }, [priceNumber, quantityNumber]);
 
-  if (!isOpen) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setManualContactId(contactId ?? "");
+  }, [contactId]);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === "undefined") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose, saving]);
+
+  if (!isOpen || !mounted || typeof document === "undefined") {
     return null;
   }
 
@@ -115,19 +147,30 @@ export function CreateSalesModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+  const modal = (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-sales-modal-title"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) {
+          onClose();
+        }
+      }}
+    >
+      <div className="relative max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Create Sales</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">New sales order</h2>
+            <h2 id="create-sales-modal-title" className="mt-1 text-2xl font-semibold text-slate-950">New sales order</h2>
             {defaultCustomerName ? <p className="mt-1 text-sm text-slate-500">Customer: {defaultCustomerName}</p> : null}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-slate-200 px-3 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            disabled={saving}
+            className="rounded-full border border-slate-200 px-3 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Close
           </button>
@@ -149,6 +192,7 @@ export function CreateSalesModal({
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</span>
             <select
+              aria-label="Sales status"
               value={status}
               onChange={(event) => setStatus(event.target.value as SalesStatus)}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -281,7 +325,8 @@ export function CreateSalesModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+            disabled={saving}
+            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
@@ -297,6 +342,8 @@ export function CreateSalesModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
 
 export default CreateSalesModal;
