@@ -21,7 +21,6 @@ import {
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
-type BackfillProgress = "requested" | "running";
 
 function formatHistorySyncWindow(days: number | null | undefined) {
   if (!days) {
@@ -74,7 +73,6 @@ export function WhatsAppAccountDashboard() {
   const [isWorking, setIsWorking] = useState(false);
   const [backfillSelections, setBackfillSelections] = useState<Record<string, WhatsAppBackfillDays>>({});
   const [backfillingAccountId, setBackfillingAccountId] = useState<string | null>(null);
-  const [backfillProgress, setBackfillProgress] = useState<Record<string, BackfillProgress>>({});
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -172,20 +170,13 @@ export function WhatsAppAccountDashboard() {
     }
 
     setBackfillingAccountId(accountId);
-    setBackfillProgress((current) => ({ ...current, [accountId]: "requested" }));
     setNotice(null);
 
     try {
       await backfillWhatsAppAccount(accountId, lookbackDays);
-      setBackfillProgress((current) => ({ ...current, [accountId]: "running" }));
       setNotice(`Sync request accepted for "${label}". WhatsApp history will update in the background.`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
-      setBackfillProgress((current) => {
-        const next = { ...current };
-        delete next[accountId];
-        return next;
-      });
       setNotice(error instanceof Error ? error.message : "Unable to start WhatsApp history sync");
     } finally {
       setBackfillingAccountId(null);
@@ -318,7 +309,6 @@ export function WhatsAppAccountDashboard() {
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
               const selectedBackfillDays = backfillSelections[account.id] ?? 7;
               const isBackfillingThisAccount = backfillingAccountId === account.id;
-              const currentBackfillProgress = backfillProgress[account.id];
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
                   {editingAccountId === account.id ? (
@@ -472,20 +462,6 @@ export function WhatsAppAccountDashboard() {
                             Delete
                           </Button>
                         </div>
-                        {currentBackfillProgress ? (
-                          <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-semibold">
-                                {currentBackfillProgress === "requested" ? "Sync requested" : "Sync in progress"}
-                              </span>
-                              <span>{selectedBackfillDays}d</span>
-                            </div>
-                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-100">
-                              <div className={`h-full rounded-full bg-amber-500 ${currentBackfillProgress === "requested" ? "w-1/3" : "w-2/3"}`} />
-                            </div>
-                            <p className="mt-1 text-[0.68rem]">WhatsApp history sync runs in the background.</p>
-                          </div>
-                        ) : null}
                       </div>
                     </>
                   )}
