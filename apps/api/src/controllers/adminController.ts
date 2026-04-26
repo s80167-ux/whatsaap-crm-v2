@@ -268,7 +268,6 @@ export async function replayRawEvents(req: Request, res: Response) {
   return res.status(202).json({ data: result });
 }
 
-export async function backfillWhatsAppAccount(req: Request, res: Response)
 export async function deleteWhatsAppAccount(req: Request, res: Response) {
   if (!req.auth) {
     return res.status(401).json({ error: "Authentication required" });
