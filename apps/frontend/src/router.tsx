@@ -35,6 +35,9 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage").then((module) => ({
 const ClearOrganizationDataPage = lazy(() =>
   import("./pages/ClearOrganizationDataPage").then((module) => ({ default: module.ClearOrganizationDataPage }))
 );
+const SuperAdminAuditLogsPage = lazy(() =>
+  import("./pages/SuperAdminAuditLogsPage").then((module) => ({ default: module.SuperAdminAuditLogsPage }))
+);
 
 function withRouteFallback(page: ReactElement) {
   return (
@@ -77,6 +80,7 @@ export const router = createBrowserRouter([
           { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "platform", element: withRouteFallback(<PlatformPage />) },
           { path: "super-admin/clear-organization-data", element: withRouteFallback(<ClearOrganizationDataPage />) },
+          { path: "super-admin/audit-logs", element: withRouteFallback(<SuperAdminAuditLogsPage />) },
           { path: "profile", element: withRouteFallback(<ProfilePage />) }
         ]
       }
