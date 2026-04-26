@@ -31,6 +31,21 @@ function getContactLabel(contact: Contact) {
   return contact.display_name ?? contact.primary_phone_normalized ?? contact.primary_phone_e164 ?? "";
 }
 
+function getContactStatusInfo(contact: Contact, contactsById: Map<string, Contact>) {
+  if (contact.status === "merged") {
+    const target = contact.merged_into_contact_id ? contactsById.get(contact.merged_into_contact_id) : null;
+    return {
+      label: target ? `Merged → ${getContactLabel(target) || "target"}` : "Merged",
+      type: "merged"
+    };
+  }
+
+  return {
+    label: "Active",
+    type: "active"
+  };
+}
+
 async function updateContactDisplayName(contactId: string, displayName: string | null) {
   return apiPatch<{ data: Contact }>(`/contacts/${contactId}`, {
     displayName
@@ -243,6 +258,10 @@ export function ContactsPage() {
     () => new Map(assignableUsers.map((user) => [user.id, user])),
     [assignableUsers]
   );
+  const contactsById = useMemo(
+    () => new Map(contacts.map((contact) => [contact.id, contact])),
+    [contacts]
+  );
 
   const visibleContacts = useMemo(() => {
     const ownNumbers = new Set<string>();
@@ -412,28 +431,29 @@ export function ContactsPage() {
           <table className="w-full table-fixed bg-white/80">
             <thead className="bg-background-tint text-left text-[10px] uppercase tracking-[0.18em] text-text-soft">
               <tr>
-                <th className="w-[34%] px-2.5 py-2">Name</th>
-                <th className="w-[26%] px-2.5 py-2">Normalized</th>
-                <th className="w-[22%] px-2.5 py-2">Source</th>
-                {canAssignContacts ? <th className="w-[18%] px-2.5 py-2">Owner</th> : null}
+                <th className="w-[30%] px-2.5 py-2">Name</th>
+                <th className="w-[23%] px-2.5 py-2">Normalized</th>
+                <th className="w-[18%] px-2.5 py-2">Source</th>
+                <th className="w-[14%] px-2.5 py-2">Status</th>
+                {canAssignContacts ? <th className="w-[15%] px-2.5 py-2">Owner</th> : null}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
                     Loading contacts...
                   </td>
                 </tr>
               ) : contactsIsError ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-red-600" colSpan={canAssignContacts ? 4 : 3}>
+                  <td className="px-5 py-6 text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
                     {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
                   </td>
                 </tr>
               ) : visibleContacts.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 4 : 3}>
+                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
                     {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
                   </td>
                 </tr>
@@ -480,6 +500,24 @@ export function ContactsPage() {
                       ) : (
                         <span className="text-text-soft">--</span>
                       )}
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      {(() => {
+                        const status = getContactStatusInfo(contact, contactsById);
+
+                        return (
+                          <span
+                            className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                              status.type === "merged"
+                                ? "border-slate-200 bg-slate-100 text-slate-600"
+                                : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                            }`}
+                            title={status.label}
+                          >
+                            <span className="truncate">{status.label}</span>
+                          </span>
+                        );
+                      })()}
                     </td>
                     {canAssignContacts ? (
                       <td className="px-2.5 py-1.5">
@@ -556,6 +594,22 @@ export function ContactsPage() {
                 <p className="text-lg font-semibold text-text">{selectedContact.display_name ?? selectedContact.primary_phone_normalized ?? "Unknown"}</p>
                 <p className="text-sm text-text-muted">{selectedContact.primary_phone_normalized ?? "No normalized number yet"}</p>
                 {selectedContact.primary_phone_e164 ? <p className="mt-1 text-xs text-text-soft">{selectedContact.primary_phone_e164}</p> : null}
+                {(() => {
+                  const status = getContactStatusInfo(selectedContact, contactsById);
+
+                  return (
+                    <span
+                      className={`mt-2 inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                        status.type === "merged"
+                          ? "border-slate-200 bg-slate-100 text-slate-600"
+                          : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                      }`}
+                      title={status.label}
+                    >
+                      {status.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <CompactRepairTools
