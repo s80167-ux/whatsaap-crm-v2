@@ -143,6 +143,84 @@ async function resolveCandidatePhoneFromContact(client: any, contactId: string) 
   };
 }
 
+async function applyDuplicateContactMerge(
+  client: any,
+  input: {
+    organizationId: string;
+    sourceContactId: string;
+    targetContactId: string;
+    mergedBy: string | null;
+  }
+) {
+  if (!input.sourceContactId || !input.targetContactId) {
+    throw new Error("Invalid duplicate merge plan");
+  }
+
+  if (input.sourceContactId === input.targetContactId) {
+    throw new Error("Source and target contact cannot be the same");
+  }
+
+  const contactCheck = await client.query(
+    `
+      select id
+      from contacts
+      where organization_id = $1
+        and id in ($2, $3)
+    `,
+    [input.organizationId, input.sourceContactId, input.targetContactId]
+  );
+
+  if (contactCheck.rows.length !== 2) {
+    throw new Error("Duplicate merge contacts must belong to the same organization");
+  }
+
+  const movedCounts: Record<string, number> = {};
+
+  const conversations = await client.query(
+    `
+      update conversations
+      set contact_id = $1,
+          updated_at = timezone('utc', now())
+      where contact_id = $2
+      returning id
+    `,
+    [input.targetContactId, input.sourceContactId]
+  );
+  movedCounts.conversations = conversations.rowCount ?? 0;
+
+  const messages = await client.query(
+    `
+      update messages
+      set contact_id = $1
+      where contact_id = $2
+      returning id
+    `,
+    [input.targetContactId, input.sourceContactId]
+  );
+  movedCounts.messages = messages.rowCount ?? 0;
+
+  const source = await client.query(
+    `
+      update contacts
+      set status = 'merged',
+          merged_into_contact_id = $1,
+          merged_at = timezone('utc', now()),
+          merged_by = $2,
+          updated_at = timezone('utc', now())
+      where id = $3
+        and organization_id = $4
+      returning id, status, merged_into_contact_id
+    `,
+    [input.targetContactId, input.mergedBy, input.sourceContactId, input.organizationId]
+  );
+
+  return {
+    sourceContact: source.rows[0] ?? null,
+    targetContactId: input.targetContactId,
+    movedCounts
+  };
+}
+
 export class ContactRepairProposalService {
   static async ensureTable() {
     await withTransaction(async (client: any) => {
@@ -448,7 +526,37 @@ export class ContactRepairProposalService {
       });
     }
 
-    const applied = await ContactIdentityRepairService.refreshContactIdentity(proposal.contact_id, {
+    let appliedDuplicateMerge: any = null;
+
+    if (repairPlan.issue_type === "duplicate_contact" && repairPlan.duplicate_contact) {
+      const sourceContactId =
+        typeof repairPlan.duplicate_contact.source_contact_id === "string"
+          ? repairPlan.duplicate_contact.source_contact_id
+          : null;
+
+      const targetContactId =
+        typeof repairPlan.duplicate_contact.target_contact_id === "string"
+          ? repairPlan.duplicate_contact.target_contact_id
+          : null;
+
+      if (!sourceContactId || !targetContactId) {
+        throw new Error("Duplicate merge proposal is missing source or target contact");
+      }
+
+      await withTransaction(async (client: any) => {
+        appliedDuplicateMerge = await applyDuplicateContactMerge(client, {
+          organizationId: options.user.organizationId,
+          sourceContactId,
+          targetContactId,
+          mergedBy: options.user.organizationUserId ?? null
+        });
+      });
+    }
+
+    const refreshContactId =
+      appliedDuplicateMerge?.targetContactId ?? proposal.contact_id;
+
+    const applied = await ContactIdentityRepairService.refreshContactIdentity(refreshContactId, {
       dry_run: false,
       confirm: true,
       user: options.user
@@ -470,11 +578,17 @@ export class ContactRepairProposalService {
     await new AuditLogService().record(options.user, {
       action: "contact.repair_proposal.applied",
       entityType: "contact",
-      entityId: proposal.contact_id,
-      metadata: { proposalId, applied, appliedPhoneRepair }
+      entityId: refreshContactId,
+      metadata: { proposalId, applied, appliedPhoneRepair, appliedDuplicateMerge }
     });
 
-    return { proposalId, status: "applied", applied, appliedPhoneRepair };
+    return {
+      proposalId,
+      status: "applied",
+      applied,
+      appliedPhoneRepair,
+      appliedDuplicateMerge
+    };
   }
 
   static async reject(proposalId: string, options: { user: any; note?: string | null }) {

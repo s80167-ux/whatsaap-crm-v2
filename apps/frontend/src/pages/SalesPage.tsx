@@ -12,6 +12,7 @@ import {
 } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import CreateSalesModal from "../components/CreateSalesModal";
 import { Input } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
@@ -78,6 +79,8 @@ export function SalesPage() {
   const canLoadSales = true;
   const canLoadOrganizationScopedInputs = !isSuperAdmin || Boolean(activeOrganizationId);
   const canManageUsers = Boolean(currentUser?.permissionKeys.includes("org.manage_users"));
+  const [isCreateSalesModalOpen, setIsCreateSalesModalOpen] = useState(false);
+
   const salesFilters = useMemo(
     () => ({
       organizationId: isSuperAdmin ? activeOrganizationId : undefined,
@@ -93,6 +96,7 @@ export function SalesPage() {
     }),
     [activeOrganizationId, canLoadSales, isSuperAdmin, searchParams]
   );
+
   const { data: orders = [], isLoading: ordersLoading } = useSalesOrders(salesFilters);
   const { data: summary } = useSalesSummary(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
   const { data: leads = [], isLoading: leadsLoading } = useLeads(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
@@ -163,6 +167,7 @@ export function SalesPage() {
   const [leadTemperatureById, setLeadTemperatureById] = useState<Record<string, string>>({});
   const [leadStatusById, setLeadStatusById] = useState<Record<string, string>>({});
   const [leadAssignedUserById, setLeadAssignedUserById] = useState<Record<string, string>>({});
+
   const orderDetailRef = useRef<HTMLElement | null>(null);
   const leadDetailRef = useRef<HTMLElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -174,7 +179,7 @@ export function SalesPage() {
 
   const canWriteSales = Boolean(
     currentUser?.permissionKeys.includes("sales.write") &&
-    (!isSuperAdmin || activeOrganizationId)
+      (!isSuperAdmin || activeOrganizationId)
   );
 
   const sortedContacts = useMemo(
@@ -204,6 +209,7 @@ export function SalesPage() {
       (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
     );
   }, [activeLeadId, selectedLeadHistory, selectedOrderHistory, selectedOrderId]);
+
   const orderPagination = usePanelPagination(orders);
   const leadPagination = usePanelPagination(leads);
   const timelinePagination = usePanelPagination(timelineEntries);
@@ -276,6 +282,13 @@ export function SalesPage() {
       orderId: orderId ?? undefined,
       section
     });
+  }
+
+  async function refreshSalesQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
+      queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
+    ]);
   }
 
   async function copyShareLink(input: {
@@ -480,10 +493,7 @@ export function SalesPage() {
       setTotalAmount("");
       setCurrency("MYR");
       setNotice("Sales order created. The table and summary have been refreshed.");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
-      ]);
+      await refreshSalesQueries();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to create sales order");
     } finally {
@@ -510,12 +520,29 @@ export function SalesPage() {
 
   return (
     <section className="space-y-6">
+      <CreateSalesModal
+        isOpen={isCreateSalesModalOpen}
+        onClose={() => setIsCreateSalesModalOpen(false)}
+        onCreated={() => {
+          setNotice("Sales order created from the unified Create Sales form.");
+          void refreshSalesQueries();
+        }}
+      />
+
       <Card elevated>
-        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Sales</p>
-        <h2 className="mt-3 section-title">Pipeline workspace</h2>
-        <p className="mt-2 max-w-3xl section-copy">
-          Sales orders are now role-scoped and live. Assigned-scope users see their own records, while admins and managers can monitor the wider revenue queue.
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Sales</p>
+            <h2 className="mt-3 section-title">Pipeline workspace</h2>
+            <p className="mt-2 max-w-3xl section-copy">
+              Sales orders are now role-scoped and live. Assigned-scope users see their own records, while admins and managers can monitor the wider revenue queue.
+            </p>
+          </div>
+
+          <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
+            + Create Sales
+          </Button>
+        </div>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1119,99 +1146,66 @@ export function SalesPage() {
       </div>
 
       <section ref={orderDetailRef}>
-      <Card elevated>
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Order Detail</p>
-            <h3 className="mt-2 text-lg font-semibold text-text">
-              {selectedOrderDetail?.order.contact_name ?? "Select a sales order"}
-            </h3>
+        <Card elevated>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Order Detail</p>
+              <h3 className="mt-2 text-lg font-semibold text-text">
+                {selectedOrderDetail?.order.contact_name ?? "Select a sales order"}
+              </h3>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedOrderDetail?.order ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="px-3 py-2 text-xs"
+                    onClick={() =>
+                      copyShareLink({
+                        orderId: selectedOrderDetail.order.id,
+                        leadId: selectedOrderDetail.order.lead_id ?? activeLeadId ?? null,
+                        section: "order-detail",
+                        entityType: "sales_order",
+                        entityId: selectedOrderDetail.order.id,
+                        source: "sales_order_detail"
+                      })
+                    }
+                  >
+                    Copy order link
+                  </Button>
+                  <span
+                    className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}
+                  >
+                    {formatSalesStatus(selectedOrderDetail.order.status)}
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {selectedOrderDetail?.order ? (
-              <>
-                <Button
-                  variant="secondary"
-                  className="px-3 py-2 text-xs"
-                  onClick={() =>
-                    copyShareLink({
-                      orderId: selectedOrderDetail.order.id,
-                      leadId: selectedOrderDetail.order.lead_id ?? activeLeadId ?? null,
-                      section: "order-detail",
-                      entityType: "sales_order",
-                      entityId: selectedOrderDetail.order.id,
-                      source: "sales_order_detail"
-                    })
-                  }
-                >
-                  Copy order link
-                </Button>
-                <span
-                  className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}
-                >
-                  {formatSalesStatus(selectedOrderDetail.order.status)}
-                </span>
-              </>
-            ) : null}
-          </div>
-        </div>
 
-        {selectedOrderId ? (
-          detailLoading ? (
-            <p className="mt-5 text-sm leading-6 text-text-muted">Loading sales order detail...</p>
-          ) : selectedOrderDetail ? (
-            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.2fr),380px]">
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
-                  <p>Order ID: {selectedOrderDetail.order.id}</p>
-                  <p>Total: {formatCurrency(selectedOrderDetail.order.total_amount, selectedOrderDetail.order.currency)}</p>
-                  <p>Lead status: {selectedOrderDetail.order.lead_status ?? "--"}</p>
-                  <p>Owner: {selectedOrderDetail.order.assigned_user_id ?? "Unassigned"}</p>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-white p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Order Actions</p>
-                      <h4 className="mt-2 text-base font-semibold text-text">Status and ownership</h4>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-2 text-xs"
-                      disabled={!canWriteSales || isUpdatingOrder || !currentUser?.organizationUserId}
-                      onClick={async () => {
-                        setIsUpdatingOrder(true);
-                        setOrderNotice(null);
-
-                        try {
-                          await updateSalesOrder({
-                            orderId: selectedOrderDetail.order.id,
-                            assignedUserId: currentUser?.organizationUserId ?? null
-                          });
-
-                          setOrderNotice("Sales order assigned to you.");
-                          await Promise.all([
-                            queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
-                            queryClient.invalidateQueries({ queryKey: ["sales-orders"] })
-                          ]);
-                        } catch (error) {
-                          setOrderNotice(error instanceof Error ? error.message : "Unable to reassign sales order");
-                        } finally {
-                          setIsUpdatingOrder(false);
-                        }
-                      }}
-                    >
-                      Assign to me
-                    </Button>
+          {selectedOrderId ? (
+            detailLoading ? (
+              <p className="mt-5 text-sm leading-6 text-text-muted">Loading sales order detail...</p>
+            ) : selectedOrderDetail ? (
+              <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.2fr),380px]">
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+                    <p>Order ID: {selectedOrderDetail.order.id}</p>
+                    <p>Total: {formatCurrency(selectedOrderDetail.order.total_amount, selectedOrderDetail.order.currency)}</p>
+                    <p>Lead status: {selectedOrderDetail.order.lead_status ?? "--"}</p>
+                    <p>Owner: {selectedOrderDetail.order.assigned_user_id ?? "Unassigned"}</p>
                   </div>
 
-                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    {SALES_STATUSES.map((option) => (
+                  <div className="rounded-2xl border border-border bg-white p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Order Actions</p>
+                        <h4 className="mt-2 text-base font-semibold text-text">Status and ownership</h4>
+                      </div>
                       <Button
-                        key={option.value}
-                        variant={selectedOrderDetail.order.status === option.value ? "primary" : "secondary"}
-                        className="w-full"
-                        disabled={!canWriteSales || isUpdatingOrder}
+                        variant="secondary"
+                        className="px-3 py-2 text-xs"
+                        disabled={!canWriteSales || isUpdatingOrder || !currentUser?.organizationUserId}
                         onClick={async () => {
                           setIsUpdatingOrder(true);
                           setOrderNotice(null);
@@ -1219,381 +1213,415 @@ export function SalesPage() {
                           try {
                             await updateSalesOrder({
                               orderId: selectedOrderDetail.order.id,
-                              status: option.value
+                              assignedUserId: currentUser?.organizationUserId ?? null
                             });
 
-                            setOrderNotice(`Sales order marked as ${option.label.toLowerCase()}.`);
+                            setOrderNotice("Sales order assigned to you.");
                             await Promise.all([
                               queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
-                              queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
-                              queryClient.invalidateQueries({ queryKey: ["sales-summary"] }),
-                              queryClient.invalidateQueries({ queryKey: ["leads"] }),
-                              queryClient.invalidateQueries({ queryKey: ["lead", selectedOrderDetail.order.lead_id] }),
-                              queryClient.invalidateQueries({ queryKey: ["lead-history", selectedOrderDetail.order.lead_id] })
+                              queryClient.invalidateQueries({ queryKey: ["sales-orders"] })
                             ]);
                           } catch (error) {
-                            setOrderNotice(error instanceof Error ? error.message : "Unable to update sales order status");
+                            setOrderNotice(error instanceof Error ? error.message : "Unable to reassign sales order");
                           } finally {
                             setIsUpdatingOrder(false);
                           }
                         }}
                       >
-                        {option.label}
+                        Assign to me
                       </Button>
-                    ))}
+                    </div>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                      {SALES_STATUSES.map((option) => (
+                        <Button
+                          key={option.value}
+                          variant={selectedOrderDetail.order.status === option.value ? "primary" : "secondary"}
+                          className="w-full"
+                          disabled={!canWriteSales || isUpdatingOrder}
+                          onClick={async () => {
+                            setIsUpdatingOrder(true);
+                            setOrderNotice(null);
+
+                            try {
+                              await updateSalesOrder({
+                                orderId: selectedOrderDetail.order.id,
+                                status: option.value
+                              });
+
+                              setOrderNotice(`Sales order marked as ${option.label.toLowerCase()}.`);
+                              await Promise.all([
+                                queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
+                                queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
+                                queryClient.invalidateQueries({ queryKey: ["sales-summary"] }),
+                                queryClient.invalidateQueries({ queryKey: ["leads"] }),
+                                queryClient.invalidateQueries({ queryKey: ["lead", selectedOrderDetail.order.lead_id] }),
+                                queryClient.invalidateQueries({ queryKey: ["lead-history", selectedOrderDetail.order.lead_id] })
+                              ]);
+                            } catch (error) {
+                              setOrderNotice(error instanceof Error ? error.message : "Unable to update sales order status");
+                            } finally {
+                              setIsUpdatingOrder(false);
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <p className="mt-4 text-sm leading-6 text-text-muted">
+                      Use the status buttons above to keep the pipeline current. Item-line changes will continue updating the order total automatically.
+                    </p>
+
+                    {orderNotice ? <p className="mt-4 text-sm leading-6 text-text-muted">{orderNotice}</p> : null}
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-text-muted">
-                    Use the status buttons above to keep the pipeline current. Item-line changes will continue updating the order total automatically.
-                  </p>
-
-                  {orderNotice ? <p className="mt-4 text-sm leading-6 text-text-muted">{orderNotice}</p> : null}
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-border bg-white/80">
-                  <table className="min-w-full bg-white/80">
-                    <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
-                      <tr>
-                        <th className="px-5 py-4">Item</th>
-                        <th className="px-5 py-4">Qty</th>
-                        <th className="px-5 py-4">Unit</th>
-                        <th className="px-5 py-4">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedOrderDetail.items.length === 0 ? (
+                  <div className="overflow-hidden rounded-2xl border border-border bg-white/80">
+                    <table className="min-w-full bg-white/80">
+                      <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
                         <tr>
-                          <td className="px-5 py-6 text-sm text-text-muted" colSpan={4}>
-                            No item lines yet. Add the first one from the panel on the right.
-                          </td>
+                          <th className="px-5 py-4">Item</th>
+                          <th className="px-5 py-4">Qty</th>
+                          <th className="px-5 py-4">Unit</th>
+                          <th className="px-5 py-4">Total</th>
                         </tr>
-                      ) : (
-                        selectedOrderDetail.items.map((item) => (
-                          <tr key={item.id} className="border-t border-border/80 text-sm text-text-muted">
-                            <td className="px-5 py-4">
-                              <p className="font-medium text-text">{item.package_name ?? item.product_type ?? "Item"}</p>
-                              <p className="mt-1 text-xs text-text-soft">{item.product_type ?? "--"}</p>
-                            </td>
-                            <td className="px-5 py-4">{item.quantity}</td>
-                            <td className="px-5 py-4">{formatCurrency(item.unit_price, selectedOrderDetail.order.currency)}</td>
-                            <td className="px-5 py-4 font-medium text-text">
-                              {formatCurrency(item.total_price, selectedOrderDetail.order.currency)}
+                      </thead>
+                      <tbody>
+                        {selectedOrderDetail.items.length === 0 ? (
+                          <tr>
+                            <td className="px-5 py-6 text-sm text-text-muted" colSpan={4}>
+                              No item lines yet. Add the first one from the panel on the right.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          selectedOrderDetail.items.map((item) => (
+                            <tr key={item.id} className="border-t border-border/80 text-sm text-text-muted">
+                              <td className="px-5 py-4">
+                                <p className="font-medium text-text">{item.package_name ?? item.product_type ?? "Item"}</p>
+                                <p className="mt-1 text-xs text-text-soft">{item.product_type ?? "--"}</p>
+                              </td>
+                              <td className="px-5 py-4">{item.quantity}</td>
+                              <td className="px-5 py-4">{formatCurrency(item.unit_price, selectedOrderDetail.order.currency)}</td>
+                              <td className="px-5 py-4 font-medium text-text">
+                                {formatCurrency(item.total_price, selectedOrderDetail.order.currency)}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Add Item Line</p>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text">Product type</span>
+                    <Input value={itemProductType} onChange={(event) => setItemProductType(event.target.value)} placeholder="Product" />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text">Package name</span>
+                    <Input value={itemPackageName} onChange={(event) => setItemPackageName(event.target.value)} placeholder="Package name" />
+                  </label>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-text">Unit price</span>
+                      <Input type="number" min="0" step="0.01" value={itemUnitPrice} onChange={(event) => setItemUnitPrice(event.target.value)} />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-text">Quantity</span>
+                      <Input type="number" min="1" step="1" value={itemQuantity} onChange={(event) => setItemQuantity(event.target.value)} />
+                    </label>
+                  </div>
+
+                  {itemNotice ? <p className="text-sm leading-6 text-text-muted">{itemNotice}</p> : null}
+
+                  <Button
+                    onClick={async () => {
+                      if (!selectedOrderDetail) {
+                        return;
+                      }
+
+                      const unitPrice = Number(itemUnitPrice);
+                      const quantity = Number(itemQuantity);
+
+                      if (!Number.isFinite(unitPrice) || unitPrice < 0 || !Number.isInteger(quantity) || quantity <= 0) {
+                        setItemNotice("Enter a valid unit price and a positive quantity.");
+                        return;
+                      }
+
+                      setIsAddingItem(true);
+                      setItemNotice(null);
+
+                      try {
+                        await createSalesOrderItem({
+                          orderId: selectedOrderDetail.order.id,
+                          productType: itemProductType || null,
+                          packageName: itemPackageName || null,
+                          unitPrice,
+                          quantity
+                        });
+
+                        setItemProductType("");
+                        setItemPackageName("");
+                        setItemUnitPrice("");
+                        setItemQuantity("1");
+                        setItemNotice("Item line added and order total refreshed.");
+                        await Promise.all([
+                          queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
+                          queryClient.invalidateQueries({ queryKey: ["sales-order-history", selectedOrderDetail.order.id] }),
+                          queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
+                          queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
+                        ]);
+                      } catch (error) {
+                        setItemNotice(error instanceof Error ? error.message : "Unable to add sales order item");
+                      } finally {
+                        setIsAddingItem(false);
+                      }
+                    }}
+                    disabled={!canWriteSales || isAddingItem}
+                    className="w-full"
+                  >
+                    {isAddingItem ? "Adding..." : "Add item line"}
+                  </Button>
                 </div>
               </div>
+            ) : (
+              <p className="mt-5 text-sm leading-6 text-text-muted">
+                {salesFilters.orderId && orderDetailError
+                  ? "This order could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
+                  : "Unable to load the selected sales order."}
+              </p>
+            )
+          ) : (
+            <p className="mt-5 text-sm leading-6 text-text-muted">
+              Select a sales order from the table above to inspect item lines and add new pricing entries.
+            </p>
+          )}
+        </Card>
+      </section>
 
-              <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Add Item Line</p>
+      <section ref={leadDetailRef}>
+        <Card elevated>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Detail</p>
+              <h3 className="mt-2 text-lg font-semibold text-text">
+                {selectedLeadDetail?.contact_name ?? "Select a lead or an order with a linked lead"}
+              </h3>
+            </div>
+            {selectedLeadDetail ? (
+              <span className="rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-semibold text-text">
+                {formatLeadStatus(selectedLeadDetail.status)}
+              </span>
+            ) : null}
+          </div>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text">Product type</span>
-                  <Input value={itemProductType} onChange={(event) => setItemProductType(event.target.value)} placeholder="Product" />
-                </label>
+          {activeLeadId ? (
+            <div className="mt-6 grid gap-5 xl:grid-cols-[360px,minmax(0,1fr)]">
+              <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+                {leadDetailLoading ? (
+                  <p>Loading lead detail...</p>
+                ) : selectedLeadDetail ? (
+                  <>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Lead Snapshot</p>
+                      <div className="mt-3 space-y-2">
+                        <p className="text-text">Lead ID: {selectedLeadDetail.id}</p>
+                        <p>Contact: {selectedLeadDetail.contact_name ?? "Unknown"}</p>
+                        <p>Phone: {selectedLeadDetail.primary_phone_normalized ?? "--"}</p>
+                        <p>Source: {selectedLeadDetail.source ?? "No source"}</p>
+                        <p>Temperature: {selectedLeadDetail.temperature ? formatLeadTemperature(selectedLeadDetail.temperature) : "Unset"}</p>
+                        <p>Status: {formatLeadStatus(selectedLeadDetail.status)}</p>
+                        <p>Owner: {selectedLeadDetail.assigned_user_id ?? "Unassigned"}</p>
+                        <p>Updated: {new Date(selectedLeadDetail.updated_at).toLocaleString()}</p>
+                      </div>
+                    </div>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text">Package name</span>
-                  <Input value={itemPackageName} onChange={(event) => setItemPackageName(event.target.value)} placeholder="Package name" />
-                </label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        className="px-3 py-2 text-xs"
+                        onClick={() => focusLead(selectedLeadDetail.id, selectedOrderId ?? undefined, "lead-detail")}
+                      >
+                        Focus lead
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="px-3 py-2 text-xs"
+                        onClick={() =>
+                          copyShareLink({
+                            leadId: selectedLeadDetail.id,
+                            orderId: selectedOrderId,
+                            section: "lead-detail",
+                            entityType: "lead",
+                            entityId: selectedLeadDetail.id,
+                            source: "sales_lead_detail"
+                          })
+                        }
+                      >
+                        Copy lead link
+                      </Button>
+                      {selectedOrderId ? (
+                        <Button
+                          variant="secondary"
+                          className="px-3 py-2 text-xs"
+                          onClick={() => focusOrder(selectedOrderId, selectedLeadDetail.id, "order-detail")}
+                        >
+                          Open linked order
+                        </Button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
+                  <p>
+                    {salesFilters.leadId && leadDetailError
+                      ? "This lead could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
+                      : "Unable to load the selected lead."}
+                  </p>
+                )}
+              </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text">Unit price</span>
-                    <Input type="number" min="0" step="0.01" value={itemUnitPrice} onChange={(event) => setItemUnitPrice(event.target.value)} />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text">Quantity</span>
-                    <Input type="number" min="1" step="1" value={itemQuantity} onChange={(event) => setItemQuantity(event.target.value)} />
-                  </label>
+              <div ref={timelineRef} className="rounded-2xl border border-border bg-white p-4">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Unified Timeline</p>
+                    <h4 className="mt-2 text-base font-semibold text-text">Lead and sales activity</h4>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm text-text-muted">{timelineEntries.length} events</p>
+                    {activeLeadId || selectedOrderId ? (
+                      <Button
+                        variant="secondary"
+                        className="px-3 py-2 text-xs"
+                        onClick={() =>
+                          copyShareLink({
+                            leadId: activeLeadId,
+                            orderId: selectedOrderId,
+                            section: "timeline",
+                            entityType: "sales_timeline",
+                            entityId: activeLeadId ?? selectedOrderId ?? null,
+                            source: "sales_timeline_panel"
+                          })
+                        }
+                      >
+                        Copy timeline link
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
-                {itemNotice ? <p className="text-sm leading-6 text-text-muted">{itemNotice}</p> : null}
+                {leadHistoryLoading || orderHistoryLoading ? (
+                  <p className="mt-5 text-sm leading-6 text-text-muted">Loading timeline...</p>
+                ) : timelineEntries.length === 0 ? (
+                  <p className="mt-5 text-sm leading-6 text-text-muted">
+                    No timeline entries yet for the selected lead or order.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {timelinePagination.visibleItems.map((entry) => (
+                      <div key={`${entry.entityType}-${entry.id}`} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-text">{formatTimelineAction(entry.action)}</p>
+                            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-text-soft">
+                              {formatTimelineEntity(entry.entityType)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-text-soft">{new Date(entry.created_at).toLocaleString()}</p>
+                        </div>
 
-                <Button
-                  onClick={async () => {
-                    if (!selectedOrderDetail) {
-                      return;
-                    }
+                        <p className="mt-2 text-sm leading-6 text-text-muted">
+                          {formatTimelineDescription(entry.metadata, entry.action)}
+                        </p>
 
-                    const unitPrice = Number(itemUnitPrice);
-                    const quantity = Number(itemQuantity);
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-soft">
+                          <span>{entry.actor_name ?? "System"}</span>
+                          <span>/</span>
+                          <span>{entry.actor_role ?? "service"}</span>
+                        </div>
 
-                    if (!Number.isFinite(unitPrice) || unitPrice < 0 || !Number.isInteger(quantity) || quantity <= 0) {
-                      setItemNotice("Enter a valid unit price and a positive quantity.");
-                      return;
-                    }
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {entry.entityType === "lead" && activeLeadId ? (
+                            <>
+                              <Button
+                                variant="secondary"
+                                className="px-3 py-2 text-xs"
+                                onClick={() => focusLead(activeLeadId, selectedOrderId ?? undefined, "lead-detail")}
+                              >
+                                Open lead
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-3 py-2 text-xs"
+                                onClick={() =>
+                                  copyShareLink({
+                                    leadId: activeLeadId,
+                                    orderId: selectedOrderId,
+                                    section: "lead-detail",
+                                    entityType: "lead",
+                                    entityId: activeLeadId,
+                                    source: "sales_timeline_entry"
+                                  })
+                                }
+                              >
+                                Copy lead link
+                              </Button>
+                            </>
+                          ) : null}
 
-                    setIsAddingItem(true);
-                    setItemNotice(null);
-
-                    try {
-                      await createSalesOrderItem({
-                        orderId: selectedOrderDetail.order.id,
-                        productType: itemProductType || null,
-                        packageName: itemPackageName || null,
-                        unitPrice,
-                        quantity
-                      });
-
-                      setItemProductType("");
-                      setItemPackageName("");
-                      setItemUnitPrice("");
-                      setItemQuantity("1");
-                      setItemNotice("Item line added and order total refreshed.");
-                      await Promise.all([
-                        queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
-                        queryClient.invalidateQueries({ queryKey: ["sales-order-history", selectedOrderDetail.order.id] }),
-                        queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
-                        queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
-                      ]);
-                    } catch (error) {
-                      setItemNotice(error instanceof Error ? error.message : "Unable to add sales order item");
-                    } finally {
-                      setIsAddingItem(false);
-                    }
-                  }}
-                  disabled={!canWriteSales || isAddingItem}
-                  className="w-full"
-                >
-                  {isAddingItem ? "Adding..." : "Add item line"}
-                </Button>
+                          {(entry.entityType === "sales_order" || entry.entityType === "sales_order_item") && selectedOrderId ? (
+                            <>
+                              <Button
+                                variant="secondary"
+                                className="px-3 py-2 text-xs"
+                                onClick={() => focusOrder(selectedOrderId, activeLeadId ?? undefined, "order-detail")}
+                              >
+                                Open order
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-3 py-2 text-xs"
+                                onClick={() =>
+                                  copyShareLink({
+                                    orderId: selectedOrderId,
+                                    leadId: activeLeadId,
+                                    section: "order-detail",
+                                    entityType: entry.entityType === "sales_order_item" ? "sales_order_item" : "sales_order",
+                                    entityId: selectedOrderId,
+                                    source: "sales_timeline_entry"
+                                  })
+                                }
+                              >
+                                Copy order link
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                    <PanelPagination
+                      page={timelinePagination.page}
+                      pageCount={timelinePagination.pageCount}
+                      totalItems={timelinePagination.totalItems}
+                      onPageChange={timelinePagination.setPage}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <p className="mt-5 text-sm leading-6 text-text-muted">
-              {salesFilters.orderId && orderDetailError
-                ? "This order could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
-                : "Unable to load the selected sales order."}
+              Select a lead from the conversion queue, or select an order that already has a linked lead, to inspect its detail and timeline.
             </p>
-          )
-        ) : (
-          <p className="mt-5 text-sm leading-6 text-text-muted">
-            Select a sales order from the table above to inspect item lines and add new pricing entries.
-          </p>
-        )}
-      </Card>
+          )}
+        </Card>
       </section>
 
-      <section ref={leadDetailRef}>
-      <Card elevated>
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Detail</p>
-            <h3 className="mt-2 text-lg font-semibold text-text">
-              {selectedLeadDetail?.contact_name ?? "Select a lead or an order with a linked lead"}
-            </h3>
-          </div>
-          {selectedLeadDetail ? (
-            <span className="rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-semibold text-text">
-              {formatLeadStatus(selectedLeadDetail.status)}
-            </span>
-          ) : null}
-        </div>
-
-        {activeLeadId ? (
-          <div className="mt-6 grid gap-5 xl:grid-cols-[360px,minmax(0,1fr)]">
-            <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
-              {leadDetailLoading ? (
-                <p>Loading lead detail...</p>
-              ) : selectedLeadDetail ? (
-                <>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Lead Snapshot</p>
-                    <div className="mt-3 space-y-2">
-                      <p className="text-text">Lead ID: {selectedLeadDetail.id}</p>
-                      <p>Contact: {selectedLeadDetail.contact_name ?? "Unknown"}</p>
-                      <p>Phone: {selectedLeadDetail.primary_phone_normalized ?? "--"}</p>
-                      <p>Source: {selectedLeadDetail.source ?? "No source"}</p>
-                      <p>Temperature: {selectedLeadDetail.temperature ? formatLeadTemperature(selectedLeadDetail.temperature) : "Unset"}</p>
-                      <p>Status: {formatLeadStatus(selectedLeadDetail.status)}</p>
-                      <p>Owner: {selectedLeadDetail.assigned_user_id ?? "Unassigned"}</p>
-                      <p>Updated: {new Date(selectedLeadDetail.updated_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-2 text-xs"
-                      onClick={() => focusLead(selectedLeadDetail.id, selectedOrderId ?? undefined, "lead-detail")}
-                    >
-                      Focus lead
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-2 text-xs"
-                      onClick={() =>
-                        copyShareLink({
-                          leadId: selectedLeadDetail.id,
-                          orderId: selectedOrderId,
-                          section: "lead-detail",
-                          entityType: "lead",
-                          entityId: selectedLeadDetail.id,
-                          source: "sales_lead_detail"
-                        })
-                      }
-                    >
-                      Copy lead link
-                    </Button>
-                    {selectedOrderId ? (
-                      <Button
-                        variant="secondary"
-                        className="px-3 py-2 text-xs"
-                        onClick={() => focusOrder(selectedOrderId, selectedLeadDetail.id, "order-detail")}
-                      >
-                        Open linked order
-                      </Button>
-                    ) : null}
-                  </div>
-                </>
-              ) : (
-                <p>
-                  {salesFilters.leadId && leadDetailError
-                    ? "This lead could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
-                    : "Unable to load the selected lead."}
-                </p>
-              )}
-            </div>
-
-            <div ref={timelineRef} className="rounded-2xl border border-border bg-white p-4">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Unified Timeline</p>
-                  <h4 className="mt-2 text-base font-semibold text-text">Lead and sales activity</h4>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm text-text-muted">{timelineEntries.length} events</p>
-                  {activeLeadId || selectedOrderId ? (
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-2 text-xs"
-                      onClick={() =>
-                        copyShareLink({
-                          leadId: activeLeadId,
-                          orderId: selectedOrderId,
-                          section: "timeline",
-                          entityType: "sales_timeline",
-                          entityId: activeLeadId ?? selectedOrderId ?? null,
-                          source: "sales_timeline_panel"
-                        })
-                      }
-                    >
-                      Copy timeline link
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-
-              {leadHistoryLoading || orderHistoryLoading ? (
-                <p className="mt-5 text-sm leading-6 text-text-muted">Loading timeline...</p>
-              ) : timelineEntries.length === 0 ? (
-                <p className="mt-5 text-sm leading-6 text-text-muted">
-                  No timeline entries yet for the selected lead or order.
-                </p>
-              ) : (
-                <div className="mt-5 space-y-3">
-                  {timelinePagination.visibleItems.map((entry) => (
-                    <div key={`${entry.entityType}-${entry.id}`} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-text">{formatTimelineAction(entry.action)}</p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-text-soft">
-                            {formatTimelineEntity(entry.entityType)}
-                          </p>
-                        </div>
-                        <p className="text-xs text-text-soft">{new Date(entry.created_at).toLocaleString()}</p>
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-text-muted">
-                        {formatTimelineDescription(entry.metadata, entry.action)}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-soft">
-                        <span>{entry.actor_name ?? "System"}</span>
-                        <span>/</span>
-                        <span>{entry.actor_role ?? "service"}</span>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {entry.entityType === "lead" && activeLeadId ? (
-                          <>
-                            <Button
-                              variant="secondary"
-                              className="px-3 py-2 text-xs"
-                              onClick={() => focusLead(activeLeadId, selectedOrderId ?? undefined, "lead-detail")}
-                            >
-                              Open lead
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              className="px-3 py-2 text-xs"
-                              onClick={() =>
-                                copyShareLink({
-                                  leadId: activeLeadId,
-                                  orderId: selectedOrderId,
-                                  section: "lead-detail",
-                                  entityType: "lead",
-                                  entityId: activeLeadId,
-                                  source: "sales_timeline_entry"
-                                })
-                              }
-                            >
-                              Copy lead link
-                            </Button>
-                          </>
-                        ) : null}
-
-                        {(entry.entityType === "sales_order" || entry.entityType === "sales_order_item") && selectedOrderId ? (
-                          <>
-                            <Button
-                              variant="secondary"
-                              className="px-3 py-2 text-xs"
-                              onClick={() => focusOrder(selectedOrderId, activeLeadId ?? undefined, "order-detail")}
-                            >
-                              Open order
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              className="px-3 py-2 text-xs"
-                              onClick={() =>
-                                copyShareLink({
-                                  orderId: selectedOrderId,
-                                  leadId: activeLeadId,
-                                  section: "order-detail",
-                                  entityType: entry.entityType === "sales_order_item" ? "sales_order_item" : "sales_order",
-                                  entityId: selectedOrderId,
-                                  source: "sales_timeline_entry"
-                                })
-                              }
-                            >
-                              Copy order link
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                  <PanelPagination
-                    page={timelinePagination.page}
-                    pageCount={timelinePagination.pageCount}
-                    totalItems={timelinePagination.totalItems}
-                    onPageChange={timelinePagination.setPage}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="mt-5 text-sm leading-6 text-text-muted">
-            Select a lead from the conversion queue, or select an order that already has a linked lead, to inspect its detail and timeline.
-          </p>
-        )}
-      </Card>
-      </section>
       <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </section>
   );
