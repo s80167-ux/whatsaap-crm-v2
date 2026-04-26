@@ -64,6 +64,14 @@ export interface Contact {
   }>;
 }
 
+export interface MergedContactRedirect {
+  is_merged: true;
+  redirect_to_contact_id: string;
+  redirect_to_conversation_id: string | null;
+}
+
+export type ContactDetailResponse = Contact | MergedContactRedirect;
+
 export interface SalesOrder {
   id: string;
   organization_id: string;
