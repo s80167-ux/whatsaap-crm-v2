@@ -21,6 +21,24 @@ export type ContactRepairProposal = {
   primary_phone_e164?: string | null;
 };
 
+export type ClearOrganizationDataCounts = {
+  users: number;
+  whatsappAccounts: number;
+  contacts: number;
+  conversations: number;
+  messages: number;
+  sales: number;
+  activities: number;
+  notifications: number;
+  repairProposals: number;
+};
+
+export type ClearOrganizationDataPreview = {
+  organizationId: string;
+  organizationName: string;
+  counts: ClearOrganizationDataCounts;
+};
+
 type OrganizationApiRecord = {
   id: string;
   name: string;
@@ -218,6 +236,25 @@ export async function updateWhatsAppAccount(
 
 export async function deleteWhatsAppAccount(accountId: string) {
   return apiDelete<{ ok: true }>(`/admin/whatsapp-accounts/${accountId}`);
+}
+
+export async function fetchClearOrganizationDataPreview(organizationId: string) {
+  const response = await apiGet<{ data: ClearOrganizationDataPreview }>(
+    `/super-admin/organizations/${organizationId}/clear-data-preview`
+  );
+  return response.data;
+}
+
+export async function clearOrganizationData(organizationId: string, payload: { confirmationText: string }) {
+  const response = await apiPost<{
+    data: {
+      success: true;
+      organizationId: string;
+      organizationName: string;
+      clearedCounts: ClearOrganizationDataCounts;
+    };
+  }>(`/super-admin/organizations/${organizationId}/clear-data`, payload);
+  return response.data;
 }
 
 export async function fetchContactRepairProposals(input?: {
