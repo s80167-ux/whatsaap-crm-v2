@@ -24,6 +24,12 @@ export class ConnectorCommandService {
     return account;
   }
 
+  async backfillAccount(accountId: string) {
+    const account = await this.getAccount(accountId);
+    await this.sessionManager.reconnectSession(account);
+    return { accountId: account.id };
+  }
+
   async terminateAccount(accountId: string) {
     await this.sessionManager.terminateSession(accountId);
     return { accountId };
