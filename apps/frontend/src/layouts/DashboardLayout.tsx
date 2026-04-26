@@ -8,6 +8,7 @@ import {
   LogOut,
   MessageSquare,
   Settings2,
+  ShieldAlert,
   TrendingUp,
   UserCircle,
   Users,
@@ -93,15 +94,7 @@ function SidebarNavGroup({ icon, label, items }: { icon: ReactNode; label: strin
   );
 }
 
-function UserAvatar({
-  src,
-  name,
-  size = "sm"
-}: {
-  src?: string | null;
-  name?: string | null;
-  size?: "sm" | "md";
-}) {
+function UserAvatar({ src, name, size = "sm" }: { src?: string | null; name?: string | null; size?: "sm" | "md" }) {
   const sizeClass = size === "md" ? "h-10 w-10" : "h-6 w-6";
   const iconSize = size === "md" ? 22 : 16;
 
@@ -291,12 +284,8 @@ export function DashboardLayout() {
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className="h-2 w-2 shrink-0 bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
-            <span className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-              Rezeki CRM
-            </span>
-            {selectedOrganizationName ? (
-              <span className="hidden truncate text-xs text-white/45 sm:inline">/ {selectedOrganizationName}</span>
-            ) : null}
+            <span className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">Rezeki CRM</span>
+            {selectedOrganizationName ? <span className="hidden truncate text-xs text-white/45 sm:inline">/ {selectedOrganizationName}</span> : null}
           </div>
 
           <div className="relative shrink-0">
@@ -308,9 +297,7 @@ export function DashboardLayout() {
               onClick={() => setIsProfilePanelOpen((isOpen) => !isOpen)}
             >
               <UserAvatar src={user?.avatarUrl} name={user?.fullName ?? user?.email ?? null} />
-              <span className="hidden min-w-0 truncate sm:inline">
-                {user?.fullName ?? user?.email ?? "Profile"}
-              </span>
+              <span className="hidden min-w-0 truncate sm:inline">{user?.fullName ?? user?.email ?? "Profile"}</span>
             </button>
           </div>
         </div>
@@ -329,12 +316,8 @@ export function DashboardLayout() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
               <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
-              {user?.phone && (
-                <p className="mt-0.5 truncate text-xs text-text-muted">{user.phone}</p>
-              )}
-              {user?.address && (
-                <p className="mt-0.5 truncate text-xs text-text-muted">{user.address}</p>
-              )}
+              {user?.phone && <p className="mt-0.5 truncate text-xs text-text-muted">{user.phone}</p>}
+              {user?.address && <p className="mt-0.5 truncate text-xs text-text-muted">{user.address}</p>}
               <p className="mt-2 inline-flex border border-border bg-background-tint px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">
                 {user?.role ?? "user"}
               </p>
@@ -394,12 +377,7 @@ export function DashboardLayout() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <label className="inline-flex cursor-pointer items-center justify-center border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text transition hover:bg-background-tint">
                       Upload
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        className="sr-only"
-                        onChange={handleProfilePictureChange}
-                      />
+                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={handleProfilePictureChange} />
                     </label>
                     {profileAvatarUrl ? (
                       <Button
@@ -414,31 +392,11 @@ export function DashboardLayout() {
                   </div>
                 </div>
               </div>
-              <Input
-                value={profileFullName}
-                onChange={(event) => setProfileFullName(event.target.value)}
-                placeholder="Full name"
-                aria-label="Full name"
-                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
-              />
-              <Input
-                value={profilePhone}
-                onChange={(event) => setProfilePhone(event.target.value)}
-                placeholder="Phone number"
-                aria-label="Phone number"
-                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
-              />
-              <Input
-                value={profileAddress}
-                onChange={(event) => setProfileAddress(event.target.value)}
-                placeholder="Address"
-                aria-label="Address"
-                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
-              />
+              <Input value={profileFullName} onChange={(event) => setProfileFullName(event.target.value)} placeholder="Full name" aria-label="Full name" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
+              <Input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} placeholder="Phone number" aria-label="Phone number" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
+              <Input value={profileAddress} onChange={(event) => setProfileAddress(event.target.value)} placeholder="Address" aria-label="Address" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>
-                  Save profile
-                </Button>
+                <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>Save profile</Button>
                 <Button
                   variant="secondary"
                   className="flex-1 px-3 py-2"
@@ -461,30 +419,10 @@ export function DashboardLayout() {
 
           {isPasswordFormOpen ? (
             <form className="space-y-2" onSubmit={handleUpdatePassword}>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="New password"
-                aria-label="New password"
-                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
-                minLength={8}
-                required
-              />
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Confirm password"
-                aria-label="Confirm new password"
-                className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft"
-                minLength={8}
-                required
-              />
+              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="New password" aria-label="New password" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" minLength={8} required />
+              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" aria-label="Confirm new password" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" minLength={8} required />
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}>
-                  <Check size={16} />
-                </Button>
+                <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}><Check size={16} /></Button>
                 <Button
                   variant="secondary"
                   className="flex-1 px-3 py-2"
@@ -515,9 +453,7 @@ export function DashboardLayout() {
               </div>
               <div className="mt-4">
                 <p className="brand-badge">Rezeki Dashboard</p>
-                <p className="mt-3 text-sm leading-6 text-text-muted">
-                  WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.
-                </p>
+                <p className="mt-3 text-sm leading-6 text-text-muted">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
               </div>
             </div>
 
@@ -525,25 +461,14 @@ export function DashboardLayout() {
               <div className="mt-5">
                 <label className="block">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Viewing org</span>
-                  <Select
-                    value={selectedOrganizationId}
-                    onChange={(event) => setSelectedOrganizationId(event.target.value)}
-                    className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium"
-                    aria-label="Choose organization to view"
-                  >
+                  <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label="Choose organization to view">
                     <option value="">Choose organization</option>
                     {organizations.map((organization) => (
-                      <option key={organization.id} value={organization.id}>
-                        {organization.name}
-                      </option>
+                      <option key={organization.id} value={organization.id}>{organization.name}</option>
                     ))}
                   </Select>
                 </label>
-                {selectedOrganizationName ? (
-                  <p className="mt-1 truncate text-[11px] text-white/40">Scoped to {selectedOrganizationName}</p>
-                ) : (
-                  <p className="mt-1 text-[11px] text-white/40">Required for organization views</p>
-                )}
+                {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-white/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-white/40">Required for organization views</p>}
               </div>
             ) : null}
 
@@ -553,12 +478,7 @@ export function DashboardLayout() {
                 icon={<MessageSquare size={18} />}
                 label="Inbox"
                 items={[
-                  {
-                    to: "/inbox",
-                    icon: <MessageSquare size={16} />,
-                    label: "Conversations",
-                    badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} />
-                  },
+                  { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
                   { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Reply library" }
                 ]}
               />
@@ -592,18 +512,21 @@ export function DashboardLayout() {
                 />
               ) : null}
               {isSuperAdmin ? <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" /> : null}
+              {isSuperAdmin ? (
+                <SidebarNavGroup
+                  icon={<ShieldAlert size={18} />}
+                  label="System Tools"
+                  items={[
+                    { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
+                    { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
+                  ]}
+                />
+              ) : null}
             </nav>
           </Card>
         </motion.aside>
         <main className="min-w-0 rounded-2xl bg-transparent px-2 py-4 md:pl-0 md:pr-2 xl:pr-3">
-          <Outlet
-            context={{
-              isSuperAdmin,
-              selectedOrganizationId,
-              selectedOrganizationName,
-              setSelectedOrganizationId
-            } satisfies DashboardOutletContext}
-          />
+          <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
         </main>
       </div>
     </div>
