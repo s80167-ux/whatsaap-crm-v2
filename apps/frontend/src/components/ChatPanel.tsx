@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AudioLines,
-  BriefcaseBusiness,
   Check,
   Copy,
   Paperclip,
@@ -25,8 +25,8 @@ import { deleteMessage, forwardMessage, recordQuickReplyUsage, sendMessage } fro
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
+import { useSalesOrders } from "../hooks/useSales";
 import { Button } from "./Button";
-import CreateSalesModal from "./CreateSalesModal";
 import { Card } from "./Card";
 import { PanelPagination, usePanelPagination } from "./PanelPagination";
 import { PopupOverlay } from "./PopupOverlay";
@@ -156,6 +156,7 @@ export function ChatPanel({
   organizationId?: string | null;
   onMessageSent: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -189,7 +190,20 @@ export function ChatPanel({
     organizationId: resolvedOrganizationId,
     enabled: Boolean(conversation)
   });
+  const { data: salesOrders = [] } = useSalesOrders({
+    organizationId: resolvedOrganizationId,
+    enabled: Boolean(conversation && resolvedOrganizationId)
+  });
 
+  const salesByMessageId = useMemo(
+    () =>
+      new Map(
+        salesOrders
+          .filter((order) => order.source_message_id)
+          .map((order) => [order.source_message_id, order])
+      ),
+    [salesOrders]
+  );
   const quickReplies: QuickReplyItem[] = organizationQuickReplies.length > 0
     ? organizationQuickReplies.map((template) => ({
         id: template.id,
@@ -206,7 +220,6 @@ export function ChatPanel({
         category: "Starter",
         isOrganizationTemplate: false
       }));
-
   const quickReplyCategories = Array.from(
     new Set(quickReplies.map((reply) => reply.category).filter((category): category is string => Boolean(category)))
   ).sort((left, right) => left.localeCompare(right));
@@ -545,7 +558,6 @@ export function ChatPanel({
     setReplyDraft(null);
     setForwardSourceMessage(null);
     setForwardTargetConversationId("");
-    setCreateSalesMessage(null);
   }, [conversation?.id]);
 
   useEffect(() => {
@@ -567,19 +579,6 @@ export function ChatPanel({
 
   return (
     <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
-      <CreateSalesModal
-        isOpen={Boolean(createSalesMessage)}
-        onClose={() => setCreateSalesMessage(null)}
-        onCreated={() => {
-          setSendNotice("Sales order created from this chat bubble.");
-          setCreateSalesMessage(null);
-        }}
-        contactId={conversation.contact_id}
-        conversationId={conversation.id}
-        messageId={createSalesMessage?.id ?? null}
-        defaultCustomerName={conversation.contact_name}
-      />
-
       <header className="border-b border-border bg-white px-6 py-5 xl:px-7">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
@@ -632,6 +631,7 @@ export function ChatPanel({
               key={message.id}
               message={message}
               repliedMessage={message.reply_to_message_id ? messagesById.get(message.reply_to_message_id) : undefined}
+              linkedSalesOrderId={salesByMessageId.get(message.id)?.id ?? null}
               isDeleting={deletingMessageId === message.id}
               isSelected={selectedMessageIds.includes(message.id)}
               onReply={handleReplyToMessage}
@@ -1040,6 +1040,7 @@ export function ChatPanel({
 function MessageBubble({
   message,
   repliedMessage,
+  linkedSalesOrderId,
   isDeleting,
   isSelected,
   onReply,
@@ -1051,6 +1052,7 @@ function MessageBubble({
 }: {
   message: Message;
   repliedMessage?: Message;
+  linkedSalesOrderId?: string | null;
   isDeleting: boolean;
   isSelected: boolean;
   onReply: (message: Message) => void;
@@ -1066,6 +1068,14 @@ function MessageBubble({
   const isDeleted = Boolean(message.is_deleted);
   const showSelectionActions = !isDeleted;
   const showOutboundActions = message.direction === "outgoing" && !isDeleted;
+
+  function openLinkedSalesOrder() {
+    if (!linkedSalesOrderId) {
+      return;
+    }
+
+    window.location.href = `/sales?order_id=${linkedSalesOrderId}&section=order-detail`;
+  }
 
   return (
     <div className={`flex flex-col ${message.direction === "outgoing" ? "items-end" : "items-start"}`}>
@@ -1133,6 +1143,16 @@ function MessageBubble({
         ) : (
           <p className="break-words">{presentation.title}</p>
         )}
+        {linkedSalesOrderId ? (
+          <button
+            type="button"
+            title="Open linked sales order"
+            onClick={openLinkedSalesOrder}
+            className="mt-3 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+          >
+            💼 Sales Created
+          </button>
+        ) : null}
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-text-soft">
           <p>{new Date(message.sent_at).toLocaleString()}</p>
           {message.direction === "outgoing" && !isDeleted ? (
@@ -1166,11 +1186,6 @@ function MessageBubble({
               void onCopy(message);
             }}
             icon={<Copy className="h-3.5 w-3.5" />}
-          />
-          <BubbleActionButton
-            label="Create sales from bubble"
-            onClick={() => onCreateSales(message)}
-            icon={<BriefcaseBusiness className="h-3.5 w-3.5" />}
           />
           {showOutboundActions ? (
             <BubbleActionButton
