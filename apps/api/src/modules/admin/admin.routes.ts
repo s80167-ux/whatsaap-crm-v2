@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requirePermission } from "../../middleware/authMiddleware.js";
+import { backfillWhatsAppAccount } from "../../controllers/adminBackfillController.js";
 import {
   detectContactRepairProposal,
   listContactRepairProposals,
@@ -27,6 +28,11 @@ adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAcco
 adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/disconnect", asyncHandler(disconnectWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/backfill",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(backfillWhatsAppAccount)
+);
 adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppAccount));
 
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
