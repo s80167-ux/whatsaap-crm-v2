@@ -80,7 +80,7 @@ export function CreateSalesModal({
 
     setSaving(true);
     try {
-      const order = await createSalesOrder({
+      const orderResponse = await createSalesOrder({
         contactId: resolvedContactId,
         status,
         totalAmount,
@@ -96,6 +96,7 @@ export function CreateSalesModal({
         documentStatus: emptyToNull(documentStatus),
         notes: emptyToNull(notes)
       });
+      const order = orderResponse.data;
 
       await createSalesOrderItem({
         orderId: order.id,
