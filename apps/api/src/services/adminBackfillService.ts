@@ -53,20 +53,14 @@ export class AdminBackfillService {
       return updatedAccount;
     });
 
-    try {
-      await this.connectorClient.reconnectAccount(account.id);
-    } catch (error) {
-      logger.warn({ error, accountId: account.id }, "Failed to trigger WhatsApp history backfill through connector reconnect");
-      throw new AppError(
-        "WhatsApp connector is unavailable or failed to start the backfill flow",
-        502,
-        "connector_unavailable"
-      );
-    }
+    void this.connectorClient.reconnectAccount(account.id).catch((error) => {
+      logger.warn({ error, accountId: account.id }, "WhatsApp backfill lookback was saved, but connector reconnect failed");
+    });
 
     return {
       account,
-      lookbackDays
+      lookbackDays,
+      reconnectRequested: true
     };
   }
 }
