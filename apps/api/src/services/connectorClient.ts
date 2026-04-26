@@ -36,6 +36,12 @@ export class ConnectorClient {
     });
   }
 
+  async backfillAccount(accountId: string) {
+    return this.request<{ accountId: string }>(`/internal/accounts/${accountId}/backfill`, {
+      method: "POST"
+    });
+  }
+
   async terminateAccount(accountId: string) {
     return this.request(`/internal/accounts/${accountId}/session`, {
       method: "DELETE"
