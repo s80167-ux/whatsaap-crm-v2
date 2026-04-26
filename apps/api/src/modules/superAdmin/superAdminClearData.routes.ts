@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requireRole } from "../../middleware/authMiddleware.js";
+import { AuditLogService } from "../../services/auditLogService.js";
 import {
   ClearOrganizationDataService,
   ConfirmationTextMismatchError,
@@ -14,10 +15,25 @@ const clearDataSchema = z.object({
 });
 
 const clearOrganizationDataService = new ClearOrganizationDataService();
+const auditLogService = new AuditLogService();
 
 export const superAdminClearDataRoutes = Router();
 
 superAdminClearDataRoutes.use(requireRole(["super_admin"]));
+
+superAdminClearDataRoutes.get(
+  "/audit-logs",
+  asyncHandler(async (request, response) => {
+    const organizationId = typeof request.query.organization_id === "string" ? request.query.organization_id : null;
+    const logs = await auditLogService.list({
+      organizationId,
+      actionPrefix: "organization_data_clear_",
+      limit: 100
+    });
+
+    return response.json({ data: logs });
+  })
+);
 
 superAdminClearDataRoutes.get(
   "/organizations/:organizationId/clear-data-preview",
