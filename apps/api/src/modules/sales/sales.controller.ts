@@ -27,7 +27,17 @@ const createSalesOrderSchema = z.object({
   assignedUserId: z.string().uuid().optional().nullable(),
   status: z.enum(["open", "closed_won", "closed_lost"]).default("open"),
   totalAmount: z.coerce.number().nonnegative(),
-  currency: z.string().trim().min(3).max(8).optional().nullable()
+  currency: z.string().trim().min(3).max(8).optional().nullable(),
+  sourceMessageId: z.string().uuid().optional().nullable(),
+  sourceConversationId: z.string().uuid().optional().nullable(),
+  premiseAddress: z.string().trim().max(500).optional().nullable(),
+  businessType: z.string().trim().max(160).optional().nullable(),
+  contactPerson: z.string().trim().max(160).optional().nullable(),
+  emailAddress: z.string().trim().email().max(254).optional().nullable(),
+  expectedCloseDate: z.string().date().optional().nullable(),
+  coverageStatus: z.string().trim().max(80).optional().nullable(),
+  documentStatus: z.string().trim().max(80).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable()
 });
 
 const orderParamsSchema = z.object({
@@ -153,7 +163,17 @@ export async function createSalesOrder(request: Request, response: Response) {
     assignedUserId: input.assignedUserId ?? null,
     status: input.status,
     totalAmount: input.totalAmount,
-    currency: input.currency ?? "MYR"
+    currency: input.currency ?? "MYR",
+    sourceMessageId: input.sourceMessageId ?? null,
+    sourceConversationId: input.sourceConversationId ?? null,
+    premiseAddress: input.premiseAddress ?? null,
+    businessType: input.businessType ?? null,
+    contactPerson: input.contactPerson ?? null,
+    emailAddress: input.emailAddress ?? null,
+    expectedCloseDate: input.expectedCloseDate ?? null,
+    coverageStatus: input.coverageStatus ?? null,
+    documentStatus: input.documentStatus ?? null,
+    notes: input.notes ?? null
   });
 
   await auditLogService.record(auth, {
@@ -166,7 +186,17 @@ export async function createSalesOrder(request: Request, response: Response) {
       assigned_user_id: order.assigned_user_id,
       status: order.status,
       total_amount: order.total_amount,
-      currency: order.currency
+      currency: order.currency,
+      source_message_id: order.source_message_id,
+      source_conversation_id: order.source_conversation_id,
+      premise_address: order.premise_address,
+      business_type: order.business_type,
+      contact_person: order.contact_person,
+      email_address: order.email_address,
+      expected_close_date: order.expected_close_date,
+      coverage_status: order.coverage_status,
+      document_status: order.document_status,
+      notes: order.notes
     },
     request: getRequestAuditContext(request)
   });
