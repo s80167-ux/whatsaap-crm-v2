@@ -55,6 +55,8 @@ export interface Contact {
   primary_phone_normalized: string | null;
   primary_avatar_url?: string | null;
   owner_user_id?: string | null;
+  status?: "active" | "merged" | string | null;
+  merged_into_contact_id?: string | null;
   whatsapp_source_count?: number;
   whatsapp_sources?: Array<{
     id: string;
