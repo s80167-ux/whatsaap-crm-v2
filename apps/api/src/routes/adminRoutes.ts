@@ -33,7 +33,7 @@ adminRoutes.delete("/organizations/:organizationId", requirePermission("platform
 adminRoutes.get("/users", requirePermission("org.manage_users"), asyncHandler(listOrganizationUsers));
 adminRoutes.post("/users", requirePermission("org.manage_users"), asyncHandler(createOrganizationUser));
 adminRoutes.delete("/users/:userId", requirePermission("org.manage_users"), asyncHandler(deleteOrganizationUser));
-adminRoutes.post("/whatsapp-accounts/:accountId/backfill",requirePermission("org.manage_whatsapp_accounts"),asyncHandler(backfillWhatsAppAccount));
+
 adminRoutes.get("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
