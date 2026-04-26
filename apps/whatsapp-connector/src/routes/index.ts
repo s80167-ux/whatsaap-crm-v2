@@ -5,6 +5,7 @@ import {
   initializeAccountSession,
   initializeAllSessions,
   reconnectAccountSession,
+  backfillAccountSession,
   sendAccountMessage,
   terminateAccountSession
 } from "../controllers/connectorController.js";
@@ -17,5 +18,6 @@ router.use("/internal", requireInternalSecret);
 router.post("/internal/sessions/initialize-all", asyncHandler(initializeAllSessions));
 router.post("/internal/accounts/:accountId/connect", asyncHandler(initializeAccountSession));
 router.post("/internal/accounts/:accountId/reconnect", asyncHandler(reconnectAccountSession));
+router.post("/internal/accounts/:accountId/backfill", asyncHandler(backfillAccountSession));
 router.delete("/internal/accounts/:accountId/session", asyncHandler(terminateAccountSession));
 router.post("/internal/messages/send", asyncHandler(sendAccountMessage));
