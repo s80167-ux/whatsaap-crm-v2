@@ -598,6 +598,8 @@ export function SalesPage() {
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-text">Contact</span>
               <select
+                id="contact-select"
+                aria-label="Contact"
                 value={selectedContactId}
                 onChange={(event) => setSelectedContactId(event.target.value)}
                 className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
@@ -615,6 +617,8 @@ export function SalesPage() {
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-text">Status</span>
               <select
+                id="status-select"
+                aria-label="Status"
                 value={status}
                 onChange={(event) => setStatus(event.target.value as (typeof SALES_STATUSES)[number]["value"])}
                 className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
@@ -773,6 +777,8 @@ export function SalesPage() {
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-text">Contact</span>
               <select
+                id="lead-contact-select"
+                aria-label="Lead Contact"
                 value={leadContactId}
                 onChange={(event) => setLeadContactId(event.target.value)}
                 className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
@@ -801,6 +807,8 @@ export function SalesPage() {
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-text">Lead status</span>
                 <select
+                  id="lead-status-select"
+                  aria-label="Lead Status"
                   value={leadStatus}
                   onChange={(event) => setLeadStatus(event.target.value as (typeof LEAD_STATUSES)[number]["value"])}
                   className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
@@ -817,6 +825,8 @@ export function SalesPage() {
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-text">Temperature</span>
                 <select
+                  id="lead-temperature-select"
+                  aria-label="Lead Temperature"
                   value={leadTemperature}
                   onChange={(event) => setLeadTemperature(event.target.value as (typeof LEAD_TEMPERATURES)[number]["value"])}
                   className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
@@ -944,6 +954,7 @@ export function SalesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <select
+                          aria-label="Lead Temperature"
                           value={leadTemperatureById[lead.id] ?? ""}
                           onClick={(event) => event.stopPropagation()}
                           onChange={(event) =>
@@ -965,6 +976,7 @@ export function SalesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <select
+                          aria-label="Lead Status"
                           value={leadStatusById[lead.id] ?? lead.status}
                           onClick={(event) => event.stopPropagation()}
                           onChange={(event) =>
@@ -985,6 +997,7 @@ export function SalesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <select
+                          aria-label="Lead Assignee"
                           value={leadAssignedUserById[lead.id] ?? ""}
                           onClick={(event) => event.stopPropagation()}
                           onChange={(event) =>

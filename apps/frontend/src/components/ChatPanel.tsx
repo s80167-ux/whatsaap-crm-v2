@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
   AudioLines,
+  BriefcaseBusiness,
   Check,
   Copy,
   Paperclip,
@@ -25,6 +26,7 @@ import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
 import { Button } from "./Button";
+import CreateSalesModal from "./CreateSalesModal";
 import { Card } from "./Card";
 import { PanelPagination, usePanelPagination } from "./PanelPagination";
 import { PopupOverlay } from "./PopupOverlay";
@@ -171,6 +173,7 @@ export function ChatPanel({
   const [isForwarding, setIsForwarding] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [createSalesMessage, setCreateSalesMessage] = useState<Message | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -186,6 +189,7 @@ export function ChatPanel({
     organizationId: resolvedOrganizationId,
     enabled: Boolean(conversation)
   });
+
   const quickReplies: QuickReplyItem[] = organizationQuickReplies.length > 0
     ? organizationQuickReplies.map((template) => ({
         id: template.id,
@@ -202,6 +206,7 @@ export function ChatPanel({
         category: "Starter",
         isOrganizationTemplate: false
       }));
+
   const quickReplyCategories = Array.from(
     new Set(quickReplies.map((reply) => reply.category).filter((category): category is string => Boolean(category)))
   ).sort((left, right) => left.localeCompare(right));
@@ -540,6 +545,7 @@ export function ChatPanel({
     setReplyDraft(null);
     setForwardSourceMessage(null);
     setForwardTargetConversationId("");
+    setCreateSalesMessage(null);
   }, [conversation?.id]);
 
   useEffect(() => {
@@ -561,6 +567,19 @@ export function ChatPanel({
 
   return (
     <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
+      <CreateSalesModal
+        isOpen={Boolean(createSalesMessage)}
+        onClose={() => setCreateSalesMessage(null)}
+        onCreated={() => {
+          setSendNotice("Sales order created from this chat bubble.");
+          setCreateSalesMessage(null);
+        }}
+        contactId={conversation.contact_id}
+        conversationId={conversation.id}
+        messageId={createSalesMessage?.id ?? null}
+        defaultCustomerName={conversation.contact_name}
+      />
+
       <header className="border-b border-border bg-white px-6 py-5 xl:px-7">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
@@ -620,6 +639,7 @@ export function ChatPanel({
               onCopy={handleCopyMessage}
               onDelete={handleDeleteMessage}
               onToggleSelection={handleToggleMessageSelection}
+              onCreateSales={setCreateSalesMessage}
             />
           ))
         ) : (
@@ -1026,7 +1046,8 @@ function MessageBubble({
   onForward,
   onCopy,
   onDelete,
-  onToggleSelection
+  onToggleSelection,
+  onCreateSales
 }: {
   message: Message;
   repliedMessage?: Message;
@@ -1037,6 +1058,7 @@ function MessageBubble({
   onCopy: (message: Message) => void;
   onDelete: (message: Message) => void;
   onToggleSelection: (message: Message) => void;
+  onCreateSales: (message: Message) => void;
 }) {
   const presentation = getMessagePresentation(message);
   const Icon = getMessageTypeIcon(message.message_type);
@@ -1144,6 +1166,11 @@ function MessageBubble({
               void onCopy(message);
             }}
             icon={<Copy className="h-3.5 w-3.5" />}
+          />
+          <BubbleActionButton
+            label="Create sales from bubble"
+            onClick={() => onCreateSales(message)}
+            icon={<BriefcaseBusiness className="h-3.5 w-3.5" />}
           />
           {showOutboundActions ? (
             <BubbleActionButton
