@@ -54,9 +54,9 @@ export class AdminBackfillService {
     });
 
     try {
-      await this.connectorClient.backfillAccount(account.id);
+      await this.connectorClient.reconnectAccount(account.id);
     } catch (error) {
-      logger.warn({ error, accountId: account.id }, "Failed to trigger WhatsApp backfill through connector");
+      logger.warn({ error, accountId: account.id }, "Failed to trigger WhatsApp history backfill through connector reconnect");
       throw new AppError(
         "WhatsApp connector is unavailable or failed to start the backfill flow",
         502,
