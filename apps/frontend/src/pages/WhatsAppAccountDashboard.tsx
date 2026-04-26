@@ -10,6 +10,7 @@ import { Info, Link2, PlugZap, RefreshCw, Trash2, Unplug, Zap } from "lucide-rea
 import { useState } from "react";
 import styles from "./dashboardPage.module.css";
 import {
+  backfillWhatsAppAccount,
   createWhatsAppAccount,
   disconnectWhatsAppAccount,
   deleteWhatsAppAccount,
@@ -18,6 +19,8 @@ import {
 } from "../api/admin";
 
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
+const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
+type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
 
 function formatHistorySyncWindow(days: number | null | undefined) {
   if (!days) {
@@ -68,6 +71,8 @@ export function WhatsAppAccountDashboard() {
   }>({ organizationId: "", name: "", phoneNumber: "", historySyncLookbackDays: 7 });
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [backfillSelections, setBackfillSelections] = useState<Record<string, WhatsAppBackfillDays>>({});
+  const [backfillingAccountId, setBackfillingAccountId] = useState<string | null>(null);
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -154,6 +159,27 @@ export function WhatsAppAccountDashboard() {
       setNotice(error instanceof Error ? error.message : "Unable to reconnect WhatsApp account");
     } finally {
       setIsWorking(false);
+    }
+  }
+
+  async function handleBackfillAccount(accountId: string, label: string) {
+    const lookbackDays = backfillSelections[accountId] ?? 7;
+
+    if (!window.confirm(`Sync WhatsApp history for "${label}" from the previous ${lookbackDays} days? This will reconnect the WhatsApp session.`)) {
+      return;
+    }
+
+    setBackfillingAccountId(accountId);
+    setNotice(null);
+
+    try {
+      await backfillWhatsAppAccount(accountId, lookbackDays);
+      setNotice(`Sync WhatsApp History requested for "${label}". Pulling previous ${lookbackDays} days.`);
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to start WhatsApp history sync");
+    } finally {
+      setBackfillingAccountId(null);
     }
   }
 
@@ -281,6 +307,8 @@ export function WhatsAppAccountDashboard() {
               const statusTone = getConnectionTone(account.status);
               const connected = isConnectedAccount(account.status);
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
+              const selectedBackfillDays = backfillSelections[account.id] ?? 7;
+              const isBackfillingThisAccount = backfillingAccountId === account.id;
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
                   {editingAccountId === account.id ? (
@@ -392,6 +420,35 @@ export function WhatsAppAccountDashboard() {
                               Pair as New Device
                             </Button>
                           )}
+                          <div className="flex flex-wrap items-center gap-2 rounded border border-border bg-background-tint px-2 py-1">
+                            <Select
+                              className="min-w-20 px-2 py-1 text-xs"
+                              value={String(selectedBackfillDays)}
+                              disabled={isBackfillingThisAccount}
+                              onChange={(event) =>
+                                setBackfillSelections((current) => ({
+                                  ...current,
+                                  [account.id]: Number(event.target.value) as WhatsAppBackfillDays
+                                }))
+                              }
+                              aria-label={`History sync window for ${account.name}`}
+                            >
+                              {WHATSAPP_BACKFILL_OPTIONS.map((days) => (
+                                <option key={days} value={days}>
+                                  {days}d
+                                </option>
+                              ))}
+                            </Select>
+                            <Button
+                              variant="secondary"
+                              className="gap-1.5 px-3 py-2 text-xs"
+                              disabled={isWorking || isBackfillingThisAccount}
+                              onClick={() => handleBackfillAccount(account.id, account.name)}
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              {isBackfillingThisAccount ? "Syncing..." : "Sync WhatsApp History"}
+                            </Button>
+                          </div>
                           <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
                             Edit
