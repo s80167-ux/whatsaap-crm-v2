@@ -174,7 +174,7 @@ export function WhatsAppAccountDashboard() {
 
     try {
       await backfillWhatsAppAccount(accountId, lookbackDays);
-      setNotice(`Sync WhatsApp History requested for "${label}". Pulling previous ${lookbackDays} days.`);
+      setNotice(`Sync request accepted for "${label}". WhatsApp history will update in the background.`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to start WhatsApp history sync");
