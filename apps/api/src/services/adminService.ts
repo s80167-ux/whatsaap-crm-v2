@@ -58,6 +58,7 @@ export class AdminService {
     }
   }
 
+  async backfillWhatsAppAccount(authUser, accountId, lookbackDays)
   async createOrganization(input: { name: string; slug?: string | null }) {
     return withTransaction(async (client) => {
       const slug = input.slug?.trim() || slugifyOrganizationName(input.name);
