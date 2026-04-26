@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import {
   fetchContactRepairProposals,
   approveContactRepairProposal,
@@ -9,7 +9,15 @@ import {
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 
+type ActionNotice = {
+  type: "success" | "error";
+  title: string;
+  message: string;
+  redirectOnBackdrop?: boolean;
+};
+
 export function ContactRepairQueuePage() {
+  const navigate = useNavigate();
   const currentUser = getStoredUser();
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const isSuperAdmin = currentUser?.role === "super_admin";
@@ -23,6 +31,7 @@ export function ContactRepairQueuePage() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ActionNotice | null>(null);
 
   async function load() {
     if (!activeOrganizationId) {
@@ -40,7 +49,13 @@ export function ContactRepairQueuePage() {
       setItems(data);
       setSelected(data[0] ?? null);
     } catch (err: any) {
-      setError(err?.message || "Failed to load repair proposals");
+      const message = err?.message || "Failed to load repair proposals";
+      setError(message);
+      setNotice({
+        type: "error",
+        title: "Unable to load repair queue",
+        message
+      });
     } finally {
       setLoading(false);
     }
@@ -50,18 +65,41 @@ export function ContactRepairQueuePage() {
     load();
   }, [activeOrganizationId]);
 
+  function closeNoticeFromBackdrop() {
+    if (notice?.type === "success" && notice.redirectOnBackdrop) {
+      navigate("/contacts");
+      return;
+    }
+
+    setNotice(null);
+  }
+
   async function approve() {
     if (!selected || !activeOrganizationId || actionLoading) return;
     setActionLoading(true);
     setError(null);
+    setNotice(null);
     try {
+      const contactName = selected.contact_display_name || selected.primary_phone_normalized || "Selected contact";
       await approveContactRepairProposal({
         proposalId: selected.id,
         organizationId: activeOrganizationId
       });
       await load();
+      setNotice({
+        type: "success",
+        title: "Repair applied successfully",
+        message: `${contactName} has been repaired and updated. Click outside this popup to go to Contacts.`,
+        redirectOnBackdrop: true
+      });
     } catch (err: any) {
-      setError(err?.message || "Failed to approve repair");
+      const message = err?.message || "Failed to approve repair";
+      setError(message);
+      setNotice({
+        type: "error",
+        title: "Repair failed",
+        message
+      });
     } finally {
       setActionLoading(false);
     }
@@ -71,21 +109,86 @@ export function ContactRepairQueuePage() {
     if (!selected || !activeOrganizationId || actionLoading) return;
     setActionLoading(true);
     setError(null);
+    setNotice(null);
     try {
+      const contactName = selected.contact_display_name || selected.primary_phone_normalized || "Selected contact";
       await rejectContactRepairProposal({
         proposalId: selected.id,
         organizationId: activeOrganizationId
       });
       await load();
+      setNotice({
+        type: "success",
+        title: "Proposal rejected",
+        message: `${contactName} repair proposal has been rejected.`
+      });
     } catch (err: any) {
-      setError(err?.message || "Failed to reject repair");
+      const message = err?.message || "Failed to reject repair";
+      setError(message);
+      setNotice({
+        type: "error",
+        title: "Reject failed",
+        message
+      });
     } finally {
       setActionLoading(false);
     }
   }
 
   return (
-    <div className="grid grid-cols-[320px_1fr] gap-4 p-4">
+    <div className="relative grid grid-cols-[320px_1fr] gap-4 p-4">
+      {notice && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm"
+          onClick={closeNoticeFromBackdrop}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl border bg-white p-5 shadow-2xl ${
+              notice.type === "success" ? "border-green-200" : "border-red-200"
+            }`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+                  notice.type === "success"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {notice.type === "success" ? "✓" : "!"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-gray-900">{notice.title}</h3>
+                <p className="mt-1 text-sm text-gray-600">{notice.message}</p>
+                {notice.type === "success" && notice.redirectOnBackdrop && (
+                  <p className="mt-2 text-xs text-gray-400">Click backdrop to open Contacts.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              {notice.type === "success" && notice.redirectOnBackdrop && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/contacts")}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white"
+                >
+                  Go to Contacts
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                className="rounded-lg border px-4 py-2 text-sm font-medium text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="border rounded-xl p-3 space-y-2 overflow-y-auto max-h-[80vh]">
         {!activeOrganizationId ? (
           <p className="text-sm text-gray-400">Select organization first</p>
