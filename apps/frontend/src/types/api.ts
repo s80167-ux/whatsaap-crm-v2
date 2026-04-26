@@ -72,6 +72,16 @@ export interface SalesOrder {
   total_amount: string;
   currency: string;
   closed_at?: string | null;
+  source_message_id?: string | null;
+  source_conversation_id?: string | null;
+  premise_address?: string | null;
+  business_type?: string | null;
+  contact_person?: string | null;
+  email_address?: string | null;
+  expected_close_date?: string | null;
+  coverage_status?: string | null;
+  document_status?: string | null;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
   contact_name?: string | null;
