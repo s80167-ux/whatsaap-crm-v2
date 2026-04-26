@@ -21,6 +21,8 @@ export function ContactRepairQueuePage() {
   const [items, setItems] = useState<ContactRepairProposal[]>([]);
   const [selected, setSelected] = useState<ContactRepairProposal | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     if (!activeOrganizationId) {
@@ -37,6 +39,8 @@ export function ContactRepairQueuePage() {
       });
       setItems(data);
       setSelected(data[0] ?? null);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load repair proposals");
     } finally {
       setLoading(false);
     }
@@ -47,21 +51,37 @@ export function ContactRepairQueuePage() {
   }, [activeOrganizationId]);
 
   async function approve() {
-    if (!selected || !activeOrganizationId) return;
-    await approveContactRepairProposal({
-      proposalId: selected.id,
-      organizationId: activeOrganizationId
-    });
-    await load();
+    if (!selected || !activeOrganizationId || actionLoading) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      await approveContactRepairProposal({
+        proposalId: selected.id,
+        organizationId: activeOrganizationId
+      });
+      await load();
+    } catch (err: any) {
+      setError(err?.message || "Failed to approve repair");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function reject() {
-    if (!selected || !activeOrganizationId) return;
-    await rejectContactRepairProposal({
-      proposalId: selected.id,
-      organizationId: activeOrganizationId
-    });
-    await load();
+    if (!selected || !activeOrganizationId || actionLoading) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      await rejectContactRepairProposal({
+        proposalId: selected.id,
+        organizationId: activeOrganizationId
+      });
+      await load();
+    } catch (err: any) {
+      setError(err?.message || "Failed to reject repair");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   return (
@@ -97,6 +117,10 @@ export function ContactRepairQueuePage() {
           <>
             <h2 className="font-bold text-lg mb-2">Repair Preview</h2>
 
+            {error && (
+              <div className="mb-3 text-sm text-red-500">{error}</div>
+            )}
+
             <div className="mb-3 text-sm">
               <b>Contact:</b>{" "}
               {selected.contact_display_name || selected.primary_phone_normalized}
@@ -120,14 +144,16 @@ export function ContactRepairQueuePage() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={approve}
-                className="px-4 py-2 bg-green-600 text-white rounded"
+                disabled={actionLoading}
+                className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
               >
-                Approve & Apply
+                {actionLoading ? "Processing..." : "Approve & Apply"}
               </button>
 
               <button
                 onClick={reject}
-                className="px-4 py-2 bg-red-500 text-white rounded"
+                disabled={actionLoading}
+                className="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50"
               >
                 Reject
               </button>
