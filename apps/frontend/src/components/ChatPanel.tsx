@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageCircle,
   Forward,
+  BriefcaseBusiness,
   Reply,
   Trash2,
   Video
@@ -1181,12 +1182,18 @@ function MessageBubble({
             active={isSelected}
           />
           <BubbleActionButton
-            label="Copy bubble"
+            label={linkedSalesOrderId ? "Open linked sales order" : "Create sales from bubble"}
             onClick={() => {
-              void onCopy(message);
-            }}
-            icon={<Copy className="h-3.5 w-3.5" />}
-          />
+            if (linkedSalesOrderId) {
+            openLinkedSalesOrder();
+            return;
+      }
+
+    onCreateSales(message);
+  }}
+  icon={<BriefcaseBusiness className="h-3.5 w-3.5" />}
+  active={Boolean(linkedSalesOrderId)}
+/>
           {showOutboundActions ? (
             <BubbleActionButton
               label="Reply to bubble"
