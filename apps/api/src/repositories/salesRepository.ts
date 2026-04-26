@@ -10,6 +10,16 @@ export interface SalesOrderRow {
   total_amount: string;
   currency: string;
   closed_at: string | null;
+  source_message_id: string | null;
+  source_conversation_id: string | null;
+  premise_address: string | null;
+  business_type: string | null;
+  contact_person: string | null;
+  email_address: string | null;
+  expected_close_date: string | null;
+  coverage_status: string | null;
+  document_status: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
   contact_name: string | null;
@@ -46,6 +56,33 @@ export interface SalesOrderHistoryRow {
   created_at: string;
 }
 
+const salesOrderSelectColumns = `
+  so.id,
+  so.organization_id,
+  so.contact_id,
+  so.lead_id,
+  so.assigned_user_id,
+  so.status,
+  so.total_amount::text,
+  so.currency,
+  so.closed_at,
+  so.source_message_id,
+  so.source_conversation_id,
+  so.premise_address,
+  so.business_type,
+  so.contact_person,
+  so.email_address,
+  so.expected_close_date::text,
+  so.coverage_status,
+  so.document_status,
+  so.notes,
+  so.created_at,
+  so.updated_at,
+  coalesce(ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
+  ct.primary_phone_normalized,
+  ld.status as lead_status
+`;
+
 export class SalesRepository {
   async listOrders(
     client: PoolClient,
@@ -63,20 +100,7 @@ export class SalesRepository {
     const result = await client.query<SalesOrderRow>(
       `
         select
-          so.id,
-          so.organization_id,
-          so.contact_id,
-          so.lead_id,
-          so.assigned_user_id,
-          so.status,
-          so.total_amount::text,
-          so.currency,
-          so.closed_at,
-          so.created_at,
-          so.updated_at,
-          coalesce(ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
-          ct.primary_phone_normalized,
-          ld.status as lead_status
+          ${salesOrderSelectColumns}
         from sales_orders so
         join contacts ct on ct.id = so.contact_id
         left join leads ld on ld.id = so.lead_id
@@ -157,6 +181,16 @@ export class SalesRepository {
       totalAmount: number;
       currency: string;
       closedAt?: string | null;
+      sourceMessageId?: string | null;
+      sourceConversationId?: string | null;
+      premiseAddress?: string | null;
+      businessType?: string | null;
+      contactPerson?: string | null;
+      emailAddress?: string | null;
+      expectedCloseDate?: string | null;
+      coverageStatus?: string | null;
+      documentStatus?: string | null;
+      notes?: string | null;
     }
   ): Promise<SalesOrderRow> {
     const result = await client.query<SalesOrderRow>(
@@ -169,9 +203,19 @@ export class SalesRepository {
           status,
           total_amount,
           currency,
-          closed_at
+          closed_at,
+          source_message_id,
+          source_conversation_id,
+          premise_address,
+          business_type,
+          contact_person,
+          email_address,
+          expected_close_date,
+          coverage_status,
+          document_status,
+          notes
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         returning
           id,
           organization_id,
@@ -182,6 +226,16 @@ export class SalesRepository {
           total_amount::text,
           currency,
           closed_at,
+          source_message_id,
+          source_conversation_id,
+          premise_address,
+          business_type,
+          contact_person,
+          email_address,
+          expected_close_date::text,
+          coverage_status,
+          document_status,
+          notes,
           created_at,
           updated_at,
           null::text as contact_name,
@@ -196,7 +250,17 @@ export class SalesRepository {
         input.status,
         input.totalAmount,
         input.currency,
-        input.closedAt ?? null
+        input.closedAt ?? null,
+        input.sourceMessageId ?? null,
+        input.sourceConversationId ?? null,
+        input.premiseAddress ?? null,
+        input.businessType ?? null,
+        input.contactPerson ?? null,
+        input.emailAddress ?? null,
+        input.expectedCloseDate ?? null,
+        input.coverageStatus ?? null,
+        input.documentStatus ?? null,
+        input.notes ?? null
       ]
     );
 
@@ -231,20 +295,7 @@ export class SalesRepository {
     const result = await client.query<SalesOrderRow>(
       `
         select
-          so.id,
-          so.organization_id,
-          so.contact_id,
-          so.lead_id,
-          so.assigned_user_id,
-          so.status,
-          so.total_amount::text,
-          so.currency,
-          so.closed_at,
-          so.created_at,
-          so.updated_at,
-          coalesce(ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
-          ct.primary_phone_normalized,
-          ld.status as lead_status
+          ${salesOrderSelectColumns}
         from sales_orders so
         join contacts ct on ct.id = so.contact_id
         left join leads ld on ld.id = so.lead_id
