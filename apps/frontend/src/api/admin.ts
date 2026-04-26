@@ -187,6 +187,17 @@ export async function reconnectWhatsAppAccount(accountId: string) {
   return mapWhatsAppAccount(response.data);
 }
 
+export async function backfillWhatsAppAccount(accountId: string, lookbackDays: 7 | 30 | 90) {
+  const response = await apiPost<{ data: { account: WhatsAppAccountApiRecord; lookbackDays: number } }>(
+    `/admin/whatsapp-accounts/${accountId}/backfill`,
+    { lookbackDays }
+  );
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    lookbackDays: response.data.lookbackDays
+  };
+}
+
 export async function disconnectWhatsAppAccount(accountId: string) {
   const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/admin/whatsapp-accounts/${accountId}/disconnect`, {});
   return mapWhatsAppAccount(response.data);
