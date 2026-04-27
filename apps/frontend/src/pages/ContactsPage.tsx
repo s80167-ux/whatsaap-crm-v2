@@ -246,6 +246,7 @@ export function ContactsPage() {
   );
   const activeContact = selectedContactResponse && !isMergedContactRedirect(selectedContactResponse) ? selectedContactResponse : null;
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
+  const canRepairContacts = isSuperAdmin || canAssignContacts;
   const canAssignContactsToTeam = Boolean(
     canAssignContacts &&
       currentUser?.permissionKeys.includes("org.manage_users") &&
@@ -638,7 +639,7 @@ export function ContactsPage() {
             </div>
             <CompactRepairTools
               contact={activeContact}
-              canWrite={canAssignContacts}
+              canWrite={canRepairContacts}
               organizationId={activeOrganizationId}
               onChanged={refreshSelectedContact}
             />

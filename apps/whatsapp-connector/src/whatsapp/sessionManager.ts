@@ -169,7 +169,8 @@ export class WhatsAppSessionManager {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
         },
-        browser: ["WhatsApp CRM v2 Connector", "Chrome", "1.0.0"]
+        browser: ["WhatsApp CRM v2 Connector", "Chrome", "1.0.0"],
+        syncFullHistory: true
       });
 
       this.sockets.set(account.id, socket);
@@ -293,10 +294,12 @@ export class WhatsAppSessionManager {
       });
 
       socket.ev.on("contacts.upsert", (contacts) => {
+        logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.upsert event received");
         this.storeContactSnapshots(contacts);
       });
 
       socket.ev.on("contacts.update", (contacts) => {
+        logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.update event received");
         this.storeContactSnapshots(contacts);
       });
 
@@ -358,6 +361,7 @@ export class WhatsAppSessionManager {
       });
 
       socket.ev.on("messaging-history.set", async ({ messages }) => {
+        logger.info({ count: messages.length, sample: messages.slice(0, 3) }, "messaging-history.set event received");
         for (const message of messages) {
           await handleWhatsAppMessage(message);
         }

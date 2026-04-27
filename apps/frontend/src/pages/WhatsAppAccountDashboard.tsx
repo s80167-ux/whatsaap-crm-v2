@@ -17,11 +17,6 @@ import {
   reconnectWhatsAppAccount,
   updateWhatsAppAccount
 } from "../api/admin";
-
-const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
-  id: string;
-  name: string;
-} | null>(null);
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
@@ -56,6 +51,10 @@ function isConnectedAccount(status: string) {
 }
 
 export function WhatsAppAccountDashboard() {
+  const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const queryClient = useQueryClient();
   const { data: organizations = [] } = useOrganizations();
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
