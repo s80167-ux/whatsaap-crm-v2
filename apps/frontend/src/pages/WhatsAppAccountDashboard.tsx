@@ -289,7 +289,9 @@ export function WhatsAppAccountDashboard() {
             </Button>
           </div>
         </form>
-        <PopupOverlay
+      </PopupOverlay>
+
+      <PopupOverlay
   open={Boolean(backfillPopupAccount)}
   onClose={() => setBackfillPopupAccount(null)}
   title="Sync WhatsApp History"
@@ -331,9 +333,8 @@ export function WhatsAppAccountDashboard() {
       </Button>
     </div>
   ) : null}
+</PopupOverlay>
 
-
-      </PopupOverlay>
       <Card elevated className="min-w-0 xl:col-span-3 mt-6">
         <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
