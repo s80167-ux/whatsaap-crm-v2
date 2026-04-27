@@ -18,6 +18,10 @@ import {
   updateWhatsAppAccount
 } from "../api/admin";
 
+const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
+  id: string;
+  name: string;
+} | null>(null);
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
@@ -285,6 +289,50 @@ export function WhatsAppAccountDashboard() {
             </Button>
           </div>
         </form>
+        <PopupOverlay
+  open={Boolean(backfillPopupAccount)}
+  onClose={() => setBackfillPopupAccount(null)}
+  title="Sync WhatsApp History"
+  panelClassName="max-w-md"
+>
+  {backfillPopupAccount ? (
+    <div className="space-y-4">
+      <p className="text-sm text-text-soft">
+        Choose how far back to sync for{" "}
+        <strong>{backfillPopupAccount.name}</strong>.
+      </p>
+
+      <Select
+  value={String(backfillSelections[backfillPopupAccount.id] ?? 7)}
+  onChange={(event) => {
+    const selectedDays = Number(event.target.value) as WhatsAppBackfillDays;
+
+    setBackfillSelections((current) => ({
+      ...current,
+      [backfillPopupAccount.id]: selectedDays
+    }));
+  }}
+>
+  <option value="7">7 days</option>
+  <option value="30">30 days</option>
+  <option value="90">90 days</option>
+</Select>
+
+      <Button
+        className="w-full"
+        onClick={() =>
+          handleBackfillAccount(
+            backfillPopupAccount.id,
+            backfillPopupAccount.name
+          )
+        }
+      >
+        Start Sync
+      </Button>
+    </div>
+  ) : null}
+
+
       </PopupOverlay>
       <Card elevated className="min-w-0 xl:col-span-3 mt-6">
         <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
@@ -420,35 +468,16 @@ export function WhatsAppAccountDashboard() {
                               Pair as New Device
                             </Button>
                           )}
-                          <div className="flex flex-wrap items-center gap-2 rounded border border-border bg-background-tint px-2 py-1">
-                            <Select
-                              className="min-w-20 px-2 py-1 text-xs"
-                              value={String(selectedBackfillDays)}
-                              disabled={isBackfillingThisAccount}
-                              onChange={(event) =>
-                                setBackfillSelections((current) => ({
-                                  ...current,
-                                  [account.id]: Number(event.target.value) as WhatsAppBackfillDays
-                                }))
-                              }
-                              aria-label={`History sync window for ${account.name}`}
-                            >
-                              {WHATSAPP_BACKFILL_OPTIONS.map((days) => (
-                                <option key={days} value={days}>
-                                  {days}d
-                                </option>
-                              ))}
-                            </Select>
-                            <Button
+                          <Button
                               variant="secondary"
                               className="gap-1.5 px-3 py-2 text-xs"
                               disabled={isWorking || isBackfillingThisAccount}
-                              onClick={() => handleBackfillAccount(account.id, account.name)}
+                              onClick={() =>setBackfillPopupAccount({ id: account.id, name: account.name })
+    }
                             >
-                              <Zap className="h-3.5 w-3.5" />
-                              {isBackfillingThisAccount ? "Syncing..." : "Sync WhatsApp History"}
-                            </Button>
-                          </div>
+                      <Zap className="h-3.5 w-3.5" />
+  {isBackfillingThisAccount ? "Requesting sync..." : "Sync WhatsApp History"}
+</Button>
                           <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
                             Edit
