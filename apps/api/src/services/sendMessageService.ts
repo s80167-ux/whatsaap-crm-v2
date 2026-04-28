@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { withTransaction } from "../config/database.js";
+import { logger } from "../config/logger.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import type { SendMessageInput } from "../types/domain.js";
@@ -24,7 +25,7 @@ export class SendMessageService {
       throw new Error("Message text or one attachment is required");
     }
 
-    const message = await withTransaction(async (client) => {
+    const { message, outboxId } = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
         `
           select c.contact_id, ci.wa_jid as contact_jid
@@ -136,7 +137,7 @@ export class SendMessageService {
         }
       });
 
-      await this.messageDispatchService.enqueue(client, {
+      const outbox = await this.messageDispatchService.enqueue(client, {
         organizationId: input.organizationId,
         messageId: draft.id,
         conversationId: input.conversationId,
@@ -182,9 +183,15 @@ export class SendMessageService {
         });
       }
 
-      return draft;
+      return {
+  message: draft,
+  outboxId: outbox.id
+};
     });
 
+    void this.messageDispatchService.drainOne(outboxId).catch((error) => {
+  logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
+});
     return message;
   }
 }
