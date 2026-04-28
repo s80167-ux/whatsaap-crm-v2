@@ -250,7 +250,7 @@ export async function sendMessage(payload: {
 
 export async function retryOutboundMessage(payload: { messageId: string }) {
   return apiPost<{ ok: true; data: { ok: true; outboxId: string } }>(
-    `/messages/${payload.messageId}/retry-dispatch`,
+    `/api/messages/${payload.messageId}/retry-dispatch`,
     {}
   );
 }
