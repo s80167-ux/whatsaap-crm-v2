@@ -198,4 +198,26 @@ export class MessageDispatchOutboxRepository {
 
     return result.rows;
   }
+
+    async findRetryableByMessageId(
+    client: PoolClient,
+    input: {
+      messageId: string;
+      organizationId: string;
+    }
+  ): Promise<MessageDispatchOutboxRecord | null> {
+    const result = await client.query<MessageDispatchOutboxRecord>(
+      `
+        select *
+        from message_dispatch_outbox
+        where message_id = $1
+          and organization_id = $2
+          and processing_status in ('pending', 'failed')
+        limit 1
+      `,
+      [input.messageId, input.organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
 }
