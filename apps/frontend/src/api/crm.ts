@@ -248,6 +248,13 @@ export async function sendMessage(payload: {
   });
 }
 
+export async function retryOutboundMessage(payload: { messageId: string }) {
+  return apiPost<{ ok: true; data: { ok: true; outboxId: string } }>(
+    `/messages/${payload.messageId}/retry-dispatch`,
+    {}
+  );
+}
+
 export async function deleteMessage(payload: { messageId: string }) {
   return apiDelete<{ ok: true }>(`/messages/${payload.messageId}`);
 }
