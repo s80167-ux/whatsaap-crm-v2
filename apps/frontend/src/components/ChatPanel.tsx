@@ -22,7 +22,7 @@ import {
   Video
 } from "lucide-react";
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
-import { deleteMessage, forwardMessage, recordQuickReplyUsage, sendMessage } from "../api/crm";
+import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
@@ -161,6 +161,7 @@ export function ChatPanel({
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isRetryingOutbound, setIsRetryingOutbound] = useState(false);
   const [sendNotice, setSendNotice] = useState<string | null>(null);
   const [isQuickReplyOpen, setIsQuickReplyOpen] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -279,6 +280,31 @@ export function ChatPanel({
     }
   }
 
+
+  async function handleRetryLatestOutbound() {
+  if (!latestOutgoingMessage) return;
+
+  const confirmed = window.confirm("Retry sending this pending outbound message?");
+  if (!confirmed) return;
+
+  setIsRetryingOutbound(true);
+  setSendNotice("Retrying pending outbound message...");
+
+  try {
+    await retryOutboundMessage({
+      messageId: latestOutgoingMessage.id
+    });
+
+    setSendNotice("Retry requested. Message will update shortly.");
+    onMessageSent();
+    await queryClient.invalidateQueries();
+  } catch (error) {
+    setSendNotice(error instanceof Error ? error.message : "Retry failed");
+  } finally {
+    setIsRetryingOutbound(false);
+  }
+}
+  
   async function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -584,13 +610,26 @@ export function ChatPanel({
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
         {latestOutgoingStatusLabel ? (
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-soft">Latest outbound</span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getAckTone(latestOutgoingStatus)}`}>
-              {latestOutgoingStatusLabel}
-            </span>
-          </div>
-        ) : null}
+  <div className="mt-3 flex flex-wrap items-center gap-2">
+    <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-soft">
+      Latest outbound
+    </span>
+
+    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getAckTone(latestOutgoingStatus)}`}>
+      {latestOutgoingStatusLabel}
+    </span>
+
+    {["pending", "failed"].includes(latestOutgoingStatus ?? "") && (
+      <button
+        onClick={() => handleRetryLatestOutbound()}
+        disabled={isRetryingOutbound}
+        className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+      >
+        {isRetryingOutbound ? "Retrying..." : "Retry"}
+      </button>
+    )}
+  </div>
+) : null}
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
       <div className="space-y-4 overflow-y-auto bg-background-elevated px-3 py-5 sm:px-4 xl:px-5 2xl:px-7">
