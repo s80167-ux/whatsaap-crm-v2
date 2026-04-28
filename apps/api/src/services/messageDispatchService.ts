@@ -82,7 +82,7 @@ export class MessageDispatchService {
     return claimed.length;
   }
 
-  private async processJob(job: MessageDispatchOutboxRecord) {
+    async processJob(job: MessageDispatchOutboxRecord) {
     try {
       const outbound = await this.connectorClient.sendMessage({
         accountId: job.whatsapp_account_id,
@@ -195,6 +195,32 @@ export class MessageDispatchService {
     }
   }
 
+    async retryMessage(input: { messageId: string; organizationId: string }) {
+    const client = await pool.connect();
+
+    try {
+      const job = await this.outboxRepository.findRetryableByMessageId(client, {
+        messageId: input.messageId,
+        organizationId: input.organizationId
+      });
+
+      if (!job) {
+        return {
+          ok: false,
+          reason: "Pending outbound job not found"
+        };
+      }
+
+      await this.processJob(job);
+
+      return {
+        ok: true,
+        outboxId: job.id
+      };
+    } finally {
+      client.release();
+    }
+  }
   private extractAttachmentPayload(payload: unknown) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
