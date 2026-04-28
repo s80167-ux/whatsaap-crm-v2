@@ -199,7 +199,7 @@ export class MessageDispatchOutboxRepository {
     return result.rows;
   }
 
-    async findRetryableByMessageId(
+  async findRetryableByMessageId(
     client: PoolClient,
     input: {
       messageId: string;
