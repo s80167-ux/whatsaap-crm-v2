@@ -11,9 +11,14 @@ messageRoutes.post("/send", requirePermission("messages.send"), asyncHandler(sen
 messageRoutes.post("/:messageId/forward", requirePermission("messages.send"), asyncHandler(forwardMessage));
 messageRoutes.delete("/:messageId", requirePermission("messages.send"), asyncHandler(deleteMessage));
 
-// 🔥 NEW: Retry outbound message dispatch
 messageRoutes.post("/:messageId/retry-dispatch", requirePermission("messages.send"), asyncHandler(async (req, res) => {
-  const { messageId } = req.params;
+  const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
+
+  if (!messageId) {
+    return res.status(400).json({
+      error: "messageId is required"
+    });
+  }
 
   const organizationId = req.auth?.organizationId;
 
