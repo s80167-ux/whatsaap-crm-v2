@@ -82,7 +82,7 @@ export class MessageDispatchService {
     return claimed.length;
   }
 
-    async processJob(job: MessageDispatchOutboxRecord) {
+  async processJob(job: MessageDispatchOutboxRecord) {
     try {
       const outbound = await this.connectorClient.sendMessage({
         accountId: job.whatsapp_account_id,
@@ -92,11 +92,7 @@ export class MessageDispatchService {
       });
 
       const sentAt = new Date();
-      const connectorMessageId =
-        typeof outbound === "object" && outbound && "key" in outbound
-          ? ((outbound as { key?: { id?: string } }).key?.id ?? null)
-          : null;
-
+      const connectorMessageId = this.extractConnectorMessageId(outbound);
       const externalMessageId = connectorMessageId ?? `dispatch:${crypto.randomUUID()}`;
 
       await withTransaction(async (client) => {
@@ -195,7 +191,7 @@ export class MessageDispatchService {
     }
   }
 
-    async retryMessage(input: { messageId: string; organizationId: string }) {
+  async retryMessage(input: { messageId: string; organizationId: string }) {
     const client = await pool.connect();
 
     try {
@@ -221,6 +217,22 @@ export class MessageDispatchService {
       client.release();
     }
   }
+
+  private extractConnectorMessageId(outbound: unknown) {
+    if (!outbound || typeof outbound !== "object") {
+      return null;
+    }
+
+    const key = (outbound as { key?: unknown }).key;
+
+    if (!key || typeof key !== "object") {
+      return null;
+    }
+
+    const id = (key as { id?: unknown }).id;
+    return typeof id === "string" && id.length > 0 ? id : null;
+  }
+
   private extractAttachmentPayload(payload: unknown) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
