@@ -13,8 +13,14 @@ messageRoutes.post(
   "/:messageId/retry-dispatch",
   requirePermission("messages.send"),
   asyncHandler(async (req, res) => {
-    const { messageId } = req.params;
+    const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
     const organizationId = req.auth?.organizationId;
+
+    if (!messageId) {
+      return res.status(400).json({
+        error: "messageId is required"
+      });
+    }
 
     if (!organizationId) {
       return res.status(400).json({
