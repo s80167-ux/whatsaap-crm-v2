@@ -423,43 +423,66 @@ export class WhatsAppSessionManager {
       throw new Error("Message text or attachment is required");
     }
 
-    if (!attachment) {
-      return socket.sendMessage(recipientJid, { text: text ?? "" });
+    const socketUserId = (socket as { user?: { id?: string } }).user?.id;
+
+    if (!socketUserId) {
+      throw new Error("WhatsApp session is not fully connected. Please reconnect this WhatsApp account before sending.");
     }
 
-    const mediaBuffer = Buffer.from(attachment.dataBase64, "base64");
+    let result: unknown;
 
-    switch (attachment.kind) {
-      case "image":
-        return socket.sendMessage(recipientJid, {
-          image: mediaBuffer,
-          caption: text ?? undefined,
-          mimetype: attachment.mimeType,
-          fileName: attachment.fileName
-        });
-      case "video":
-        return socket.sendMessage(recipientJid, {
-          video: mediaBuffer,
-          caption: text ?? undefined,
-          mimetype: attachment.mimeType,
-          fileName: attachment.fileName
-        });
-      case "audio":
-        return socket.sendMessage(recipientJid, {
-          audio: mediaBuffer,
-          mimetype: attachment.mimeType,
-          ptt: false
-        });
-      case "document":
-        return socket.sendMessage(recipientJid, {
-          document: mediaBuffer,
-          mimetype: attachment.mimeType,
-          fileName: attachment.fileName,
-          caption: text ?? undefined
-        });
-      default:
-        throw new Error(`Unsupported attachment kind: ${String(attachment.kind)}`);
+    try {
+      if (!attachment) {
+        result = await socket.sendMessage(recipientJid, { text: text ?? "" });
+      } else {
+        const mediaBuffer = Buffer.from(attachment.dataBase64, "base64");
+
+        switch (attachment.kind) {
+          case "image":
+            result = await socket.sendMessage(recipientJid, {
+              image: mediaBuffer,
+              caption: text ?? undefined,
+              mimetype: attachment.mimeType,
+              fileName: attachment.fileName
+            });
+            break;
+          case "video":
+            result = await socket.sendMessage(recipientJid, {
+              video: mediaBuffer,
+              caption: text ?? undefined,
+              mimetype: attachment.mimeType,
+              fileName: attachment.fileName
+            });
+            break;
+          case "audio":
+            result = await socket.sendMessage(recipientJid, {
+              audio: mediaBuffer,
+              mimetype: attachment.mimeType,
+              ptt: false
+            });
+            break;
+          case "document":
+            result = await socket.sendMessage(recipientJid, {
+              document: mediaBuffer,
+              mimetype: attachment.mimeType,
+              fileName: attachment.fileName,
+              caption: text ?? undefined
+            });
+            break;
+          default:
+            throw new Error(`Unsupported attachment kind: ${String(attachment.kind)}`);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown Baileys send error";
+      throw new Error(`WhatsApp send failed: ${message}`);
     }
+
+    if (!result || typeof result !== "object") {
+      throw new Error("WhatsApp send failed: empty Baileys response");
+    }
+
+    return result;
   }
 
   async terminateSession(accountId: string) {
