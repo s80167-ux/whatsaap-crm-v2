@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requirePermission } from "../../middleware/authMiddleware.js";
-import { backfillWhatsAppAccount } from "../../controllers/adminBackfillController.js";
+import {
+  backfillWhatsAppAccount,
+  backfillWhatsAppHistory,
+  fullSyncWhatsAppAccount,
+  getLatestWhatsAppSyncJob,
+  getWhatsAppSyncJob,
+  syncWhatsAppContacts
+} from "../../controllers/adminBackfillController.js";
 import {
   detectContactRepairProposal,
   listContactRepairProposals,
@@ -32,6 +39,31 @@ adminRoutes.post(
   "/whatsapp-accounts/:accountId/backfill",
   requirePermission("org.manage_whatsapp_accounts"),
   asyncHandler(backfillWhatsAppAccount)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/sync-contacts",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(syncWhatsAppContacts)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/backfill-history",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(backfillWhatsAppHistory)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/full-sync",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(fullSyncWhatsAppAccount)
+);
+adminRoutes.get(
+  "/whatsapp-sync-jobs/latest",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(getLatestWhatsAppSyncJob)
+);
+adminRoutes.get(
+  "/whatsapp-sync-jobs/:jobId",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(getWhatsAppSyncJob)
 );
 adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppAccount));
 
