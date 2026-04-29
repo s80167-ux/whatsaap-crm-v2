@@ -36,9 +36,14 @@ type OutboundMediaAttachment = {
 type ContactSnapshot = Pick<Contact, "id" | "jid" | "lid" | "name" | "notify" | "verifiedName" | "imgUrl">;
 
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
 
 function isWithinHistorySyncWindow(sentAt: Date, lookbackDays: number | null | undefined) {
-  const days = Math.max(0, lookbackDays ?? 7);
+  if (lookbackDays === -1) {
+    return true;
+  }
+
+  const days = Math.max(0, lookbackDays ?? DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS);
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000 - HISTORY_SYNC_CLOCK_SKEW_MS;
   return sentAt.getTime() >= cutoffMs;
 }
@@ -317,6 +322,10 @@ export class WhatsAppSessionManager {
         const sentAt = new Date(Number(message.messageTimestamp) * 1000 || Date.now());
 
         if (!isWithinHistorySyncWindow(sentAt, account.history_sync_lookback_days)) {
+          logger.debug(
+            { accountId: account.id, messageId: message.key.id, sentAt, lookbackDays: account.history_sync_lookback_days },
+            "Skipping WhatsApp history message outside configured lookback window"
+          );
           return;
         }
 
