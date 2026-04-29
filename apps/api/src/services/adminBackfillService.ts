@@ -4,6 +4,9 @@ import { AppError } from "../lib/errors.js";
 import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
 import type { AuthUser } from "../types/auth.js";
 import { ConnectorClient } from "./connectorClient.js";
+import { WhatsAppSyncJobService } from "./whatsAppSyncJobService.js";
+
+type SyncJobType = "contacts_sync" | "history_backfill" | "full_sync";
 
 function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id: string; created_by?: string | null }) {
   if (authUser.role === "super_admin") {
@@ -24,10 +27,16 @@ function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id
 export class AdminBackfillService {
   constructor(
     private readonly whatsappRepository = new WhatsAppAdminRepository(),
-    private readonly connectorClient = new ConnectorClient()
+    private readonly connectorClient = new ConnectorClient(),
+    private readonly syncJobService = new WhatsAppSyncJobService()
   ) {}
 
-  async backfillWhatsAppAccount(authUser: AuthUser, accountId: string, lookbackDays: number) {
+  async backfillWhatsAppAccount(
+    authUser: AuthUser,
+    accountId: string,
+    lookbackDays: number,
+    jobType: SyncJobType = "history_backfill"
+  ) {
     const account = await withTransaction(async (client) => {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);
 
@@ -53,14 +62,23 @@ export class AdminBackfillService {
       return updatedAccount;
     });
 
+    const syncJob = await this.syncJobService.createJob({
+      authUser,
+      organizationId: account.organization_id,
+      whatsappAccountId: account.id,
+      jobType,
+      lookbackDays
+    });
+
     void this.connectorClient.reconnectAccount(account.id).catch((error) => {
-      logger.warn({ error, accountId: account.id }, "WhatsApp backfill lookback was saved, but connector reconnect failed");
+      logger.warn({ error, accountId: account.id, syncJobId: syncJob.id }, "WhatsApp sync lookback was saved, but connector reconnect failed");
     });
 
     return {
       account,
       lookbackDays,
-      reconnectRequested: true
+      reconnectRequested: true,
+      syncJob
     };
   }
 }
