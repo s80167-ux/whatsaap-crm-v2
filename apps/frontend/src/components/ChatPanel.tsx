@@ -1113,7 +1113,8 @@ function MessageBubble({
   const replyContext = getReplyContext(message, repliedMessage);
   const isDeleted = Boolean(message.is_deleted);
   const showSelectionActions = !isDeleted;
-  const showOutboundActions = message.direction === "outgoing" && !isDeleted;
+  // Show reply/forward for both incoming and outgoing (if not deleted)
+  const showBubbleActions = (message.direction === "outgoing" || message.direction === "incoming") && !isDeleted;
 
   function openLinkedSalesOrder() {
     if (!linkedSalesOrderId) {
@@ -1229,29 +1230,28 @@ function MessageBubble({
           <BubbleActionButton
             label={linkedSalesOrderId ? "Open linked sales order" : "Create sales from bubble"}
             onClick={() => {
-            if (linkedSalesOrderId) {
-            openLinkedSalesOrder();
-            return;
-      }
-
-    onCreateSales(message);
-  }}
-  icon={<BriefcaseBusiness className="h-3.5 w-3.5" />}
-  active={Boolean(linkedSalesOrderId)}
-/>
-          {showOutboundActions ? (
-            <BubbleActionButton
-              label="Reply to bubble"
-              onClick={() => onReply(message)}
-              icon={<Reply className="h-3.5 w-3.5" />}
-            />
-          ) : null}
-          {showOutboundActions ? (
-            <BubbleActionButton
-              label="Forward bubble"
-              onClick={() => onForward(message)}
-              icon={<Forward className="h-3.5 w-3.5" />}
-            />
+              if (linkedSalesOrderId) {
+                openLinkedSalesOrder();
+                return;
+              }
+              onCreateSales(message);
+            }}
+            icon={<BriefcaseBusiness className="h-3.5 w-3.5" />}
+            active={Boolean(linkedSalesOrderId)}
+          />
+          {showBubbleActions ? (
+            <>
+              <BubbleActionButton
+                label="Reply to bubble"
+                onClick={() => onReply(message)}
+                icon={<Reply className="h-3.5 w-3.5" />}
+              />
+              <BubbleActionButton
+                label="Forward bubble"
+                onClick={() => onForward(message)}
+                icon={<Forward className="h-3.5 w-3.5" />}
+              />
+            </>
           ) : null}
           <BubbleActionButton
             label={isDeleting ? "Deleting bubble" : "Delete bubble"}
@@ -1278,6 +1278,15 @@ function BubbleActionButton({
   disabled?: boolean;
   active?: boolean;
 }) {
+  // Special style for tick icon when active for higher contrast
+  const isTick = label === "Tick bubble" || label === "Untick bubble";
+  const buttonClass = isTick && active
+    ? "inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+    : `inline-flex h-7 w-7 items-center justify-center rounded-full border bg-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+        active
+          ? "border-primary/35 bg-primary/10 text-primary"
+          : "border-border text-text-soft hover:border-primary/30 hover:text-primary"
+      }`;
   return (
     <button
       type="button"
@@ -1285,11 +1294,7 @@ function BubbleActionButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
-        active
-          ? "border-primary/35 bg-primary/10 text-primary"
-          : "border-border text-text-soft hover:border-primary/30 hover:text-primary"
-      }`}
+      className={buttonClass}
     >
       {icon}
     </button>

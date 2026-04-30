@@ -108,6 +108,15 @@ See [frontend/.env.example](../frontend/.env.example).
 - Set `CONNECTOR_INSTANCE_ID` uniquely per connector service or replica group
 - Point `CONNECTOR_BASE_URL` on the backend at the connector's private Railway URL
 
+Recommended connector values:
+
+```env
+BAILEYS_AUTH_DIR=/data/baileys_auth
+CONNECTOR_INSTANCE_ID=connector-railway-1
+```
+
+Do not use a relative `BAILEYS_AUTH_DIR` such as `./data/baileys_auth` on Railway, because container restarts can force WhatsApp re-registration and QR rescans if auth files are not stored on the mounted volume.
+
 ### Supabase
 
 - Apply the versioned SQL files in `infra/sql/migrations` in order

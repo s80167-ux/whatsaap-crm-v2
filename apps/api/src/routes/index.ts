@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth, requireOrganizationContext } from "../middleware/authMiddleware.js";
+import { requireAuth, requireCsrf, requireOrganizationContext } from "../middleware/authMiddleware.js";
 import { adminRoutes } from "../modules/admin/admin.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
 import { contactRoutes } from "../modules/contacts/contacts.routes.js";
@@ -27,6 +27,7 @@ apiRouter.get("/health", (_req, res) => {
 apiRouter.use("/auth", authRoutes);
 
 apiRouter.use(requireAuth);
+apiRouter.use(requireCsrf);
 
 // SUPER ADMIN ONLY TOOL
 apiRouter.use("/super-admin", superAdminClearDataRoutes);

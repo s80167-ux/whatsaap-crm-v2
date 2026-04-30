@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -9,6 +10,10 @@ import { requestContext } from "./middleware/requestContext.js";
 import { apiRouter } from "./routes/index.js";
 
 export const app = express();
+
+if (env.TRUST_PROXY) {
+  app.set("trust proxy", 1);
+}
 
 function isAllowedOrigin(origin: string | undefined) {
   if (!origin) {
@@ -45,10 +50,12 @@ app.use(
 
       callback(new Error(`CORS blocked for origin: ${origin ?? "unknown"}`));
     },
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"]
   })
 );
 app.use(requestContext);
+app.use(cookieParser());
 app.use(express.json({ limit: "8mb" }));
 app.use(morgan("dev"));
 

@@ -59,26 +59,23 @@ export class WhatsAppRuntimeRepository {
     );
   }
 
-  async incrementReconnectAttempts(client: PoolClient, sessionId: string): Promise<void> {
-    await client.query(
-      `
-        update whatsapp_account_sessions
-        set reconnect_attempt_count = reconnect_attempt_count + 1
-        where id = $1
-      `,
-      [sessionId]
-    );
-  }
-
-  async endSession(client: PoolClient, input: { sessionId: string; reason: string | null }): Promise<void> {
+  async closeSession(
+    client: PoolClient,
+    input: {
+      sessionId: string;
+      reason: string | null;
+      incrementReconnectAttempt?: boolean;
+    }
+  ): Promise<void> {
     await client.query(
       `
         update whatsapp_account_sessions
         set ended_at = coalesce(ended_at, timezone('utc', now())),
-            end_reason = coalesce($2, end_reason)
+            end_reason = coalesce($2, end_reason),
+            reconnect_attempt_count = reconnect_attempt_count + $3
         where id = $1
       `,
-      [input.sessionId, input.reason]
+      [input.sessionId, input.reason, input.incrementReconnectAttempt ? 1 : 0]
     );
   }
 

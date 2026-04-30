@@ -138,6 +138,14 @@ npm run worker:usage-daily -- --days 7
 - `CONNECTOR_LEASE_TTL_MS`: lease staleness window before another connector can take over
 - `CONNECTOR_HEARTBEAT_INTERVAL_MS`: lease heartbeat interval
 
+For Railway deployments, do not leave `BAILEYS_AUTH_DIR` on the default relative path such as `./data/baileys_auth`.
+Mount a persistent volume to `/data` and set:
+
+```env
+BAILEYS_AUTH_DIR=/data/baileys_auth
+CONNECTOR_INSTANCE_ID=connector-railway-1
+```
+
 ### Frontend
 
 - `VITE_API_BASE_URL`: backend API base URL

@@ -23,7 +23,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
-import { updateMyPassword, updateMyProfile } from "../api/auth";
+import { logout, updateMyPassword, updateMyProfile } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
@@ -354,9 +354,13 @@ export function DashboardLayout() {
               <span className="ml-2">Password</span>
             </Button>
             <Button
-              onClick={() => {
-                clearAuthSession();
-                navigate("/login", { replace: true });
+              onClick={async () => {
+                try {
+                  await logout();
+                } finally {
+                  clearAuthSession();
+                  navigate("/login", { replace: true });
+                }
               }}
               variant="secondary"
               className="border-border bg-white px-3 py-2 text-text hover:bg-background-tint"

@@ -1,5 +1,6 @@
 import { pool, withTransaction } from "../config/database.js";
-import { supabaseAdmin, supabasePublic } from "../config/supabase.js";
+import { createSupabaseAdminClient, createSupabasePublicClient } from "../config/supabase.js";
+import { AppError } from "../lib/errors.js";
 import { AuthzRepository } from "../repositories/authzRepository.js";
 import { OrganizationUserRepository } from "../repositories/organizationUserRepository.js";
 import type { AuthUser, UserRole } from "../types/auth.js";
@@ -11,13 +12,14 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
+    const supabasePublic = createSupabasePublicClient();
     const { data, error } = await supabasePublic.auth.signInWithPassword({
       email,
       password
     });
 
     if (error || !data.session || !data.user) {
-      throw new Error("Invalid email or password");
+      throw new AppError("Invalid email or password", 401, "invalid_credentials");
     }
 
     const resolvedUser = await this.resolveAuthUser({
@@ -28,7 +30,8 @@ export class AuthService {
     });
 
     return {
-      token: data.session.access_token,
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
       user: {
         id: resolvedUser.authUserId,
         organizationUserId: resolvedUser.organizationUserId,
@@ -39,6 +42,30 @@ export class AuthService {
         role: resolvedUser.role,
         permissionKeys: resolvedUser.permissionKeys
       }
+    };
+  }
+
+  async refreshSession(refreshToken: string) {
+    const supabasePublic = createSupabasePublicClient();
+    const { data, error } = await supabasePublic.auth.refreshSession({
+      refresh_token: refreshToken
+    });
+
+    if (error || !data.session || !data.user) {
+      throw new AppError("Invalid or expired session", 401, "invalid_session");
+    }
+
+    const resolvedUser = await this.resolveAuthUser({
+      authUserId: data.user.id,
+      email: data.user.email ?? "",
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
+    });
+
+    return {
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      user: resolvedUser
     };
   }
 
@@ -56,10 +83,11 @@ export class AuthService {
   }
 
   async getAuthUserFromAccessToken(token: string) {
+    const supabaseAdmin = createSupabaseAdminClient();
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !data.user) {
-      throw new Error("Invalid or expired token");
+      throw new AppError("Invalid or expired token", 401, "invalid_token");
     }
 
     return this.resolveAuthUser({
@@ -78,6 +106,7 @@ export class AuthService {
     password: string;
     role: UserRole;
   }) {
+    const supabaseAdmin = createSupabaseAdminClient();
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email: input.email,
       password: input.password,
@@ -133,6 +162,7 @@ export class AuthService {
   }
 
   async deleteAuthUser(authUserId: string) {
+    const supabaseAdmin = createSupabaseAdminClient();
     const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
 
     if (error) {
@@ -141,6 +171,7 @@ export class AuthService {
   }
 
   async updatePassword(authUserId: string, password: string) {
+    const supabaseAdmin = createSupabaseAdminClient();
     const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
       password
     });
@@ -151,6 +182,7 @@ export class AuthService {
   }
 
   async updateProfile(authUser: AuthUser, input: { fullName: string | null; avatarUrl: string | null }) {
+    const supabaseAdmin = createSupabaseAdminClient();
     const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.authUserId, {
       user_metadata: {
         full_name: input.fullName,
@@ -179,6 +211,15 @@ export class AuthService {
       fullName: input.fullName,
       avatarUrl: input.avatarUrl
     });
+  }
+
+  async logout(accessToken: string) {
+    const supabaseAdmin = createSupabaseAdminClient();
+    const { error } = await supabaseAdmin.auth.admin.signOut(accessToken, "local");
+
+    if (error) {
+      throw new AppError(error.message ?? "Unable to sign out", 500, "logout_failed");
+    }
   }
 
   private async resolveAuthUser(input: {

@@ -253,39 +253,60 @@ export class WhatsAppSessionManager {
             const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             const reason = shouldReconnect ? "connection_closed_reconnecting" : "logged_out";
+            const activeRuntime = this.runtimes.get(account.id);
 
-            await withTransaction(async (client) => {
-              await this.runtimeRepository.endSession(client, {
-                sessionId: session.id,
-                reason
-              });
-              await this.runtimeRepository.appendConnectionEvent(client, {
-                whatsappAccountId: account.id,
-                sessionId: session.id,
-                eventType: "disconnected",
-                severity: shouldReconnect ? "warn" : "error",
-                payload: {
-                  status_code: statusCode,
-                  should_reconnect: shouldReconnect
-                }
-              });
+            if (activeRuntime?.sessionId !== session.id) {
+              logger.info(
+                { accountId: account.id, sessionId: session.id, activeSessionId: activeRuntime?.sessionId ?? null },
+                "Ignoring stale WhatsApp session close event"
+              );
+              return;
+            }
 
-              if (shouldReconnect) {
-                await this.runtimeRepository.incrementReconnectAttempts(client, session.id);
-              } else {
-                await this.accountRepository.releaseLease(client, {
-                  accountId: account.id,
-                  ownerId: env.CONNECTOR_INSTANCE_ID
-                });
-              }
-
-              await this.accountRepository.updateStatus(client, account.id, "disconnected");
-            });
+            let closePersistenceFailed = false;
 
             this.sockets.delete(account.id);
             this.clearRuntime(account.id);
 
-            logger.warn({ accountId: account.id, statusCode }, "WhatsApp session closed");
+            try {
+              await withTransaction(async (client) => {
+                await this.runtimeRepository.closeSession(client, {
+                  sessionId: session.id,
+                  reason,
+                  incrementReconnectAttempt: shouldReconnect
+                });
+                await this.runtimeRepository.appendConnectionEvent(client, {
+                  whatsappAccountId: account.id,
+                  sessionId: session.id,
+                  eventType: "disconnected",
+                  severity: shouldReconnect ? "warn" : "error",
+                  payload: {
+                    status_code: statusCode,
+                    should_reconnect: shouldReconnect
+                  }
+                });
+
+                if (!shouldReconnect) {
+                  await this.accountRepository.releaseLease(client, {
+                    accountId: account.id,
+                    ownerId: env.CONNECTOR_INSTANCE_ID
+                  });
+                }
+
+                await this.accountRepository.updateStatus(client, account.id, "disconnected");
+              });
+            } catch (error) {
+              closePersistenceFailed = true;
+              logger.error(
+                { error, accountId: account.id, sessionId: session.id, shouldReconnect, statusCode },
+                "Failed to persist WhatsApp session close state"
+              );
+            }
+
+            logger.warn(
+              { accountId: account.id, statusCode, shouldReconnect, closePersistenceFailed },
+              "WhatsApp session closed"
+            );
 
             if (shouldReconnect && !this.disabledAccounts.has(account.id)) {
               setTimeout(() => {
@@ -689,7 +710,7 @@ export class WhatsAppSessionManager {
 
     await withTransaction(async (client) => {
       if (runtime) {
-        await this.runtimeRepository.endSession(client, {
+        await this.runtimeRepository.closeSession(client, {
           sessionId: runtime.sessionId,
           reason
         });

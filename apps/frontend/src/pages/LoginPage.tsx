@@ -7,7 +7,6 @@ import { login } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
-import { storeAuthSession } from "../lib/auth";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -22,8 +21,7 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const session = await login({ email, password });
-      storeAuthSession(session);
+      await login({ email, password });
       navigate("/", { replace: true });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to sign in");

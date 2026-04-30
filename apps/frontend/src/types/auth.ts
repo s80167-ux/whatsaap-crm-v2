@@ -12,6 +12,5 @@ export interface AuthProfile {
 }
 
 export interface LoginResponse {
-  token: string;
   user: AuthProfile;
 }

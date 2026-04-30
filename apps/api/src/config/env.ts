@@ -29,6 +29,14 @@ const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
+  SESSION_COOKIE_NAME: z.string().min(1).default("crm_session"),
+  REFRESH_COOKIE_NAME: z.string().min(1).default("crm_refresh"),
+  CSRF_COOKIE_NAME: z.string().min(1).default("crm_csrf"),
+  COOKIE_SECURE: z.coerce.boolean().optional(),
+  COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+  COOKIE_DOMAIN: z.string().min(1).optional(),
+  COOKIE_MAX_AGE_MS: z.coerce.number().int().positive().default(1000 * 60 * 60 * 24 * 30),
+  TRUST_PROXY: z.coerce.boolean().default(false),
   BAILEYS_AUTH_DIR: z.string().default("./data/baileys_auth"),
   CONNECTOR_BASE_URL: z.string().url().default("http://localhost:4010"),
   CONNECTOR_INTERNAL_SECRET: z.string().min(1).default("change-me"),
@@ -43,10 +51,15 @@ const envSchema = z.object({
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()
 });
 
-export const env = envSchema.parse({
+const parsedEnv = envSchema.parse({
   ...process.env,
   SUPABASE_URL: process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY:
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 });
+
+export const env = {
+  ...parsedEnv,
+  COOKIE_SECURE: parsedEnv.COOKIE_SECURE ?? parsedEnv.NODE_ENV === "production"
+};

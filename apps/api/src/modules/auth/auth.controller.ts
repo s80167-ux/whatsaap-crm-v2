@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { clearSessionCookies, issueCsrfToken, setCsrfCookie, setNoStore, setSessionCookies } from "../../lib/authCookies.js";
 import { AppError } from "../../lib/errors.js";
 import { AuthService } from "../../services/authService.js";
 
@@ -37,13 +38,27 @@ function requireAuth(request: Request) {
 export async function login(request: Request, response: Response) {
   const input = loginSchema.parse(request.body);
   const result = await authService.login(input.email, input.password);
-  return response.json({ data: result });
+  const csrfToken = issueCsrfToken();
+  setSessionCookies(response, {
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    csrfToken
+  });
+  setNoStore(response);
+  return response.json({ data: { user: result.user }, csrfToken });
 }
 
 export async function getMe(request: Request, response: Response) {
   const auth = requireAuth(request);
   const profile = await authService.getProfile(auth);
-  return response.json({ data: profile });
+  const csrfToken = request.authSession?.csrfToken ?? issueCsrfToken();
+
+  if (!request.authSession?.csrfToken) {
+    setCsrfCookie(response, csrfToken);
+  }
+
+  setNoStore(response);
+  return response.json({ data: profile, csrfToken });
 }
 
 export async function updateMyPassword(request: Request, response: Response) {
@@ -62,4 +77,20 @@ export async function updateMe(request: Request, response: Response) {
   });
 
   return response.json({ data: profile });
+}
+
+export async function logout(request: Request, response: Response) {
+  const authSession = request.authSession;
+
+  if (authSession?.accessToken) {
+    try {
+      await authService.logout(authSession.accessToken);
+    } catch {
+      // Clear local cookies even if upstream revoke fails.
+    }
+  }
+
+  clearSessionCookies(response);
+  setNoStore(response);
+  return response.json({ ok: true });
 }

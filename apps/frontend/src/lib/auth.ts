@@ -1,14 +1,10 @@
-import type { AuthProfile, LoginResponse } from "../types/auth";
+import type { AuthProfile } from "../types/auth";
 
-const TOKEN_KEY = "crm_auth_token";
 const USER_KEY = "crm_auth_user";
+const CSRF_KEY = "crm_csrf_token";
 
-export function getAuthToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+function dispatchAuthUpdated() {
+  window.dispatchEvent(new Event("crm_auth_user_updated"));
 }
 
 export function getStoredUser(): AuthProfile | null {
@@ -21,11 +17,12 @@ export function getStoredUser(): AuthProfile | null {
   }
 }
 
-export function storeAuthSession(session: LoginResponse) {
+export function storeAuthSession(user: AuthProfile, csrfToken?: string | null) {
   try {
-    localStorage.setItem(TOKEN_KEY, session.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(session.user));
-    window.dispatchEvent(new Event("crm_auth_user_updated"));
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    storeCsrfToken(csrfToken);
+
+    dispatchAuthUpdated();
   } catch {
     // noop
   }
@@ -39,7 +36,27 @@ export function updateStoredUser(updater: (user: AuthProfile) => AuthProfile) {
     }
 
     localStorage.setItem(USER_KEY, JSON.stringify(updater(currentUser)));
-    window.dispatchEvent(new Event("crm_auth_user_updated"));
+    dispatchAuthUpdated();
+  } catch {
+    // noop
+  }
+}
+
+export function getCsrfToken() {
+  try {
+    return sessionStorage.getItem(CSRF_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function storeCsrfToken(csrfToken: string | null | undefined) {
+  try {
+    if (csrfToken) {
+      sessionStorage.setItem(CSRF_KEY, csrfToken);
+    } else {
+      sessionStorage.removeItem(CSRF_KEY);
+    }
   } catch {
     // noop
   }
@@ -47,9 +64,9 @@ export function updateStoredUser(updater: (user: AuthProfile) => AuthProfile) {
 
 export function clearAuthSession() {
   try {
-    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    window.dispatchEvent(new Event("crm_auth_user_updated"));
+    sessionStorage.removeItem(CSRF_KEY);
+    dispatchAuthUpdated();
   } catch {
     // noop
   }

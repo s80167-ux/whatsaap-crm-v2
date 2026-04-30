@@ -211,19 +211,9 @@ export function WhatsAppAccountDashboard() {
   return (
     <section className="space-y-6">
       <Card elevated>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="section-title">WhatsApp Account Management</h2>
-            <p className="section-copy">Create and manage WhatsApp accounts for your organization.</p>
-          </div>
-          <Button
-            variant="primary"
-            className={`ml-auto px-4 py-2 text-sm font-semibold rounded ${styles.buttonNoShadow}`}
-            onClick={() => setShowCreatePopup(true)}
-            aria-label="Add WhatsApp Account"
-          >
-            Add WhatsApp Account
-          </Button>
+        <div>
+          <h2 className="section-title">WhatsApp Account Management</h2>
+          <p className="section-copy">Create and manage WhatsApp accounts for your organization.</p>
         </div>
         {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
       </Card>
@@ -338,9 +328,19 @@ export function WhatsAppAccountDashboard() {
         <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
           <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
-          <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
-            {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
-          </Button>
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="primary"
+              className={`px-4 py-2 text-sm font-semibold rounded ${styles.buttonNoShadow}`}
+              onClick={() => setShowCreatePopup(true)}
+              aria-label="Add WhatsApp Account"
+            >
+              Add WhatsApp Account
+            </Button>
+            <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
+              {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
+            </Button>
+          </div>
         </div>
         <div className="mt-4 overflow-hidden border border-border bg-white text-sm shadow-soft">
           <div className="hidden grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] gap-3 border-b border-border bg-background-tint px-4 py-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-text-soft lg:grid">

@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
-import { requireAuth } from "../../middleware/authMiddleware.js";
-import { getMe, login, updateMe, updateMyPassword } from "./auth.controller.js";
+import { requireAuth, requireCsrf } from "../../middleware/authMiddleware.js";
+import { getMe, login, logout, updateMe, updateMyPassword } from "./auth.controller.js";
 
 export const authRoutes = Router();
 
 authRoutes.post("/login", asyncHandler(login));
 authRoutes.get("/me", requireAuth, asyncHandler(getMe));
-authRoutes.patch("/me", requireAuth, asyncHandler(updateMe));
-authRoutes.post("/me/password", requireAuth, asyncHandler(updateMyPassword));
+authRoutes.post("/logout", requireAuth, requireCsrf, asyncHandler(logout));
+authRoutes.patch("/me", requireAuth, requireCsrf, asyncHandler(updateMe));
+authRoutes.post("/me/password", requireAuth, requireCsrf, asyncHandler(updateMyPassword));
