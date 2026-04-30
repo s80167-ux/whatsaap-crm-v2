@@ -408,6 +408,43 @@ export class MessageRepository {
     return result.rows[0] ?? null;
   }
 
+  async findByIdAnyOrganization(
+    client: PoolClient,
+    input: {
+      messageId: string;
+    }
+  ): Promise<MessageRecord | null> {
+    const result = await client.query<MessageRecord>(
+      `
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          reply_to_message_id,
+          is_deleted,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+        from messages
+        where id = $1
+          and is_deleted = false
+        limit 1
+      `,
+      [input.messageId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async markDeleted(
     client: PoolClient,
     input: {

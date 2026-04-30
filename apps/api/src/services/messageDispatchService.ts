@@ -191,7 +191,7 @@ export class MessageDispatchService {
     }
   }
 
-  async retryMessage(input: { messageId: string; organizationId: string }) {
+  async retryMessage(input: { messageId: string; organizationId: string | null }) {
     const client = await pool.connect();
 
     try {

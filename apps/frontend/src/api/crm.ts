@@ -248,20 +248,28 @@ export async function sendMessage(payload: {
   });
 }
 
-export async function retryOutboundMessage(payload: { messageId: string }) {
-  return apiPost<{ ok: true; data: { ok: true; outboxId: string } }>(
+export async function retryOutboundMessage(payload: { messageId: string; organizationId?: string | null }) {
+    return apiPost<{ ok: true; data: { ok: true; outboxId: string } }>(
     `/messages/${payload.messageId}/retry-dispatch`,
-    {}
+    {
+      organizationId: payload.organizationId ?? null
+    }
   );
 }
 
-export async function deleteMessage(payload: { messageId: string }) {
-  return apiDelete<{ ok: true }>(`/messages/${payload.messageId}`);
+export async function deleteMessage(payload: { messageId: string; organizationId?: string | null }) {
+  const suffix = payload.organizationId ? `?organization_id=${encodeURIComponent(payload.organizationId)}` : "";
+  return apiDelete<{ ok: true }>(`/messages/${payload.messageId}${suffix}`);
 }
 
-export async function forwardMessage(payload: { messageId: string; targetConversationId: string }) {
+export async function forwardMessage(payload: {
+  messageId: string;
+  targetConversationId: string;
+  organizationId?: string | null;
+}) {
   return apiPost<{ data: Message }>(`/messages/${payload.messageId}/forward`, {
-    targetConversationId: payload.targetConversationId
+    targetConversationId: payload.targetConversationId,
+    organizationId: payload.organizationId ?? null
   });
 }
 

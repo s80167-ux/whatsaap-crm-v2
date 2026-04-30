@@ -17,6 +17,8 @@ export interface Conversation {
   contact_name: string;
   phone_number_normalized: string | null;
   contact_avatar_url?: string | null;
+  has_sales?: boolean;
+  has_sales_lead_tag?: boolean;
 }
 
 export interface Message {

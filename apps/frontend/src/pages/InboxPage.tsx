@@ -29,7 +29,12 @@ export function InboxPage() {
 
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
-  const { data: conversations = [], isLoading } = useConversations(
+  const {
+    data: conversations = [],
+    error: conversationsError,
+    isError: conversationsIsError,
+    isLoading
+  } = useConversations(
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined
   );
@@ -133,6 +138,10 @@ export function InboxPage() {
             <div className="min-h-0 overflow-y-auto">
               {isLoading ? (
                 <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+              ) : conversationsIsError ? (
+                <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-coral">
+                  {conversationsError instanceof Error ? conversationsError.message : "Unable to load conversations."}
+                </div>
               ) : (
                 <ConversationList
                   conversations={visibleConversations}

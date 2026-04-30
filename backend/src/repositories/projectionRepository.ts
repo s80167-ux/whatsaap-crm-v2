@@ -19,6 +19,7 @@ export interface ConversationSummaryRow {
   last_message_preview: string | null;
   last_message_type: string | null;
   last_message_direction: string | null;
+  has_sales: boolean;
 }
 
 export class ProjectionRepository {
@@ -264,10 +265,24 @@ export class ProjectionRepository {
           its.contact_avatar_url as contact_avatar_url,
           its.last_message_preview,
           its.last_message_type,
-          its.last_message_direction
+          its.last_message_direction,
+          coalesce(sales_info.has_sales, false) as has_sales
         from inbox_thread_summary its
         join conversations c on c.id = its.conversation_id
         join contacts ct on ct.id = its.contact_id
+        left join lateral (
+          select
+            exists (
+              select 1 from sales_orders so
+              where so.contact_id = its.contact_id
+                and so.organization_id = its.organization_id
+            )
+            or exists (
+              select 1 from leads l
+              where l.contact_id = its.contact_id
+                and l.organization_id = its.organization_id
+            ) as has_sales
+        ) sales_info on true
         where its.organization_id = $1
           and (
             not $2::boolean

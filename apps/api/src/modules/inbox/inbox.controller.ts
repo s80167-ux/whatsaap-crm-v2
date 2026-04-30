@@ -24,7 +24,10 @@ const historyRangeQuerySchema = z
 
 function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
-  const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+  const organizationId =
+    request.auth?.role === "super_admin"
+      ? organization_id ?? request.auth.organizationId ?? ""
+      : request.auth?.organizationId ?? organization_id ?? "";
 
   if (!organizationId && request.auth?.role === "super_admin") {
     return null;

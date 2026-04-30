@@ -291,9 +291,10 @@ export function ChatPanel({
   setSendNotice("Retrying pending outbound message...");
 
   try {
-    await retryOutboundMessage({
-      messageId: latestOutgoingMessage.id
-    });
+        await retryOutboundMessage({
+        messageId: latestOutgoingMessage.id,
+        organizationId: resolvedOrganizationId
+      });
 
     setSendNotice("Retry requested. Message will update shortly.");
     onMessageSent();
@@ -396,7 +397,7 @@ export function ChatPanel({
     setDeletingMessageId(message.id);
     setSendNotice(null);
     try {
-      await deleteMessage({ messageId: message.id });
+      await deleteMessage({ messageId: message.id, organizationId: resolvedOrganizationId });
       if (replyDraft?.messageId === message.id) {
         setReplyDraft(null);
       }
@@ -458,7 +459,11 @@ export function ChatPanel({
     setIsBulkDeleting(true);
     setSendNotice(null);
     try {
-      await Promise.all(deletableMessages.map(async (message) => deleteMessage({ messageId: message.id })));
+      await Promise.all(
+        deletableMessages.map(async (message) =>
+          deleteMessage({ messageId: message.id, organizationId: resolvedOrganizationId })
+        )
+      );
       if (replyDraft && deletableMessages.some((message) => message.id === replyDraft.messageId)) {
         setReplyDraft(null);
       }
@@ -491,7 +496,8 @@ export function ChatPanel({
     try {
       await forwardMessage({
         messageId: forwardSourceMessage.id,
-        targetConversationId: forwardTargetConversationId
+        targetConversationId: forwardTargetConversationId,
+        organizationId: resolvedOrganizationId
       });
       setForwardSourceMessage(null);
       setForwardTargetConversationId("");

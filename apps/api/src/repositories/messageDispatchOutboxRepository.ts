@@ -203,21 +203,36 @@ export class MessageDispatchOutboxRepository {
     client: PoolClient,
     input: {
       messageId: string;
-      organizationId: string;
+            organizationId: string | null;
     }
   ): Promise<MessageDispatchOutboxRecord | null> {
+    const { messageId, organizationId } = input;
+
+    if (organizationId) {
+      const result = await client.query<MessageDispatchOutboxRecord>(
+        `
+          select *
+          from message_dispatch_outbox
+          where message_id = $1
+            and organization_id = $2
+            and processing_status in ('pending', 'failed')
+          limit 1
+        `,
+        [messageId, organizationId]
+      );
+      return result.rows[0] ?? null;
+    }
+
     const result = await client.query<MessageDispatchOutboxRecord>(
       `
         select *
         from message_dispatch_outbox
         where message_id = $1
-          and organization_id = $2
           and processing_status in ('pending', 'failed')
         limit 1
       `,
-      [input.messageId, input.organizationId]
+      [messageId]
     );
-
     return result.rows[0] ?? null;
   }
 }

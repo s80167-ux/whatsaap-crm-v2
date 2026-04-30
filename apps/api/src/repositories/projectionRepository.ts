@@ -20,6 +20,8 @@ export interface ConversationSummaryRow {
   last_message_preview: string | null;
   last_message_type: string | null;
   last_message_direction: string | null;
+  has_sales: boolean;
+  has_sales_lead_tag?: boolean;
 }
 
 export class ProjectionRepository {
@@ -388,7 +390,8 @@ export class ProjectionRepository {
           coalesce(ct.primary_avatar_url, latest_identity.profile_avatar_url, its.contact_avatar_url) as contact_avatar_url,
           its.last_message_preview,
           its.last_message_type,
-          its.last_message_direction
+          its.last_message_direction,
+          coalesce(sales_info.has_sales, false) as has_sales
         from inbox_thread_summary its
         join conversations c on c.id = its.conversation_id
         join contacts ct on ct.id = its.contact_id
@@ -428,6 +431,19 @@ export class ProjectionRepository {
           order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
           limit 1
         ) latest_identity on true
+        left join lateral (
+          select
+            exists (
+              select 1 from sales_orders so
+              where so.contact_id = its.contact_id
+                and so.organization_id = its.organization_id
+            )
+            or exists (
+              select 1 from leads l
+              where l.contact_id = its.contact_id
+                and l.organization_id = its.organization_id
+            ) as has_sales
+        ) sales_info on true
         where ($1::uuid is null or its.organization_id = $1)
           and (
             $4::timestamptz is null
@@ -450,7 +466,10 @@ export class ProjectionRepository {
       [organizationId, assignedOnly, organizationUserId, activitySince]
     );
 
-    return result.rows;
+    return result.rows.map((row) => ({
+      ...row,
+      has_sales_lead_tag: false
+    }));
   }
 
   async listContactSummaries(

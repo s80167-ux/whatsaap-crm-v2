@@ -8,6 +8,7 @@ import { detectContactRepairProposal } from "../api/admin";
 import { apiPatch } from "../lib/http";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { ContactRepairQueueOverlay } from "../components/ContactRepairQueueOverlay";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
@@ -69,12 +70,14 @@ function CompactRepairTools({
   contact,
   canWrite,
   organizationId,
-  onChanged
+  onChanged,
+  onOpenQueue
 }: {
   contact: Contact;
   canWrite: boolean;
   organizationId?: string | null;
   onChanged: () => Promise<void>;
+  onOpenQueue: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -149,15 +152,25 @@ function CompactRepairTools({
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
-          onClick={() => setExpanded((value) => !value)}
-          disabled={!canWrite}
-        >
-          {expanded ? "Hide" : "Open tools"}
-          <ChevronDown size={14} className={`transition ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="secondary"
+            className="px-3 py-2 text-xs"
+            onClick={onOpenQueue}
+            disabled={!canWrite}
+          >
+            Review queue
+          </Button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setExpanded((value) => !value)}
+            disabled={!canWrite}
+          >
+            {expanded ? "Hide" : "Open tools"}
+            <ChevronDown size={14} className={`transition ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -232,6 +245,7 @@ export function ContactsPage() {
   const [contactSortMode, setContactSortMode] = useState<ContactSortMode>("latest");
   const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null);
+  const [isRepairQueueOpen, setIsRepairQueueOpen] = useState(false);
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, true);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
@@ -642,6 +656,7 @@ export function ContactsPage() {
               canWrite={canRepairContacts}
               organizationId={activeOrganizationId}
               onChanged={refreshSelectedContact}
+              onOpenQueue={() => setIsRepairQueueOpen(true)}
             />
             <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
               <p>Contact ID: {activeContact.id}</p>
@@ -690,6 +705,13 @@ export function ContactsPage() {
           </p>
         )}
       </Card>
+      <ContactRepairQueueOverlay
+        open={isRepairQueueOpen}
+        onClose={() => setIsRepairQueueOpen(false)}
+        organizationId={activeOrganizationId}
+        preferredContactId={activeContact?.id ?? selectedContactId}
+        onChanged={refreshSelectedContact}
+      />
     </div>
   );
 }

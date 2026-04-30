@@ -1,0 +1,13 @@
+name: DeepSeek MCP
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: deepseek
+    command: npx
+    args:
+      - -y
+      - deepseek-mcp-server
+    env:
+      DEEPSEEK_API_KEY: "sk-a11d1518a25a410aa91224cd940a75b1"
+       DEEPSEEK_BASE_URL: "https://api.deepseek.com"
+       DEEPSEEK_MODEL: "deepseek-v4-flash"

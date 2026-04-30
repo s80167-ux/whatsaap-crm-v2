@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import brandBanner from "../../asset/rezeki_dashboard_banner.png";
+import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
 import { login } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -40,6 +41,11 @@ export function LoginPage() {
           </div>
 
           <div className="p-8 md:p-10">
+            <img
+              src={brandLogo}
+              alt="Rezeki Dashboard logo"
+              className="mb-5 h-14 w-auto object-contain"
+            />
             <p className="brand-badge">Rezeki Dashboard</p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text">Sign in to your workspace</h1>
             <p className="mt-2 text-sm leading-6 text-text-muted">

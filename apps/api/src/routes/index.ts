@@ -7,7 +7,7 @@ import { conversationRoutes } from "../modules/conversations/conversations.route
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { inboxRoutes } from "../modules/inbox/inbox.routes.js";
 import { leadRoutes } from "../modules/leads/leads.routes.js";
-import { messageRoutes } from "../modules/messages/messages.routes.js";
+import { messagesRoutes } from "../modules/messages/messages.routes.js";
 import { organizationRoutes } from "../modules/organizations/organizations.routes.js";
 import { permissionRoutes } from "../modules/permissions/permissions.routes.js";
 import { platformRoutes } from "../modules/platform/platform.routes.js";
@@ -52,7 +52,7 @@ apiRouter.use("/inbox", inboxRoutes);
 apiRouter.use("/conversations", conversationRoutes);
 apiRouter.use("/contacts", contactRoutes);
 apiRouter.use("/leads", leadRoutes);
-apiRouter.use("/messages", messageRoutes);
+apiRouter.use("/messages", messagesRoutes);
 apiRouter.use("/quick-replies", quickReplyRoutes);
 apiRouter.use("/reports", reportRoutes);
 apiRouter.use("/sales", salesRoutes);

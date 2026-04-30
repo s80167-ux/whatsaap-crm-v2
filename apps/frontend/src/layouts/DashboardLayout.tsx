@@ -13,7 +13,6 @@ import {
   UserCircle,
   Users,
   Workflow,
-  Wrench,
   X,
   PlugZap
 } from "lucide-react";
@@ -487,7 +486,6 @@ export function DashboardLayout() {
                 label="CRM"
                 items={[
                   { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-                  { to: "/repair-queue", icon: <Wrench size={16} />, label: "Repair Queue" },
                   { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
                   { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
                 ]}

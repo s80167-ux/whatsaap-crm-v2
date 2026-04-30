@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
 import { AppError } from "../../lib/errors.js";
 import { AuditLogService } from "../../services/auditLogService.js";
+import { MessageDispatchService } from "../../services/messageDispatchService.js";
 import { QueryService } from "../../services/queryService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
 import { withTransaction } from "../../config/database.js";
@@ -11,6 +12,7 @@ import { MessageRepository } from "../../repositories/messageRepository.js";
 const queryService = new QueryService();
 const sendMessageService = new SendMessageService();
 const auditLogService = new AuditLogService();
+const messageDispatchService = new MessageDispatchService();
 const messageRepository = new MessageRepository();
 
 const attachmentSchema = z.object({
@@ -49,9 +51,29 @@ const organizationQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
 
+const organizationBodySchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  organization_id: z.string().uuid().optional().nullable()
+});
+
 function requireOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId = request.auth?.organizationId ?? organization_id ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  return organizationId;
+}
+
+function requireOrganizationIdFromRequest(request: Request) {
+  const { organization_id } = organizationQuerySchema.parse(request.query);
+  const body = organizationBodySchema.safeParse(request.body ?? {});
+  const bodyOrganizationId = body.success
+    ? body.data.organizationId ?? body.data.organization_id ?? ""
+    : "";
+  const organizationId = request.auth?.organizationId ?? bodyOrganizationId ?? organization_id ?? "";
 
   if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
@@ -122,22 +144,38 @@ export async function deleteMessage(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { messageId } = messageParamsSchema.parse(request.params);
 
-  if (!auth.organizationId) {
-    throw new AppError("organization_id is required", 400, "organization_required");
-  }
-
   const deletedMessage = await withTransaction(async (client) => {
-    const existingMessage = await messageRepository.findById(client, {
-      organizationId: auth.organizationId!,
-      messageId
-    });
+    const requestedOrganizationId = (() => {
+      try {
+        return requireOrganizationIdFromRequest(request);
+      } catch (error) {
+        if (auth.role === "super_admin" && error instanceof AppError && error.code === "organization_required") {
+          return null;
+        }
+
+        throw error;
+      }
+    })();
+
+    const existingMessage = requestedOrganizationId
+      ? await messageRepository.findById(client, {
+          organizationId: requestedOrganizationId,
+          messageId
+        })
+      : auth.role === "super_admin"
+        ? await messageRepository.findByIdAnyOrganization(client, {
+            messageId
+          })
+        : null;
 
     if (!existingMessage) {
       throw new AppError("Message not found", 404, "message_not_found");
     }
 
+    const organizationId = existingMessage.organization_id;
+
     return messageRepository.markDeleted(client, {
-      organizationId: auth.organizationId!,
+      organizationId,
       messageId
     });
   });
@@ -147,7 +185,7 @@ export async function deleteMessage(request: Request, response: Response) {
   }
 
   await auditLogService.record(auth, {
-    organizationId: auth.organizationId,
+    organizationId: deletedMessage.organization_id,
     action: "message.deleted",
     entityType: "message",
     entityId: deletedMessage.id,
@@ -165,14 +203,11 @@ export async function forwardMessage(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { messageId } = messageParamsSchema.parse(request.params);
   const input = forwardSchema.parse(request.body);
-
-  if (!auth.organizationId) {
-    throw new AppError("organization_id is required", 400, "organization_required");
-  }
+  const organizationId = requireOrganizationIdFromRequest(request);
 
   const sourceMessage = await withTransaction(async (client) => {
     const existingMessage = await messageRepository.findById(client, {
-      organizationId: auth.organizationId!,
+      organizationId,
       messageId
     });
 
@@ -192,7 +227,7 @@ export async function forwardMessage(request: Request, response: Response) {
           and id = $2
         limit 1
       `,
-      [auth.organizationId, input.targetConversationId]
+      [organizationId, input.targetConversationId]
     );
 
     return result.rows[0] ?? null;
@@ -224,7 +259,7 @@ export async function forwardMessage(request: Request, response: Response) {
   }
 
   const forwardedMessage = await sendMessageService.send({
-    organizationId: auth.organizationId,
+    organizationId,
     organizationUserId: auth.organizationUserId ?? null,
     whatsappAccountId: targetConversation.whatsapp_account_id,
     conversationId: input.targetConversationId,
@@ -234,7 +269,7 @@ export async function forwardMessage(request: Request, response: Response) {
   });
 
   await auditLogService.record(auth, {
-    organizationId: auth.organizationId,
+    organizationId,
     action: "message.forwarded",
     entityType: "message",
     entityId: forwardedMessage.id,
@@ -248,4 +283,29 @@ export async function forwardMessage(request: Request, response: Response) {
   });
 
   return response.status(201).json({ data: forwardedMessage });
+}
+
+export async function retryOutboundMessage(request: Request, response: Response) {
+  const { messageId } = messageParamsSchema.parse(request.params);
+
+  const bodySchema = z.object({
+    organizationId: z.string().uuid().nullable().optional()
+  });
+
+  const input = bodySchema.parse(request.body ?? {});
+  const organizationId = input.organizationId ?? request.auth?.organizationId ?? null;
+
+  const result = await messageDispatchService.retryMessage({
+    messageId,
+    organizationId
+  });
+
+  if (!result.ok) {
+    throw new AppError(result.reason ?? "Pending outbound job not found", 404, "message_retry_not_found");
+  }
+
+  return response.json({
+    ok: true,
+    data: result
+  });
 }

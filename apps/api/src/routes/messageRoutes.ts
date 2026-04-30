@@ -14,24 +14,21 @@ messageRoutes.post(
   requirePermission("messages.send"),
   asyncHandler(async (req, res) => {
     const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
-    const organizationId = req.auth?.organizationId;
 
-    if (!messageId) {
-      return res.status(400).json({
-        error: "messageId is required"
-      });
-    }
+        if (!messageId) {
+          return res.status(400).json({
+            error: "messageId is required"
+          });
+        }
 
-    if (!organizationId) {
-      return res.status(400).json({
-        error: "organization_id is required"
-      });
-    }
+        // Use organizationId from request body (if provided), otherwise fallback to the auth context.
+        // Super admins may send it explicitly or omit it to retry across all orgs.
+        const organizationId = req.body?.organizationId ?? req.auth?.organizationId ?? null;
 
-    const result = await messageDispatchService.retryMessage({
-      messageId,
-      organizationId
-    });
+        const result = await messageDispatchService.retryMessage({
+          messageId,
+          organizationId
+        });
 
     if (!result.ok) {
       return res.status(404).json({
