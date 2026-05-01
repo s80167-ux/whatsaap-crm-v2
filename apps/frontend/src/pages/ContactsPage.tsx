@@ -3,9 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, Phone } from "lucide-react";
-import { assignContact } from "../api/crm";
+import { assignContact, updateContact } from "../api/crm";
 import { detectContactRepairProposal } from "../api/admin";
-import { apiPatch } from "../lib/http";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { ContactRepairQueueOverlay } from "../components/ContactRepairQueueOverlay";
@@ -53,9 +52,15 @@ function getContactStatusInfo(contact: Contact, contactsById: Map<string, Contac
 }
 
 async function updateContactDisplayName(contactId: string, displayName: string | null) {
-  return apiPatch<{ data: Contact }>(`/contacts/${contactId}`, {
+  return updateContact({
+    contactId,
     displayName
   });
+}
+
+function emptyToNull(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 function getPrimarySourceLabel(contact: Contact) {
@@ -292,6 +297,13 @@ export function ContactsPage() {
   const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null);
   const [isRepairQueueOpen, setIsRepairQueueOpen] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editPhoneNumber, setEditPhoneNumber] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editCompanyName, setEditCompanyName] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, true);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
@@ -402,6 +414,25 @@ export function ContactsPage() {
     setSelectedContactId(selectedContactResponse.redirect_to_contact_id);
   }, [selectedContactResponse]);
 
+  useEffect(() => {
+    if (!activeContact) {
+      setEditDisplayName("");
+      setEditPhoneNumber("");
+      setEditEmail("");
+      setEditCompanyName("");
+      setEditNotes("");
+      setSaveMessage(null);
+      return;
+    }
+
+    setEditDisplayName(activeContact.display_name ?? "");
+    setEditPhoneNumber(activeContact.primary_phone_e164 ?? activeContact.primary_phone_normalized ?? "");
+    setEditEmail(activeContact.email ?? "");
+    setEditCompanyName(activeContact.company_name ?? "");
+    setEditNotes(activeContact.notes ?? "");
+    setSaveMessage(null);
+  }, [activeContact]);
+
   async function handleAssignContact(contactId: string, organizationUserId: string) {
     if (!organizationUserId) {
       return;
@@ -426,20 +457,48 @@ export function ContactsPage() {
     await queryClient.invalidateQueries({ queryKey: ["contact", selectedContactId] });
   }
 
+  async function handleSaveContactProfile() {
+    if (!activeContact || !canRepairContacts) {
+      return;
+    }
+
+    setIsSavingContact(true);
+    setSaveMessage(null);
+
+    try {
+      await updateContact({
+        contactId: activeContact.id,
+        displayName: emptyToNull(editDisplayName),
+        phoneNumber: emptyToNull(editPhoneNumber),
+        email: emptyToNull(editEmail),
+        companyName: emptyToNull(editCompanyName),
+        notes: emptyToNull(editNotes)
+      });
+      await refreshSelectedContact();
+      setSaveMessage("Contact profile saved.");
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Unable to save contact profile.");
+    } finally {
+      setIsSavingContact(false);
+    }
+  }
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
       <Card elevated className="workspace-block min-w-0">
-        <div className="workspace-page-header">
+        <div className={isMobile ? "space-y-3" : "workspace-page-header"}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Contacts</p>
-            <h2 className="mt-3 section-title">Canonical customer records</h2>
-            <p className="mt-2 max-w-2xl section-copy">
+            <h2 className={isMobile ? "mt-2 text-[1.7rem] font-semibold tracking-tight text-text" : "mt-3 section-title"}>
+              Canonical customer records
+            </h2>
+            <p className={isMobile ? "mt-2 max-w-xl text-sm leading-6 text-text-muted" : "mt-2 max-w-2xl section-copy"}>
               Every customer is stored once per organization and can fan out into many WhatsApp identities without duplicating the core record.
             </p>
           </div>
-          <div className="workspace-subtle max-w-xs">
+          <div className={isMobile ? "rounded-2xl border border-border bg-background-tint px-4 py-3" : "workspace-subtle max-w-xs"}>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
-            <p className="mt-2 text-sm leading-6 text-text-muted">
+            <p className={isMobile ? "mt-1 text-sm leading-6 text-text-muted" : "mt-2 text-sm leading-6 text-text-muted"}>
               Keep ownership, source history, and identity cleanup easy to scan from one desktop view.
             </p>
           </div>
@@ -874,6 +933,76 @@ export function ContactsPage() {
                       : activeContact.owner_user_id
                   : "Unassigned"}
               </p>
+            </div>
+            <div className="workspace-subtle">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Profile details</p>
+                  <p className="mt-1 text-sm text-text-muted">Update the CRM record and save directly to the contacts table.</p>
+                </div>
+                <Button
+                  className="px-4 py-2 text-sm"
+                  onClick={() => void handleSaveContactProfile()}
+                  disabled={!canRepairContacts || isSavingContact}
+                >
+                  {isSavingContact ? "Saving..." : "Save profile"}
+                </Button>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Display name</span>
+                  <Input
+                    value={editDisplayName}
+                    onChange={(event) => setEditDisplayName(event.target.value)}
+                    placeholder="Contact name"
+                    className="mt-1 h-10 w-full"
+                    disabled={!canRepairContacts || isSavingContact}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Phone number</span>
+                  <Input
+                    value={editPhoneNumber}
+                    onChange={(event) => setEditPhoneNumber(event.target.value)}
+                    placeholder="+60123456789"
+                    className="mt-1 h-10 w-full"
+                    disabled={!canRepairContacts || isSavingContact}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Email</span>
+                  <Input
+                    value={editEmail}
+                    onChange={(event) => setEditEmail(event.target.value)}
+                    placeholder="contact@company.com"
+                    type="email"
+                    className="mt-1 h-10 w-full"
+                    disabled={!canRepairContacts || isSavingContact}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Company name</span>
+                  <Input
+                    value={editCompanyName}
+                    onChange={(event) => setEditCompanyName(event.target.value)}
+                    placeholder="Company name"
+                    className="mt-1 h-10 w-full"
+                    disabled={!canRepairContacts || isSavingContact}
+                  />
+                </label>
+              </div>
+              <label className="mt-3 block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Notes</span>
+                <textarea
+                  value={editNotes}
+                  onChange={(event) => setEditNotes(event.target.value)}
+                  rows={4}
+                  placeholder="Add internal notes for this contact"
+                  className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canRepairContacts || isSavingContact}
+                />
+              </label>
+              {saveMessage ? <p className="mt-3 text-sm text-text-muted">{saveMessage}</p> : null}
             </div>
             <div className="workspace-subtle">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp source</p>

@@ -9,9 +9,10 @@ type NavLinkItemProps = {
   badge?: ReactNode;
   variant?: "default" | "sub";
   onClick?: () => void;
+  compact?: boolean;
 };
 
-export function NavLinkItem({ to, icon, label, badge, variant = "default", onClick }: NavLinkItemProps) {
+export function NavLinkItem({ to, icon, label, badge, variant = "default", onClick, compact = false }: NavLinkItemProps) {
   const showStackedBadge = variant === "sub" && Boolean(badge);
 
   return (
@@ -22,7 +23,13 @@ export function NavLinkItem({ to, icon, label, badge, variant = "default", onCli
       className={({ isActive }) =>
         clsx(
           "flex min-w-0 items-center gap-3 text-sm font-medium transition duration-200",
-          variant === "sub" ? "ml-3 px-3 py-2.5 pl-3" : "px-4 py-3.5",
+          variant === "sub"
+            ? compact
+              ? "ml-2 px-2.5 py-2 pl-2.5 text-[13px]"
+              : "ml-3 px-3 py-2.5 pl-3"
+            : compact
+              ? "px-3 py-2.5 text-[13px]"
+              : "px-4 py-3.5",
           isActive
             ? "rounded-xl bg-white text-slate-900 shadow-[0_10px_24px_rgba(8,15,32,0.16)]"
             : "rounded-xl text-white/72 hover:bg-white/10 hover:text-white"
@@ -32,7 +39,7 @@ export function NavLinkItem({ to, icon, label, badge, variant = "default", onCli
       <span
         className={clsx(
           "flex items-center justify-center rounded-lg text-current",
-          variant === "sub" ? "h-7 w-7" : "h-8 w-8"
+          variant === "sub" ? (compact ? "h-6 w-6" : "h-7 w-7") : compact ? "h-7 w-7" : "h-8 w-8"
         )}
       >
         {icon}

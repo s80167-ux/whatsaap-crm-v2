@@ -69,6 +69,8 @@ create table if not exists contacts (
   last_name text,
   phone_primary text,
   phone_primary_normalized text,
+  email text,
+  company_name text,
   notes text,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),

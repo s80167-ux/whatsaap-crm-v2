@@ -221,6 +221,26 @@ export async function assignContact(payload: { contactId: string; organizationUs
   });
 }
 
+export async function updateContact(payload: {
+  contactId: string;
+  displayName?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  companyName?: string | null;
+  notes?: string | null;
+  ownerUserId?: string | null;
+}) {
+  const response = await apiPatch<{ data: Contact }>(`/contacts/${payload.contactId}`, {
+    displayName: payload.displayName,
+    phoneNumber: payload.phoneNumber,
+    email: payload.email,
+    companyName: payload.companyName,
+    notes: payload.notes,
+    ownerUserId: payload.ownerUserId
+  });
+  return response.data;
+}
+
 export async function assignConversation(payload: { conversationId: string; organizationUserId: string }) {
   return apiPost<{ data: { id: string; assigned_user_id: string | null } }>(
     `/conversations/${payload.conversationId}/assign`,

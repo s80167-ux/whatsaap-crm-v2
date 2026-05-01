@@ -24,15 +24,27 @@ const assignContactBodySchema = z.object({
 const createContactBodySchema = z.object({
   displayName: z.string().min(1).optional().nullable(),
   phoneNumber: z.string().min(6).optional().nullable(),
+  email: z.string().trim().email().max(254).optional().nullable(),
+  companyName: z.string().trim().max(160).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
   ownerUserId: z.string().uuid().optional().nullable()
 });
 
 const updateContactBodySchema = z.object({
   displayName: z.string().min(1).optional().nullable(),
   phoneNumber: z.string().min(6).optional().nullable(),
+  email: z.string().trim().email().max(254).optional().nullable(),
+  companyName: z.string().trim().max(160).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
   ownerUserId: z.string().uuid().optional().nullable()
 }).refine(
-  (input) => input.displayName !== undefined || input.phoneNumber !== undefined || input.ownerUserId !== undefined,
+  (input) =>
+    input.displayName !== undefined ||
+    input.phoneNumber !== undefined ||
+    input.email !== undefined ||
+    input.companyName !== undefined ||
+    input.notes !== undefined ||
+    input.ownerUserId !== undefined,
   { message: "At least one field must be provided" }
 );
 
@@ -128,6 +140,9 @@ export async function createContact(request: Request, response: Response) {
       organizationId: auth.organizationId!,
       displayName: input.displayName ?? null,
       phoneNumber: input.phoneNumber ?? null,
+      email: input.email ?? null,
+      companyName: input.companyName ?? null,
+      notes: input.notes ?? null,
       ownerUserId: input.ownerUserId ?? null
     })
   );
@@ -140,6 +155,9 @@ export async function createContact(request: Request, response: Response) {
     metadata: {
       display_name: contact.display_name,
       primary_phone_e164: contact.primary_phone_e164,
+      email: contact.email ?? null,
+      company_name: contact.company_name ?? null,
+      notes: contact.notes ?? null,
       owner_user_id: contact.owner_user_id ?? null
     },
     request: getRequestAuditContext(request)
@@ -164,6 +182,9 @@ export async function updateContact(request: Request, response: Response) {
       contactId,
       displayName: input.displayName,
       phoneNumber: input.phoneNumber,
+      email: input.email,
+      companyName: input.companyName,
+      notes: input.notes,
       ownerUserId: input.ownerUserId
     })
   );
@@ -176,6 +197,9 @@ export async function updateContact(request: Request, response: Response) {
     metadata: {
       display_name: contact.display_name,
       primary_phone_e164: contact.primary_phone_e164,
+      email: contact.email ?? null,
+      company_name: contact.company_name ?? null,
+      notes: contact.notes ?? null,
       owner_user_id: contact.owner_user_id ?? null
     },
     request: getRequestAuditContext(request)

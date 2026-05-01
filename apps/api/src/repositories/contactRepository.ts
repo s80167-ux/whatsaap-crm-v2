@@ -18,6 +18,9 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           owner_user_id
         from contacts
         where organization_id = $1
@@ -63,6 +66,9 @@ export class ContactRepository {
           end as display_name,
           c.primary_phone_e164,
           coalesce(c.primary_phone_normalized, latest_identity.phone_normalized, latest_identity.phone_e164) as primary_phone_normalized,
+          c.email,
+          c.company_name,
+          c.notes,
           coalesce(c.primary_avatar_url, latest_identity.profile_avatar_url) as primary_avatar_url,
           c.owner_user_id,
           coalesce(src.source_count, 0)::integer as whatsapp_source_count,
@@ -164,6 +170,9 @@ export class ContactRepository {
       displayName: string | null;
       primaryPhoneE164: string | null;
       primaryPhoneNormalized: string | null;
+      email?: string | null;
+      companyName?: string | null;
+      notes?: string | null;
       primaryAvatarUrl?: string | null;
     }
   ): Promise<ContactRecord> {
@@ -174,15 +183,21 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           primary_avatar_url
         )
-        values ($1, nullif(trim($2), ''), $3, $4, $5)
+        values ($1, nullif(trim($2), ''), $3, $4, nullif(trim($5), ''), nullif(trim($6), ''), nullif(trim($7), ''), $8)
         returning
           id,
           organization_id,
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           primary_avatar_url,
           owner_user_id
       `,
@@ -191,6 +206,9 @@ export class ContactRepository {
         input.displayName,
         input.primaryPhoneE164,
         input.primaryPhoneNormalized,
+        input.email ?? null,
+        input.companyName ?? null,
+        input.notes ?? null,
         input.primaryAvatarUrl ?? null
       ]
     );
@@ -205,6 +223,9 @@ export class ContactRepository {
       displayName: string | null;
       primaryPhoneE164: string | null;
       primaryPhoneNormalized: string | null;
+      email?: string | null;
+      companyName?: string | null;
+      notes?: string | null;
       primaryAvatarUrl?: string | null;
     }
   ): Promise<ContactRecord> {
@@ -230,7 +251,10 @@ export class ContactRepository {
               when $4 like '+60%' and primary_phone_normalized not like '+60%' then $4
               else primary_phone_normalized
             end,
-            primary_avatar_url = coalesce(nullif(trim($5), ''), primary_avatar_url),
+            email = coalesce(nullif(trim($5), ''), email),
+            company_name = coalesce(nullif(trim($6), ''), company_name),
+            notes = coalesce(nullif(trim($7), ''), notes),
+            primary_avatar_url = coalesce(nullif(trim($8), ''), primary_avatar_url),
             anchored_at = case
               when is_anchor_locked or nullif(trim($2), '') is null then anchored_at
               when nullif(trim(display_name), '') is null then timezone('utc', now())
@@ -250,6 +274,9 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           primary_avatar_url,
           owner_user_id
       `,
@@ -258,6 +285,9 @@ export class ContactRepository {
         input.displayName,
         input.primaryPhoneE164,
         input.primaryPhoneNormalized,
+        input.email ?? null,
+        input.companyName ?? null,
+        input.notes ?? null,
         input.primaryAvatarUrl ?? null
       ]
     );
@@ -270,39 +300,62 @@ export class ContactRepository {
     input: {
       organizationId: string;
       contactId: string;
+      hasDisplayName?: boolean;
       displayName?: string | null;
+      hasPrimaryPhoneE164?: boolean;
       primaryPhoneE164?: string | null;
       primaryPhoneNormalized?: string | null;
+      hasEmail?: boolean;
+      email?: string | null;
+      hasCompanyName?: boolean;
+      companyName?: string | null;
+      hasNotes?: boolean;
+      notes?: string | null;
     }
   ): Promise<ContactRecord | null> {
     const result = await client.query<ContactRecord>(
       `
         update contacts
         set display_name = case
-              when $3::text is null then display_name
-              when nullif(trim($3), '') is null then display_name
-              else nullif(trim($3), '')
+              when not $3::boolean then display_name
+              when nullif(trim($4), '') is null then null
+              else nullif(trim($4), '')
             end,
             primary_phone_e164 = case
-              when $4::text is null then primary_phone_e164
-              when nullif(trim($4), '') is null then null
-              else $4
+              when not $5::boolean then primary_phone_e164
+              when nullif(trim($6), '') is null then null
+              else $6
             end,
             primary_phone_normalized = case
-              when $4::text is null then primary_phone_normalized
-              when nullif(trim($4), '') is null then null
-              else $5
+              when not $5::boolean then primary_phone_normalized
+              when nullif(trim($6), '') is null then null
+              else $7
+            end,
+            email = case
+              when not $8::boolean then email
+              when nullif(trim($9), '') is null then null
+              else nullif(trim($9), '')
+            end,
+            company_name = case
+              when not $10::boolean then company_name
+              when nullif(trim($11), '') is null then null
+              else nullif(trim($11), '')
+            end,
+            notes = case
+              when not $12::boolean then notes
+              when nullif(trim($13), '') is null then null
+              else nullif(trim($13), '')
             end,
             is_anchor_locked = case
-              when $3::text is null or nullif(trim($3), '') is null then is_anchor_locked
+              when not $3::boolean or nullif(trim($4), '') is null then is_anchor_locked
               else true
             end,
             anchored_at = case
-              when $3::text is null or nullif(trim($3), '') is null then anchored_at
+              when not $3::boolean or nullif(trim($4), '') is null then anchored_at
               else timezone('utc', now())
             end,
             anchored_by_source = case
-              when $3::text is null or nullif(trim($3), '') is null then anchored_by_source
+              when not $3::boolean or nullif(trim($4), '') is null then anchored_by_source
               else 'manual'
             end,
             updated_at = timezone('utc', now())
@@ -314,15 +367,26 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           primary_avatar_url,
           owner_user_id
       `,
       [
         input.contactId,
         input.organizationId,
+        input.hasDisplayName ?? false,
         input.displayName ?? null,
+        input.hasPrimaryPhoneE164 ?? false,
         input.primaryPhoneE164 ?? null,
-        input.primaryPhoneNormalized ?? null
+        input.primaryPhoneNormalized ?? null,
+        input.hasEmail ?? false,
+        input.email ?? null,
+        input.hasCompanyName ?? false,
+        input.companyName ?? null,
+        input.hasNotes ?? false,
+        input.notes ?? null
       ]
     );
 
@@ -373,6 +437,9 @@ export class ContactRepository {
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
+          email,
+          company_name,
+          notes,
           owner_user_id
       `,
       [input.contactId, input.organizationId, input.organizationUserId]

@@ -6,6 +6,9 @@ export interface ContactRecord {
   display_name: string | null;
   primary_phone_e164: string | null;
   primary_phone_normalized: string | null;
+  email: string | null;
+  company_name: string | null;
+  notes: string | null;
   primary_avatar_url?: string | null;
   owner_user_id?: UUID | null;
   whatsapp_source_count?: number;

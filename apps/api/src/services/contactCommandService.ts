@@ -17,6 +17,9 @@ export class ContactCommandService {
       organizationId: string;
       displayName: string | null;
       phoneNumber: string | null;
+      email?: string | null;
+      companyName?: string | null;
+      notes?: string | null;
       ownerUserId?: string | null;
     }
   ) {
@@ -35,14 +38,20 @@ export class ContactCommandService {
         organizationId: input.organizationId,
         displayName: input.displayName,
         primaryPhoneE164: input.phoneNumber,
-        primaryPhoneNormalized: normalizedPhone
+        primaryPhoneNormalized: normalizedPhone,
+        email: input.email ?? null,
+        companyName: input.companyName ?? null,
+        notes: input.notes ?? null
       });
     } else {
       contact = await this.contactRepository.anchor(client, {
         contactId: contact.id,
         displayName: input.displayName,
         primaryPhoneE164: input.phoneNumber,
-        primaryPhoneNormalized: normalizedPhone
+        primaryPhoneNormalized: normalizedPhone,
+        email: input.email ?? null,
+        companyName: input.companyName ?? null,
+        notes: input.notes ?? null
       });
     }
 
@@ -66,6 +75,9 @@ export class ContactCommandService {
       contactId: string;
       displayName?: string | null;
       phoneNumber?: string | null;
+      email?: string | null;
+      companyName?: string | null;
+      notes?: string | null;
       ownerUserId?: string | null;
     }
   ) {
@@ -97,9 +109,18 @@ export class ContactCommandService {
       (await this.contactRepository.updateProfile(client, {
         organizationId: input.organizationId,
         contactId: input.contactId,
+        hasDisplayName: input.displayName !== undefined,
         displayName: input.displayName,
+        hasPrimaryPhoneE164: input.phoneNumber !== undefined,
         primaryPhoneE164: input.phoneNumber,
         primaryPhoneNormalized: normalizedPhone
+        ,
+        hasEmail: input.email !== undefined,
+        email: input.email,
+        hasCompanyName: input.companyName !== undefined,
+        companyName: input.companyName,
+        hasNotes: input.notes !== undefined,
+        notes: input.notes
       })) ?? existingContact;
 
     if (input.ownerUserId) {

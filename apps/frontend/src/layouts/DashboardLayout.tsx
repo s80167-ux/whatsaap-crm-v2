@@ -31,6 +31,7 @@ import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { NavLinkItem } from "../components/NavLinkItem";
 import { PopupOverlay } from "../components/PopupOverlay";
+import { RouteTransition } from "../components/RouteTransition";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
@@ -59,12 +60,14 @@ function SidebarNavGroup({
   icon,
   label,
   items,
-  onNavigate
+  onNavigate,
+  compact = false
 }: {
   icon: ReactNode;
   label: string;
   items: SidebarSubItem[];
   onNavigate?: () => void;
+  compact?: boolean;
 }) {
   const location = useLocation();
   const isGroupActive = items.some((item) =>
@@ -83,13 +86,15 @@ function SidebarNavGroup({
       <button
         type="button"
         className={clsx(
-          "flex w-full items-center gap-3 rounded-none px-4 py-3 text-left text-sm font-medium transition duration-200",
+          compact
+            ? "flex w-full items-center gap-2.5 rounded-none px-3 py-2.5 text-left text-[13px] font-medium transition duration-200"
+            : "flex w-full items-center gap-3 rounded-none px-4 py-3 text-left text-sm font-medium transition duration-200",
           isGroupActive ? "bg-white/10 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
         )}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-sm text-current">{icon}</span>
+        <span className={clsx("flex items-center justify-center rounded-sm text-current", compact ? "h-7 w-7" : "h-8 w-8")}>{icon}</span>
         <span>{label}</span>
         <ChevronDown
           size={16}
@@ -107,6 +112,7 @@ function SidebarNavGroup({
               badge={item.badge}
               variant="sub"
               onClick={onNavigate}
+              compact={compact}
             />
           ))}
         </div>
@@ -170,14 +176,14 @@ function SidebarContent({
     <>
       <div className={mobile ? "space-y-3" : ""}>
         {mobile ? (
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/10">
+          <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/10">
                 <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">Rezeki CRM</p>
-                <p className="truncate text-xs text-white/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+                <p className="truncate text-[13px] font-semibold text-white">Rezeki CRM</p>
+                <p className="truncate text-[11px] text-white/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
               </div>
             </div>
           </div>
@@ -195,10 +201,10 @@ function SidebarContent({
       </div>
 
       {isSuperAdmin ? (
-        <div className="mt-5">
+        <div className={mobile ? "mt-3" : "mt-5"}>
           <label className="block">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{mobile ? "Current org" : "Viewing org"}</span>
-            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium ${mobile ? "rounded-xl border border-white/10 bg-white/10 px-3" : ""}`} aria-label="Choose organization to view">
+            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 ${mobile ? "h-8 rounded-lg border border-white/10 bg-white/10 px-2.5 text-[13px]" : "h-9 px-0 py-0 text-sm font-medium"}`} aria-label="Choose organization to view">
               <option value="">Choose organization</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>{organization.name}</option>
@@ -209,9 +215,9 @@ function SidebarContent({
         </div>
       ) : null}
 
-      <nav className={`space-y-2 ${mobile ? "mt-6" : "mt-8"}`}>
-        {mobile ? <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Primary</p> : null}
-        <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" onClick={onNavigate} />
+      <nav className={`space-y-1.5 ${mobile ? "mt-4" : "mt-8"}`}>
+        {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Primary</p> : null}
+        <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" onClick={onNavigate} compact={mobile} />
         <SidebarNavGroup
           icon={<MessageSquare size={18} />}
           label="Inbox"
@@ -220,8 +226,9 @@ function SidebarContent({
             { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Reply library" }
           ]}
           onNavigate={onNavigate}
+          compact={mobile}
         />
-        {mobile ? <p className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Workspace</p> : null}
+        {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Workspace</p> : null}
         <SidebarNavGroup
           icon={<Users size={18} />}
           label="CRM"
@@ -231,6 +238,7 @@ function SidebarContent({
             { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
           ]}
           onNavigate={onNavigate}
+          compact={mobile}
         />
         <SidebarNavGroup
           icon={<Settings2 size={18} />}
@@ -240,10 +248,11 @@ function SidebarContent({
             { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
           ]}
           onNavigate={onNavigate}
+          compact={mobile}
         />
         {isSuperAdmin ? (
           <>
-            {mobile ? <p className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Admin</p> : null}
+            {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Admin</p> : null}
           <SidebarNavGroup
             icon={<Workflow size={18} />}
             label="Super Admin Map"
@@ -253,8 +262,9 @@ function SidebarContent({
               { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
             ]}
             onNavigate={onNavigate}
+            compact={mobile}
           />
-            <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" onClick={onNavigate} />
+            <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" onClick={onNavigate} compact={mobile} />
           <SidebarNavGroup
             icon={<ShieldAlert size={18} />}
             label="System Tools"
@@ -263,6 +273,7 @@ function SidebarContent({
               { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
             ]}
             onNavigate={onNavigate}
+            compact={mobile}
           />
           </>
         ) : null}
@@ -474,12 +485,12 @@ export function DashboardLayout() {
         <div className="fixed inset-0 z-40 md:hidden" aria-hidden={!isMobileNavOpen}>
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/26 backdrop-blur-md backdrop-saturate-150"
             aria-label="Close navigation menu"
             onClick={() => setIsMobileNavOpen(false)}
           />
-          <aside className="absolute inset-y-12 left-0 w-[min(86vw,24rem)] overflow-y-auto">
-            <Card className="app-shell dashboard-sidebar flex min-h-full flex-col rounded-none p-4 pb-8" elevated>
+          <aside className="absolute inset-y-12 left-0 w-[min(76vw,18.5rem)] overflow-y-auto">
+            <Card className="app-shell dashboard-sidebar flex min-h-full flex-col rounded-none p-3 pb-6" elevated>
               <SidebarContent
                 isSuperAdmin={isSuperAdmin}
                 organizations={organizations}
@@ -640,9 +651,9 @@ export function DashboardLayout() {
         </div>
       </PopupOverlay>
 
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
-        <motion.aside className="hidden min-w-0 md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
-          <Card className="app-shell dashboard-sidebar flex h-full flex-col p-5 md:sticky md:top-[4.5rem]" elevated>
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] items-start gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
+        <motion.aside className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
+          <Card className="app-shell dashboard-sidebar flex flex-col p-5" elevated>
             <SidebarContent
               isSuperAdmin={isSuperAdmin}
               organizations={organizations}
@@ -654,7 +665,9 @@ export function DashboardLayout() {
           </Card>
         </motion.aside>
         <main className="min-w-0 bg-transparent px-3 py-4 md:pl-0 md:pr-2 xl:pr-3">
-          <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
+          <RouteTransition className="route-transition-stage">
+            <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
+          </RouteTransition>
         </main>
       </div>
     </div>

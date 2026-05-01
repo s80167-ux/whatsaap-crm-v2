@@ -45,6 +45,9 @@
   --surface-radius-sm: 10px;
   --surface-radius-md: 14px;
   --surface-radius-lg: 18px;
+  --motion-fast: 160ms;
+  --motion-page: 220ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body {
@@ -236,6 +239,18 @@ canvas {
     @apply text-white;
   }
 
+  .dashboard-sidebar-sticky {
+    position: sticky;
+    top: 4.5rem;
+    align-self: start;
+  }
+
+  .dashboard-sidebar {
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
   .metric-card {
     @apply relative overflow-hidden;
     background:
@@ -424,6 +439,26 @@ canvas {
     @apply mt-4 border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-white/70;
     border-radius: var(--surface-radius-md);
   }
+
+  .route-transition-stage {
+    min-height: 100%;
+    will-change: opacity, transform, filter;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .route-transition-stage {
+    will-change: auto;
+  }
 }
 
 @media print {
@@ -461,6 +496,13 @@ canvas {
   .dashboard-focus-grid,
   .inbox-workspace-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-sidebar {
+    max-height: none;
+    overflow-y: visible;
   }
 }
 

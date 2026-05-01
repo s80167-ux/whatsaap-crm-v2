@@ -11,6 +11,7 @@ function GlobalErrorElement() {
   );
 }
 import { ProtectedLayout } from "./layouts/ProtectedLayout";
+import { RouteTransition } from "./components/RouteTransition";
 
 const DashboardLayout = lazy(() =>
   import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout }))
@@ -41,7 +42,7 @@ const SuperAdminAuditLogsPage = lazy(() =>
 function withRouteFallback(page: ReactElement) {
   return (
     <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading page...</div>}>
-      {page}
+      <RouteTransition>{page}</RouteTransition>
     </Suspense>
   );
 }
