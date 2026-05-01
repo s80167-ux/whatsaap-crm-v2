@@ -42,6 +42,15 @@ export type ClearOrganizationDataPreview = {
   organizationId: string;
   organizationName: string;
   counts: ClearOrganizationDataCounts;
+  salesSummary: {
+    totalOrders: number;
+    openOrders: number;
+    wonOrders: number;
+    lostOrders: number;
+    pipelineValue: number;
+    wonValue: number;
+    averageOrderValue: number;
+  };
 };
 
 type OrganizationApiRecord = {

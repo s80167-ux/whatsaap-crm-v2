@@ -5,6 +5,7 @@ import { PanelPagination, usePanelPagination } from "../components/PanelPaginati
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccounts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookUser, Link2, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
@@ -293,6 +294,7 @@ function isConnectedAccount(status: string) {
 }
 
 export function WhatsAppAccountDashboard() {
+  const isMobile = useIsMobileViewport();
   const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
     id: string;
     name: string;
@@ -626,16 +628,17 @@ export function WhatsAppAccountDashboard() {
             <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
             <p className="mt-2 text-sm text-text-muted">Monitor device health, scan QR pairing when needed, and trigger safe sync actions from one place.</p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
             <Button
               variant="primary"
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => setShowCreatePopup(true)}
               aria-label="Add WhatsApp Account"
             >
               Add WhatsApp Account
             </Button>
-            <Button variant="ghost" size="sm" className="shrink-0" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
+            <Button variant="ghost" size="sm" className="w-full shrink-0 sm:w-auto" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
               {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
             </Button>
           </div>
@@ -665,6 +668,7 @@ export function WhatsAppAccountDashboard() {
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
               const isBackfillingThisAccount = backfillingAccountId === account.id;
               const isSyncingContactsThisAccount = syncingContactsAccountId === account.id;
+              const hasSyncJobStatus = Boolean(syncJobSnapshots[account.id] || syncJobRefreshKeys[account.id]);
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
                   {editingAccountId === account.id ? (
@@ -714,21 +718,21 @@ export function WhatsAppAccountDashboard() {
                     </form>
                   ) : (
                     <>
-                      <div>
+                      <div className={isMobile ? "rounded-2xl border border-border bg-background-tint/60 px-3 py-3" : ""}>
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Name</p>
                         <p className="break-words font-semibold leading-5 text-text">{account.name}</p>
                         <p className="mt-1 text-xs text-text-soft">{organizations.find((o) => o.id === account.organization_id)?.name}</p>
                       </div>
-                      <div className="min-w-0">
+                      <div className={`min-w-0 ${isMobile ? "rounded-2xl border border-border bg-background-tint/60 px-3 py-3" : ""}`}>
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Status</p>
                         <span className={`inline-flex min-w-0 items-center gap-2 font-medium ${statusTone.text}`}>
                           <span className={`h-3 w-3 shrink-0 rounded-full ${statusTone.dot}`} />
                           {formatConnectionStatus(account.status)}
                         </span>
                       </div>
-                      <div className="min-w-0">
+                      <div className={`min-w-0 ${isMobile ? "rounded-2xl border border-border bg-background-tint/60 px-3 py-3" : ""}`}>
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Phone Number</p>
-                        <p className="truncate font-mono text-sm tracking-wide text-text" title={phoneNumber}>
+                        <p className="break-all font-mono text-sm tracking-wide text-text sm:truncate" title={phoneNumber}>
                           {phoneNumber}
                         </p>
                       </div>
@@ -746,14 +750,14 @@ export function WhatsAppAccountDashboard() {
                             tone="sky"
                           />
                         ) : null}
-                        {syncJobSnapshots[account.id] || syncJobRefreshKeys[account.id] ? (
+                        {hasSyncJobStatus ? (
                           <SyncJobStatusCard
                             accountId={account.id}
                             seededJob={syncJobSnapshots[account.id]}
                             refreshKey={syncJobRefreshKeys[account.id] ?? 0}
                           />
                         ) : null}
-                        {!isSyncingContactsThisAccount && !syncJobSnapshots[account.id] && !syncJobRefreshKeys[account.id] && accountActivityNotice[account.id] ? (
+                        {!isSyncingContactsThisAccount && !hasSyncJobStatus && accountActivityNotice[account.id] ? (
                           <AccountActivityCard
                             title={accountActivityNotice[account.id].title}
                             detail={accountActivityNotice[account.id].detail}
@@ -763,11 +767,12 @@ export function WhatsAppAccountDashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Actions</p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className={isMobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
                           {connected ? (
                             <Button
                               variant="danger"
                               size="sm"
+                              className={isMobile ? "w-full justify-start px-3 text-left" : ""}
                               disabled={isWorking}
                               onClick={() => handleDisconnectAccount(account.id, account.name)}
                             >
@@ -778,6 +783,7 @@ export function WhatsAppAccountDashboard() {
                             <Button
                               variant="primary"
                               size="sm"
+                              className={isMobile ? "w-full justify-start px-3 text-left" : ""}
                               disabled={isWorking}
                               onClick={() => handleReconnectAccount(account.id, account.name)}
                             >
@@ -788,7 +794,7 @@ export function WhatsAppAccountDashboard() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="gap-1.5"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
                             disabled={isWorking || isBackfillingThisAccount}
                             onClick={() => setBackfillPopupAccount({ id: account.id, name: account.name })}
                           >
@@ -798,20 +804,21 @@ export function WhatsAppAccountDashboard() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="gap-1.5"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
                             disabled={isWorking || isSyncingContactsThisAccount}
                             onClick={() => handleSyncContacts(account.id, account.name)}
                           >
                             <BookUser className="h-3.5 w-3.5" />
                             {isSyncingContactsThisAccount ? "Syncing contacts..." : "Sync Contacts"}
                           </Button>
-                          <Button variant="secondary" size="sm" className="gap-1.5" disabled={isWorking} onClick={() => beginEditAccount(account)}>
+                          <Button variant="secondary" size="sm" className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"} disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
                             Edit
                           </Button>
                           <Button
                             variant="danger"
                             size="sm"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : ""}
                             disabled={isWorking}
                             onClick={() => handleDeleteAccount(account.id, account.name)}
                           >

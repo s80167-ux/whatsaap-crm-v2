@@ -22,6 +22,7 @@ import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { useOrganizations, useOrganizationUsers } from "../hooks/useAdmin";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser, updateStoredUser } from "../lib/auth";
 import type { OrganizationSummary, UserSummary } from "../types/admin";
 
@@ -101,6 +102,7 @@ function UserAvatarPreview({ src, label }: { src?: string | null; label?: string
 
 export function SetupPage() {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const { data: organizations = [] } = useOrganizations();
@@ -427,100 +429,161 @@ export function SetupPage() {
                   Add Organization
                 </Button>
               </div>
-              <div className="workspace-table-wrap">
-                <table className="workspace-table">
-                  <thead>
-                    <tr>
-                      <th className="px-5 py-4">Name</th>
-                      <th className="px-5 py-4">Slug</th>
-                      <th className="px-5 py-4">Status</th>
-                      <th className="px-5 py-4">Created</th>
-                      <th className="px-5 py-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {organizationPagination.visibleItems.length === 0 ? (
+              {isMobile ? (
+                <div className="space-y-3">
+                  {organizationPagination.visibleItems.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+                      No organizations yet. Add the first organization to start assigning users and channels.
+                    </div>
+                  ) : organizationPagination.visibleItems.map((organization) => (
+                    <div key={organization.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                      {editingOrganizationId === organization.id ? (
+                        <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
+                          <Input
+                            value={organizationEdit.name}
+                            onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, name: event.target.value }))}
+                            placeholder="Organization name"
+                            required
+                          />
+                          <Input
+                            value={organizationEdit.slug}
+                            onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, slug: event.target.value }))}
+                            placeholder="Slug"
+                          />
+                          <Select
+                            value={organizationEdit.status}
+                            onChange={(event) => setOrganizationEdit((draft) => ({
+                              ...draft,
+                              status: event.target.value as OrganizationSummary["status"]
+                            }))}
+                          >
+                            <option value="active">active</option>
+                            <option value="trial">trial</option>
+                            <option value="suspended">suspended</option>
+                            <option value="closed">closed</option>
+                          </Select>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button type="submit" className="w-full" disabled={isWorking}>Save changes</Button>
+                            <Button variant="secondary" className="w-full" disabled={isWorking} onClick={() => setEditingOrganizationId(null)}>Cancel</Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-text">{organization.name}</p>
+                              <p className="mt-1 break-all text-sm text-text-muted">{organization.slug || "No slug"}</p>
+                            </div>
+                            <span className="rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">
+                              {organization.status}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-xs text-text-soft">Created {new Date(organization.created_at).toLocaleDateString()}</p>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <Button variant="secondary" className="w-full" disabled={isWorking} onClick={() => beginEditOrganization(organization)}>Edit</Button>
+                            <Button variant="secondary" className="w-full text-coral" disabled={isWorking} onClick={() => handleDeleteOrganization(organization.id, organization.name)}>Delete</Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="workspace-table-wrap">
+                  <table className="workspace-table">
+                    <thead>
                       <tr>
-                        <td className="px-4 py-8 text-sm text-text-muted" colSpan={5}>
-                          No organizations yet. Add the first organization to start assigning users and channels.
-                        </td>
+                        <th className="px-5 py-4">Name</th>
+                        <th className="px-5 py-4">Slug</th>
+                        <th className="px-5 py-4">Status</th>
+                        <th className="px-5 py-4">Created</th>
+                        <th className="px-5 py-4">Actions</th>
                       </tr>
-                    ) : organizationPagination.visibleItems.map((organization) => (
-                      <tr key={organization.id} className="table-row text-sm text-text-muted">
-                        {editingOrganizationId === organization.id ? (
-                          <td colSpan={5} className="bg-background-tint">
-                            <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
-                              <Input
-                                value={organizationEdit.name}
-                                onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, name: event.target.value }))}
-                                placeholder="Organization name"
-                                required
-                              />
-                              <Input
-                                value={organizationEdit.slug}
-                                onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, slug: event.target.value }))}
-                                placeholder="Slug"
-                              />
-                              <Select
-                                value={organizationEdit.status}
-                                onChange={(event) => setOrganizationEdit((draft) => ({
-                                  ...draft,
-                                  status: event.target.value as OrganizationSummary["status"]
-                                }))}
-                              >
-                                <option value="active">active</option>
-                                <option value="trial">trial</option>
-                                <option value="suspended">suspended</option>
-                                <option value="closed">closed</option>
-                              </Select>
-                              <div className="flex gap-2 mt-2">
-                                <Button type="submit" className="flex-1" disabled={isWorking}>
-                                  Save changes
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="flex-1"
-                                  disabled={isWorking}
-                                  onClick={() => setEditingOrganizationId(null)}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </form>
+                    </thead>
+                    <tbody>
+                      {organizationPagination.visibleItems.length === 0 ? (
+                        <tr>
+                          <td className="px-4 py-8 text-sm text-text-muted" colSpan={5}>
+                            No organizations yet. Add the first organization to start assigning users and channels.
                           </td>
-                        ) : (
-                          <>
-                            <td className="px-5 py-4 font-medium text-text">{organization.name}</td>
-                            <td className="px-5 py-4">{organization.slug}</td>
-                            <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{organization.status}</td>
-                            <td className="px-5 py-4">{new Date(organization.created_at).toLocaleDateString()}</td>
-                            <td className="px-5 py-4">
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="secondary"
-                                  className=""
-                                  disabled={isWorking}
-                                  onClick={() => beginEditOrganization(organization)}
+                        </tr>
+                      ) : organizationPagination.visibleItems.map((organization) => (
+                        <tr key={organization.id} className="table-row text-sm text-text-muted">
+                          {editingOrganizationId === organization.id ? (
+                            <td colSpan={5} className="bg-background-tint">
+                              <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
+                                <Input
+                                  value={organizationEdit.name}
+                                  onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, name: event.target.value }))}
+                                  placeholder="Organization name"
+                                  required
+                                />
+                                <Input
+                                  value={organizationEdit.slug}
+                                  onChange={(event) => setOrganizationEdit((draft) => ({ ...draft, slug: event.target.value }))}
+                                  placeholder="Slug"
+                                />
+                                <Select
+                                  value={organizationEdit.status}
+                                  onChange={(event) => setOrganizationEdit((draft) => ({
+                                    ...draft,
+                                    status: event.target.value as OrganizationSummary["status"]
+                                  }))}
                                 >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="text-coral"
-                                  disabled={isWorking}
-                                  onClick={() => handleDeleteOrganization(organization.id, organization.name)}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
+                                  <option value="active">active</option>
+                                  <option value="trial">trial</option>
+                                  <option value="suspended">suspended</option>
+                                  <option value="closed">closed</option>
+                                </Select>
+                                <div className="flex gap-2 mt-2">
+                                  <Button type="submit" className="flex-1" disabled={isWorking}>
+                                    Save changes
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    className="flex-1"
+                                    disabled={isWorking}
+                                    onClick={() => setEditingOrganizationId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </form>
                             </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          ) : (
+                            <>
+                              <td className="px-5 py-4 font-medium text-text">{organization.name}</td>
+                              <td className="px-5 py-4">{organization.slug}</td>
+                              <td className="px-5 py-4 uppercase tracking-[0.16em] text-text-soft">{organization.status}</td>
+                              <td className="px-5 py-4">{new Date(organization.created_at).toLocaleDateString()}</td>
+                              <td className="px-5 py-4">
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="secondary"
+                                    className=""
+                                    disabled={isWorking}
+                                    onClick={() => beginEditOrganization(organization)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    className="text-coral"
+                                    disabled={isWorking}
+                                    onClick={() => handleDeleteOrganization(organization.id, organization.name)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <PanelPagination
                 className="mt-4"
                 page={organizationPagination.page}
@@ -539,183 +602,339 @@ export function SetupPage() {
               Add User
             </Button>
           </div>
-          <div className="workspace-table-wrap">
-            <table className="workspace-table workspace-table-compact w-full text-xs align-middle table-fixed">
-              <colgroup>
-                <col className="user-table-col-name" />
-                <col className="user-table-col-email" />
-                {isSuperAdmin ? <col className="user-table-col-org" /> : null}
-                <col className={isSuperAdmin ? "user-table-col-role" : "user-table-col-role-nosuper"} />
-                <col className="user-table-col-status" />
-                <col className="user-table-col-actions" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="px-3 py-2 font-semibold truncate">Name</th>
-                  <th className="px-3 py-2 font-semibold truncate">Email</th>
-                  {isSuperAdmin && <th className="px-3 py-2 font-semibold truncate">Organization</th>}
-                  <th className="px-3 py-2 font-semibold truncate">Role</th>
-                  <th className="px-3 py-2 font-semibold truncate">Status</th>
-                  <th className="px-3 py-2 font-semibold truncate">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userPagination.visibleItems.length === 0 ? (
+          {isMobile ? (
+            <div className="space-y-3">
+              {userPagination.visibleItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+                  No users yet. Add the first user to start assigning work and access.
+                </div>
+              ) : userPagination.visibleItems.map((user) => (
+                <div key={user.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                  {editingUserId === user.id ? (
+                    <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
+                      <div className="flex items-center gap-3">
+                        <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
+                        <div className="min-w-0 flex-1">
+                          <Input
+                            value={userEdit.fullName}
+                            onChange={(event) => setUserEdit((draft) => ({ ...draft, fullName: event.target.value }))}
+                            placeholder="Full name"
+                          />
+                          <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
+                        </div>
+                      </div>
+                      {isSuperAdmin ? (
+                        <Select
+                          value={userEdit.organizationId}
+                          onChange={(event) => setUserEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                          required
+                        >
+                          {organizations.map((organization) => (
+                            <option key={organization.id} value={organization.id}>
+                              {organization.name}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : null}
+                      <Select
+                        value={userEdit.role}
+                        onChange={(event) => setUserEdit((draft) => ({
+                          ...draft,
+                          role: event.target.value as Exclude<UserSummary["role"], "super_admin">
+                        }))}
+                      >
+                        <option value="org_admin">org_admin</option>
+                        <option value="manager">manager</option>
+                        <option value="agent">agent</option>
+                        <option value="user">user</option>
+                      </Select>
+                      <Select
+                        value={userEdit.status}
+                        onChange={(event) => setUserEdit((draft) => ({
+                          ...draft,
+                          status: event.target.value as UserSummary["status"]
+                        }))}
+                      >
+                        <option value="active">active</option>
+                        <option value="invited">invited</option>
+                      </Select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button type="submit" className="w-full" disabled={isWorking || (isSuperAdmin && !userEdit.organizationId)}>Save changes</Button>
+                        <Button variant="secondary" className="w-full" disabled={isWorking} onClick={() => setEditingUserId(null)}>Cancel</Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words font-medium text-text">{user.full_name ?? user.email}</p>
+                          <p className="mt-1 break-all text-sm text-text-muted">{user.email}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl border border-border bg-background-tint px-3 py-2">
+                          <p className="uppercase tracking-[0.14em] text-text-soft">Role</p>
+                          <p className="mt-1 text-text">{user.role}</p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-background-tint px-3 py-2">
+                          <p className="uppercase tracking-[0.14em] text-text-soft">Status</p>
+                          <p className="mt-1 uppercase tracking-[0.14em] text-text">{user.status}</p>
+                        </div>
+                        {isSuperAdmin ? (
+                          <div className="col-span-2 rounded-xl border border-border bg-background-tint px-3 py-2">
+                            <p className="uppercase tracking-[0.14em] text-text-soft">Organization</p>
+                            <p className="mt-1 break-words text-text">{getOrganizationName(user.organization_id)}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <Button
+                          variant="ghost"
+                          className="w-full px-2 py-2 text-xs"
+                          disabled={isWorking || user.role === "super_admin"}
+                          onClick={() => beginEditUser(user)}
+                        >
+                          Edit
+                        </Button>
+                        {canResetManagedUser(user) ? (
+                          resetPasswordUserId === user.id ? (
+                            <div className="col-span-3 rounded-xl border border-border bg-background-tint p-3">
+                              <form className="space-y-2" onSubmit={(event) => handleResetUserPassword(event, user)}>
+                                <Input
+                                  type="password"
+                                  value={resetPassword}
+                                  onChange={(event) => setResetPassword(event.target.value)}
+                                  placeholder="New password"
+                                  minLength={8}
+                                  required
+                                  className="px-3 py-2 text-sm"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button type="submit" className="w-full px-3 py-2 text-xs" disabled={isWorking}>Reset</Button>
+                                  <Button
+                                    variant="secondary"
+                                    className="w-full px-3 py-2 text-xs"
+                                    disabled={isWorking}
+                                    onClick={() => {
+                                      setResetPasswordUserId(null);
+                                      setResetPassword("");
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </form>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              className="w-full px-2 py-2 text-xs"
+                              disabled={isWorking}
+                              onClick={() => {
+                                setResetPasswordUserId(user.id);
+                                setResetPassword("");
+                              }}
+                            >
+                              Reset
+                            </Button>
+                          )
+                        ) : (
+                          <div />
+                        )}
+                        <Button
+                          variant="ghost"
+                          className="w-full px-2 py-2 text-xs text-coral"
+                          disabled={isWorking}
+                          onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="workspace-table-wrap">
+              <table className="workspace-table workspace-table-compact w-full text-xs align-middle table-fixed">
+                <colgroup>
+                  <col className="user-table-col-name" />
+                  <col className="user-table-col-email" />
+                  {isSuperAdmin ? <col className="user-table-col-org" /> : null}
+                  <col className={isSuperAdmin ? "user-table-col-role" : "user-table-col-role-nosuper"} />
+                  <col className="user-table-col-status" />
+                  <col className="user-table-col-actions" />
+                </colgroup>
+                <thead>
                   <tr>
-                    <td className="px-4 py-8 text-sm text-text-muted" colSpan={isSuperAdmin ? 6 : 5}>
-                      No users yet. Add the first user to start assigning work and access.
-                    </td>
+                    <th className="px-3 py-2 font-semibold truncate">Name</th>
+                    <th className="px-3 py-2 font-semibold truncate">Email</th>
+                    {isSuperAdmin && <th className="px-3 py-2 font-semibold truncate">Organization</th>}
+                    <th className="px-3 py-2 font-semibold truncate">Role</th>
+                    <th className="px-3 py-2 font-semibold truncate">Status</th>
+                    <th className="px-3 py-2 font-semibold truncate">Actions</th>
                   </tr>
-                ) : userPagination.visibleItems.map((user) => (
-                  <tr key={user.id} className="border-b border-border last:border-0 text-[13px] text-text">
-                    {editingUserId === user.id ? (
-                      <td colSpan={isSuperAdmin ? 6 : 5} className="bg-background-tint">
-                        <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
-                          <div className="flex items-center gap-3">
-                            <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
-                            <div className="min-w-0 flex-1">
-                              <Input
-                                value={userEdit.fullName}
-                                onChange={(event) => setUserEdit((draft) => ({ ...draft, fullName: event.target.value }))}
-                                placeholder="Full name"
-                              />
-                              <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
-                            </div>
-                          </div>
-                          {isSuperAdmin ? (
-                            <Select
-                              value={userEdit.organizationId}
-                              onChange={(event) => setUserEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                              required
-                            >
-                              {organizations.map((organization) => (
-                                <option key={organization.id} value={organization.id}>
-                                  {organization.name}
-                                </option>
-                              ))}
-                            </Select>
-                          ) : null}
-                          <Select
-                            value={userEdit.role}
-                            onChange={(event) => setUserEdit((draft) => ({
-                              ...draft,
-                              role: event.target.value as Exclude<UserSummary["role"], "super_admin">
-                            }))}
-                          >
-                            <option value="org_admin">org_admin</option>
-                            <option value="manager">manager</option>
-                            <option value="agent">agent</option>
-                            <option value="user">user</option>
-                          </Select>
-                          <Select
-                            value={userEdit.status}
-                            onChange={(event) => setUserEdit((draft) => ({
-                              ...draft,
-                              status: event.target.value as UserSummary["status"]
-                            }))}
-                          >
-                            <option value="active">active</option>
-                            <option value="invited">invited</option>
-                          </Select>
-                          <div className="flex gap-2 mt-2">
-                            <Button type="submit" className="flex-1" disabled={isWorking || (isSuperAdmin && !userEdit.organizationId)}>
-                              Save changes
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              className="flex-1"
-                              disabled={isWorking}
-                              onClick={() => setEditingUserId(null)}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </form>
+                </thead>
+                <tbody>
+                  {userPagination.visibleItems.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-8 text-sm text-text-muted" colSpan={isSuperAdmin ? 6 : 5}>
+                        No users yet. Add the first user to start assigning work and access.
                       </td>
-                    ) : (
-                      <>
-                        <td className="px-3 py-2 font-medium text-text truncate">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
-                            <div className="min-w-0">
-                              <span className="truncate font-medium text-text text-[13px]">{user.full_name ?? user.email}</span>
+                    </tr>
+                  ) : userPagination.visibleItems.map((user) => (
+                    <tr key={user.id} className="border-b border-border last:border-0 text-[13px] text-text">
+                      {editingUserId === user.id ? (
+                        <td colSpan={isSuperAdmin ? 6 : 5} className="bg-background-tint">
+                          <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
+                            <div className="flex items-center gap-3">
+                              <UserAvatarPreview src={userEdit.avatarUrl} label={userEdit.fullName || user.email} />
+                              <div className="min-w-0 flex-1">
+                                <Input
+                                  value={userEdit.fullName}
+                                  onChange={(event) => setUserEdit((draft) => ({ ...draft, fullName: event.target.value }))}
+                                  placeholder="Full name"
+                                />
+                                <p className="mt-2 text-xs text-text-soft">JPG, PNG, WebP, or GIF up to 512 KB.</p>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 truncate">{user.email}</td>
-                        {isSuperAdmin && <td className="px-3 py-2 truncate">{getOrganizationName(user.organization_id)}</td>}
-                        <td className="px-3 py-2 truncate">{user.role}</td>
-                        <td className="px-3 py-2 uppercase tracking-[0.14em] text-text-soft truncate">{user.status}</td>
-                        <td className="px-3 py-2 truncate">
-                          <div className="flex gap-1 flex-row flex-nowrap items-center">
-                            <Button
-                              variant="ghost"
-                              className="px-1 py-0.5 text-xs min-w-0"
-                              disabled={isWorking || user.role === "super_admin"}
-                              onClick={() => beginEditUser(user)}
-                            >
-                              Edit
-                            </Button>
-                            {canResetManagedUser(user) ? (
-                              resetPasswordUserId === user.id ? (
-                                <form className="space-y-1 flex-1" onSubmit={(event) => handleResetUserPassword(event, user)}>
-                                  <Input
-                                    type="password"
-                                    value={resetPassword}
-                                    onChange={(event) => setResetPassword(event.target.value)}
-                                    placeholder="New password"
-                                    minLength={8}
-                                    required
-                                    className="px-2 py-1 text-xs"
-                                  />
-                                  <div className="flex gap-1 mt-1">
-                                    <Button type="submit" className="flex-1 px-2 py-1 text-xs" disabled={isWorking}>
-                                      Reset
-                                    </Button>
-                                    <Button
-                                      variant="secondary"
-                                      className="flex-1 px-2 py-1 text-xs"
-                                      disabled={isWorking}
-                                      onClick={() => {
-                                        setResetPasswordUserId(null);
-                                        setResetPassword("");
-                                      }}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </form>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  className="px-1 py-0.5 text-xs min-w-0"
-                                  disabled={isWorking}
-                                  onClick={() => {
-                                    setResetPasswordUserId(user.id);
-                                    setResetPassword("");
-                                  }}
-                                >
-                                  Reset
-                                </Button>
-                              )
+                            {isSuperAdmin ? (
+                              <Select
+                                value={userEdit.organizationId}
+                                onChange={(event) => setUserEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                                required
+                              >
+                                {organizations.map((organization) => (
+                                  <option key={organization.id} value={organization.id}>
+                                    {organization.name}
+                                  </option>
+                                ))}
+                              </Select>
                             ) : null}
-                            <Button
-                              variant="ghost"
-                              className="px-1 py-0.5 text-xs text-coral min-w-0"
-                              disabled={isWorking}
-                              onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
+                            <Select
+                              value={userEdit.role}
+                              onChange={(event) => setUserEdit((draft) => ({
+                                ...draft,
+                                role: event.target.value as Exclude<UserSummary["role"], "super_admin">
+                              }))}
                             >
-                              Delete
-                            </Button>
-                          </div>
+                              <option value="org_admin">org_admin</option>
+                              <option value="manager">manager</option>
+                              <option value="agent">agent</option>
+                              <option value="user">user</option>
+                            </Select>
+                            <Select
+                              value={userEdit.status}
+                              onChange={(event) => setUserEdit((draft) => ({
+                                ...draft,
+                                status: event.target.value as UserSummary["status"]
+                              }))}
+                            >
+                              <option value="active">active</option>
+                              <option value="invited">invited</option>
+                            </Select>
+                            <div className="flex gap-2 mt-2">
+                              <Button type="submit" className="flex-1" disabled={isWorking || (isSuperAdmin && !userEdit.organizationId)}>
+                                Save changes
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="flex-1"
+                                disabled={isWorking}
+                                onClick={() => setEditingUserId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </form>
                         </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      ) : (
+                        <>
+                          <td className="px-3 py-2 font-medium text-text truncate">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
+                              <div className="min-w-0">
+                                <span className="truncate font-medium text-text text-[13px]">{user.full_name ?? user.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 truncate">{user.email}</td>
+                          {isSuperAdmin && <td className="px-3 py-2 truncate">{getOrganizationName(user.organization_id)}</td>}
+                          <td className="px-3 py-2 truncate">{user.role}</td>
+                          <td className="px-3 py-2 uppercase tracking-[0.14em] text-text-soft truncate">{user.status}</td>
+                          <td className="px-3 py-2 truncate">
+                            <div className="flex gap-1 flex-row flex-nowrap items-center">
+                              <Button
+                                variant="ghost"
+                                className="px-1 py-0.5 text-xs min-w-0"
+                                disabled={isWorking || user.role === "super_admin"}
+                                onClick={() => beginEditUser(user)}
+                              >
+                                Edit
+                              </Button>
+                              {canResetManagedUser(user) ? (
+                                resetPasswordUserId === user.id ? (
+                                  <form className="space-y-1 flex-1" onSubmit={(event) => handleResetUserPassword(event, user)}>
+                                    <Input
+                                      type="password"
+                                      value={resetPassword}
+                                      onChange={(event) => setResetPassword(event.target.value)}
+                                      placeholder="New password"
+                                      minLength={8}
+                                      required
+                                      className="px-2 py-1 text-xs"
+                                    />
+                                    <div className="flex gap-1 mt-1">
+                                      <Button type="submit" className="flex-1 px-2 py-1 text-xs" disabled={isWorking}>
+                                        Reset
+                                      </Button>
+                                      <Button
+                                        variant="secondary"
+                                        className="flex-1 px-2 py-1 text-xs"
+                                        disabled={isWorking}
+                                        onClick={() => {
+                                          setResetPasswordUserId(null);
+                                          setResetPassword("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    className="px-1 py-0.5 text-xs min-w-0"
+                                    disabled={isWorking}
+                                    onClick={() => {
+                                      setResetPasswordUserId(user.id);
+                                      setResetPassword("");
+                                    }}
+                                  >
+                                    Reset
+                                  </Button>
+                                )
+                              ) : null}
+                              <Button
+                                variant="ghost"
+                                className="px-1 py-0.5 text-xs text-coral min-w-0"
+                                disabled={isWorking}
+                                onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <PanelPagination
             className="mt-4"
             page={userPagination.page}

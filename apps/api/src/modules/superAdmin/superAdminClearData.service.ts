@@ -18,6 +18,15 @@ export type ClearOrganizationDataPreview = {
   organizationId: string;
   organizationName: string;
   counts: ClearOrganizationDataCounts;
+  salesSummary: {
+    totalOrders: number;
+    openOrders: number;
+    wonOrders: number;
+    lostOrders: number;
+    pipelineValue: number;
+    wonValue: number;
+    averageOrderValue: number;
+  };
 };
 
 type OrganizationRecord = {
@@ -27,6 +36,16 @@ type OrganizationRecord = {
 
 type CountRow = {
   count: string;
+};
+
+type SalesSummaryRow = {
+  total_orders: string;
+  open_orders: string;
+  won_orders: string;
+  lost_orders: string;
+  pipeline_value: string;
+  won_value: string;
+  average_order_value: string;
 };
 
 const EMPTY_COUNTS: ClearOrganizationDataCounts = {
@@ -110,7 +129,8 @@ export class ClearOrganizationDataService {
       return {
         organizationId: organization.id,
         organizationName: organization.name,
-        counts
+        counts,
+        salesSummary: await this.getSalesSummary(client, organizationId)
       };
     } finally {
       client.release();
@@ -186,6 +206,48 @@ export class ClearOrganizationDataService {
     }
 
     return counts;
+  }
+
+  private async getSalesSummary(client: PoolClient, organizationId: string) {
+    if (!(await this.tableColumnExists(client, "sales_orders", "organization_id"))) {
+      return {
+        totalOrders: 0,
+        openOrders: 0,
+        wonOrders: 0,
+        lostOrders: 0,
+        pipelineValue: 0,
+        wonValue: 0,
+        averageOrderValue: 0
+      };
+    }
+
+    const result = await client.query<SalesSummaryRow>(
+      `
+        select
+          count(*)::text as total_orders,
+          count(*) filter (where status = 'open')::text as open_orders,
+          count(*) filter (where status = 'closed_won')::text as won_orders,
+          count(*) filter (where status = 'closed_lost')::text as lost_orders,
+          coalesce(sum(case when status = 'open' then total_amount else 0 end), 0)::text as pipeline_value,
+          coalesce(sum(case when status = 'closed_won' then total_amount else 0 end), 0)::text as won_value,
+          coalesce(avg(nullif(total_amount, 0)), 0)::text as average_order_value
+        from sales_orders
+        where organization_id = $1
+      `,
+      [organizationId]
+    );
+
+    const row = result.rows[0];
+
+    return {
+      totalOrders: Number(row?.total_orders ?? 0),
+      openOrders: Number(row?.open_orders ?? 0),
+      wonOrders: Number(row?.won_orders ?? 0),
+      lostOrders: Number(row?.lost_orders ?? 0),
+      pipelineValue: Number(row?.pipeline_value ?? 0),
+      wonValue: Number(row?.won_value ?? 0),
+      averageOrderValue: Number(row?.average_order_value ?? 0)
+    };
   }
 
   private async clearTables(client: PoolClient, organizationId: string): Promise<ClearOrganizationDataCounts> {

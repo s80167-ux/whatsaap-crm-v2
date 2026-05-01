@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown } from "lucide-react";
+import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, Phone } from "lucide-react";
 import { assignContact } from "../api/crm";
 import { detectContactRepairProposal } from "../api/admin";
 import { apiPatch } from "../lib/http";
@@ -13,6 +13,7 @@ import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useContact, useContacts } from "../hooks/useContacts";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 import type { Contact, ContactDetailResponse, MergedContactRedirect } from "../types/api";
@@ -61,6 +62,23 @@ function getPrimarySourceLabel(contact: Contact) {
   return contact.whatsapp_sources?.[0]?.label ?? null;
 }
 
+function getDialablePhoneNumber(contact: Contact | null) {
+  const candidates = [contact?.primary_phone_e164 ?? null, contact?.primary_phone_normalized ?? null];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    const compact = candidate.replace(/[\s()-]/g, "");
+    if (/^\+?\d{7,15}$/.test(compact)) {
+      return compact.startsWith("+") ? compact : `+${compact}`;
+    }
+  }
+
+  return null;
+}
+
 function getUserLabel(user: { full_name: string | null; email: string | null; role: string }) {
   const name = user.full_name?.trim() || user.email || "Unnamed user";
   return `${name} (${user.role.replace(/_/g, " ")})`;
@@ -79,6 +97,7 @@ function CompactRepairTools({
   onChanged: () => Promise<void>;
   onOpenQueue: () => void;
 }) {
+  const isMobile = useIsMobileViewport();
   const [expanded, setExpanded] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualName, setManualName] = useState(contact.display_name ?? "");
@@ -137,52 +156,76 @@ function CompactRepairTools({
     });
 
   const disabled = !canWrite || busyAction !== null;
+  const showCollapsedMobile = isMobile && !expanded;
 
   return (
     <div className="rounded-2xl border border-primary/10 bg-background-tint/70 p-3 shadow-soft">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      {showCollapsedMobile ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Wrench size={15} aria-hidden="true" />
             </span>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Repair tools</p>
-              <p className="text-xs text-text-muted">Compact correction for wrong CRM names.</p>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Contact repair</p>
+              <p className="text-xs text-text-muted">Admin tools</p>
             </div>
           </div>
-        </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            variant="secondary"
-            className="px-3 py-2 text-xs"
-            onClick={onOpenQueue}
-            disabled={!canWrite}
-          >
-            Review queue
-          </Button>
           <button
             type="button"
             className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => setExpanded((value) => !value)}
+            onClick={() => setExpanded(true)}
             disabled={!canWrite}
           >
-            {expanded ? "Hide" : "Open tools"}
-            <ChevronDown size={14} className={`transition ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+            Open
+            <ChevronDown size={14} aria-hidden="true" />
           </button>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Wrench size={15} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Repair tools</p>
+                  <p className="text-xs text-text-muted">Compact correction for wrong CRM names.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="secondary"
+                className="px-3 py-2 text-xs"
+                onClick={onOpenQueue}
+                disabled={!canWrite}
+              >
+                Review queue
+              </Button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setExpanded((value) => !value)}
+                disabled={!canWrite}
+              >
+                {expanded ? "Hide" : "Open tools"}
+                <ChevronDown size={14} className={`transition ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={refreshDiagnosis} disabled={disabled}>
-          {busyAction === "refresh" ? "Refreshing..." : "Refresh diagnosis"}
-        </Button>
-        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={clearCanonicalName} disabled={disabled}>
-          {busyAction === "clear-name" ? "Clearing..." : "Clear wrong name"}
-        </Button>
-      </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={refreshDiagnosis} disabled={disabled}>
+              {busyAction === "refresh" ? "Refreshing..." : "Refresh diagnosis"}
+            </Button>
+            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={clearCanonicalName} disabled={disabled}>
+              {busyAction === "clear-name" ? "Clearing..." : "Clear wrong name"}
+            </Button>
+          </div>
 
-      {expanded ? (
+          {expanded ? (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Button variant="secondary" className="px-2 py-2 text-xs" onClick={refreshDiagnosis} disabled={disabled}>
@@ -226,7 +269,9 @@ function CompactRepairTools({
             ) : null}
           </div>
         </div>
-      ) : null}
+          ) : null}
+        </>
+      )}
 
       {message ? <p className="mt-2 text-xs text-text-muted">{message}</p> : null}
     </div>
@@ -235,6 +280,7 @@ function CompactRepairTools({
 
 export function ContactsPage() {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
@@ -278,6 +324,7 @@ export function ContactsPage() {
     () => new Map(assignableUsers.map((user) => [user.id, user])),
     [assignableUsers]
   );
+  const selectedContactDialableNumber = useMemo(() => getDialablePhoneNumber(activeContact), [activeContact]);
   const contactsById = useMemo(
     () => new Map(contacts.map((contact) => [contact.id, contact])),
     [contacts]
@@ -406,7 +453,7 @@ export function ContactsPage() {
 
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[240px] sm:min-w-[300px]">
+            <div className="min-w-0 w-full sm:min-w-[300px] sm:w-auto">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Search contact</p>
               <div className="flex h-10 items-stretch border border-border bg-background-tint">
                 <div className="flex items-center px-3 text-text-soft">
@@ -421,7 +468,7 @@ export function ContactsPage() {
               </div>
             </div>
 
-            <div className="min-w-[200px] flex flex-col">
+            <div className="min-w-0 w-full sm:min-w-[200px] sm:w-auto flex flex-col">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp Source</p>
               <Select
                 value={selectedWhatsAppAccountId}
@@ -473,103 +520,93 @@ export function ContactsPage() {
           <p className="text-sm text-text-muted">{visibleContacts.length} of {contacts.length} contacts</p>
         </div>
 
-        <div className="workspace-table-wrap mt-6">
-          <table className="workspace-table workspace-table-compact w-full table-fixed">
-            <thead>
-              <tr>
-                <th className="w-[30%] px-2.5 py-2">Name</th>
-                <th className="w-[23%] px-2.5 py-2">Normalized</th>
-                <th className="w-[18%] px-2.5 py-2">Source</th>
-                <th className="w-[14%] px-2.5 py-2">Status</th>
-                {canAssignContacts ? <th className="w-[15%] px-2.5 py-2">Owner</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
-                    Loading contacts...
-                  </td>
-                </tr>
-              ) : contactsIsError ? (
-                <tr>
-                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
-                    {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
-                  </td>
-                </tr>
-              ) : visibleContacts.length === 0 ? (
-                <tr>
-                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
-                    {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
-                  </td>
-                </tr>
-              ) : (
-                contactsPagination.visibleItems.map((contact) => (
-                  <motion.tr
+        {isMobile ? (
+          <div className="mt-6 space-y-3">
+            {isLoading ? (
+              <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+                Loading contacts...
+              </div>
+            ) : contactsIsError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600">
+                {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
+              </div>
+            ) : visibleContacts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+                {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
+              </div>
+            ) : (
+              contactsPagination.visibleItems.map((contact) => {
+                const status = getContactStatusInfo(contact, contactsById);
+                const sourceLabel = getPrimarySourceLabel(contact);
+
+                return (
+                  <motion.button
                     key={contact.id}
+                    type="button"
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
-                    className={`table-row cursor-pointer text-xs text-text-muted ${
-                      selectedContactId === contact.id ? "bg-primary/5" : ""
+                    className={`w-full rounded-2xl border p-4 text-left shadow-soft transition ${
+                      selectedContactId === contact.id
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-border bg-white"
                     }`}
                     onClick={() => {
                       setRedirectMessage(null);
                       setSelectedContactId(contact.id);
                     }}
                   >
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border bg-primary/10 text-[10px] font-semibold text-primary">
-                          {contact.primary_avatar_url ? (
-                            <img
-                              src={contact.primary_avatar_url}
-                              alt={contact.display_name ? `${contact.display_name} profile` : "Contact profile"}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center">{getContactInitials(contact.display_name)}</span>
-                          )}
-                        </div>
-                        <span className="min-w-0 truncate font-medium text-text">{contact.display_name ?? contact.primary_phone_normalized ?? "Unknown"}</span>
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border bg-primary/10 text-xs font-semibold text-primary">
+                        {contact.primary_avatar_url ? (
+                          <img
+                            src={contact.primary_avatar_url}
+                            alt={contact.display_name ? `${contact.display_name} profile` : "Contact profile"}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center">{getContactInitials(contact.display_name)}</span>
+                        )}
                       </div>
-                    </td>
-                    <td className="truncate px-2.5 py-1.5" title={contact.primary_phone_normalized ?? undefined}>
-                      {contact.primary_phone_normalized ?? "--"}
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      {getPrimarySourceLabel(contact) ? (
-                        <span className="inline-flex max-w-[150px] items-center rounded-full border border-border bg-background-tint px-2 py-0.5 text-[11px] font-medium text-text-muted">
-                          <span className="truncate">{getPrimarySourceLabel(contact)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words font-semibold text-text">
+                          {contact.display_name ?? contact.primary_phone_normalized ?? "Unknown"}
+                        </p>
+                        <p className="mt-1 break-all text-sm text-text-muted">
+                          {contact.primary_phone_normalized ?? "--"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {sourceLabel ? (
+                        <span className="inline-flex max-w-full items-center rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-medium text-text-muted">
+                          <span className="truncate">{sourceLabel}</span>
                           {(contact.whatsapp_source_count ?? 0) > 1 ? (
                             <span className="ml-1 text-text-soft">+{(contact.whatsapp_source_count ?? 1) - 1}</span>
                           ) : null}
                         </span>
                       ) : (
-                        <span className="text-text-soft">--</span>
+                        <span className="inline-flex rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-medium text-text-soft">
+                          No source
+                        </span>
                       )}
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      {(() => {
-                        const status = getContactStatusInfo(contact, contactsById);
+                      <span
+                        className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                          status.type === "merged"
+                            ? "border-slate-200 bg-slate-100 text-slate-600"
+                            : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                        }`}
+                        title={status.label}
+                      >
+                        <span className="truncate">{status.label}</span>
+                      </span>
+                    </div>
 
-                        return (
-                          <span
-                            className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                              status.type === "merged"
-                                ? "border-slate-200 bg-slate-100 text-slate-600"
-                                : "border-emerald-100 bg-emerald-50 text-emerald-700"
-                            }`}
-                            title={status.label}
-                          >
-                            <span className="truncate">{status.label}</span>
-                          </span>
-                        );
-                      })()}
-                    </td>
                     {canAssignContacts ? (
-                      <td className="px-2.5 py-1.5">
+                      <div className="mt-3">
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">Owner</p>
                         {canAssignContactsToTeam ? (
                           <Select
                             value={contact.owner_user_id ?? ""}
@@ -579,7 +616,7 @@ export function ContactsPage() {
                               void handleAssignContact(contact.id, event.target.value);
                             }}
                             disabled={assigningContactId === contact.id || organizationUsersLoading || assignableUsers.length === 0}
-                            className="h-8 w-full min-w-0 bg-white px-2 py-1 text-[11px]"
+                            className="h-10 w-full min-w-0 bg-white px-3 py-2 text-sm"
                             aria-label={`Assign ${contact.display_name ?? "contact"} to a team member`}
                           >
                             <option value="" disabled>
@@ -592,11 +629,11 @@ export function ContactsPage() {
                             ))}
                           </Select>
                         ) : contact.owner_user_id === currentUser?.organizationUserId ? (
-                          <span className="whitespace-nowrap text-text-soft">Assigned to you</span>
+                          <p className="text-sm text-text-soft">Assigned to you</p>
                         ) : (
                           <Button
                             variant="secondary"
-                            className="whitespace-nowrap px-2 py-1 text-[11px]"
+                            className="w-full px-3 py-2 text-sm"
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleAssignContact(contact.id, currentUser?.organizationUserId ?? "");
@@ -606,14 +643,156 @@ export function ContactsPage() {
                             {assigningContactId === contact.id ? "Assigning..." : "Assign to me"}
                           </Button>
                         )}
-                      </td>
+                      </div>
                     ) : null}
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </motion.button>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div className="workspace-table-wrap mt-6">
+            <table className="workspace-table workspace-table-compact w-full table-fixed">
+              <thead>
+                <tr>
+                  <th className="w-[30%] px-2.5 py-2">Name</th>
+                  <th className="w-[23%] px-2.5 py-2">Normalized</th>
+                  <th className="w-[18%] px-2.5 py-2">Source</th>
+                  <th className="w-[14%] px-2.5 py-2">Status</th>
+                  {canAssignContacts ? <th className="w-[15%] px-2.5 py-2">Owner</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                      Loading contacts...
+                    </td>
+                  </tr>
+                ) : contactsIsError ? (
+                  <tr>
+                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
+                      {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
+                    </td>
+                  </tr>
+                ) : visibleContacts.length === 0 ? (
+                  <tr>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                      {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
+                    </td>
+                  </tr>
+                ) : (
+                  contactsPagination.visibleItems.map((contact) => (
+                    <motion.tr
+                      key={contact.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className={`table-row cursor-pointer text-xs text-text-muted ${
+                        selectedContactId === contact.id ? "bg-primary/5" : ""
+                      }`}
+                      onClick={() => {
+                        setRedirectMessage(null);
+                        setSelectedContactId(contact.id);
+                      }}
+                    >
+                      <td className="px-2.5 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border bg-primary/10 text-[10px] font-semibold text-primary">
+                            {contact.primary_avatar_url ? (
+                              <img
+                                src={contact.primary_avatar_url}
+                                alt={contact.display_name ? `${contact.display_name} profile` : "Contact profile"}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center">{getContactInitials(contact.display_name)}</span>
+                            )}
+                          </div>
+                          <span className="min-w-0 truncate font-medium text-text">{contact.display_name ?? contact.primary_phone_normalized ?? "Unknown"}</span>
+                        </div>
+                      </td>
+                      <td className="truncate px-2.5 py-1.5" title={contact.primary_phone_normalized ?? undefined}>
+                        {contact.primary_phone_normalized ?? "--"}
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        {getPrimarySourceLabel(contact) ? (
+                          <span className="inline-flex max-w-[150px] items-center rounded-full border border-border bg-background-tint px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                            <span className="truncate">{getPrimarySourceLabel(contact)}</span>
+                            {(contact.whatsapp_source_count ?? 0) > 1 ? (
+                              <span className="ml-1 text-text-soft">+{(contact.whatsapp_source_count ?? 1) - 1}</span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          <span className="text-text-soft">--</span>
+                        )}
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        {(() => {
+                          const status = getContactStatusInfo(contact, contactsById);
+
+                          return (
+                            <span
+                              className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                status.type === "merged"
+                                  ? "border-slate-200 bg-slate-100 text-slate-600"
+                                  : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                              }`}
+                              title={status.label}
+                            >
+                              <span className="truncate">{status.label}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      {canAssignContacts ? (
+                        <td className="px-2.5 py-1.5">
+                          {canAssignContactsToTeam ? (
+                            <Select
+                              value={contact.owner_user_id ?? ""}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(event) => {
+                                event.stopPropagation();
+                                void handleAssignContact(contact.id, event.target.value);
+                              }}
+                              disabled={assigningContactId === contact.id || organizationUsersLoading || assignableUsers.length === 0}
+                              className="h-8 w-full min-w-0 bg-white px-2 py-1 text-[11px]"
+                              aria-label={`Assign ${contact.display_name ?? "contact"} to a team member`}
+                            >
+                              <option value="" disabled>
+                                Unassigned
+                              </option>
+                              {assignableUsers.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                  {getUserLabel(user)}
+                                </option>
+                              ))}
+                            </Select>
+                          ) : contact.owner_user_id === currentUser?.organizationUserId ? (
+                            <span className="whitespace-nowrap text-text-soft">Assigned to you</span>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              className="whitespace-nowrap px-2 py-1 text-[11px]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleAssignContact(contact.id, currentUser?.organizationUserId ?? "");
+                              }}
+                              disabled={assigningContactId === contact.id}
+                            >
+                              {assigningContactId === contact.id ? "Assigning..." : "Assign to me"}
+                            </Button>
+                          )}
+                        </td>
+                      ) : null}
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
         <PanelPagination
           className="mt-4"
           page={contactsPagination.page}
@@ -666,6 +845,16 @@ export function ContactsPage() {
                 })()}
               </div>
             </div>
+            {selectedContactDialableNumber ? (
+              <a
+                href={`tel:${selectedContactDialableNumber}`}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90 xl:hidden"
+                aria-label={`Call ${activeContact.display_name ?? "contact"}`}
+              >
+                <Phone size={16} />
+                <span>Call contact</span>
+              </a>
+            ) : null}
             <CompactRepairTools
               contact={activeContact}
               canWrite={canRepairContacts}
