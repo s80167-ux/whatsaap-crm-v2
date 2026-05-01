@@ -38,6 +38,15 @@ export class ConnectorCommandService {
     };
   }
 
+  async syncAccountContacts(accountId: string) {
+    const account = await this.getAccount(accountId);
+    const contacts = await this.sessionManager.syncContacts(account);
+    return {
+      accountId,
+      contacts
+    };
+  }
+
   async terminateAccount(accountId: string) {
     await this.sessionManager.terminateSession(accountId);
     return { accountId };

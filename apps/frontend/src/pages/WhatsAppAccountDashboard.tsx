@@ -5,6 +5,7 @@ import { PanelPagination, usePanelPagination } from "../components/PanelPaginati
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
+import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccounts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookUser, Link2, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
 import { useState } from "react";
@@ -324,6 +325,8 @@ export function WhatsAppAccountDashboard() {
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
+
+  useRealtimeWhatsAppAccounts(activeOrganizationId);
 
   function beginEditAccount(account: any) {
     setEditingAccountId(account.id);

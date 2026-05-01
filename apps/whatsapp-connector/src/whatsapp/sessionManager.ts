@@ -43,6 +43,11 @@ export type StoredContactSnapshot = {
   verifiedName: string | null | undefined;
   imgUrl: string | null | undefined;
 };
+type ContactSyncWaiter = {
+  resolve: (contacts: StoredContactSnapshot[]) => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
+};
 
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
@@ -99,6 +104,7 @@ export class WhatsAppSessionManager {
   private readonly phoneJidByLid = new Map<string, string>();
   private readonly avatarUrlByJid = new Map<string, string>();
   private readonly contactByJid = new Map<string, ContactSnapshot>();
+  private readonly contactSyncWaiters = new Map<string, ContactSyncWaiter[]>();
 
   getSocket(accountId: string) {
     return this.sockets.get(accountId);
@@ -128,6 +134,29 @@ export class WhatsAppSessionManager {
     }
 
     return Array.from(contacts.values());
+  }
+
+  async syncContacts(account: {
+    id: string;
+    organization_id: string;
+    label: string | null;
+    connection_status: string;
+    account_jid: string | null;
+    display_name: string | null;
+    history_sync_lookback_days?: number | null;
+  }) {
+    const existingContacts = this.listStoredContacts(account.id);
+    const hasLiveSession = this.connectedAccounts.has(account.id) && this.sockets.has(account.id);
+
+    if (!hasLiveSession) {
+      throw new Error("WhatsApp account must be connected before syncing contacts");
+    }
+
+    if (existingContacts.length > 0) {
+      return existingContacts;
+    }
+
+    return this.waitForContacts(account.id, 15_000);
   }
 
   async initializeAll() {
@@ -475,8 +504,14 @@ export class WhatsAppSessionManager {
         }
       });
 
-      socket.ev.on("messaging-history.set", async ({ messages }) => {
-        logger.info({ count: messages.length, sample: messages.slice(0, 3) }, "messaging-history.set event received");
+      socket.ev.on("messaging-history.set", async ({ messages, contacts }) => {
+        logger.info(
+          { messageCount: messages.length, contactCount: contacts.length, sample: messages.slice(0, 3) },
+          "messaging-history.set event received"
+        );
+        if (contacts.length > 0) {
+          this.storeContactSnapshots(account.id, contacts);
+        }
         for (const message of messages) {
           await handleWhatsAppMessage(message);
         }
@@ -628,6 +663,47 @@ export class WhatsAppSessionManager {
     return `${accountId}::${key}`;
   }
 
+  private waitForContacts(accountId: string, timeoutMs: number) {
+    const existing = this.listStoredContacts(accountId);
+    if (existing.length > 0) {
+      return Promise.resolve(existing);
+    }
+
+    return new Promise<StoredContactSnapshot[]>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const waiters = this.contactSyncWaiters.get(accountId) ?? [];
+        this.contactSyncWaiters.set(
+          accountId,
+          waiters.filter((waiter) => waiter.timeout !== timeout)
+        );
+        reject(new Error("WhatsApp did not return any contacts before the sync timed out"));
+      }, timeoutMs);
+
+      const waiter: ContactSyncWaiter = { resolve, reject, timeout };
+      const waiters = this.contactSyncWaiters.get(accountId) ?? [];
+      waiters.push(waiter);
+      this.contactSyncWaiters.set(accountId, waiters);
+    });
+  }
+
+  private flushContactSyncWaiters(accountId: string) {
+    const waiters = this.contactSyncWaiters.get(accountId);
+    if (!waiters?.length) {
+      return;
+    }
+
+    const contacts = this.listStoredContacts(accountId);
+    if (contacts.length === 0) {
+      return;
+    }
+
+    this.contactSyncWaiters.delete(accountId);
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timeout);
+      waiter.resolve(contacts);
+    }
+  }
+
   private lookupPhoneFromLid(accountId: string, jid: string | null | undefined) {
     if (!jid?.includes("@lid")) {
       return null;
@@ -674,6 +750,8 @@ export class WhatsAppSessionManager {
         }
       }
     }
+
+    this.flushContactSyncWaiters(accountId);
   }
 
   private getStoredContactSnapshot(accountId: string, jid: string, key: Record<string, unknown>) {

@@ -104,7 +104,7 @@ export class AdminBackfillService {
       return existingAccount;
     });
 
-    const connectorResult = await this.connectorClient.listAccountContacts(account.id);
+    const connectorResult = await this.connectorClient.syncAccountContacts(account.id);
     const uniqueContacts = new Map<string, (typeof connectorResult.contacts)[number]>();
 
     for (const contact of connectorResult.contacts) {
@@ -120,6 +120,14 @@ export class AdminBackfillService {
 
       const dedupeKey = contact.jid ?? contact.lid ?? contact.id;
       uniqueContacts.set(dedupeKey, contact);
+    }
+
+    if (connectorResult.contacts.length === 0) {
+      throw new AppError(
+        "WhatsApp returned no contacts after refresh. Keep the device connected and try again.",
+        409,
+        "whatsapp_contacts_empty"
+      );
     }
 
     const summary = {

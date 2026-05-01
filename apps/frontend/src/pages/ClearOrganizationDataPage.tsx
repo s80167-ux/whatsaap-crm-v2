@@ -70,7 +70,7 @@ export function ClearOrganizationDataPage() {
       const refreshed = await fetchClearOrganizationDataPreview(selectedOrganizationId);
       setPreview(refreshed.counts);
     } catch (err) {
-      setError("Failed to clear data");
+      setError(err instanceof Error ? err.message : "Failed to clear data");
     } finally {
       setLoading(false);
     }

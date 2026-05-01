@@ -58,6 +58,12 @@ export async function listAccountContacts(req: Request, res: Response) {
   return res.json({ data: result });
 }
 
+export async function syncAccountContacts(req: Request, res: Response) {
+  const { accountId } = accountParamSchema.parse(req.params);
+  const result = await connectorCommandService.syncAccountContacts(accountId);
+  return res.json({ data: result });
+}
+
 export async function terminateAccountSession(req: Request, res: Response) {
   const { accountId } = accountParamSchema.parse(req.params);
   const result = await connectorCommandService.terminateAccount(accountId);

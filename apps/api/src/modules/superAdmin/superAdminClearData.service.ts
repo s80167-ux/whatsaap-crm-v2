@@ -55,23 +55,36 @@ const COUNT_TABLES: Array<{ key: CountKey; tableName: string; columnName: string
 
 const CLEAR_TABLES: Array<{ key?: CountKey; tableName: string; columnName: string; excludeSuperAdminUsers?: boolean }> = [
   { tableName: "message_status_events", columnName: "message_id" },
+  { tableName: "quick_reply_message_events", columnName: "organization_id" },
+  { tableName: "message_dispatch_outbox", columnName: "organization_id" },
   { tableName: "message_outbox_receipts", columnName: "organization_id" },
   { tableName: "message_outbox_jobs", columnName: "organization_id" },
   { tableName: "sales_order_items", columnName: "sales_order_id" },
   { key: "notifications", tableName: "notifications", columnName: "organization_id" },
   { key: "activities", tableName: "activities", columnName: "organization_id" },
   { tableName: "conversation_assignments", columnName: "organization_id" },
+  { tableName: "contact_owners", columnName: "organization_id" },
+  { tableName: "inbox_thread_summary", columnName: "organization_id" },
+  { tableName: "contact_summary", columnName: "organization_id" },
   { key: "messages", tableName: "messages", columnName: "organization_id" },
   { tableName: "media_assets", columnName: "organization_id" },
   { key: "sales", tableName: "sales_orders", columnName: "organization_id" },
   { tableName: "leads", columnName: "organization_id" },
   { key: "repairProposals", tableName: "contact_repair_proposals", columnName: "organization_id" },
+  { tableName: "quick_reply_templates", columnName: "organization_id" },
+  { tableName: "processed_event_keys", columnName: "organization_id" },
   { tableName: "contact_identities", columnName: "organization_id" },
   { key: "conversations", tableName: "conversations", columnName: "organization_id" },
   { key: "contacts", tableName: "contacts", columnName: "organization_id" },
+  { tableName: "dashboard_metrics_daily", columnName: "organization_id" },
+  { tableName: "usage_daily", columnName: "organization_id" },
+  { tableName: "raw_channel_events", columnName: "organization_id" },
   { tableName: "raw_whatsapp_events", columnName: "organization_id" },
   { tableName: "whatsapp_sync_jobs", columnName: "organization_id" },
+  { tableName: "whatsapp_connection_events", columnName: "organization_id" },
+  { tableName: "whatsapp_account_sessions", columnName: "whatsapp_account_id" },
   { key: "whatsappAccounts", tableName: "whatsapp_accounts", columnName: "organization_id" },
+  { tableName: "organization_user_permissions", columnName: "organization_user_id" },
   { key: "users", tableName: "organization_users", columnName: "organization_id", excludeSuperAdminUsers: true }
 ];
 
@@ -210,6 +223,24 @@ export class ClearOrganizationDataService {
         delete from sales_order_items
         where sales_order_id in (
           select id from sales_orders where organization_id = $1
+        )
+      `;
+    }
+
+    if (table.tableName === "whatsapp_account_sessions") {
+      return `
+        delete from whatsapp_account_sessions
+        where whatsapp_account_id in (
+          select id from whatsapp_accounts where organization_id = $1
+        )
+      `;
+    }
+
+    if (table.tableName === "organization_user_permissions") {
+      return `
+        delete from organization_user_permissions
+        where organization_user_id in (
+          select id from organization_users where organization_id = $1 and role <> 'super_admin'
         )
       `;
     }
