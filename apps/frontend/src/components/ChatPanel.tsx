@@ -610,7 +610,7 @@ export function ChatPanel({
 
   if (!conversation) {
     return (
-      <Card className="flex min-h-[420px] items-center justify-center p-10" elevated>
+      <Card className="workspace-block flex min-h-[420px] items-center justify-center p-10" elevated>
         <div className="max-w-sm text-center">
           <p className="text-lg font-semibold text-text">Pick a conversation</p>
           <p className="mt-2 text-sm leading-6 text-text-muted">
@@ -622,10 +622,19 @@ export function ChatPanel({
   }
 
   return (
-    <Card className={`min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
+    <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
-        <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
-        <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Live conversation</p>
+            <p className="mt-2 text-xl font-semibold text-text">{conversation.contact_name}</p>
+            <p className="mt-1 text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
+          </div>
+          <div className="workspace-subtle px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace note</p>
+            <p className="mt-1 text-xs leading-5 text-text-muted">Reply quickly, then use the side panel for assignment and contact details.</p>
+          </div>
+        </div>
         {latestOutgoingStatusLabel ? (
   <div className="mt-3 flex flex-wrap items-center gap-2">
     <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-soft">
@@ -717,7 +726,7 @@ export function ChatPanel({
           </div>
         )}
       </div>
-      <footer className="border-t border-primary/15 bg-slate-50 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
+      <footer className="border-t border-primary/10 bg-slate-50/90 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {replyDraft ? (
           <div className="mb-3 rounded-2xl border border-primary/15 bg-primary-soft/30 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -740,7 +749,7 @@ export function ChatPanel({
         {attachment ? (
           <AttachmentPreview attachment={attachment} onClear={handleClearAttachment} />
         ) : null}
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_32px_rgba(20,32,51,0.08)]">
+        <div className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-3 shadow-[0_14px_32px_rgba(20,32,51,0.08)]">
           <input
             ref={fileInputRef}
             type="file"

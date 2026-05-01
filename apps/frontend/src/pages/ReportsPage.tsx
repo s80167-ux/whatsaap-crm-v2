@@ -196,14 +196,15 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <section className="workspace-page-header">
         <div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary-soft p-2 text-primary">
+            <div className="rounded-2xl bg-primary-soft p-3 text-primary">
               <BarChart3 size={24} />
             </div>
             <div>
-              <h1 className="section-title">Analytics &amp; Reports</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Reports</p>
+              <h1 className="mt-2 section-title">Analytics &amp; Reports</h1>
               <p className="section-copy mt-1">Comprehensive insights into sales performance and pipeline health.</p>
             </div>
           </div>
@@ -215,7 +216,7 @@ export function ReportsPage() {
         </div>
       </section>
 
-      <div className="grid gap-2 rounded-lg bg-white/70 p-1 shadow-soft md:grid-cols-5">
+      <div className="grid gap-2 rounded-2xl border border-border/70 bg-white/80 p-1.5 shadow-soft md:grid-cols-5">
         {REPORT_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -272,7 +273,7 @@ export function ReportsPage() {
           }}
         />
       ) : (
-        <Card>
+        <Card className="workspace-block">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{REPORT_TABS.find((tab) => tab.id === activeTab)?.label}</p>
           <h2 className="mt-3 text-xl font-semibold text-text">Report module placeholder</h2>
           <p className="section-copy mt-2">
@@ -323,7 +324,7 @@ function DailyReportDashboard(props: {
 
   return (
     <div className="space-y-4">
-      <Card className="report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
+      <Card className="workspace-block report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <CalendarDays size={16} />
@@ -372,7 +373,7 @@ function DailyReportDashboard(props: {
         </div>
       </Card>
 
-      <Card className="report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
+      <Card className="workspace-block report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
         <div className="flex items-center gap-2 text-sm font-semibold text-text">
           <Filter size={16} className="text-primary" />
           Team &amp; Product Filters
@@ -548,7 +549,7 @@ function DailyReportDashboard(props: {
 
 function ReportStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-white px-4 py-3 shadow-soft">
+    <div className="workspace-block !px-4 !py-3">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-text-soft">{label}</p>
       <p className="mt-1 text-lg font-bold text-text">{value}</p>
     </div>

@@ -210,10 +210,19 @@ export function WhatsAppAccountDashboard() {
 
   return (
     <section className="space-y-6">
-      <Card elevated>
-        <div>
-          <h2 className="section-title">WhatsApp Account Management</h2>
-          <p className="section-copy">Create and manage WhatsApp accounts for your organization.</p>
+      <Card elevated className="workspace-block">
+        <div className="workspace-page-header">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Channels</p>
+            <h2 className="mt-3 section-title">WhatsApp Account Management</h2>
+            <p className="section-copy mt-2">Create, pair, and maintain WhatsApp accounts for each organization without leaving the admin workspace.</p>
+          </div>
+          <div className="workspace-subtle max-w-xs p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Keep connection health, pairing, and history sync actions clear for non-technical operators.
+            </p>
+          </div>
         </div>
         {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
       </Card>
@@ -228,7 +237,7 @@ export function WhatsAppAccountDashboard() {
           await handleCreateAccount(e);
           if (!isWorking && selectedOrganizationId) setShowCreatePopup(false);
         }}>
-          <div className="space-y-3">
+          <div className="workspace-form-panel space-y-3 p-4">
             <Select
               id="organization-select"
               name="organization"
@@ -281,57 +290,53 @@ export function WhatsAppAccountDashboard() {
       </PopupOverlay>
 
       <PopupOverlay
-  open={Boolean(backfillPopupAccount)}
-  onClose={() => setBackfillPopupAccount(null)}
-  title="Sync WhatsApp History"
-  panelClassName="max-w-md"
->
-  {backfillPopupAccount ? (
-    <div className="space-y-4">
-      <p className="text-sm text-text-soft">
-        Choose how far back to sync for{" "}
-        <strong>{backfillPopupAccount.name}</strong>.
-      </p>
-
-      <Select
-  value={String(backfillSelections[backfillPopupAccount.id] ?? 7)}
-  onChange={(event) => {
-    const selectedDays = Number(event.target.value) as WhatsAppBackfillDays;
-
-    setBackfillSelections((current) => ({
-      ...current,
-      [backfillPopupAccount.id]: selectedDays
-    }));
-  }}
->
-  <option value="7">7 days</option>
-  <option value="30">30 days</option>
-  <option value="90">90 days</option>
-</Select>
-
-      <Button
-        className="w-full"
-        onClick={() =>
-          handleBackfillAccount(
-            backfillPopupAccount.id,
-            backfillPopupAccount.name
-          )
-        }
+        open={Boolean(backfillPopupAccount)}
+        onClose={() => setBackfillPopupAccount(null)}
+        title="Sync WhatsApp History"
+        panelClassName="max-w-md"
       >
-        Start Sync
-      </Button>
-    </div>
-  ) : null}
-</PopupOverlay>
+        {backfillPopupAccount ? (
+          <div className="workspace-form-panel space-y-4 p-4">
+            <p className="text-sm text-text-soft">
+              Choose how far back to sync for <strong>{backfillPopupAccount.name}</strong>.
+            </p>
 
-      <Card elevated className="min-w-0 xl:col-span-3 mt-6">
-        <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
-          <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
+            <Select
+              value={String(backfillSelections[backfillPopupAccount.id] ?? 7)}
+              onChange={(event) => {
+                const selectedDays = Number(event.target.value) as WhatsAppBackfillDays;
+
+                setBackfillSelections((current) => ({
+                  ...current,
+                  [backfillPopupAccount.id]: selectedDays
+                }));
+              }}
+            >
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+              <option value="90">90 days</option>
+            </Select>
+
+            <Button
+              className="w-full"
+              onClick={() => handleBackfillAccount(backfillPopupAccount.id, backfillPopupAccount.name)}
+            >
+              Start Sync
+            </Button>
+          </div>
+        ) : null}
+      </PopupOverlay>
+
+      <Card elevated className="workspace-block mt-6 min-w-0 xl:col-span-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-text">WhatsApp accounts</h3>
+            <p className="mt-2 text-sm text-text-muted">Monitor device health, scan QR pairing when needed, and trigger safe sync actions from one place.</p>
+          </div>
           <div className="flex gap-2 items-center">
             <Button
               variant="primary"
-              className={`px-4 py-2 text-sm font-semibold rounded ${styles.buttonNoShadow}`}
+              className={`px-4 py-2 text-sm font-semibold ${styles.buttonNoShadow}`}
               onClick={() => setShowCreatePopup(true)}
               aria-label="Add WhatsApp Account"
             >
@@ -342,7 +347,10 @@ export function WhatsAppAccountDashboard() {
             </Button>
           </div>
         </div>
-        <div className="mt-4 overflow-hidden border border-border bg-white text-sm shadow-soft">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
+          <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
+        </div>
+        <div className="workspace-table-wrap mt-4 overflow-hidden text-sm shadow-soft">
           <div className="hidden grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] gap-3 border-b border-border bg-background-tint px-4 py-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-text-soft lg:grid">
             <p>Device Name</p>
             <p>Status</p>
@@ -351,7 +359,14 @@ export function WhatsAppAccountDashboard() {
             <p>Actions</p>
           </div>
           <div className="divide-y divide-border">
-            {accountPagination.visibleItems.map((account) => {
+            {accountPagination.visibleItems.length === 0 ? (
+              <div className="workspace-empty-state m-4 px-6 py-10">
+                <p className="text-base font-semibold text-text">No WhatsApp accounts yet</p>
+                <p className="mt-2 text-sm leading-6 text-text-muted">
+                  Add the first account to start pairing a device and syncing conversations for this organization.
+                </p>
+              </div>
+            ) : accountPagination.visibleItems.map((account) => {
               const statusTone = getConnectionTone(account.status);
               const connected = isConnectedAccount(account.status);
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
@@ -360,7 +375,7 @@ export function WhatsAppAccountDashboard() {
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
                   {editingAccountId === account.id ? (
-                    <form className="space-y-3 lg:col-span-5" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
+                    <form className="workspace-form-panel space-y-3 p-4 lg:col-span-5" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
                       <Select
                         value={accountEdit.organizationId}
                         onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
@@ -427,17 +442,17 @@ export function WhatsAppAccountDashboard() {
                       <div className="min-w-0">
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Info</p>
                         <div className="flex flex-wrap gap-2">
-                          <span title={`Last connected: ${account.last_connected_at || "Never"}. Last disconnected: ${account.last_disconnected_at || "Never"}.`} className="inline-flex items-center gap-1.5 bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                          <span title={`Last connected: ${account.last_connected_at || "Never"}. Last disconnected: ${account.last_disconnected_at || "Never"}.`} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
                             <Info className="h-3.5 w-3.5" />
                             Device Info
                           </span>
-                          <span title={`Health score: ${account.health_score ?? "--"}`} className="inline-flex items-center gap-1.5 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                          <span title={`Health score: ${account.health_score ?? "--"}`} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
                             <PlugZap className="h-3.5 w-3.5" />
                             Readiness
                           </span>
-                          <span title={`History sync: ${formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}`} className="inline-flex items-center gap-1.5 bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
+                          <span title={`History sync: ${formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}`} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                             <Zap className="h-3.5 w-3.5" />
-                            Webhooks
+                            Sync Window
                           </span>
                         </div>
                         {account.status?.toLowerCase() === "qr_required" ? (
@@ -460,7 +475,7 @@ export function WhatsAppAccountDashboard() {
                             </Button>
                           ) : (
                             <Button
-                              className="gap-1.5 bg-[#78bd2b] px-3 py-2 text-xs text-white hover:bg-[#64a421]"
+                              className="gap-1.5 bg-emerald-600 px-3 py-2 text-xs text-white hover:bg-emerald-700"
                               disabled={isWorking}
                               onClick={() => handleReconnectAccount(account.id, account.name)}
                             >
@@ -469,15 +484,14 @@ export function WhatsAppAccountDashboard() {
                             </Button>
                           )}
                           <Button
-                              variant="secondary"
-                              className="gap-1.5 px-3 py-2 text-xs"
-                              disabled={isWorking || isBackfillingThisAccount}
-                              onClick={() =>setBackfillPopupAccount({ id: account.id, name: account.name })
-    }
-                            >
-                      <Zap className="h-3.5 w-3.5" />
-  {isBackfillingThisAccount ? "Requesting sync..." : "Sync WhatsApp History"}
-</Button>
+                            variant="secondary"
+                            className="gap-1.5 px-3 py-2 text-xs"
+                            disabled={isWorking || isBackfillingThisAccount}
+                            onClick={() => setBackfillPopupAccount({ id: account.id, name: account.name })}
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            {isBackfillingThisAccount ? "Requesting sync..." : "Sync WhatsApp History"}
+                          </Button>
                           <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
                             Edit

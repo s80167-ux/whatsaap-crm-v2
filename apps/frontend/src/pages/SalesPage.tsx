@@ -529,19 +529,26 @@ export function SalesPage() {
         }}
       />
 
-      <Card elevated>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <Card elevated className="workspace-block">
+        <div className="workspace-page-header">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Sales</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Sales</p>
             <h2 className="mt-3 section-title">Pipeline workspace</h2>
             <p className="mt-2 max-w-3xl section-copy">
               Sales orders are now role-scoped and live. Assigned-scope users see their own records, while admins and managers can monitor the wider revenue queue.
             </p>
           </div>
-
-          <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
-            + Create Sales
-          </Button>
+          <div className="flex w-full max-w-sm flex-col gap-4 sm:items-end">
+            <div className="workspace-subtle w-full">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Keep order creation, active pipeline, and conversion follow-up visible without leaving the page.
+              </p>
+            </div>
+            <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
+              + Create Sales
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -553,7 +560,7 @@ export function SalesPage() {
       </div>
 
       {salesFilters.status || salesFilters.createdFrom || salesFilters.closedFrom ? (
-        <Card elevated className="border-primary/20 bg-primary/5">
+        <Card elevated className="workspace-subtle border-primary/20 bg-primary/5">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Active Drill-Down</p>
           <p className="mt-3 text-sm leading-6 text-text-muted">
             {buildSalesFilterSummary(salesFilters)}
@@ -562,7 +569,7 @@ export function SalesPage() {
       ) : null}
 
       {(salesFilters.orderId && orderDetailError) || (salesFilters.leadId && leadDetailError) ? (
-        <Card elevated className="border-coral/20 bg-coral/5">
+        <Card elevated className="workspace-subtle border-coral/20 bg-coral/5">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-coral">Shared Link Notice</p>
           <div className="mt-3 space-y-3 text-sm leading-6 text-text-muted">
             {salesFilters.orderId && orderDetailError ? (
@@ -592,11 +599,16 @@ export function SalesPage() {
       ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
-        <Card elevated>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Quick Create</p>
-          <div className="mt-5 space-y-4">
+        <Card elevated className="workspace-block">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Quick Create</p>
+              <p className="mt-2 text-sm text-text-muted">Create a sales order with only the essentials, then refine details in the order panel.</p>
+            </div>
+          </div>
+          <div className="workspace-form-panel mt-5 space-y-4 p-4">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-text">Contact</span>
+              <span className="workspace-label">Contact</span>
               <select
                 id="contact-select"
                 aria-label="Contact"
@@ -615,7 +627,7 @@ export function SalesPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-text">Status</span>
+              <span className="workspace-label">Status</span>
               <select
                 id="status-select"
                 aria-label="Status"
@@ -634,7 +646,7 @@ export function SalesPage() {
 
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr),110px]">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text">Amount</span>
+                <span className="workspace-label">Amount</span>
                 <Input
                   type="number"
                   min="0"
@@ -646,7 +658,7 @@ export function SalesPage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text">Currency</span>
+                <span className="workspace-label">Currency</span>
                 <Input
                   value={currency}
                   onChange={(event) => setCurrency(event.target.value.toUpperCase())}
@@ -664,14 +676,14 @@ export function SalesPage() {
             </Button>
 
             {!canWriteSales ? (
-              <p className="rounded-xl border border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
+              <p className="workspace-empty-state px-4 py-3 text-sm leading-6 text-text-muted">
                 Your role can view assigned sales but cannot create or update them.
               </p>
             ) : null}
           </div>
         </Card>
 
-        <Card elevated>
+        <Card elevated className="workspace-block">
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Orders</p>
@@ -680,9 +692,9 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{orders.length} records</p>
           </div>
 
-          <div ref={ordersTableContainerRef} className="mt-6 max-h-[520px] overflow-auto rounded-2xl border border-border bg-white/80">
-            <table className="min-w-full bg-white/80">
-              <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+          <div ref={ordersTableContainerRef} className="workspace-table-wrap mt-6 max-h-[520px]">
+            <table className="workspace-table">
+              <thead>
                 <tr>
                   <th className="px-5 py-4">Contact</th>
                   <th className="px-5 py-4">Status</th>
@@ -695,14 +707,14 @@ export function SalesPage() {
               <tbody>
                 {ordersLoading ? (
                   <tr>
-                    <td className="px-5 py-6 text-sm text-text-muted" colSpan={6}>
+                    <td className="text-sm text-text-muted" colSpan={6}>
                       Loading sales orders...
                     </td>
                   </tr>
                 ) : orders.length === 0 ? (
                   <tr>
-                    <td className="px-5 py-6 text-sm text-text-muted" colSpan={6}>
-                      No sales orders yet. Create the first one from the form on the left.
+                    <td className="px-4 py-8 text-sm text-text-muted" colSpan={6}>
+                      No sales orders yet. Create the first order from the panel on the left to start the pipeline.
                     </td>
                   </tr>
                 ) : (
@@ -771,11 +783,14 @@ export function SalesPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
-        <Card elevated>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Intake</p>
-          <div className="mt-5 space-y-4">
+        <Card elevated className="workspace-block">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Intake</p>
+            <p className="mt-2 text-sm text-text-muted">Capture new opportunities quickly, then manage progress from the conversion queue.</p>
+          </div>
+          <div className="workspace-form-panel mt-5 space-y-4 p-4">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-text">Contact</span>
+              <span className="workspace-label">Contact</span>
               <select
                 id="lead-contact-select"
                 aria-label="Lead Contact"
@@ -794,7 +809,7 @@ export function SalesPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-text">Source</span>
+              <span className="workspace-label">Source</span>
               <Input
                 value={leadSource}
                 onChange={(event) => setLeadSource(event.target.value)}
@@ -805,7 +820,7 @@ export function SalesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text">Lead status</span>
+                <span className="workspace-label">Lead status</span>
                 <select
                   id="lead-status-select"
                   aria-label="Lead Status"
@@ -823,7 +838,7 @@ export function SalesPage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text">Temperature</span>
+                <span className="workspace-label">Temperature</span>
                 <select
                   id="lead-temperature-select"
                   aria-label="Lead Temperature"
@@ -882,7 +897,7 @@ export function SalesPage() {
           </div>
         </Card>
 
-        <Card elevated>
+        <Card elevated className="workspace-block">
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Leads</p>
@@ -891,9 +906,9 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{leads.length} leads</p>
           </div>
 
-          <div ref={leadsTableContainerRef} className="mt-6 max-h-[520px] overflow-auto rounded-2xl border border-border bg-white/80">
-            <table className="min-w-full bg-white/80">
-              <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+          <div ref={leadsTableContainerRef} className="workspace-table-wrap mt-6 max-h-[520px]">
+            <table className="workspace-table">
+              <thead>
                 <tr>
                   <th className="px-5 py-4">Contact</th>
                   <th className="px-5 py-4">Lead</th>
@@ -908,14 +923,14 @@ export function SalesPage() {
               <tbody>
                 {leadsLoading ? (
                   <tr>
-                    <td className="px-5 py-6 text-sm text-text-muted" colSpan={8}>
+                    <td className="text-sm text-text-muted" colSpan={8}>
                       Loading leads...
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td className="px-5 py-6 text-sm text-text-muted" colSpan={8}>
-                      No leads yet. Create the first one from the intake form.
+                    <td className="px-4 py-8 text-sm text-text-muted" colSpan={8}>
+                      No leads yet. Add the first lead from the intake panel to populate the queue.
                     </td>
                   </tr>
                 ) : (
@@ -1159,7 +1174,7 @@ export function SalesPage() {
       </div>
 
       <section ref={orderDetailRef}>
-        <Card elevated>
+        <Card elevated className="workspace-block">
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Order Detail</p>
@@ -1290,9 +1305,9 @@ export function SalesPage() {
                     {orderNotice ? <p className="mt-4 text-sm leading-6 text-text-muted">{orderNotice}</p> : null}
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-border bg-white/80">
-                    <table className="min-w-full bg-white/80">
-                      <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+                  <div className="workspace-table-wrap">
+                    <table className="workspace-table workspace-table-compact">
+                      <thead>
                         <tr>
                           <th className="px-5 py-4">Item</th>
                           <th className="px-5 py-4">Qty</th>
@@ -1304,7 +1319,7 @@ export function SalesPage() {
                         {selectedOrderDetail.items.length === 0 ? (
                           <tr>
                             <td className="px-5 py-6 text-sm text-text-muted" colSpan={4}>
-                              No item lines yet. Add the first one from the panel on the right.
+                              No item lines yet. Add the first item line from the panel on the right.
                             </td>
                           </tr>
                         ) : (
@@ -1327,26 +1342,26 @@ export function SalesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4">
+                <div className="workspace-form-panel space-y-4 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Add Item Line</p>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text">Product type</span>
+                    <span className="workspace-label">Product type</span>
                     <Input value={itemProductType} onChange={(event) => setItemProductType(event.target.value)} placeholder="Product" />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text">Package name</span>
+                    <span className="workspace-label">Package name</span>
                     <Input value={itemPackageName} onChange={(event) => setItemPackageName(event.target.value)} placeholder="Package name" />
                   </label>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-text">Unit price</span>
+                      <span className="workspace-label">Unit price</span>
                       <Input type="number" min="0" step="0.01" value={itemUnitPrice} onChange={(event) => setItemUnitPrice(event.target.value)} />
                     </label>
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-text">Quantity</span>
+                      <span className="workspace-label">Quantity</span>
                       <Input type="number" min="1" step="1" value={itemQuantity} onChange={(event) => setItemQuantity(event.target.value)} />
                     </label>
                   </div>
@@ -1436,7 +1451,7 @@ export function SalesPage() {
 
           {activeLeadId ? (
             <div className="mt-6 grid gap-5 xl:grid-cols-[360px,minmax(0,1fr)]">
-              <div className="space-y-4 rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+              <div className="workspace-form-panel space-y-4 p-4 text-sm leading-6 text-text-muted">
                 {leadDetailLoading ? (
                   <p>Loading lead detail...</p>
                 ) : selectedLeadDetail ? (
@@ -1642,8 +1657,8 @@ export function SalesPage() {
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <Card elevated>
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-soft">{label}</p>
+    <Card elevated className="workspace-block">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
       <p className={`mt-3 text-3xl font-semibold ${tone}`}>{value}</p>
     </Card>
   );

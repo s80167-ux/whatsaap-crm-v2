@@ -133,9 +133,9 @@ export function PlatformPage() {
 
       <Card elevated>
         <h3 className="text-lg font-semibold text-text">Organizations</h3>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
-          <table className="min-w-full bg-white/80">
-            <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+        <div className="workspace-table-wrap mt-4">
+          <table className="workspace-table">
+            <thead>
               <tr>
                 <th className="px-5 py-4">Name</th>
                 <th className="px-5 py-4">Slug</th>
@@ -175,9 +175,9 @@ export function PlatformPage() {
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Card elevated>
           <h3 className="text-lg font-semibold text-text">Connector accounts</h3>
-          <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
-            <table className="min-w-full bg-white/80">
-              <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+          <div className="workspace-table-wrap mt-4">
+            <table className="workspace-table">
+              <thead>
                 <tr>
                   <th className="px-5 py-4">Account</th>
                   <th className="px-5 py-4">Status</th>
@@ -262,9 +262,9 @@ export function PlatformPage() {
             {isRetryingOutbound ? "Retrying..." : "Retry failed jobs"}
           </Button>
         </div>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
-          <table className="min-w-full bg-white/80">
-            <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+          <div className="workspace-table-wrap mt-4">
+            <table className="workspace-table">
+              <thead>
               <tr>
                 <th className="px-5 py-4">Status</th>
                 <th className="px-5 py-4">Recipient</th>
@@ -307,9 +307,9 @@ export function PlatformPage() {
 
       <Card elevated>
         <h3 className="text-lg font-semibold text-text">Recent outbound receipts</h3>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
-          <table className="min-w-full bg-white/80">
-            <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+        <div className="workspace-table-wrap mt-4">
+          <table className="workspace-table">
+            <thead>
               <tr>
                 <th className="px-5 py-4">Ack</th>
                 <th className="px-5 py-4">Message</th>
@@ -352,9 +352,9 @@ export function PlatformPage() {
 
       <Card elevated>
         <h3 className="text-lg font-semibold text-text">Recent audit logs</h3>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white/80">
-          <table className="min-w-full bg-white/80">
-            <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+        <div className="workspace-table-wrap mt-4">
+          <table className="workspace-table">
+            <thead>
               <tr>
                 <th className="px-5 py-4">Action</th>
                 <th className="px-5 py-4">Role</th>

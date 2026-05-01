@@ -170,7 +170,7 @@ function SidebarContent({
     <>
       <div className={mobile ? "space-y-3" : ""}>
         {mobile ? (
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/6 px-4 py-4">
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/10">
                 <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-cover" />
@@ -188,7 +188,7 @@ function SidebarContent({
             </div>
             <div className="mt-4">
               <p className="brand-badge">Rezeki Dashboard</p>
-              <p className="mt-3 text-sm leading-6 text-text-muted">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
+              <p className="sidebar-hero-copy">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
             </div>
           </div>
         )}
@@ -198,7 +198,7 @@ function SidebarContent({
         <div className="mt-5">
           <label className="block">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{mobile ? "Current org" : "Viewing org"}</span>
-            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium ${mobile ? "rounded-xl border border-white/10 bg-white/8 px-3" : ""}`} aria-label="Choose organization to view">
+            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium ${mobile ? "rounded-xl border border-white/10 bg-white/10 px-3" : ""}`} aria-label="Choose organization to view">
               <option value="">Choose organization</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>{organization.name}</option>
@@ -438,27 +438,27 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:px-6 md:pb-4 md:pt-16">
-      <header className="dashboard-topbar fixed inset-x-0 top-0 z-50 border-b border-white/20 bg-slate-950/70 text-white shadow-soft backdrop-blur-xl">
+      <header className="dashboard-topbar fixed inset-x-0 top-0 z-50 border-b border-slate-200/70 text-white shadow-soft backdrop-blur-xl">
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="topbar-chip flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5">
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center border border-white/15 bg-white/10 text-white transition duration-200 hover:border-white/30 hover:bg-white/15 md:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white transition duration-200 hover:border-white/30 hover:bg-white/15 md:hidden"
               aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileNavOpen}
               onClick={() => setIsMobileNavOpen((isOpen) => !isOpen)}
             >
               <Menu size={16} />
             </button>
-            <span className="h-2 w-2 shrink-0 bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
-            <span className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">Rezeki CRM</span>
-            {selectedOrganizationName ? <span className="hidden truncate text-xs text-white/45 sm:inline">/ {selectedOrganizationName}</span> : null}
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
+            <span className="topbar-brand truncate text-[11px] font-semibold uppercase tracking-[0.22em]">Rezeki CRM</span>
+            {selectedOrganizationName ? <span className="topbar-scope hidden truncate text-xs sm:inline">/ {selectedOrganizationName}</span> : null}
           </div>
 
           <div className="relative shrink-0">
             <button
               type="button"
-              className="inline-flex h-8 max-w-[14rem] items-center gap-2 border border-white/15 bg-white/10 px-2.5 text-xs font-semibold text-white transition duration-200 hover:border-white/30 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"
+              className="topbar-profile-trigger inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-xl border px-2.5 text-xs font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"
               aria-label="Open profile panel"
               aria-expanded={isProfilePanelOpen}
               onClick={() => setIsProfilePanelOpen((isOpen) => !isOpen)}
@@ -640,9 +640,9 @@ export function DashboardLayout() {
         </div>
       </PopupOverlay>
 
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[246px,minmax(0,1fr)] md:gap-2">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
         <motion.aside className="hidden min-w-0 md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
-          <Card className="app-shell dashboard-sidebar flex h-full flex-col rounded-none p-6 md:rounded-2xl" elevated>
+          <Card className="app-shell dashboard-sidebar flex h-full flex-col p-5 md:sticky md:top-[4.5rem]" elevated>
             <SidebarContent
               isSuperAdmin={isSuperAdmin}
               organizations={organizations}
@@ -653,7 +653,7 @@ export function DashboardLayout() {
             />
           </Card>
         </motion.aside>
-        <main className="min-w-0 rounded-2xl bg-transparent px-3 py-4 md:pl-0 md:pr-2 xl:pr-3">
+        <main className="min-w-0 bg-transparent px-3 py-4 md:pl-0 md:pr-2 xl:pr-3">
           <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
         </main>
       </div>

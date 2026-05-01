@@ -381,12 +381,22 @@ export function ContactsPage() {
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
-      <Card elevated className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Contacts</p>
-        <h2 className="mt-3 section-title">Canonical customer records</h2>
-        <p className="mt-2 max-w-2xl section-copy">
-          Every customer is stored once per organization and can fan out into many WhatsApp identities without duplicating the core record.
-        </p>
+      <Card elevated className="workspace-block min-w-0">
+        <div className="workspace-page-header">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Contacts</p>
+            <h2 className="mt-3 section-title">Canonical customer records</h2>
+            <p className="mt-2 max-w-2xl section-copy">
+              Every customer is stored once per organization and can fan out into many WhatsApp identities without duplicating the core record.
+            </p>
+          </div>
+          <div className="workspace-subtle max-w-xs">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Keep ownership, source history, and identity cleanup easy to scan from one desktop view.
+            </p>
+          </div>
+        </div>
 
         {redirectMessage ? (
           <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-sm font-medium text-primary">
@@ -429,7 +439,7 @@ export function ContactsPage() {
 
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
-              <div className="grid h-10 grid-cols-2 overflow-hidden border border-border bg-white/70">
+              <div className="grid h-10 grid-cols-2 overflow-hidden rounded-xl border border-border bg-white/70 shadow-soft">
                 <button
                   type="button"
                   className={`flex items-center justify-center gap-2 px-3 text-xs font-semibold transition hover:bg-background-tint ${
@@ -463,9 +473,9 @@ export function ContactsPage() {
           <p className="text-sm text-text-muted">{visibleContacts.length} of {contacts.length} contacts</p>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white/80">
-          <table className="w-full table-fixed bg-white/80">
-            <thead className="bg-background-tint text-left text-[10px] uppercase tracking-[0.18em] text-text-soft">
+        <div className="workspace-table-wrap mt-6">
+          <table className="workspace-table workspace-table-compact w-full table-fixed">
+            <thead>
               <tr>
                 <th className="w-[30%] px-2.5 py-2">Name</th>
                 <th className="w-[23%] px-2.5 py-2">Normalized</th>
@@ -477,19 +487,19 @@ export function ContactsPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
                     Loading contacts...
                   </td>
                 </tr>
               ) : contactsIsError ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
                     {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
                   </td>
                 </tr>
               ) : visibleContacts.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-6 text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
                     {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
                   </td>
                 </tr>
@@ -613,8 +623,13 @@ export function ContactsPage() {
         />
       </Card>
 
-      <Card elevated className="border-primary/10 bg-white shadow-panel xl:sticky xl:top-6 xl:self-start">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Detail</p>
+      <Card elevated className="workspace-block border-primary/10 bg-white shadow-panel xl:sticky xl:top-6 xl:self-start">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-soft">Detail</p>
+            <p className="mt-2 text-sm text-text-muted">Review profile health, ownership, and source records.</p>
+          </div>
+        </div>
         {activeContact ? (
           <div className="mt-5 space-y-4">
             <div className="flex items-center gap-4">
@@ -658,7 +673,7 @@ export function ContactsPage() {
               onChanged={refreshSelectedContact}
               onOpenQueue={() => setIsRepairQueueOpen(true)}
             />
-            <div className="rounded-xl border border-border bg-white p-4 text-sm leading-6 text-text-muted shadow-soft">
+            <div className="workspace-subtle text-sm leading-6 text-text-muted">
               <p>Contact ID: {activeContact.id}</p>
               <p>
                 Owner:{" "}
@@ -671,7 +686,7 @@ export function ContactsPage() {
                   : "Unassigned"}
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
+            <div className="workspace-subtle">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">WhatsApp source</p>
               {activeContact.whatsapp_sources?.length ? (
                 <div className="mt-3 flex flex-wrap gap-2">

@@ -394,20 +394,30 @@ export function SetupPage() {
 
   return (
     <section className="space-y-6">
-      <Card elevated>
-        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Setup</p>
-        <h2 className="mt-3 section-title">Tenant operations console</h2>
-        <p className="mt-2 max-w-3xl section-copy">
-          This screen handles the first real admin workflow after auth: provision an organization, invite users, and register WhatsApp sessions without leaving the app.
-        </p>
+      <Card elevated className="workspace-block">
+        <div className="workspace-page-header">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Setup</p>
+            <h2 className="mt-3 section-title">Tenant operations console</h2>
+            <p className="mt-2 max-w-3xl section-copy">
+              This screen handles the first real admin workflow after auth: provision an organization, invite users, and register WhatsApp sessions without leaving the app.
+            </p>
+          </div>
+          <div className="workspace-subtle max-w-xs">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Keep organization, user, and channel administration calm and readable for non-technical SME operators.
+            </p>
+          </div>
+        </div>
         {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
       </Card>
 
       <div className="space-y-6">
         {isSuperAdmin ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
-            <Card elevated className="relative">
-              <div className="flex items-center justify-between mb-2">
+            <Card elevated className="workspace-block relative">
+              <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-text">Organizations</h3>
                 <Button
                   variant="ghost"
@@ -417,9 +427,9 @@ export function SetupPage() {
                   Add Organization
                 </Button>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-border bg-white/80">
-                <table className="min-w-full bg-white/80">
-                  <thead className="bg-background-tint text-left text-xs uppercase tracking-[0.2em] text-text-soft">
+              <div className="workspace-table-wrap">
+                <table className="workspace-table">
+                  <thead>
                     <tr>
                       <th className="px-5 py-4">Name</th>
                       <th className="px-5 py-4">Slug</th>
@@ -429,7 +439,13 @@ export function SetupPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {organizationPagination.visibleItems.map((organization) => (
+                    {organizationPagination.visibleItems.length === 0 ? (
+                      <tr>
+                        <td className="px-4 py-8 text-sm text-text-muted" colSpan={5}>
+                          No organizations yet. Add the first organization to start assigning users and channels.
+                        </td>
+                      </tr>
+                    ) : organizationPagination.visibleItems.map((organization) => (
                       <tr key={organization.id} className="table-row text-sm text-text-muted">
                         {editingOrganizationId === organization.id ? (
                           <td colSpan={5} className="bg-background-tint">
@@ -516,15 +532,15 @@ export function SetupPage() {
           </motion.div>
         ) : null}
 
-        <Card elevated>
-          <div className="flex items-center justify-between mb-2">
+        <Card elevated className="workspace-block">
+          <div className="mb-2 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-text">Users</h3>
             <Button variant="ghost" className="z-10" onClick={() => setShowUserPopup(true)}>
               Add User
             </Button>
           </div>
-          <div className="rounded-xl border border-border bg-white/90">
-            <table className="w-full text-xs align-middle table-fixed">
+          <div className="workspace-table-wrap">
+            <table className="workspace-table workspace-table-compact w-full text-xs align-middle table-fixed">
               <colgroup>
                 <col className="user-table-col-name" />
                 <col className="user-table-col-email" />
@@ -533,7 +549,7 @@ export function SetupPage() {
                 <col className="user-table-col-status" />
                 <col className="user-table-col-actions" />
               </colgroup>
-              <thead className="bg-background-tint text-left font-semibold text-[11px] uppercase tracking-[0.15em] text-text-soft">
+              <thead>
                 <tr>
                   <th className="px-3 py-2 font-semibold truncate">Name</th>
                   <th className="px-3 py-2 font-semibold truncate">Email</th>
@@ -544,7 +560,13 @@ export function SetupPage() {
                 </tr>
               </thead>
               <tbody>
-                {userPagination.visibleItems.map((user) => (
+                {userPagination.visibleItems.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-8 text-sm text-text-muted" colSpan={isSuperAdmin ? 6 : 5}>
+                      No users yet. Add the first user to start assigning work and access.
+                    </td>
+                  </tr>
+                ) : userPagination.visibleItems.map((user) => (
                   <tr key={user.id} className="border-b border-border last:border-0 text-[13px] text-text">
                     {editingUserId === user.id ? (
                       <td colSpan={isSuperAdmin ? 6 : 5} className="bg-background-tint">

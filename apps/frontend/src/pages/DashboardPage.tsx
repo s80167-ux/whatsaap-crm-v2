@@ -91,28 +91,35 @@ export function DashboardPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <Card elevated className="p-4 sm:p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+    <section className="dashboard-main-grid">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),340px] xl:items-end">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
-            <h2 className="mt-2 section-title">{title}</h2>
+            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">{title}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
+              A clean operating view for conversations, pipeline progress, and daily revenue activity.
+            </p>
           </div>
-          <p className="max-w-xl text-xs leading-5 text-text-muted">
-            Role-scoped metrics surface the right operating view without leaking cross-tenant data.
-          </p>
+          <div className="workspace-subtle p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Workspace focus</p>
+            <p className="mt-2 text-sm font-semibold text-text">Keep today simple: reply fast, move leads, close the next sale.</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Role-scoped metrics surface the right operating view without leaking cross-tenant data.
+            </p>
+          </div>
         </div>
       </Card>
 
-      <div className="metric-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="metric-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(isLoading ? Array.from({ length: 4 }, () => null as DashboardMetric | null) : data?.metrics ?? []).map((metric, index) => (
           <motion.div key={metric?.label ?? index} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 + index * 0.04 }}>
-            <Card elevated className="metric-card min-h-[118px] p-4">
+            <Card elevated className="metric-card min-h-[138px] p-5">
               {metric ? (
                 <>
-                  <p className="pr-10 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{metric.label}</p>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-text">{metric.value}</p>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">{metric.hint}</p>
+                  <p className="pr-12 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{metric.label}</p>
+                  <p className="mt-4 text-3xl font-semibold tracking-tight text-text">{metric.value}</p>
+                  <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
                 </>
               ) : (
                 <div className="h-full animate-pulse rounded-xl bg-background-tint" />
@@ -123,22 +130,22 @@ export function DashboardPage() {
       </div>
 
       {data?.sales ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr),380px]">
+        <div className="dashboard-focus-grid">
           <CompactSection title={data.sales.title} eyebrow="Sales Overview" defaultOpen>
             <div className="grid gap-3 md:grid-cols-3">
               {data.sales.stats.map((metric) => (
                 metric.href ? (
-                  <div key={metric.label} className="rounded-2xl border border-border bg-background-tint p-3 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white">
+                  <div key={metric.label} className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white">
                     <Link to={appendSalesSection(metric.href, "timeline")}>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
-                      <p className="mt-2 text-xl font-semibold text-text">{metric.value}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{metric.hint}</p>
+                      <p className="mt-3 text-2xl font-semibold text-text">{metric.value}</p>
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
                     </Link>
                     <div className="mt-2">
                       <button
                         type="button"
                         title={`Copy timeline link for ${metric.label}`}
-                        className="text-xs font-medium text-primary transition hover:opacity-80"
+                        className="text-xs font-medium text-primary/80 transition hover:text-primary"
                         onClick={() =>
                           void copyTimelineLink({
                             href: metric.href,
@@ -153,10 +160,10 @@ export function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div key={metric.label} className="rounded-2xl border border-border bg-background-tint p-3">
+                  <div key={metric.label} className="workspace-subtle p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
-                    <p className="mt-2 text-xl font-semibold text-text">{metric.value}</p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{metric.hint}</p>
+                    <p className="mt-3 text-2xl font-semibold text-text">{metric.value}</p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
                   </div>
                 )
               ))}
@@ -168,7 +175,7 @@ export function DashboardPage() {
               {data.sales.pipeline.map((stage) => (
                 <div
                   key={stage.status}
-                  className="block rounded-2xl border border-border bg-background-tint p-3 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
+                  className="workspace-subtle block p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
                 >
                   <Link to={appendSalesSection(stage.href ?? "/sales", "timeline")}>
                     <div className="flex items-center justify-between gap-3">
@@ -179,14 +186,14 @@ export function DashboardPage() {
                     </div>
                     <p className="mt-1 text-xs leading-5 text-text-muted">{formatCurrencyValue(stage.value)}</p>
                   </Link>
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      title={`Copy timeline link for ${formatPipelineStatus(stage.status)}`}
-                      className="text-xs font-medium text-primary transition hover:opacity-80"
-                      onClick={() =>
-                        void copyTimelineLink({
-                          href: stage.href ?? "/sales",
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        title={`Copy timeline link for ${formatPipelineStatus(stage.status)}`}
+                        className="text-xs font-medium text-primary/80 transition hover:text-primary"
+                        onClick={() =>
+                          void copyTimelineLink({
+                            href: stage.href ?? "/sales",
                           entityType: "sales_pipeline",
                           entityId: stage.status,
                           source: "dashboard_pipeline_card"
@@ -207,11 +214,11 @@ export function DashboardPage() {
 
       {data?.sales?.trends?.length ? (
         <CompactSection title="Recent daily buckets" eyebrow="Trend Drill-Down" summary="Click a bucket to open matching orders" defaultOpen={!isMobile}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {data.sales.trends.map((point) => (
               <div
                 key={`${point.metric}-${point.range_start}`}
-                className="rounded-2xl border border-border bg-background-tint p-3 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
+                className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
               >
                 <Link to={appendSalesSection(point.href ?? "/sales", "timeline")}>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">
@@ -227,7 +234,7 @@ export function DashboardPage() {
                   <button
                     type="button"
                     title={`Copy timeline link for ${point.label}`}
-                    className="text-xs font-medium text-primary transition hover:opacity-80"
+                    className="text-xs font-medium text-primary/80 transition hover:text-primary"
                     onClick={() =>
                       void copyTimelineLink({
                         href: point.href ?? "/sales",
@@ -265,19 +272,19 @@ function CompactSection({
   defaultOpen?: boolean;
 }) {
   return (
-    <Card elevated className="p-0">
+    <Card elevated className="workspace-block overflow-hidden p-0">
       <details className="group" open={defaultOpen}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 marker:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
           <div className="min-w-0">
             {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-soft">{eyebrow}</p> : null}
-            <h3 className="mt-1 truncate text-base font-semibold text-text">{title}</h3>
-            {summary ? <p className="mt-1 text-xs text-text-muted">{summary}</p> : null}
+            <h3 className="mt-1 truncate text-lg font-semibold text-text">{title}</h3>
+            {summary ? <p className="mt-1 text-sm text-text-muted">{summary}</p> : null}
           </div>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background-tint text-text-muted transition group-open:rotate-180">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-background-tint text-text-muted transition group-open:rotate-180">
             <ChevronDown size={16} />
           </span>
         </summary>
-        <div className="border-t border-border px-4 pb-4 pt-3">{children}</div>
+        <div className="border-t border-border px-5 pb-5 pt-4">{children}</div>
       </details>
     </Card>
   );
@@ -359,7 +366,7 @@ function DashboardGraphPanel({
   return (
     <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen={defaultOpen}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
-        <div className="rounded-2xl border border-border bg-gradient-to-br from-background-tint to-white p-3">
+        <div className="workspace-subtle bg-gradient-to-br from-background-tint to-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-text">Orders and won revenue</p>
@@ -394,7 +401,7 @@ function DashboardGraphPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-3">
+        <div className="workspace-block p-4">
           <div className="grid items-center gap-3 sm:grid-cols-[116px,minmax(0,1fr)]">
             <div className="relative mx-auto h-28 w-28">
               <svg viewBox="0 0 120 120" role="img" aria-label="Pipeline order stage share donut" className="h-full w-full rotate-[-90deg]">
@@ -839,7 +846,7 @@ function PerformancePanel({
   const rowPagination = usePanelPagination(rows);
 
   return (
-    <Card elevated className="overflow-hidden p-0">
+      <Card elevated className="workspace-block overflow-hidden p-0">
       <div className={`h-1.5 ${isSuccess ? "bg-gradient-to-r from-amber-400 via-accent to-emerald-500" : "bg-gradient-to-r from-rose-500 via-coral to-amber-400"}`} />
       <div className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -850,7 +857,7 @@ function PerformancePanel({
               <p className="mt-1 text-xs text-text-muted">{subtitle}</p>
             </div>
           </div>
-          <span className={`rounded-none border px-3 py-1 text-xs font-semibold ${isSuccess ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${isSuccess ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
             {badge}
           </span>
         </div>
@@ -897,7 +904,7 @@ function PerformanceRow({
 
   return (
     <div className="grid grid-cols-[auto,auto,minmax(0,1fr),auto] items-center gap-3 py-3">
-      <span className={`flex h-8 w-8 items-center justify-center rounded-none border text-xs font-bold ${isSuccess ? getRankTone(index) : "border-rose-100 bg-rose-50 text-rose-700"}`}>
+      <span className={`flex h-8 w-8 items-center justify-center rounded-xl border text-xs font-bold ${isSuccess ? getRankTone(index) : "border-rose-100 bg-rose-50 text-rose-700"}`}>
         {isSuccess && index < 3 ? <Medal size={18} /> : isSuccess ? `${index + 1}` : (
           <span className="text-center text-[10px] leading-tight">
             <span className="block">{index + 1}{getOrdinalSuffix(index + 1)}</span>
@@ -905,7 +912,7 @@ function PerformanceRow({
           </span>
         )}
       </span>
-      <span className={`flex h-8 min-w-8 items-center justify-center rounded-none px-2 text-[11px] font-bold uppercase ${isSuccess ? "bg-background-tint text-primary" : "bg-rose-50 text-rose-700"}`}>
+      <span className={`flex h-8 min-w-8 items-center justify-center rounded-xl px-2 text-[11px] font-bold uppercase ${isSuccess ? "bg-background-tint text-primary" : "bg-rose-50 text-rose-700"}`}>
         {getInitials(leader.name)}
       </span>
       <div className="min-w-0">
@@ -978,10 +985,10 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
 
 function InsightTile({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <Card elevated className="min-h-[110px] p-4">
+    <Card elevated className="workspace-block min-h-[118px] p-5">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight text-text">{value}</p>
-      <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">{hint}</p>
+      <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-muted">{hint}</p>
     </Card>
   );
 }

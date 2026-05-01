@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
-import { ArrowDownAZ, ChevronLeft, Clock3, Info } from "lucide-react";
+import { ArrowDownAZ, ChevronLeft, Clock3, Info, Search } from "lucide-react";
 import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
 import { Card } from "../components/Card";
@@ -21,6 +21,7 @@ import type { Conversation } from "../types/api";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
+type ConversationFilterMode = "all" | "unread" | "sales" | "assigned";
 
 export function InboxPage() {
   const queryClient = useQueryClient();
@@ -46,9 +47,35 @@ export function InboxPage() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
   const [isContactSheetOpen, setIsContactSheetOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [filterMode, setFilterMode] = useState<ConversationFilterMode>("all");
   const visibleConversations = useMemo(
     () =>
       conversations
+        .filter((conversation) => {
+          const normalizedSearch = searchText.trim().toLowerCase();
+          const matchesSearch =
+            !normalizedSearch ||
+            conversation.contact_name.toLowerCase().includes(normalizedSearch) ||
+            (conversation.phone_number_normalized ?? "").toLowerCase().includes(normalizedSearch) ||
+            (conversation.whatsapp_account_label ?? "").toLowerCase().includes(normalizedSearch) ||
+            (conversation.last_message_preview ?? "").toLowerCase().includes(normalizedSearch);
+
+          if (!matchesSearch) {
+            return false;
+          }
+
+          switch (filterMode) {
+            case "unread":
+              return conversation.unread_count > 0;
+            case "sales":
+              return Boolean(conversation.has_sales || conversation.has_sales_lead_tag);
+            case "assigned":
+              return Boolean(conversation.assigned_user_id);
+            default:
+              return true;
+          }
+        })
         .map((conversation, index) => ({ conversation, index }))
         .sort((left, right) => {
           if (conversationSortMode === "alphabetical") {
@@ -65,7 +92,7 @@ export function InboxPage() {
           return rightTime - leftTime || left.index - right.index;
         })
         .map(({ conversation }) => conversation),
-    [conversationSortMode, conversations]
+    [conversationSortMode, conversations, filterMode, searchText]
   );
   const stableSelectedConversation =
     visibleConversations.find((conversation) => conversation.id === selectedConversation?.id) ?? visibleConversations[0];
@@ -98,7 +125,7 @@ export function InboxPage() {
 
   const conversationListCard = (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Card className="grid min-h-[420px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[520px] md:max-h-[calc(100vh-9.5rem)]" elevated>
+      <Card className="workspace-block grid min-h-[420px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[520px] md:max-h-[calc(100vh-9.5rem)]" elevated>
         <header className="pb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
           <div className="mt-3 flex items-end justify-between gap-4">
@@ -107,7 +134,38 @@ export function InboxPage() {
               <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-soft" />
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Search contact, number, account, or message..."
+                className="input-base h-11 pl-10"
+                aria-label="Search conversations"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "all", label: "All" },
+                { key: "unread", label: "Unread" },
+                { key: "sales", label: "Sales" },
+                { key: "assigned", label: "Assigned" }
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    filterMode === item.key
+                      ? "border-primary/20 bg-primary-soft text-primary"
+                      : "border-border bg-white text-text-muted hover:border-primary/20 hover:text-text"
+                  }`}
+                  onClick={() => setFilterMode(item.key as ConversationFilterMode)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
             <div className="flex items-center gap-1">
               <button
@@ -161,7 +219,7 @@ export function InboxPage() {
   return (
     <section className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card elevated>
+        <Card elevated className="workspace-page-header">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
@@ -248,21 +306,9 @@ export function InboxPage() {
           </PopupOverlay>
         </>
       ) : (
-        <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[420px,minmax(0,1fr)] 2xl:grid-cols-[500px,minmax(0,1.25fr)] xl:items-start">
-          <div>
+        <div className="inbox-workspace-grid">
+          <div className="inbox-side-rail">
             {conversationListCard}
-            <div className="mt-3">
-              <ContactInfoPanel
-                className="border-primary/10 bg-white shadow-panel text-xs"
-                conversation={stableSelectedConversation}
-                onAssigned={() => {
-                  void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-                  void queryClient.invalidateQueries({
-                    queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-                  });
-                }}
-              />
-            </div>
           </div>
           <ChatPanel
             conversation={stableSelectedConversation}
@@ -277,6 +323,18 @@ export function InboxPage() {
               void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
             }}
           />
+          <div className="inbox-side-rail">
+            <ContactInfoPanel
+              className="workspace-block border-primary/10 bg-white text-xs"
+              conversation={stableSelectedConversation}
+              onAssigned={() => {
+                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+                void queryClient.invalidateQueries({
+                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+                });
+              }}
+            />
+          </div>
         </div>
       )}
     </section>

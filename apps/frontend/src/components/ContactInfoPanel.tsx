@@ -105,7 +105,7 @@ export function ContactInfoPanel({
             className={
               showMobileSheet
                 ? "rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_44px_rgba(20,32,51,0.08)]"
-                : ""
+                : "workspace-subtle p-4"
             }
           >
             <div className="flex items-center gap-4">
@@ -182,7 +182,7 @@ export function ContactInfoPanel({
             )}
           </div>
 
-          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3" : "rounded-lg border border-border bg-background-tint p-2 mt-1"}`}>
+          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3" : "workspace-subtle mt-1 p-3"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Details</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
@@ -214,7 +214,7 @@ export function ContactInfoPanel({
             ) : null}
           </div>
           {canAssign ? (
-            <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(20,32,51,0.06)]" : "rounded-lg border border-border bg-background-tint p-2 mt-1"}`}>
+            <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(20,32,51,0.06)]" : "workspace-subtle mt-1 p-3"}`}>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Assignment</p>
               {organizationUsersLoading ? (
                 <p className="mt-2 text-xs text-text-muted">Loading users...</p>

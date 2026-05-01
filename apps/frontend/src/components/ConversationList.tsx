@@ -56,7 +56,7 @@ export function ConversationList({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="truncate font-medium text-text">{conversation.contact_name}</p>
+                <p className="truncate text-[15px] font-semibold text-text">{conversation.contact_name}</p>
                 {conversation.has_sales && (
                   <span className="shrink-0" title="Has sales activity">
                     <Briefcase size={16} className="text-[#8B4513]" aria-hidden="true" />
@@ -73,9 +73,16 @@ export function ConversationList({
                 <span className="truncate">{getConversationSourceLabel(conversation)}</span>
               </p>
             </div>
-            <span className="shrink-0 text-xs text-text-soft">
-              {formatConversationTimestamp(conversation.last_message_at)}
-            </span>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span className="text-xs text-text-soft">
+                {formatConversationTimestamp(conversation.last_message_at)}
+              </span>
+              {conversation.unread_count > 0 ? (
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-1 text-[10px] font-semibold text-white">
+                  {conversation.unread_count}
+                </span>
+              ) : null}
+            </div>
           </div>
           <p className="mt-3 overflow-hidden text-sm leading-6 text-text-muted">
             {getConversationPreview(conversation.last_message_preview, conversation.last_message_type)}

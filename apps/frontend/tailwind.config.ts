@@ -47,9 +47,9 @@ export default {
         coral: "#FF4D4F"
       },
       borderRadius: {
-        xl: "0.375rem",
-        "2xl": "0.5rem",
-        "3xl": "0.75rem"
+        xl: "0.75rem",
+        "2xl": "0.95rem",
+        "3xl": "1.25rem"
       },
       boxShadow: {
         soft: "0 1px 2px rgba(1, 19, 39, 0.04)",

@@ -40,6 +40,11 @@
     linear-gradient(180deg, #ffffff 0%, #f5f7fa 44%, #f1f5f9 100%);
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   overflow-x: clip;
+  --shell-sidebar-width: 264px;
+  --shell-sidebar-width-wide: 288px;
+  --surface-radius-sm: 10px;
+  --surface-radius-md: 14px;
+  --surface-radius-lg: 18px;
 }
 
 body {
@@ -88,7 +93,8 @@ canvas {
 
 @layer components {
   .app-shell {
-    @apply rounded-none border border-border bg-card shadow-soft;
+    @apply border border-border bg-card shadow-soft;
+    border-radius: var(--surface-radius-lg);
   }
 
   .section-title {
@@ -106,36 +112,43 @@ canvas {
   }
 
   .brand-badge {
-    @apply inline-flex items-center rounded-none border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary shadow-none;
+    @apply inline-flex items-center border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary shadow-none;
+    border-radius: 9999px;
   }
 
   /* Card surfaces */
   .card-surface {
-    @apply rounded-none border border-border bg-white shadow-soft transition duration-300 ease-out hover:shadow-panel hover:-translate-y-0.5 px-7 py-6;
+    @apply border border-border bg-white shadow-soft transition duration-300 ease-out hover:shadow-panel hover:-translate-y-0.5 px-7 py-6;
+    border-radius: var(--surface-radius-lg);
   }
 
   /* Button styles */
   .btn-primary {
-    @apply rounded-none bg-primary text-white font-semibold px-5 py-3 shadow-soft transition duration-200 ease-out hover:bg-primary-deep focus-visible:ring-4 focus-visible:ring-primary/20;
+    @apply border border-primary bg-primary text-white font-semibold shadow-soft transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-primary-deep hover:shadow-panel focus-visible:ring-4 focus-visible:ring-primary/20;
+    border-radius: var(--surface-radius-sm);
   }
   .btn-secondary {
-    @apply rounded-none border border-border bg-white text-primary font-medium px-5 py-3 transition duration-200 ease-out hover:bg-background-tint focus-visible:ring-4 focus-visible:ring-primary/10;
+    @apply border border-border bg-white text-primary font-medium shadow-[0_10px_24px_rgba(20,32,51,0.04)] transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/20 hover:bg-background-tint hover:shadow-soft focus-visible:ring-4 focus-visible:ring-primary/10;
+    border-radius: var(--surface-radius-sm);
   }
   .btn-ghost {
-    @apply rounded-none bg-transparent text-text-muted px-5 py-3 transition duration-200 ease-out hover:bg-background-tint hover:text-text focus-visible:ring-4 focus-visible:ring-primary/10;
+    @apply border border-transparent bg-transparent text-text-muted transition duration-200 ease-out hover:border-border/70 hover:bg-background-tint hover:text-text focus-visible:ring-4 focus-visible:ring-primary/10;
+    border-radius: var(--surface-radius-sm);
   }
 
   /* Input styles */
   .input-base {
-    @apply w-full rounded-none border border-border bg-background-tint px-4 py-3 text-sm text-text outline-none transition duration-200 placeholder:text-text-soft focus:border-primary focus:ring-2 focus:ring-primary/10;
+    @apply w-full border border-border bg-background-tint px-4 py-3 text-sm text-text outline-none transition duration-200 placeholder:text-text-soft focus:border-primary focus:ring-2 focus:ring-primary/10;
+    border-radius: var(--surface-radius-sm);
   }
 
   /* List/Conversation item */
   .conversation-item {
-    @apply rounded-none border border-border bg-white p-6 text-left shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-background-tint;
+    @apply border border-border bg-white p-6 text-left shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-background-tint;
+    border-radius: var(--surface-radius-md);
   }
   .conversation-item-active {
-    @apply border-primary/30 bg-blue-50 shadow-panel;
+    @apply border-primary/35 bg-primary-soft/80 shadow-panel;
   }
 
   /* Status badge colors */
@@ -164,20 +177,20 @@ canvas {
   }
 
   .dashboard-sidebar {
-    @apply border-slate-200 bg-slate-700 text-white shadow-soft;
+    @apply border-slate-300 text-white shadow-soft;
     background:
-      linear-gradient(180deg, rgba(71, 85, 105, 0.98), rgba(51, 65, 85, 0.98)),
-      #475569;
+      radial-gradient(circle at top, rgba(111, 178, 255, 0.12), transparent 28%),
+      linear-gradient(180deg, rgba(67, 79, 98, 0.98), rgba(49, 60, 79, 0.98)),
+      #445167;
   }
 
   .dashboard-sidebar .brand-badge {
-    @apply border-white/10 bg-white/10 text-white;
+    @apply border-white/15 bg-white/10 text-white;
   }
 
   .dashboard-sidebar .logo-panel {
-    background: transparent;
-    border: 0;
-    box-shadow: none;
+    @apply rounded-2xl border border-white/10 bg-white/5 px-4 py-5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .dashboard-sidebar .section-copy,
@@ -203,7 +216,8 @@ canvas {
   }
 
   .dashboard-sidebar .sidebar-org-select {
-    @apply border-0 border-b border-white/15 bg-transparent text-white shadow-none outline-none focus:border-white/50 focus:ring-0;
+    @apply border border-white/10 bg-white/10 text-white shadow-none outline-none focus:border-white/35 focus:ring-0;
+    border-radius: 12px;
   }
 
   .dashboard-sidebar .sidebar-org-select option {
@@ -220,6 +234,8 @@ canvas {
 
   .metric-card {
     @apply relative overflow-hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,1), rgba(248,250,252,0.95));
   }
 
   .metric-card::after {
@@ -229,7 +245,7 @@ canvas {
     right: 1.25rem;
     width: 2.25rem;
     height: 2.25rem;
-    border-radius: 0;
+    border-radius: 12px;
     background: rgba(0, 87, 168, 0.12);
     box-shadow: inset 0 0 0 1px rgba(0, 87, 168, 0.08);
   }
@@ -261,6 +277,148 @@ canvas {
     box-shadow:
       0 28px 80px rgba(2, 6, 23, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-radius: 22px 22px 0 0;
+  }
+
+  .workspace-page-header {
+    @apply border border-border bg-white shadow-soft;
+    border-radius: calc(var(--surface-radius-lg) + 2px);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,1), rgba(249,251,255,0.96));
+  }
+
+  .workspace-block {
+    @apply border border-border bg-white shadow-soft;
+    border-radius: var(--surface-radius-lg);
+  }
+
+  .workspace-subtle {
+    @apply border border-border bg-background-tint/70;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .workspace-form-panel {
+    @apply border border-border bg-background-tint/65;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .workspace-empty-state {
+    @apply border border-dashed border-border bg-background-tint/55 text-center;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .workspace-label {
+    @apply mb-2 block text-sm font-medium text-text;
+  }
+
+  .workspace-helper {
+    @apply text-sm leading-6 text-text-muted;
+  }
+
+  .dashboard-topbar {
+    color: #f8fbff;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)),
+      rgba(15, 23, 42, 0.08);
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .dashboard-topbar .topbar-chip {
+    background: rgba(15, 23, 42, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 8px 20px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .dashboard-topbar .topbar-brand {
+    color: rgba(248, 251, 255, 0.96);
+  }
+
+  .dashboard-topbar .topbar-scope {
+    color: rgba(226, 236, 248, 0.82);
+  }
+
+  .dashboard-topbar .topbar-profile-trigger {
+    color: #f8fbff;
+    background: rgba(15, 23, 42, 0.38);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      0 10px 22px rgba(15, 23, 42, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .dashboard-topbar .topbar-profile-trigger:hover,
+  .dashboard-topbar .topbar-profile-trigger:focus-visible {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+  }
+
+  .workspace-table-wrap {
+    @apply overflow-auto border border-border bg-white/80;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .workspace-table {
+    @apply min-w-full bg-white/80;
+  }
+
+  .workspace-table thead {
+    @apply bg-background-tint text-left text-[11px] uppercase tracking-[0.16em] text-text-soft;
+  }
+
+  .workspace-table th {
+    @apply px-4 py-3 font-semibold;
+  }
+
+  .workspace-table td {
+    @apply px-4 py-3 align-top;
+  }
+
+  .workspace-table-compact th {
+    @apply px-3 py-2.5;
+  }
+
+  .workspace-table-compact td {
+    @apply px-3 py-2.5;
+  }
+
+  .dashboard-main-grid {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .dashboard-main-grid > * {
+    min-width: 0;
+  }
+
+  .dashboard-focus-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  }
+
+  .inbox-workspace-grid {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.4fr) minmax(280px, 0.72fr);
+    align-items: start;
+  }
+
+  .inbox-side-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .sidebar-hero-copy {
+    @apply mt-4 border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-white/70;
+    border-radius: var(--surface-radius-md);
   }
 }
 
@@ -285,10 +443,37 @@ canvas {
   }
 }
 
-:where([class*="rounded"]) {
-  border-radius: 0 !important;
-}
-
 .whatsapp-connection-dot {
   border-radius: 9999px !important;
+}
+
+@media (max-width: 1400px) {
+  .inbox-workspace-grid {
+    grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.35fr);
+  }
+}
+
+@media (max-width: 1279px) {
+  .dashboard-focus-grid,
+  .inbox-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-page-header,
+  .workspace-block {
+    padding: 1.1rem !important;
+  }
+
+  .workspace-table th,
+  .workspace-table td {
+    @apply px-3 py-2.5;
+  }
+}
+
+@media (max-width: 640px) {
+  .popup-overlay__panel {
+    border-radius: 22px 22px 0 0;
+  }
 }
