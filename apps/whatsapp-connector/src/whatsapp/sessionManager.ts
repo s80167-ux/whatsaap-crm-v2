@@ -82,6 +82,8 @@ export class WhatsAppSessionManager {
   private readonly runtimes = new Map<string, SessionRuntimeState>();
   private readonly disabledAccounts = new Set<string>();
   private readonly initializingAccounts = new Set<string>();
+  private readonly connectedAccounts = new Set<string>();
+  private readonly reconnectFailureCounts = new Map<string, number>();
   private readonly accountRepository = new WhatsAppAccountRepository();
   private readonly runtimeRepository = new WhatsAppRuntimeRepository();
   private readonly rawEventIngestionService = new RawEventIngestionService();
@@ -113,6 +115,8 @@ export class WhatsAppSessionManager {
     history_sync_lookback_days?: number | null;
   }) {
     this.disabledAccounts.delete(account.id);
+    this.connectedAccounts.delete(account.id);
+    this.reconnectFailureCounts.delete(account.id);
 
     await this.cleanupRuntime(account.id, "manual_reconnect");
 
@@ -236,6 +240,9 @@ export class WhatsAppSessionManager {
           }
 
           if (connection === "open") {
+            this.connectedAccounts.add(account.id);
+            this.reconnectFailureCounts.delete(account.id);
+
             await withTransaction(async (client) => {
               await this.runtimeRepository.touchConnected(client, session.id);
               await this.runtimeRepository.appendConnectionEvent(client, {
@@ -264,6 +271,24 @@ export class WhatsAppSessionManager {
             }
 
             let closePersistenceFailed = false;
+            const hadConnected = this.connectedAccounts.delete(account.id);
+            const consecutiveReconnectFailures = hadConnected
+              ? 0
+              : (this.reconnectFailureCounts.get(account.id) ?? 0) + 1;
+            const autoReconnectSuppressed =
+              shouldReconnect &&
+              !hadConnected &&
+              consecutiveReconnectFailures >= env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES;
+
+            if (hadConnected) {
+              this.reconnectFailureCounts.delete(account.id);
+            } else {
+              this.reconnectFailureCounts.set(account.id, consecutiveReconnectFailures);
+            }
+
+            if (autoReconnectSuppressed) {
+              this.disabledAccounts.add(account.id);
+            }
 
             this.sockets.delete(account.id);
             this.clearRuntime(account.id);
@@ -292,6 +317,23 @@ export class WhatsAppSessionManager {
                     ownerId: env.CONNECTOR_INSTANCE_ID
                   });
                 }
+                if (autoReconnectSuppressed) {
+                  await this.runtimeRepository.appendConnectionEvent(client, {
+                    whatsappAccountId: account.id,
+                    sessionId: session.id,
+                    eventType: "reconnect_suppressed",
+                    severity: "warn",
+                    payload: {
+                      status_code: statusCode,
+                      consecutive_failures: consecutiveReconnectFailures,
+                      max_consecutive_failures: env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES
+                    }
+                  });
+                  await this.accountRepository.releaseLease(client, {
+                    accountId: account.id,
+                    ownerId: env.CONNECTOR_INSTANCE_ID
+                  });
+                }
 
                 await this.accountRepository.updateStatus(client, account.id, "disconnected");
               });
@@ -304,11 +346,19 @@ export class WhatsAppSessionManager {
             }
 
             logger.warn(
-              { accountId: account.id, statusCode, shouldReconnect, closePersistenceFailed },
+              {
+                accountId: account.id,
+                statusCode,
+                shouldReconnect,
+                closePersistenceFailed,
+                hadConnected,
+                consecutiveReconnectFailures,
+                autoReconnectSuppressed
+              },
               "WhatsApp session closed"
             );
 
-            if (shouldReconnect && !this.disabledAccounts.has(account.id)) {
+            if (shouldReconnect && !autoReconnectSuppressed && !this.disabledAccounts.has(account.id)) {
               setTimeout(() => {
                 void this.initializeSession(account);
               }, 5_000);
@@ -535,6 +585,8 @@ export class WhatsAppSessionManager {
       clearInterval(runtime.heartbeat);
       this.runtimes.delete(accountId);
     }
+
+    this.connectedAccounts.delete(accountId);
   }
 
   private lookupPhoneFromLid(jid: string | null | undefined) {

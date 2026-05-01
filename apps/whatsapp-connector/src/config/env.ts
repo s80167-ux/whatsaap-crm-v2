@@ -30,7 +30,8 @@ const envSchema = z.object({
   CONNECTOR_INTERNAL_SECRET: z.string().min(1),
   CONNECTOR_INSTANCE_ID: z.string().min(1).default(`connector-${process.pid}`),
   CONNECTOR_LEASE_TTL_MS: z.coerce.number().int().positive().default(30000),
-  CONNECTOR_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10000)
+  CONNECTOR_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10000),
+  CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES: z.coerce.number().int().min(1).default(5)
 });
 
 export const env = envSchema.parse(process.env);
