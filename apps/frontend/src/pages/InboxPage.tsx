@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
-import { ArrowDownAZ, Clock3 } from "lucide-react";
+import { ArrowDownAZ, ChevronLeft, Clock3, Info } from "lucide-react";
+import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
 import { Card } from "../components/Card";
 import { ContactInfoPanel } from "../components/ContactInfoPanel";
 import { ConversationList } from "../components/ConversationList";
 import { InboxSubTabs } from "../components/InboxSubTabs";
+import { PopupOverlay } from "../components/PopupOverlay";
 import { useConversations } from "../hooks/useConversations";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useMessages } from "../hooks/useMessages";
 import { useRealtimeInbox } from "../hooks/useRealtimeInbox";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
@@ -17,9 +20,11 @@ import { getStoredUser } from "../lib/auth";
 import type { Conversation } from "../types/api";
 
 type ConversationSortMode = "alphabetical" | "latest";
+type MobileInboxPane = "list" | "chat";
 
 export function InboxPage() {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
@@ -39,6 +44,8 @@ export function InboxPage() {
     isSuperAdmin ? activeOrganizationId : undefined
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
+  const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
+  const [isContactSheetOpen, setIsContactSheetOpen] = useState(false);
   const visibleConversations = useMemo(
     () =>
       conversations
@@ -70,6 +77,87 @@ export function InboxPage() {
 
   const conversationCountLabel = `${visibleConversations.length} conversation${visibleConversations.length === 1 ? "" : "s"}`;
 
+  useEffect(() => {
+    if (!isMobile) {
+      setMobilePane("chat");
+      setIsContactSheetOpen(false);
+      return;
+    }
+
+    setMobilePane("list");
+    setIsContactSheetOpen(false);
+  }, [isMobile, activeOrganizationId]);
+
+  function handleConversationSelect(conversation: Conversation) {
+    setSelectedConversation(conversation);
+
+    if (isMobile) {
+      setMobilePane("chat");
+    }
+  }
+
+  const conversationListCard = (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+      <Card className="grid min-h-[420px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[520px] md:max-h-[calc(100vh-9.5rem)]" elevated>
+        <header className="pb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
+          <div className="mt-3 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="section-title">Latest conversations</h2>
+              <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
+                  conversationSortMode === "alphabetical" ? "text-primary" : "text-text-soft"
+                }`}
+                title="Sort alphabetically"
+                aria-label="Sort conversations alphabetically"
+                aria-pressed={conversationSortMode === "alphabetical"}
+                onClick={() => setConversationSortMode("alphabetical")}
+              >
+                <ArrowDownAZ size={16} aria-hidden="true" />
+                A-Z
+              </button>
+              <button
+                type="button"
+                className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
+                  conversationSortMode === "latest" ? "text-primary" : "text-text-soft"
+                }`}
+                title="Sort by latest message"
+                aria-label="Sort conversations by latest message"
+                aria-pressed={conversationSortMode === "latest"}
+                onClick={() => setConversationSortMode("latest")}
+              >
+                <Clock3 size={16} aria-hidden="true" />
+                Latest
+              </button>
+            </div>
+          </div>
+        </header>
+        <div className="min-h-0 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+          ) : conversationsIsError ? (
+            <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-coral">
+              {conversationsError instanceof Error ? conversationsError.message : "Unable to load conversations."}
+            </div>
+          ) : (
+            <ConversationList
+              conversations={visibleConversations}
+              selectedConversationId={stableSelectedConversation?.id}
+              onSelect={handleConversationSelect}
+            />
+          )}
+        </div>
+      </Card>
+    </motion.div>
+  );
+
   return (
     <section className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
@@ -91,94 +179,106 @@ export function InboxPage() {
           </div>
         </Card>
       </motion.div>
-      <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[420px,minmax(0,1fr)] 2xl:grid-cols-[500px,minmax(0,1.25fr)] xl:items-start">
-      <div>
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-          <Card className="grid max-h-[calc(100vh-9.5rem)] min-h-[520px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white" elevated>
-            <header className="pb-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <div className="mt-3 flex items-end justify-between gap-4">
-                <div>
-                  <h2 className="section-title">Latest conversations</h2>
-                  <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
-                <div className="flex items-center gap-1">
-                  <button
+      {isMobile ? (
+        <>
+          {mobilePane === "list" ? (
+            conversationListCard
+          ) : (
+            <div className="space-y-3">
+              <Card className="p-3" elevated>
+                <div className="flex items-center justify-between gap-3">
+                  <Button
                     type="button"
-                    className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
-                      conversationSortMode === "alphabetical" ? "text-primary" : "text-text-soft"
-                    }`}
-                    title="Sort alphabetically"
-                    aria-label="Sort conversations alphabetically"
-                    aria-pressed={conversationSortMode === "alphabetical"}
-                    onClick={() => setConversationSortMode("alphabetical")}
+                    variant="ghost"
+                    className="px-3 py-2 text-xs text-text hover:text-text"
+                    onClick={() => setMobilePane("list")}
                   >
-                    <ArrowDownAZ size={16} aria-hidden="true" />
-                    A-Z
-                  </button>
-                  <button
+                    <ChevronLeft size={16} />
+                    <span className="ml-1">Back</span>
+                  </Button>
+                  <div className="min-w-0 flex-1 text-center">
+                    <p className="truncate text-sm font-semibold text-text">{stableSelectedConversation?.contact_name ?? "Conversation"}</p>
+                    <p className="truncate text-xs text-text-muted">{stableSelectedConversation?.phone_number_normalized ?? "No phone available"}</p>
+                  </div>
+                  <Button
                     type="button"
-                    className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
-                      conversationSortMode === "latest" ? "text-primary" : "text-text-soft"
-                    }`}
-                    title="Sort by latest message"
-                    aria-label="Sort conversations by latest message"
-                    aria-pressed={conversationSortMode === "latest"}
-                    onClick={() => setConversationSortMode("latest")}
+                    variant="secondary"
+                    className="px-3 py-2 text-xs"
+                    onClick={() => setIsContactSheetOpen(true)}
+                    disabled={!stableSelectedConversation}
                   >
-                    <Clock3 size={16} aria-hidden="true" />
-                    Latest
-                  </button>
+                    <Info size={14} />
+                    <span className="ml-1">Contact</span>
+                  </Button>
                 </div>
-              </div>
-            </header>
-            <div className="min-h-0 overflow-y-auto">
-              {isLoading ? (
-                <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
-              ) : conversationsIsError ? (
-                <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-coral">
-                  {conversationsError instanceof Error ? conversationsError.message : "Unable to load conversations."}
-                </div>
-              ) : (
-                <ConversationList
-                  conversations={visibleConversations}
-                  selectedConversationId={stableSelectedConversation?.id}
-                  onSelect={setSelectedConversation}
-                />
-              )}
+              </Card>
+              <ChatPanel
+                conversation={stableSelectedConversation}
+                conversations={visibleConversations}
+                messages={messages}
+                historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
+                organizationId={activeOrganizationId}
+                onMessageSent={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+                  });
+                  void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+                }}
+              />
             </div>
-          </Card>
-        </motion.div>
-        <div className="mt-3">
-          <ContactInfoPanel
-            className="border-primary/10 bg-white shadow-panel text-xs"
+          )}
+          <PopupOverlay
+            open={isContactSheetOpen}
+            onClose={() => setIsContactSheetOpen(false)}
+            title="Contact details"
+            description="Contact summary and assignment for the active conversation."
+            panelClassName="max-w-[min(36rem,100vw)] sm:max-w-[min(36rem,calc(100vw-2rem))]"
+          >
+            <ContactInfoPanel
+              className="text-xs"
+              conversation={stableSelectedConversation}
+              mobileSheet
+              onAssigned={() => {
+                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+                void queryClient.invalidateQueries({
+                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+                });
+              }}
+            />
+          </PopupOverlay>
+        </>
+      ) : (
+        <div className="grid gap-5 2xl:gap-6 xl:grid-cols-[420px,minmax(0,1fr)] 2xl:grid-cols-[500px,minmax(0,1.25fr)] xl:items-start">
+          <div>
+            {conversationListCard}
+            <div className="mt-3">
+              <ContactInfoPanel
+                className="border-primary/10 bg-white shadow-panel text-xs"
+                conversation={stableSelectedConversation}
+                onAssigned={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+                  void queryClient.invalidateQueries({
+                    queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+                  });
+                }}
+              />
+            </div>
+          </div>
+          <ChatPanel
             conversation={stableSelectedConversation}
-            onAssigned={() => {
-              void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+            conversations={visibleConversations}
+            messages={messages}
+            historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
+            organizationId={activeOrganizationId}
+            onMessageSent={() => {
               void queryClient.invalidateQueries({
                 queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
               });
+              void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
             }}
           />
         </div>
-      </div>
-      <ChatPanel
-        conversation={stableSelectedConversation}
-        conversations={visibleConversations}
-        messages={messages}
-        historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
-        organizationId={activeOrganizationId}
-        onMessageSent={() => {
-          void queryClient.invalidateQueries({
-            queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-          });
-          void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-        }}
-      />
-      </div>
+      )}
     </section>
   );
 }

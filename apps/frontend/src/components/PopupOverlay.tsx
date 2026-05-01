@@ -51,7 +51,7 @@ export function PopupOverlay({
   }
 
   return createPortal(
-    <div className="popup-overlay fixed inset-0 z-[90] flex items-center justify-center p-4 sm:p-6">
+    <div className="popup-overlay fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-6">
       <button
         type="button"
         aria-label="Close popup"
@@ -63,7 +63,7 @@ export function PopupOverlay({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         className={clsx(
-          "popup-overlay__panel relative z-[1] max-h-[min(88vh,920px)] w-full overflow-hidden border border-border bg-white text-text shadow-[0_28px_80px_rgba(2,6,23,0.55)] backdrop-blur-2xl",
+          "popup-overlay__panel relative z-[1] mt-auto max-h-[min(88vh,920px)] w-full overflow-hidden border border-border bg-white text-text shadow-[0_28px_80px_rgba(2,6,23,0.55)] backdrop-blur-2xl sm:mt-0",
           panelClassName
         )}
         role="dialog"
@@ -71,7 +71,7 @@ export function PopupOverlay({
         aria-label={title ?? "Popup window"}
       >
         {title || description || showCloseButton ? (
-          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-6">
             <div className="min-w-0">
               {title ? <p className="text-sm font-semibold tracking-[0.02em] text-text">{title}</p> : null}
               {description ? <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p> : null}
@@ -88,7 +88,7 @@ export function PopupOverlay({
             ) : null}
           </div>
         ) : null}
-        <div className="max-h-[calc(min(88vh,920px)-4.5rem)] overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+        <div className="max-h-[calc(min(88vh,920px)-4.5rem)] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           {children}
         </div>
       </motion.div>

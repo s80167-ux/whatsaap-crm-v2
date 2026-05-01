@@ -9,3 +9,6 @@ backend/logs
 frontend/.vite
 
 .vercel
+playwright-report
+test-results
+visual-pass-artifacts

@@ -6,6 +6,7 @@ import {
   FileBarChart,
   KeyRound,
   LogOut,
+  Menu,
   MessageSquare,
   Settings2,
   ShieldAlert,
@@ -23,6 +24,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
+import brandLogoMobile from "../../asset/rezeki_dashboard_logo_mobile_transparent.png";
 import { logout, updateMyPassword, updateMyProfile } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -31,7 +33,9 @@ import { NavLinkItem } from "../components/NavLinkItem";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
+import type { OrganizationSummary, WhatsAppAccountSummary } from "../types/admin";
 
 const SUPER_ADMIN_ORGANIZATION_KEY = "crm_super_admin_organization_id";
 const MAX_PROFILE_PICTURE_BYTES = 512 * 1024;
@@ -51,7 +55,17 @@ type SidebarSubItem = {
   badge?: ReactNode;
 };
 
-function SidebarNavGroup({ icon, label, items }: { icon: ReactNode; label: string; items: SidebarSubItem[] }) {
+function SidebarNavGroup({
+  icon,
+  label,
+  items,
+  onNavigate
+}: {
+  icon: ReactNode;
+  label: string;
+  items: SidebarSubItem[];
+  onNavigate?: () => void;
+}) {
   const location = useLocation();
   const isGroupActive = items.some((item) =>
     item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to)
@@ -85,7 +99,15 @@ function SidebarNavGroup({ icon, label, items }: { icon: ReactNode; label: strin
       <div className={clsx("overflow-hidden transition-all duration-200", isOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0")}>
         <div className="space-y-1 py-1">
           {items.map((item) => (
-            <NavLinkItem key={item.to} to={item.to} icon={item.icon} label={item.label} badge={item.badge} variant="sub" />
+            <NavLinkItem
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              badge={item.badge}
+              variant="sub"
+              onClick={onNavigate}
+            />
           ))}
         </div>
       </div>
@@ -125,8 +147,134 @@ function readProfilePicture(file: File) {
   });
 }
 
+function SidebarContent({
+  isSuperAdmin,
+  organizations,
+  selectedOrganizationId,
+  selectedOrganizationName,
+  setSelectedOrganizationId,
+  whatsappAccounts,
+  onNavigate,
+  mobile = false
+}: {
+  isSuperAdmin: boolean;
+  organizations: OrganizationSummary[];
+  selectedOrganizationId: string;
+  selectedOrganizationName: string | null;
+  setSelectedOrganizationId: (organizationId: string) => void;
+  whatsappAccounts: WhatsAppAccountSummary[];
+  onNavigate?: () => void;
+  mobile?: boolean;
+}) {
+  return (
+    <>
+      <div className={mobile ? "space-y-3" : ""}>
+        {mobile ? (
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/6 px-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/10">
+                <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">Rezeki CRM</p>
+                <p className="truncate text-xs text-white/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="logo-panel">
+              <img src={brandLogo} alt="Rezeki Dashboard" className="h-auto w-full" />
+            </div>
+            <div className="mt-4">
+              <p className="brand-badge">Rezeki Dashboard</p>
+              <p className="mt-3 text-sm leading-6 text-text-muted">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isSuperAdmin ? (
+        <div className="mt-5">
+          <label className="block">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{mobile ? "Current org" : "Viewing org"}</span>
+            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium ${mobile ? "rounded-xl border border-white/10 bg-white/8 px-3" : ""}`} aria-label="Choose organization to view">
+              <option value="">Choose organization</option>
+              {organizations.map((organization) => (
+                <option key={organization.id} value={organization.id}>{organization.name}</option>
+              ))}
+            </Select>
+          </label>
+          {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-white/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-white/40">Required for organization views</p>}
+        </div>
+      ) : null}
+
+      <nav className={`space-y-2 ${mobile ? "mt-6" : "mt-8"}`}>
+        {mobile ? <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Primary</p> : null}
+        <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" onClick={onNavigate} />
+        <SidebarNavGroup
+          icon={<MessageSquare size={18} />}
+          label="Inbox"
+          items={[
+            { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
+            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Reply library" }
+          ]}
+          onNavigate={onNavigate}
+        />
+        {mobile ? <p className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Workspace</p> : null}
+        <SidebarNavGroup
+          icon={<Users size={18} />}
+          label="CRM"
+          items={[
+            { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
+            { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
+            { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
+          ]}
+          onNavigate={onNavigate}
+        />
+        <SidebarNavGroup
+          icon={<Settings2 size={18} />}
+          label="Setup"
+          items={[
+            { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
+            { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
+          ]}
+          onNavigate={onNavigate}
+        />
+        {isSuperAdmin ? (
+          <>
+            {mobile ? <p className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Admin</p> : null}
+          <SidebarNavGroup
+            icon={<Workflow size={18} />}
+            label="Super Admin Map"
+            items={[
+              { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
+              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
+              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
+            ]}
+            onNavigate={onNavigate}
+          />
+            <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" onClick={onNavigate} />
+          <SidebarNavGroup
+            icon={<ShieldAlert size={18} />}
+            label="System Tools"
+            items={[
+              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
+              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
+            ]}
+            onNavigate={onNavigate}
+          />
+          </>
+        ) : null}
+      </nav>
+    </>
+  );
+}
+
 export function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobileViewport();
   const [user, setUser] = useState(() => getStoredUser());
   const isSuperAdmin = user?.role === "super_admin";
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(() => {
@@ -156,6 +304,7 @@ export function DashboardLayout() {
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     function handleStoredUserUpdate() {
@@ -200,6 +349,16 @@ export function DashboardLayout() {
       setSelectedOrganizationId("");
     }
   }, [isSuperAdmin, organizations, selectedOrganizationId]);
+
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileNavOpen(false);
+    }
+  }, [isMobile]);
 
   async function handleUpdatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -282,6 +441,15 @@ export function DashboardLayout() {
       <header className="dashboard-topbar fixed inset-x-0 top-0 z-50 border-b border-white/20 bg-slate-950/70 text-white shadow-soft backdrop-blur-xl">
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
           <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center border border-white/15 bg-white/10 text-white transition duration-200 hover:border-white/30 hover:bg-white/15 md:hidden"
+              aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileNavOpen}
+              onClick={() => setIsMobileNavOpen((isOpen) => !isOpen)}
+            >
+              <Menu size={16} />
+            </button>
             <span className="h-2 w-2 shrink-0 bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
             <span className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">Rezeki CRM</span>
             {selectedOrganizationName ? <span className="hidden truncate text-xs text-white/45 sm:inline">/ {selectedOrganizationName}</span> : null}
@@ -301,6 +469,31 @@ export function DashboardLayout() {
           </div>
         </div>
       </header>
+
+      {isMobileNavOpen ? (
+        <div className="fixed inset-0 z-40 md:hidden" aria-hidden={!isMobileNavOpen}>
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            aria-label="Close navigation menu"
+            onClick={() => setIsMobileNavOpen(false)}
+          />
+          <aside className="absolute inset-y-12 left-0 w-[min(86vw,24rem)] overflow-y-auto">
+            <Card className="app-shell dashboard-sidebar flex min-h-full flex-col rounded-none p-4 pb-8" elevated>
+              <SidebarContent
+                isSuperAdmin={isSuperAdmin}
+                organizations={organizations}
+                selectedOrganizationId={selectedOrganizationId}
+                selectedOrganizationName={selectedOrganizationName}
+                setSelectedOrganizationId={setSelectedOrganizationId}
+                whatsappAccounts={whatsappAccounts}
+                onNavigate={() => setIsMobileNavOpen(false)}
+                mobile
+              />
+            </Card>
+          </aside>
+        </div>
+      ) : null}
 
       <PopupOverlay
         open={isProfilePanelOpen}
@@ -448,86 +641,19 @@ export function DashboardLayout() {
       </PopupOverlay>
 
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[246px,minmax(0,1fr)] md:gap-2">
-        <motion.aside className="min-w-0" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
+        <motion.aside className="hidden min-w-0 md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell dashboard-sidebar flex h-full flex-col rounded-none p-6 md:rounded-2xl" elevated>
-            <div>
-              <div className="logo-panel">
-                <img src={brandLogo} alt="Rezeki Dashboard" className="h-auto w-full" />
-              </div>
-              <div className="mt-4">
-                <p className="brand-badge">Rezeki Dashboard</p>
-                <p className="mt-3 text-sm leading-6 text-text-muted">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
-              </div>
-            </div>
-
-            {isSuperAdmin ? (
-              <div className="mt-5">
-                <label className="block">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Viewing org</span>
-                  <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label="Choose organization to view">
-                    <option value="">Choose organization</option>
-                    {organizations.map((organization) => (
-                      <option key={organization.id} value={organization.id}>{organization.name}</option>
-                    ))}
-                  </Select>
-                </label>
-                {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-white/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-white/40">Required for organization views</p>}
-              </div>
-            ) : null}
-
-            <nav className="mt-8 space-y-2">
-              <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" />
-              <SidebarNavGroup
-                icon={<MessageSquare size={18} />}
-                label="Inbox"
-                items={[
-                  { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
-                  { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Reply library" }
-                ]}
-              />
-              <SidebarNavGroup
-                icon={<Users size={18} />}
-                label="CRM"
-                items={[
-                  { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-                  { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
-                  { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
-                ]}
-              />
-              <SidebarNavGroup
-                icon={<Settings2 size={18} />}
-                label="Setup"
-                items={[
-                  { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
-                  { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
-                ]}
-              />
-              {isSuperAdmin ? (
-                <SidebarNavGroup
-                  icon={<Workflow size={18} />}
-                  label="Super Admin Map"
-                  items={[
-                    { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
-                    { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
-                    { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
-                  ]}
-                />
-              ) : null}
-              {isSuperAdmin ? <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" /> : null}
-              {isSuperAdmin ? (
-                <SidebarNavGroup
-                  icon={<ShieldAlert size={18} />}
-                  label="System Tools"
-                  items={[
-                    { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
-                    { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
-                  ]}
-                />
-              ) : null}
-            </nav>
+            <SidebarContent
+              isSuperAdmin={isSuperAdmin}
+              organizations={organizations}
+              selectedOrganizationId={selectedOrganizationId}
+              selectedOrganizationName={selectedOrganizationName}
+              setSelectedOrganizationId={setSelectedOrganizationId}
+              whatsappAccounts={whatsappAccounts}
+            />
           </Card>
         </motion.aside>
-        <main className="min-w-0 rounded-2xl bg-transparent px-2 py-4 md:pl-0 md:pr-2 xl:pr-3">
+        <main className="min-w-0 rounded-2xl bg-transparent px-3 py-4 md:pl-0 md:pr-2 xl:pr-3">
           <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
         </main>
       </div>

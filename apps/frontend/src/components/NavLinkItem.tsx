@@ -8,15 +8,17 @@ type NavLinkItemProps = {
   label: string;
   badge?: ReactNode;
   variant?: "default" | "sub";
+  onClick?: () => void;
 };
 
-export function NavLinkItem({ to, icon, label, badge, variant = "default" }: NavLinkItemProps) {
+export function NavLinkItem({ to, icon, label, badge, variant = "default", onClick }: NavLinkItemProps) {
   const showStackedBadge = variant === "sub" && Boolean(badge);
 
   return (
     <NavLink
       to={to}
       end={to === "/"}
+      onClick={onClick}
       className={({ isActive }) =>
         clsx(
           "flex min-w-0 items-center gap-3 rounded-none text-sm font-medium transition duration-200",

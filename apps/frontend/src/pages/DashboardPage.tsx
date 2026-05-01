@@ -33,6 +33,7 @@ import { PanelPagination, usePanelPagination } from "../components/PanelPaginati
 import { Toast } from "../components/Toast";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useRoleDashboard } from "../hooks/useDashboard";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser } from "../lib/auth";
 import type { DashboardMetric, DashboardSummary } from "../types/dashboard";
 
@@ -46,6 +47,7 @@ type TrendDay = {
 
 export function DashboardPage() {
   const user = getStoredUser();
+  const isMobile = useIsMobileViewport();
   const { data, isLoading } = useRoleDashboard();
   const { toast: copyToast, copyText } = useCopyFeedback();
   const canShowSalesPerformance = user?.role === "org_admin" || user?.role === "user";
@@ -161,7 +163,7 @@ export function DashboardPage() {
             </div>
           </CompactSection>
 
-          <CompactSection title="Pipeline" eyebrow={`${data.sales.pipeline.length} stages`} defaultOpen>
+          <CompactSection title="Pipeline" eyebrow={`${data.sales.pipeline.length} stages`} defaultOpen={!isMobile}>
             <div className="space-y-2">
               {data.sales.pipeline.map((stage) => (
                 <div
@@ -204,7 +206,7 @@ export function DashboardPage() {
       {data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
 
       {data?.sales?.trends?.length ? (
-        <CompactSection title="Recent daily buckets" eyebrow="Trend Drill-Down" summary="Click a bucket to open matching orders">
+        <CompactSection title="Recent daily buckets" eyebrow="Trend Drill-Down" summary="Click a bucket to open matching orders" defaultOpen={!isMobile}>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {data.sales.trends.map((point) => (
               <div
@@ -282,6 +284,7 @@ function CompactSection({
 }
 
 function DashboardAnalytics({ sales, showPerformance }: { sales: SalesDashboard; showPerformance: boolean }) {
+  const isMobile = useIsMobileViewport();
   const trendDays = buildTrendDays(sales.trends ?? []);
   const pipelineTotal = sales.pipeline.reduce((total, stage) => total + stage.count, 0);
   const wonStage = sales.pipeline.find((stage) => stage.status === "closed_won");
@@ -310,7 +313,7 @@ function DashboardAnalytics({ sales, showPerformance }: { sales: SalesDashboard;
         />
       ) : null}
 
-      <DashboardGraphPanel sales={sales} trendDays={trendDays} showPerformance={showPerformance} />
+      <DashboardGraphPanel sales={sales} trendDays={trendDays} showPerformance={showPerformance} defaultOpen={!isMobile} />
 
       {!showPerformance ? (
         <div className="grid gap-3 md:grid-cols-3">
@@ -326,11 +329,13 @@ function DashboardAnalytics({ sales, showPerformance }: { sales: SalesDashboard;
 function DashboardGraphPanel({
   sales,
   trendDays,
-  showPerformance
+  showPerformance,
+  defaultOpen
 }: {
   sales: SalesDashboard;
   trendDays: TrendDay[];
   showPerformance: boolean;
+  defaultOpen: boolean;
 }) {
   const pipelineTotal = sales.pipeline.reduce((total, stage) => total + stage.count, 0);
   const maxPipelineCount = Math.max(...sales.pipeline.map((stage) => stage.count), 1);
@@ -352,7 +357,7 @@ function DashboardGraphPanel({
   const teamWinRatePagination = usePanelPagination(rankedLeaders);
 
   return (
-    <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen>
+    <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen={defaultOpen}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
         <div className="rounded-2xl border border-border bg-gradient-to-br from-background-tint to-white p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

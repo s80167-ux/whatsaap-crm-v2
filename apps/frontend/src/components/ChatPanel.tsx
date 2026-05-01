@@ -27,6 +27,7 @@ import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
 import { useSalesOrders } from "../hooks/useSales";
+import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { PanelPagination, usePanelPagination } from "./PanelPagination";
@@ -34,6 +35,8 @@ import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
+const INITIAL_VISIBLE_MESSAGES = 4;
+const LOAD_OLDER_MESSAGES_STEP = 4;
 const QUICK_REPLIES = [
   "Hi, thanks for reaching out. How can I help you today?",
   "Noted, let me check and get back to you shortly.",
@@ -158,6 +161,7 @@ export function ChatPanel({
   onMessageSent: () => void;
 }) {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobileViewport();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -178,6 +182,7 @@ export function ChatPanel({
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [createSalesMessage, setCreateSalesMessage] = useState<Message | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [visibleMessageCount, setVisibleMessageCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const latestOutgoingMessage = [...messages].reverse().find((message) => message.direction === "outgoing");
@@ -186,6 +191,11 @@ export function ChatPanel({
   const messagesById = new Map(messages.map((message) => [message.id, message]));
   const forwardableConversations = conversations.filter((item) => item.id !== conversation?.id);
   const selectedMessages = selectedMessageIds.map((messageId) => messagesById.get(messageId)).filter((message): message is Message => Boolean(message));
+  const visibleMessages = useMemo(
+    () => messages.slice(Math.max(0, messages.length - visibleMessageCount)),
+    [messages, visibleMessageCount]
+  );
+  const hiddenMessageCount = Math.max(0, messages.length - visibleMessages.length);
   const { toast: copyToast, copyText } = useCopyFeedback();
   const resolvedOrganizationId = organizationId ?? (conversation as (Conversation & { organization_id?: string | null }) | undefined)?.organization_id ?? null;
   const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
@@ -591,6 +601,7 @@ export function ChatPanel({
     setReplyDraft(null);
     setForwardSourceMessage(null);
     setForwardTargetConversationId("");
+    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
   }, [conversation?.id]);
 
   useEffect(() => {
@@ -611,8 +622,8 @@ export function ChatPanel({
   }
 
   return (
-    <Card className="grid min-h-[640px] max-h-[calc(100vh-9.5rem)] min-w-0 grid-rows-[auto,1fr,auto] overflow-hidden p-0" elevated>
-      <header className="border-b border-border bg-white px-6 py-5 xl:px-7">
+    <Card className={`min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
+      <header className="border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <p className="text-lg font-semibold text-text">{conversation.contact_name}</p>
         <p className="text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
         {latestOutgoingStatusLabel ? (
@@ -638,7 +649,7 @@ export function ChatPanel({
 ) : null}
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
-      <div className="space-y-4 overflow-y-auto bg-background-elevated px-3 py-5 sm:px-4 xl:px-5 2xl:px-7">
+      <div className={`space-y-4 bg-background-elevated px-3 py-4 sm:px-4 sm:py-5 xl:px-5 2xl:px-7 ${isMobile ? "overflow-visible pb-6" : "overflow-y-auto"}`}>
         {selectedMessages.length > 0 ? (
           <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(20,32,51,0.08)] backdrop-blur">
             <p className="text-sm font-medium text-text">
@@ -671,8 +682,20 @@ export function ChatPanel({
             </div>
           </div>
         ) : null}
+        {hiddenMessageCount > 0 ? (
+          <div className="sticky top-0 z-[1] flex justify-center">
+            <Button
+              type="button"
+              variant="secondary"
+              className="rounded-full border border-slate-200/80 bg-white/92 px-3.5 py-1 text-[11px] font-medium text-slate-500 shadow-[0_6px_14px_rgba(20,32,51,0.05)] backdrop-blur hover:border-slate-300 hover:bg-white hover:text-primary"
+              onClick={() => setVisibleMessageCount((current) => Math.min(messages.length, current + LOAD_OLDER_MESSAGES_STEP))}
+            >
+              {Math.min(hiddenMessageCount, LOAD_OLDER_MESSAGES_STEP)} earlier messages
+            </Button>
+          </div>
+        ) : null}
         {messages.length > 0 ? (
-          messages.map((message) => (
+          visibleMessages.map((message) => (
             <MessageBubble
               key={message.id}
               message={message}
@@ -694,7 +717,7 @@ export function ChatPanel({
           </div>
         )}
       </div>
-      <footer className="border-t border-border bg-white px-3 py-4 sm:px-4 xl:px-5 2xl:px-7">
+      <footer className="border-t border-primary/15 bg-slate-50 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {replyDraft ? (
           <div className="mb-3 rounded-2xl border border-primary/15 bg-primary-soft/30 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -717,7 +740,7 @@ export function ChatPanel({
         {attachment ? (
           <AttachmentPreview attachment={attachment} onClear={handleClearAttachment} />
         ) : null}
-        <div className="flex flex-wrap items-stretch gap-3">
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_32px_rgba(20,32,51,0.08)]">
           <input
             ref={fileInputRef}
             type="file"
@@ -726,83 +749,143 @@ export function ChatPanel({
             onChange={handleAttachmentChange}
             title="Attach a file"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            title="Attach a file"
-            aria-label="Attach a file"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
-            aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
-            onClick={() => {
-              const shouldOpen = !isEmojiOpen;
-              closeComposerPopups();
-              setIsEmojiOpen(shouldOpen);
-            }}
-            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-          >
-            <Smile className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-            aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-            onClick={() => {
-              const shouldOpen = !isQuickReplyOpen;
-              closeComposerPopups();
-              setIsQuickReplyOpen(shouldOpen);
-            }}
-            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-            aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-            onClick={() => {
-              const shouldOpen = !isActionsOpen;
-              closeComposerPopups();
-              setIsActionsOpen(shouldOpen);
-            }}
-            className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-          >
-            <Wand2 className="h-4 w-4" />
-          </Button>
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onFocus={() => {
-              if (!text.trim()) {
-                setSelectedQuickReplyTemplateId(null);
-              }
-            }}
-            onKeyDown={(event) => {
-              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                event.preventDefault();
-                void handleSend();
-              }
-            }}
-            placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
-            rows={1}
-            className="min-h-7 flex-1 resize-none rounded-xl border border-border bg-white px-5 py-2 text-[15px] text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
-          />
-          <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="min-w-[112px] rounded-xl px-6">
-            {isSending ? "Sending..." : "Send"}
-          </Button>
+          <div className="grid grid-cols-4 gap-1.5 sm:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              title="Attach a file"
+              aria-label="Attach a file"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-10 px-2 text-primary hover:bg-primary-soft/50"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+              aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+              onClick={() => {
+                const shouldOpen = !isEmojiOpen;
+                closeComposerPopups();
+                setIsEmojiOpen(shouldOpen);
+              }}
+              className="h-10 px-2 text-primary hover:bg-primary-soft/50"
+            >
+              <Smile className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+              aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+              onClick={() => {
+                const shouldOpen = !isQuickReplyOpen;
+                closeComposerPopups();
+                setIsQuickReplyOpen(shouldOpen);
+              }}
+              className="h-10 px-2 text-primary hover:bg-primary-soft/50"
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+              aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+              onClick={() => {
+                const shouldOpen = !isActionsOpen;
+                closeComposerPopups();
+                setIsActionsOpen(shouldOpen);
+              }}
+              className="h-10 px-2 text-primary hover:bg-primary-soft/50"
+            >
+              <Wand2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="hidden items-stretch gap-3 sm:flex">
+              <Button
+                type="button"
+                variant="ghost"
+                title="Attach a file"
+                aria-label="Attach a file"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+                aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+                onClick={() => {
+                  const shouldOpen = !isEmojiOpen;
+                  closeComposerPopups();
+                  setIsEmojiOpen(shouldOpen);
+                }}
+                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Smile className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+                aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+                onClick={() => {
+                  const shouldOpen = !isQuickReplyOpen;
+                  closeComposerPopups();
+                  setIsQuickReplyOpen(shouldOpen);
+                }}
+                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Sparkles className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+                aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+                onClick={() => {
+                  const shouldOpen = !isActionsOpen;
+                  closeComposerPopups();
+                  setIsActionsOpen(shouldOpen);
+                }}
+                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              onFocus={() => {
+                if (!text.trim()) {
+                  setSelectedQuickReplyTemplateId(null);
+                }
+              }}
+              onKeyDown={(event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void handleSend();
+                }
+              }}
+              placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
+              rows={isMobile ? 2 : 1}
+              className="min-h-[56px] w-full flex-1 resize-none rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-[15px] text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+            />
+            <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto sm:h-auto">
+              {isSending ? "Sending..." : "Send"}
+            </Button>
+          </div>
         </div>
         <p className="mt-2 text-xs leading-5 text-text-soft">
-          Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow.
+          {isMobile
+            ? "Tap Send to queue the message."
+            : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
         </p>
       </footer>
       <PopupOverlay
