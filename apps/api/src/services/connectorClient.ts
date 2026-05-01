@@ -42,6 +42,21 @@ export class ConnectorClient {
     });
   }
 
+  async listAccountContacts(accountId: string) {
+    return this.request<{
+      accountId: string;
+      contacts: Array<{
+        id: string;
+        jid?: string | null;
+        lid?: string | null;
+        name?: string | null;
+        notify?: string | null;
+        verifiedName?: string | null;
+        imgUrl?: string | null;
+      }>;
+    }>(`/internal/accounts/${accountId}/contacts`);
+  }
+
   async terminateAccount(accountId: string) {
     return this.request(`/internal/accounts/${accountId}/session`, {
       method: "DELETE"

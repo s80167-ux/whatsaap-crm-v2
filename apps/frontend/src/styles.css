@@ -124,15 +124,19 @@ canvas {
 
   /* Button styles */
   .btn-primary {
-    @apply border border-primary bg-primary text-white font-semibold shadow-soft transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-primary-deep hover:shadow-panel focus-visible:ring-4 focus-visible:ring-primary/20;
+    @apply border border-primary bg-primary text-white font-semibold shadow-soft transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary-deep hover:bg-primary-deep hover:shadow-panel focus-visible:ring-4 focus-visible:ring-primary/20;
     border-radius: var(--surface-radius-sm);
   }
   .btn-secondary {
-    @apply border border-border bg-white text-primary font-medium shadow-[0_10px_24px_rgba(20,32,51,0.04)] transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/20 hover:bg-background-tint hover:shadow-soft focus-visible:ring-4 focus-visible:ring-primary/10;
+    @apply border border-border bg-white text-text font-medium shadow-[0_10px_24px_rgba(20,32,51,0.04)] transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/20 hover:bg-background-tint hover:text-primary hover:shadow-soft focus-visible:ring-4 focus-visible:ring-primary/10;
     border-radius: var(--surface-radius-sm);
   }
   .btn-ghost {
     @apply border border-transparent bg-transparent text-text-muted transition duration-200 ease-out hover:border-border/70 hover:bg-background-tint hover:text-text focus-visible:ring-4 focus-visible:ring-primary/10;
+    border-radius: var(--surface-radius-sm);
+  }
+  .btn-danger {
+    @apply border border-coral/25 bg-coral text-white font-semibold shadow-soft transition duration-200 ease-out hover:-translate-y-0.5 hover:border-coral hover:brightness-95 hover:shadow-panel focus-visible:ring-4 focus-visible:ring-coral/20;
     border-radius: var(--surface-radius-sm);
   }
 

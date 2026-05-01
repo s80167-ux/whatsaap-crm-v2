@@ -1,5 +1,10 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
-import type { OrganizationSummary, UserSummary, WhatsAppAccountSummary } from "../types/admin";
+import type {
+  OrganizationSummary,
+  UserSummary,
+  WhatsAppAccountSummary,
+  WhatsAppSyncJobSummary
+} from "../types/admin";
 
 export type ContactRepairProposal = {
   id: string;
@@ -75,6 +80,8 @@ type WhatsAppAccountApiRecord = {
   health_score?: number | null;
   history_sync_lookback_days?: number | null;
 };
+
+type WhatsAppSyncJobApiRecord = WhatsAppSyncJobSummary;
 
 function mapOrganization(record: OrganizationApiRecord): OrganizationSummary {
   return {
@@ -206,14 +213,49 @@ export async function reconnectWhatsAppAccount(accountId: string) {
 }
 
 export async function backfillWhatsAppAccount(accountId: string, lookbackDays: 7 | 30 | 90) {
-  const response = await apiPost<{ data: { account: WhatsAppAccountApiRecord; lookbackDays: number } }>(
+  const response = await apiPost<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      lookbackDays: number;
+      reconnectRequested: boolean;
+      syncJob: WhatsAppSyncJobApiRecord;
+    };
+  }>(
     `/admin/whatsapp-accounts/${accountId}/backfill`,
     { lookbackDays }
   );
   return {
     account: mapWhatsAppAccount(response.data.account),
-    lookbackDays: response.data.lookbackDays
+    lookbackDays: response.data.lookbackDays,
+    reconnectRequested: response.data.reconnectRequested,
+    syncJob: response.data.syncJob
   };
+}
+
+export async function fetchLatestWhatsAppSyncJob(accountId: string) {
+  const response = await apiGet<{ data: WhatsAppSyncJobApiRecord | null }>(
+    `/admin/whatsapp-sync-jobs/latest?accountId=${encodeURIComponent(accountId)}`
+  );
+  return response.data;
+}
+
+export async function syncWhatsAppContacts(accountId: string) {
+  const response = await apiPost<{
+    data: {
+      accountId: string;
+      organizationId: string;
+      importedAt: string;
+      summary: {
+        requested: number;
+        eligible: number;
+        imported: number;
+        created: number;
+        updated: number;
+        skipped: number;
+      };
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/sync-contacts`, {});
+  return response.data;
 }
 
 export async function disconnectWhatsAppAccount(accountId: string) {

@@ -30,6 +30,14 @@ export class ConnectorCommandService {
     return { accountId: account.id };
   }
 
+  async listAccountContacts(accountId: string) {
+    await this.getAccount(accountId);
+    return {
+      accountId,
+      contacts: this.sessionManager.listStoredContacts(accountId)
+    };
+  }
+
   async terminateAccount(accountId: string) {
     await this.sessionManager.terminateSession(accountId);
     return { accountId };

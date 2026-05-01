@@ -52,6 +52,12 @@ export async function backfillAccountSession(req: Request, res: Response) {
   return res.status(202).json({ data: result });
 }
 
+export async function listAccountContacts(req: Request, res: Response) {
+  const { accountId } = accountParamSchema.parse(req.params);
+  const result = await connectorCommandService.listAccountContacts(accountId);
+  return res.json({ data: result });
+}
+
 export async function terminateAccountSession(req: Request, res: Response) {
   const { accountId } = accountParamSchema.parse(req.params);
   const result = await connectorCommandService.terminateAccount(accountId);

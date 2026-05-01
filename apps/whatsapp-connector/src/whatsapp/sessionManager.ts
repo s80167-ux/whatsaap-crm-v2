@@ -34,6 +34,15 @@ type OutboundMediaAttachment = {
 };
 
 type ContactSnapshot = Pick<Contact, "id" | "jid" | "lid" | "name" | "notify" | "verifiedName" | "imgUrl">;
+export type StoredContactSnapshot = {
+  id: string;
+  jid: string | null | undefined;
+  lid: string | null | undefined;
+  name: string | null | undefined;
+  notify: string | null | undefined;
+  verifiedName: string | null | undefined;
+  imgUrl: string | null | undefined;
+};
 
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
@@ -93,6 +102,32 @@ export class WhatsAppSessionManager {
 
   getSocket(accountId: string) {
     return this.sockets.get(accountId);
+  }
+
+  listStoredContacts(accountId: string): StoredContactSnapshot[] {
+    const contacts = new Map<string, StoredContactSnapshot>();
+
+    for (const [key, snapshot] of this.contactByJid.entries()) {
+      if (!key.startsWith(`${accountId}::`)) {
+        continue;
+      }
+
+      const dedupeKey = snapshot.jid ?? snapshot.lid ?? snapshot.id ?? key;
+
+      if (!contacts.has(dedupeKey)) {
+        contacts.set(dedupeKey, {
+          id: snapshot.id,
+          jid: snapshot.jid,
+          lid: snapshot.lid,
+          name: snapshot.name,
+          notify: snapshot.notify,
+          verifiedName: snapshot.verifiedName,
+          imgUrl: snapshot.imgUrl
+        });
+      }
+    }
+
+    return Array.from(contacts.values());
   }
 
   async initializeAll() {
@@ -371,12 +406,12 @@ export class WhatsAppSessionManager {
 
       socket.ev.on("contacts.upsert", (contacts) => {
         logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.upsert event received");
-        this.storeContactSnapshots(contacts);
+        this.storeContactSnapshots(account.id, contacts);
       });
 
       socket.ev.on("contacts.update", (contacts) => {
         logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.update event received");
-        this.storeContactSnapshots(contacts);
+        this.storeContactSnapshots(account.id, contacts);
       });
 
       const handleWhatsAppMessage = async (message: WAMessage) => {
@@ -403,11 +438,11 @@ export class WhatsAppSessionManager {
         const messageKey = message.key as Record<string, unknown>;
         const phoneRaw =
           bestPhoneFromWhatsAppMessageKey(messageKey) ??
-          this.lookupPhoneFromLid(message.key.remoteJid) ??
+          this.lookupPhoneFromLid(account.id, message.key.remoteJid) ??
           jidToPhone(message.key.remoteJid);
-        const profileName = this.resolveCanonicalProfileName(message);
-        const profilePushName = this.resolvePushProfileName(message);
-        const profileAvatarUrl = await this.resolveProfileAvatarUrl(socket, message.key.remoteJid, messageKey);
+        const profileName = this.resolveCanonicalProfileName(account.id, message);
+        const profilePushName = this.resolvePushProfileName(account.id, message);
+        const profileAvatarUrl = await this.resolveProfileAvatarUrl(account.id, socket, message.key.remoteJid, messageKey);
 
         try {
           await this.rawEventIngestionService.enqueueMessageEvent({
@@ -589,15 +624,19 @@ export class WhatsAppSessionManager {
     this.connectedAccounts.delete(accountId);
   }
 
-  private lookupPhoneFromLid(jid: string | null | undefined) {
+  private scopedContactKey(accountId: string, key: string) {
+    return `${accountId}::${key}`;
+  }
+
+  private lookupPhoneFromLid(accountId: string, jid: string | null | undefined) {
     if (!jid?.includes("@lid")) {
       return null;
     }
 
-    return jidToPhone(this.phoneJidByLid.get(jid));
+    return jidToPhone(this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)));
   }
 
-  private storeContactSnapshots(contacts: Array<Partial<Contact>>) {
+  private storeContactSnapshots(accountId: string, contacts: Array<Partial<Contact>>) {
     for (const contact of contacts) {
       const ids = [contact.id, contact.jid, contact.lid].filter((value): value is string => typeof value === "string" && value.length > 0);
 
@@ -616,8 +655,9 @@ export class WhatsAppSessionManager {
       };
 
       for (const id of ids) {
-        const existing = this.contactByJid.get(id);
-        this.contactByJid.set(id, {
+        const scopedId = this.scopedContactKey(accountId, id);
+        const existing = this.contactByJid.get(scopedId);
+        this.contactByJid.set(scopedId, {
           ...existing,
           ...snapshot,
           id: snapshot.id ?? existing?.id ?? id
@@ -625,21 +665,21 @@ export class WhatsAppSessionManager {
       }
 
       if (contact.lid && contact.jid) {
-        this.phoneJidByLid.set(contact.lid, contact.jid);
+        this.phoneJidByLid.set(this.scopedContactKey(accountId, contact.lid), contact.jid);
       }
 
       if (typeof contact.imgUrl === "string" && contact.imgUrl.length > 0 && contact.imgUrl !== "changed") {
         for (const id of ids) {
-          this.avatarUrlByJid.set(id, contact.imgUrl);
+          this.avatarUrlByJid.set(this.scopedContactKey(accountId, id), contact.imgUrl);
         }
       }
     }
   }
 
-  private getStoredContactSnapshot(jid: string, key: Record<string, unknown>) {
+  private getStoredContactSnapshot(accountId: string, jid: string, key: Record<string, unknown>) {
     const candidates = [
       jid,
-      this.phoneJidByLid.get(jid),
+      this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)),
       key.remoteJid,
       key.senderPn,
       key.participantPn,
@@ -647,7 +687,7 @@ export class WhatsAppSessionManager {
     ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
 
     for (const candidate of candidates) {
-      const snapshot = this.contactByJid.get(candidate);
+      const snapshot = this.contactByJid.get(this.scopedContactKey(accountId, candidate));
 
       if (snapshot) {
         return snapshot;
@@ -657,36 +697,36 @@ export class WhatsAppSessionManager {
     return null;
   }
 
-  private resolveCanonicalProfileName(message: WAMessage) {
+  private resolveCanonicalProfileName(accountId: string, message: WAMessage) {
     if (!message.key?.remoteJid) {
       return null;
     }
 
     const key = message.key as Record<string, unknown>;
-    const snapshot = this.getStoredContactSnapshot(message.key.remoteJid, key);
+    const snapshot = this.getStoredContactSnapshot(accountId, message.key.remoteJid, key);
     const directVerifiedName = typeof message.verifiedBizName === "string" ? message.verifiedBizName.trim() : "";
     const cachedVerifiedName = typeof snapshot?.verifiedName === "string" ? snapshot.verifiedName.trim() : "";
 
     return directVerifiedName || cachedVerifiedName || null;
   }
 
-  private resolvePushProfileName(message: WAMessage) {
+  private resolvePushProfileName(accountId: string, message: WAMessage) {
     if (!message.key?.remoteJid || message.key.fromMe) {
       return null;
     }
 
     const key = message.key as Record<string, unknown>;
-    const snapshot = this.getStoredContactSnapshot(message.key.remoteJid, key);
+    const snapshot = this.getStoredContactSnapshot(accountId, message.key.remoteJid, key);
     const pushName = typeof message.pushName === "string" ? message.pushName.trim() : "";
     const notifyName = typeof snapshot?.notify === "string" ? snapshot.notify.trim() : "";
 
     return pushName || notifyName || null;
   }
 
-  private async resolveProfileAvatarUrl(socket: ReturnType<typeof makeWASocket>, jid: string, key: Record<string, unknown>) {
+  private async resolveProfileAvatarUrl(accountId: string, socket: ReturnType<typeof makeWASocket>, jid: string, key: Record<string, unknown>) {
     const candidates = [
       jid,
-      this.phoneJidByLid.get(jid),
+      this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)),
       key.senderPn,
       key.participantPn,
       key.participant,
@@ -694,7 +734,8 @@ export class WhatsAppSessionManager {
     ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
 
     for (const candidate of candidates) {
-      const cached = this.avatarUrlByJid.get(candidate);
+      const scopedCandidate = this.scopedContactKey(accountId, candidate);
+      const cached = this.avatarUrlByJid.get(scopedCandidate);
 
       if (cached) {
         return cached;
@@ -704,8 +745,8 @@ export class WhatsAppSessionManager {
         const avatarUrl = await socket.profilePictureUrl(candidate, "image", 1_500);
 
         if (avatarUrl) {
-          this.avatarUrlByJid.set(candidate, avatarUrl);
-          this.avatarUrlByJid.set(jid, avatarUrl);
+          this.avatarUrlByJid.set(scopedCandidate, avatarUrl);
+          this.avatarUrlByJid.set(this.scopedContactKey(accountId, jid), avatarUrl);
           return avatarUrl;
         }
       } catch (error) {

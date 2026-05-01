@@ -50,9 +50,9 @@ export async function syncWhatsAppContacts(req: Request, res: Response) {
   }
 
   const { accountId } = paramsSchema.parse(req.params);
-  const result = await adminBackfillService.backfillWhatsAppAccount(req.auth, accountId, 0, "contacts_sync");
+  const result = await adminBackfillService.syncWhatsAppContacts(req.auth, accountId);
 
-  return res.status(202).json({ data: result });
+  return res.json({ data: result });
 }
 
 export async function backfillWhatsAppHistory(req: Request, res: Response) {

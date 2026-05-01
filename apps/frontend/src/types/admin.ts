@@ -33,3 +33,36 @@ export interface WhatsAppAccountSummary {
   health_score?: number | null;
   history_sync_lookback_days?: number | null;
 }
+
+export type WhatsAppSyncJobStatus =
+  | "queued"
+  | "running"
+  | "receiving_events"
+  | "processing_events"
+  | "idle"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type WhatsAppSyncJobType = "contacts_sync" | "history_backfill" | "full_sync";
+
+export interface WhatsAppSyncJobSummary {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  requested_by?: string | null;
+  job_type: WhatsAppSyncJobType;
+  lookback_days?: number | null;
+  status: WhatsAppSyncJobStatus;
+  raw_events_received: number;
+  messages_processed: number;
+  conversations_updated: number;
+  contacts_processed?: number;
+  failed_events: number;
+  last_activity_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}

@@ -5,21 +5,262 @@ import { PanelPagination, usePanelPagination } from "../components/PanelPaginati
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
-import { useQueryClient } from "@tanstack/react-query";
-import { Info, Link2, PlugZap, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookUser, Link2, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
 import { useState } from "react";
-import styles from "./dashboardPage.module.css";
 import {
   backfillWhatsAppAccount,
   createWhatsAppAccount,
   disconnectWhatsAppAccount,
   deleteWhatsAppAccount,
+  fetchLatestWhatsAppSyncJob,
   reconnectWhatsAppAccount,
+  syncWhatsAppContacts,
   updateWhatsAppAccount
 } from "../api/admin";
+import type { WhatsAppSyncJobStatus, WhatsAppSyncJobSummary } from "../types/admin";
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
+const ACTIVE_SYNC_JOB_STATUSES: WhatsAppSyncJobStatus[] = ["queued", "running", "receiving_events", "processing_events"];
+
+function formatSyncJobStatus(status: WhatsAppSyncJobStatus) {
+  switch (status) {
+    case "queued":
+      return "Queued";
+    case "running":
+      return "Starting";
+    case "receiving_events":
+      return "Importing";
+    case "processing_events":
+      return "Processing";
+    case "completed":
+      return "Completed";
+    case "failed":
+      return "Failed";
+    case "cancelled":
+      return "Cancelled";
+    case "idle":
+      return "Waiting";
+    default:
+      return status;
+  }
+}
+
+function describeSyncJob(job: WhatsAppSyncJobSummary) {
+  const lookbackText = job.lookback_days ? `last ${job.lookback_days} days` : "the selected window";
+
+  switch (job.status) {
+    case "queued":
+      return "Sync request received. Preparing WhatsApp reconnect.";
+    case "running":
+      return `Starting history sync for ${lookbackText}.`;
+    case "receiving_events":
+      return "Importing WhatsApp history into the queue.";
+    case "processing_events":
+      return "Processing imported messages into CRM records.";
+    case "completed":
+      return `Sync complete. ${job.messages_processed} messages processed and ${job.conversations_updated} conversations updated.`;
+    case "failed":
+      return job.error_message?.trim() || "Sync failed. Please retry or check the connector logs.";
+    case "cancelled":
+      return "Sync was cancelled before completion.";
+    case "idle":
+      return "No new sync activity detected recently. Review the counters below.";
+    default:
+      return "Sync status updated.";
+  }
+}
+
+function getSyncJobProgress(status: WhatsAppSyncJobStatus) {
+  switch (status) {
+    case "queued":
+      return 10;
+    case "running":
+      return 25;
+    case "receiving_events":
+      return 60;
+    case "processing_events":
+      return 85;
+    case "completed":
+      return 100;
+    case "failed":
+    case "cancelled":
+      return 100;
+    case "idle":
+      return 92;
+    default:
+      return 0;
+  }
+}
+
+function formatRelativeTime(value?: string | null) {
+  if (!value) {
+    return "Just now";
+  }
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return "Just now";
+  }
+
+  const diffMs = Date.now() - timestamp;
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return "Just now";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+}
+
+function getSyncJobTone(status: WhatsAppSyncJobStatus) {
+  switch (status) {
+    case "completed":
+      return {
+        panel: "border-emerald-200 bg-emerald-50/70",
+        badge: "bg-emerald-100 text-emerald-700",
+        bar: "bg-emerald-500",
+        text: "text-emerald-800"
+      };
+    case "failed":
+    case "cancelled":
+      return {
+        panel: "border-rose-200 bg-rose-50/80",
+        badge: "bg-rose-100 text-rose-700",
+        bar: "bg-rose-500",
+        text: "text-rose-800"
+      };
+    default:
+      return {
+        panel: "border-sky-200 bg-sky-50/70",
+        badge: "bg-sky-100 text-sky-700",
+        bar: "bg-sky-500",
+        text: "text-sky-800"
+      };
+  }
+}
+
+function SyncJobStatusCard({
+  accountId,
+  seededJob,
+  refreshKey
+}: {
+  accountId: string;
+  seededJob?: WhatsAppSyncJobSummary | null;
+  refreshKey: number;
+}) {
+  const query = useQuery({
+    queryKey: ["whatsapp-sync-job", accountId, refreshKey],
+    queryFn: () => fetchLatestWhatsAppSyncJob(accountId),
+    initialData: seededJob ?? undefined,
+    refetchInterval: (queryContext) => {
+      const currentJob = queryContext.state.data;
+      if (!currentJob) {
+        return false;
+      }
+      return ACTIVE_SYNC_JOB_STATUSES.includes(currentJob.status) ? 4000 : false;
+    }
+  });
+
+  const job = query.data;
+
+  if (!job) {
+    return null;
+  }
+
+  const tone = getSyncJobTone(job.status);
+  const progress = getSyncJobProgress(job.status);
+
+  return (
+    <div className={`mt-4 rounded-2xl border px-4 py-4 ${tone.panel}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] ${tone.badge}`}>
+              {formatSyncJobStatus(job.status)}
+            </span>
+            <span className="text-xs text-text-soft">
+              {job.lookback_days ? `${job.lookback_days}-day history sync` : "History sync"}
+            </span>
+          </div>
+          <p className={`mt-2 text-sm font-medium ${tone.text}`}>{describeSyncJob(job)}</p>
+        </div>
+        <p className="text-xs text-text-soft">
+          Last activity {formatRelativeTime(job.last_activity_at ?? job.updated_at)}
+        </p>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${tone.bar}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="mt-3 grid gap-3 text-xs text-text-muted sm:grid-cols-3">
+        <div className="rounded-xl bg-white/75 px-3 py-2">
+          <p className="font-semibold text-text">Raw events</p>
+          <p className="mt-1 text-sm font-semibold text-text">{job.raw_events_received}</p>
+        </div>
+        <div className="rounded-xl bg-white/75 px-3 py-2">
+          <p className="font-semibold text-text">Messages processed</p>
+          <p className="mt-1 text-sm font-semibold text-text">{job.messages_processed}</p>
+        </div>
+        <div className="rounded-xl bg-white/75 px-3 py-2">
+          <p className="font-semibold text-text">Conversations updated</p>
+          <p className="mt-1 text-sm font-semibold text-text">{job.conversations_updated}</p>
+        </div>
+      </div>
+
+      {job.failed_events > 0 ? (
+        <p className="mt-3 text-xs font-medium text-rose-700">
+          {job.failed_events} event{job.failed_events === 1 ? "" : "s"} failed during processing.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AccountActivityCard({
+  title,
+  detail,
+  tone = "sky"
+}: {
+  title: string;
+  detail: string;
+  tone?: "sky" | "emerald";
+}) {
+  const tones = tone === "emerald"
+    ? {
+        panel: "border-emerald-200 bg-emerald-50/70",
+        badge: "bg-emerald-100 text-emerald-700",
+        text: "text-emerald-800"
+      }
+    : {
+        panel: "border-sky-200 bg-sky-50/70",
+        badge: "bg-sky-100 text-sky-700",
+        text: "text-sky-800"
+      };
+
+  return (
+    <div className={`mt-4 rounded-2xl border px-4 py-4 ${tones.panel}`}>
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] ${tones.badge}`}>
+        {title}
+      </span>
+      <p className={`mt-2 text-sm font-medium ${tones.text}`}>{detail}</p>
+    </div>
+  );
+}
 
 function formatHistorySyncWindow(days: number | null | undefined) {
   if (!days) {
@@ -76,6 +317,10 @@ export function WhatsAppAccountDashboard() {
   const [isWorking, setIsWorking] = useState(false);
   const [backfillSelections, setBackfillSelections] = useState<Record<string, WhatsAppBackfillDays>>({});
   const [backfillingAccountId, setBackfillingAccountId] = useState<string | null>(null);
+  const [syncingContactsAccountId, setSyncingContactsAccountId] = useState<string | null>(null);
+  const [syncJobRefreshKeys, setSyncJobRefreshKeys] = useState<Record<string, number>>({});
+  const [syncJobSnapshots, setSyncJobSnapshots] = useState<Record<string, WhatsAppSyncJobSummary>>({});
+  const [accountActivityNotice, setAccountActivityNotice] = useState<Record<string, { title: string; detail: string; tone?: "sky" | "emerald" }>>({});
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -176,13 +421,58 @@ export function WhatsAppAccountDashboard() {
     setNotice(null);
 
     try {
-      await backfillWhatsAppAccount(accountId, lookbackDays);
-      setNotice(`Sync request accepted for "${label}". WhatsApp history will update in the background.`);
+      const result = await backfillWhatsAppAccount(accountId, lookbackDays);
+      setSyncJobSnapshots((current) => ({
+        ...current,
+        [accountId]: result.syncJob
+      }));
+      setSyncJobRefreshKeys((current) => ({
+        ...current,
+        [accountId]: (current[accountId] ?? 0) + 1
+      }));
+      setAccountActivityNotice((current) => ({
+        ...current,
+        [accountId]: {
+          title: "History Sync",
+          detail: `Sync started for "${label}". Live progress is shown here.`,
+          tone: "sky"
+        }
+      }));
+      setBackfillPopupAccount(null);
+      setNotice(`Sync started for "${label}". Live progress is now shown on the account card.`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to start WhatsApp history sync");
     } finally {
       setBackfillingAccountId(null);
+    }
+  }
+
+  async function handleSyncContacts(accountId: string, label: string) {
+    if (!window.confirm(`Import all available WhatsApp contacts for "${label}" into CRM contacts?`)) {
+      return;
+    }
+
+    setSyncingContactsAccountId(accountId);
+    setNotice(null);
+
+    try {
+      const result = await syncWhatsAppContacts(accountId);
+      setAccountActivityNotice((current) => ({
+        ...current,
+        [accountId]: {
+          title: "Contacts Synced",
+          detail: `${result.summary.imported} imported (${result.summary.created} new, ${result.summary.updated} updated, ${result.summary.skipped} skipped).`,
+          tone: "emerald"
+        }
+      }));
+      setNotice(
+        `Contact sync complete for "${label}". Imported ${result.summary.imported} contacts (${result.summary.created} new, ${result.summary.updated} updated, ${result.summary.skipped} skipped).`
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to sync WhatsApp contacts");
+    } finally {
+      setSyncingContactsAccountId(null);
     }
   }
 
@@ -336,13 +626,13 @@ export function WhatsAppAccountDashboard() {
           <div className="flex gap-2 items-center">
             <Button
               variant="primary"
-              className={`px-4 py-2 text-sm font-semibold ${styles.buttonNoShadow}`}
+              size="sm"
               onClick={() => setShowCreatePopup(true)}
               aria-label="Add WhatsApp Account"
             >
               Add WhatsApp Account
             </Button>
-            <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
+            <Button variant="ghost" size="sm" className="shrink-0" disabled={isRefreshingAccounts} onClick={handleRefreshAccounts}>
               {isRefreshingAccounts ? "Refreshing..." : "Refresh status"}
             </Button>
           </div>
@@ -370,8 +660,8 @@ export function WhatsAppAccountDashboard() {
               const statusTone = getConnectionTone(account.status);
               const connected = isConnectedAccount(account.status);
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
-              const selectedBackfillDays = backfillSelections[account.id] ?? 7;
               const isBackfillingThisAccount = backfillingAccountId === account.id;
+              const isSyncingContactsThisAccount = syncingContactsAccountId === account.id;
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
                   {editingAccountId === account.id ? (
@@ -441,24 +731,31 @@ export function WhatsAppAccountDashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Info</p>
-                        <div className="flex flex-wrap gap-2">
-                          <span title={`Last connected: ${account.last_connected_at || "Never"}. Last disconnected: ${account.last_disconnected_at || "Never"}.`} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
-                            <Info className="h-3.5 w-3.5" />
-                            Device Info
-                          </span>
-                          <span title={`Health score: ${account.health_score ?? "--"}`} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                            <PlugZap className="h-3.5 w-3.5" />
-                            Readiness
-                          </span>
-                          <span title={`History sync: ${formatHistorySyncWindow(account.history_sync_lookback_days ?? 7)}`} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                            <Zap className="h-3.5 w-3.5" />
-                            Sync Window
-                          </span>
-                        </div>
                         {account.status?.toLowerCase() === "qr_required" ? (
                           <div className="mt-4">
                             <WhatsAppQrDisplay accountId={account.id} />
                           </div>
+                        ) : null}
+                        {isSyncingContactsThisAccount ? (
+                          <AccountActivityCard
+                            title="Syncing Contacts"
+                            detail="Importing WhatsApp contacts into CRM. This may take a moment."
+                            tone="sky"
+                          />
+                        ) : null}
+                        {syncJobSnapshots[account.id] || syncJobRefreshKeys[account.id] ? (
+                          <SyncJobStatusCard
+                            accountId={account.id}
+                            seededJob={syncJobSnapshots[account.id]}
+                            refreshKey={syncJobRefreshKeys[account.id] ?? 0}
+                          />
+                        ) : null}
+                        {!isSyncingContactsThisAccount && !syncJobSnapshots[account.id] && !syncJobRefreshKeys[account.id] && accountActivityNotice[account.id] ? (
+                          <AccountActivityCard
+                            title={accountActivityNotice[account.id].title}
+                            detail={accountActivityNotice[account.id].detail}
+                            tone={accountActivityNotice[account.id].tone}
+                          />
                         ) : null}
                       </div>
                       <div className="min-w-0">
@@ -466,7 +763,8 @@ export function WhatsAppAccountDashboard() {
                         <div className="flex flex-wrap gap-2">
                           {connected ? (
                             <Button
-                              className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
+                              variant="danger"
+                              size="sm"
                               disabled={isWorking}
                               onClick={() => handleDisconnectAccount(account.id, account.name)}
                             >
@@ -475,7 +773,8 @@ export function WhatsAppAccountDashboard() {
                             </Button>
                           ) : (
                             <Button
-                              className="gap-1.5 bg-emerald-600 px-3 py-2 text-xs text-white hover:bg-emerald-700"
+                              variant="primary"
+                              size="sm"
                               disabled={isWorking}
                               onClick={() => handleReconnectAccount(account.id, account.name)}
                             >
@@ -485,19 +784,31 @@ export function WhatsAppAccountDashboard() {
                           )}
                           <Button
                             variant="secondary"
-                            className="gap-1.5 px-3 py-2 text-xs"
+                            size="sm"
+                            className="gap-1.5"
                             disabled={isWorking || isBackfillingThisAccount}
                             onClick={() => setBackfillPopupAccount({ id: account.id, name: account.name })}
                           >
                             <Zap className="h-3.5 w-3.5" />
                             {isBackfillingThisAccount ? "Requesting sync..." : "Sync WhatsApp History"}
                           </Button>
-                          <Button variant="secondary" className="gap-1.5 px-3 py-2 text-xs" disabled={isWorking} onClick={() => beginEditAccount(account)}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="gap-1.5"
+                            disabled={isWorking || isSyncingContactsThisAccount}
+                            onClick={() => handleSyncContacts(account.id, account.name)}
+                          >
+                            <BookUser className="h-3.5 w-3.5" />
+                            {isSyncingContactsThisAccount ? "Syncing contacts..." : "Sync Contacts"}
+                          </Button>
+                          <Button variant="secondary" size="sm" className="gap-1.5" disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
                             Edit
                           </Button>
                           <Button
-                            className="gap-1.5 bg-red-500 px-3 py-2 text-xs text-white hover:bg-red-600"
+                            variant="danger"
+                            size="sm"
                             disabled={isWorking}
                             onClick={() => handleDeleteAccount(account.id, account.name)}
                           >
