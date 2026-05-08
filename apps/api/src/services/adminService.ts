@@ -429,6 +429,41 @@ export class AdminService {
     return account;
   }
 
+  async resetWhatsAppAccountPairing(authUser: AuthUser, accountId: string) {
+    const account = await withTransaction(async (client) => {
+      const existingAccount = await this.whatsappRepository.findById(client, accountId);
+
+      if (!existingAccount) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (!canManageWhatsAppAccount(authUser, existingAccount)) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      return existingAccount;
+    });
+
+    try {
+      await this.connectorClient.terminateAccount(account.id);
+      await this.connectorClient.reconnectAccount(account.id);
+    } catch (error) {
+      logger.warn(
+        { error, accountId: account.id },
+        "Failed to reset WhatsApp account pairing through connector"
+      );
+      throw new AppError(
+        "WhatsApp connector is unavailable or failed to reset the pairing flow",
+        502,
+        "connector_unavailable"
+      );
+    }
+
+    return withTransaction(async (client) => {
+      return (await this.whatsappRepository.findById(client, accountId)) ?? account;
+    });
+  }
+
   async disconnectWhatsAppAccount(authUser: AuthUser, accountId: string) {
     const existingAccount = await withTransaction(async (client) => {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);

@@ -8,7 +8,7 @@ import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccounts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookUser, Link2, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
+import { BookUser, Link2, QrCode, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
 import { useState } from "react";
 import {
   backfillWhatsAppAccount,
@@ -17,6 +17,7 @@ import {
   deleteWhatsAppAccount,
   fetchLatestWhatsAppSyncJob,
   reconnectWhatsAppAccount,
+  resetWhatsAppPairing,
   syncWhatsAppContacts,
   updateWhatsAppAccount
 } from "../api/admin";
@@ -293,6 +294,10 @@ function isConnectedAccount(status: string) {
   return status.toLowerCase() === "connected";
 }
 
+function canResetPairing(status: string) {
+  return ["pairing", "reconnecting"].includes(status.toLowerCase());
+}
+
 export function WhatsAppAccountDashboard() {
   const isMobile = useIsMobileViewport();
   const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
@@ -410,6 +415,24 @@ export function WhatsAppAccountDashboard() {
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to reconnect WhatsApp account");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleResetPairing(accountId: string, label: string) {
+    if (!window.confirm(`Stop the current reconnect for "${label}" and generate a fresh QR code?`)) {
+      return;
+    }
+
+    setIsWorking(true);
+    setNotice(null);
+    try {
+      await resetWhatsAppPairing(accountId);
+      setNotice(`Fresh QR requested for "${label}". The QR card will appear when WhatsApp returns it.`);
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to reset WhatsApp pairing");
     } finally {
       setIsWorking(false);
     }
@@ -665,6 +688,7 @@ export function WhatsAppAccountDashboard() {
             ) : accountPagination.visibleItems.map((account) => {
               const statusTone = getConnectionTone(account.status);
               const connected = isConnectedAccount(account.status);
+              const showResetPairing = canResetPairing(account.status);
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
               const isBackfillingThisAccount = backfillingAccountId === account.id;
               const isSyncingContactsThisAccount = syncingContactsAccountId === account.id;
@@ -791,6 +815,18 @@ export function WhatsAppAccountDashboard() {
                               Pair as New Device
                             </Button>
                           )}
+                          {showResetPairing ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
+                              disabled={isWorking}
+                              onClick={() => handleResetPairing(account.id, account.name)}
+                            >
+                              <QrCode className="h-3.5 w-3.5" />
+                              Reset to QR
+                            </Button>
+                          ) : null}
                           <Button
                             variant="secondary"
                             size="sm"

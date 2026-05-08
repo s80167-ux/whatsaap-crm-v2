@@ -23,6 +23,7 @@ import {
   listWhatsAppAccounts,
   disconnectWhatsAppAccount,
   reconnectWhatsAppAccount,
+  resetWhatsAppAccountPairing,
   replayRawEvents,
   updateWhatsAppAccount
 } from "./admin.controller.js";
@@ -35,6 +36,7 @@ adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAcco
 adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/disconnect", asyncHandler(disconnectWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
+adminRoutes.post("/whatsapp-accounts/:accountId/reset-pairing", asyncHandler(resetWhatsAppAccountPairing));
 adminRoutes.post(
   "/whatsapp-accounts/:accountId/backfill",
   requirePermission("org.manage_whatsapp_accounts"),

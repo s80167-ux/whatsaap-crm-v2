@@ -221,6 +221,11 @@ export async function reconnectWhatsAppAccount(accountId: string) {
   return mapWhatsAppAccount(response.data);
 }
 
+export async function resetWhatsAppPairing(accountId: string) {
+  const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/admin/whatsapp-accounts/${accountId}/reset-pairing`, {});
+  return mapWhatsAppAccount(response.data);
+}
+
 export async function backfillWhatsAppAccount(accountId: string, lookbackDays: 7 | 30 | 90) {
   const response = await apiPost<{
     data: {
