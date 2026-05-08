@@ -247,8 +247,7 @@ canvas {
 
   .dashboard-sidebar {
     max-height: calc(100vh - 5.5rem);
-    overflow-y: auto;
-    scrollbar-gutter: stable;
+    overflow-y: scroll;
   }
 
   .metric-card {
@@ -335,23 +334,29 @@ canvas {
   }
 
   .dashboard-topbar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    z-index: 100 !important;
+    background: rgba(15, 23, 42, 0.3);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+    backdrop-filter: blur(22px) saturate(145%);
     color: #f8fbff;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)),
-      rgba(15, 23, 42, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
     box-shadow:
       0 10px 24px rgba(15, 23, 42, 0.08),
       inset 0 -1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .dashboard-topbar .topbar-chip {
-    background: rgba(15, 23, 42, 0.32);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     box-shadow:
       0 8px 20px rgba(15, 23, 42, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    -webkit-backdrop-filter: blur(10px) saturate(130%);
+    backdrop-filter: blur(10px) saturate(130%);
   }
 
   .dashboard-topbar .topbar-brand {
@@ -364,11 +369,13 @@ canvas {
 
   .dashboard-topbar .topbar-profile-trigger {
     color: #f8fbff;
-    background: rgba(15, 23, 42, 0.38);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(15, 23, 42, 0.48);
+    border-color: rgba(255, 255, 255, 0.2);
     box-shadow:
       0 10px 22px rgba(15, 23, 42, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(8px) saturate(130%);
+    backdrop-filter: blur(8px) saturate(130%);
   }
 
   .dashboard-topbar .topbar-profile-trigger:hover,
@@ -376,6 +383,22 @@ canvas {
     background: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.28);
     color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    .dashboard-shell {
+      height: 100dvh;
+      min-height: 100dvh;
+      padding-top: 0;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+    }
+
+    .dashboard-content {
+      height: auto;
+      min-height: calc(100dvh - 3rem);
+      overflow: visible;
+    }
   }
 
   .workspace-table-wrap {

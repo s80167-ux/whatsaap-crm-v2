@@ -448,8 +448,8 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:px-6 md:pb-4 md:pt-16">
-      <header className="dashboard-topbar fixed inset-x-0 top-0 z-50 border-b border-slate-200/70 text-white shadow-soft backdrop-blur-xl">
+    <div className="dashboard-shell min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:px-6 md:pb-4 md:pt-16">
+      <header className="dashboard-topbar fixed inset-x-0 top-0 z-[100] border-b border-slate-200/70 text-white shadow-soft">
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
           <div className="topbar-chip flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5">
             <button
@@ -651,7 +651,7 @@ export function DashboardLayout() {
         </div>
       </PopupOverlay>
 
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] items-start gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
+      <div className="dashboard-content mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] items-start gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
         <motion.aside className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell dashboard-sidebar flex flex-col p-5" elevated>
             <SidebarContent
@@ -664,7 +664,7 @@ export function DashboardLayout() {
             />
           </Card>
         </motion.aside>
-        <main className="min-w-0 bg-transparent px-3 py-4 md:pl-0 md:pr-2 xl:pr-3">
+        <main className="min-w-0 bg-transparent px-3 pb-4 pt-12 md:pl-0 md:pr-2 md:pt-4 xl:pr-3">
           <RouteTransition className="route-transition-stage">
             <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
           </RouteTransition>

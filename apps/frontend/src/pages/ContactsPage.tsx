@@ -1009,7 +1009,7 @@ export function ContactsPage() {
         <div
           className={
             isCompactDetailLayout
-              ? "fixed inset-0 z-40 flex items-end bg-slate-950/45 px-3 pt-12"
+              ? "fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 px-3 py-6"
               : ""
           }
           onClick={() => {
@@ -1023,7 +1023,7 @@ export function ContactsPage() {
             elevated
             className={
               isCompactDetailLayout
-                ? "workspace-block max-h-[86vh] w-full overflow-y-auto rounded-b-none border-primary/10 bg-white shadow-panel"
+                ? "workspace-block max-h-[86vh] w-full max-w-2xl overflow-y-auto border-primary/10 bg-white shadow-panel"
                 : "workspace-block border-primary/10 bg-white shadow-panel lg:sticky lg:top-6 lg:self-start"
             }
             onClick={(event) => event.stopPropagation()}
