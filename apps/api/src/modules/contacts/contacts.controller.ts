@@ -4,6 +4,7 @@ import { withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ContactAssignmentService } from "../../services/contactAssignmentService.js";
 import { ContactCommandService } from "../../services/contactCommandService.js";
+import { ConversationService } from "../../services/conversationService.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
@@ -11,6 +12,7 @@ import { getRequestAuditContext } from "../../lib/requestAudit.js";
 const queryService = new QueryService();
 const contactAssignmentService = new ContactAssignmentService();
 const contactCommandService = new ContactCommandService();
+const conversationService = new ConversationService();
 const auditLogService = new AuditLogService();
 
 const contactParamsSchema = z.object({
@@ -19,6 +21,10 @@ const contactParamsSchema = z.object({
 
 const assignContactBodySchema = z.object({
   organizationUserId: z.string().uuid()
+});
+
+const startConversationBodySchema = z.object({
+  whatsappAccountId: z.string().uuid()
 });
 
 const createContactBodySchema = z.object({
@@ -227,4 +233,36 @@ export async function assignContact(request: Request, response: Response) {
   );
 
   return response.status(201).json({ data: contact });
+}
+
+export async function startContactConversation(request: Request, response: Response) {
+  const auth = requireAuth(request);
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const { contactId } = contactParamsSchema.parse(request.params);
+  const { whatsappAccountId } = startConversationBodySchema.parse(request.body);
+  const contact = await queryService.getContact(auth, auth.organizationId, contactId);
+
+  if (!contact) {
+    throw new AppError("Contact not found", 404, "contact_not_found");
+  }
+
+  const hasSelectedSource = contact.whatsapp_sources?.some((source) => source.id === whatsappAccountId);
+
+  if (!hasSelectedSource) {
+    throw new AppError("Contact has no WhatsApp source for the selected account", 400, "contact_whatsapp_source_missing");
+  }
+
+  const conversation = await withTransaction((client) =>
+    conversationService.findOrCreateConversation(client, {
+      organizationId: auth.organizationId!,
+      whatsappAccountId,
+      contactId
+    })
+  );
+
+  return response.status(201).json({ data: conversation });
 }

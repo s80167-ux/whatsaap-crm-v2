@@ -120,6 +120,7 @@ npm run worker:usage-daily -- --days 7
 - `BAILEYS_AUTH_DIR`: persistent auth directory, e.g. `/data/baileys_auth` on Railway
 - `CONNECTOR_BASE_URL`: internal URL for the standalone WhatsApp connector
 - `CONNECTOR_INTERNAL_SECRET`: shared secret between backend and connector
+- `ALLOW_LOCAL_CONNECTOR_SEND`: set to `true` only when a local connector owns a dev WhatsApp session
 - `RAW_EVENT_WORKER_BATCH_SIZE`: number of raw events claimed per poll
 - `RAW_EVENT_WORKER_POLL_INTERVAL_MS`: worker poll interval
 - `RAW_EVENT_WORKER_STALE_AFTER_MS`: when a stuck `processing` event is returned to `pending`
@@ -145,6 +146,12 @@ Mount a persistent volume to `/data` and set:
 BAILEYS_AUTH_DIR=/data/baileys_auth
 CONNECTOR_INSTANCE_ID=connector-railway-1
 ```
+
+### Dev WhatsApp Sends
+
+When running the API locally against a shared or production-like database, point `CONNECTOR_BASE_URL` to the connector that owns the WhatsApp sessions, for example the Railway connector. The API blocks sends to `localhost:4010` in development by default so local dev cannot create false pending/failed messages against sessions owned elsewhere.
+
+Use `ALLOW_LOCAL_CONNECTOR_SEND=true` only for connector-specific development with a separate local WhatsApp account/session.
 
 ### Frontend
 

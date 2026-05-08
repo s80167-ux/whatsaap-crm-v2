@@ -221,6 +221,13 @@ export async function assignContact(payload: { contactId: string; organizationUs
   });
 }
 
+export async function startContactConversation(payload: { contactId: string; whatsappAccountId: string }) {
+  const response = await apiPost<{ data: Conversation }>(`/contacts/${payload.contactId}/conversation`, {
+    whatsappAccountId: payload.whatsappAccountId
+  });
+  return response.data;
+}
+
 export async function updateContact(payload: {
   contactId: string;
   displayName?: string | null;

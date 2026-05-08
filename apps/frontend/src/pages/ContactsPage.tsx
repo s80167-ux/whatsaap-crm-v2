@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, Phone } from "lucide-react";
-import { assignContact, updateContact } from "../api/crm";
+import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, MessageCircle, Phone, X } from "lucide-react";
+import { assignContact, sendMessage, startContactConversation, updateContact } from "../api/crm";
 import { detectContactRepairProposal } from "../api/admin";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -82,6 +82,10 @@ function getDialablePhoneNumber(contact: Contact | null) {
   }
 
   return null;
+}
+
+function getMessageableSources(contact: Contact | null) {
+  return contact?.whatsapp_sources?.filter((source) => source.id) ?? [];
 }
 
 function getUserLabel(user: { full_name: string | null; email: string | null; role: string }) {
@@ -304,6 +308,11 @@ export function ContactsPage() {
   const [editNotes, setEditNotes] = useState("");
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [composeContact, setComposeContact] = useState<Contact | null>(null);
+  const [composeAccountId, setComposeAccountId] = useState("");
+  const [composeText, setComposeText] = useState("");
+  const [isSendingContactMessage, setIsSendingContactMessage] = useState(false);
+  const [composeNotice, setComposeNotice] = useState<string | null>(null);
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId, true);
   const { data: contacts = [], error: contactsError, isError: contactsIsError, isLoading } = useContacts(
@@ -318,6 +327,7 @@ export function ContactsPage() {
   );
   const activeContact = selectedContactResponse && !isMergedContactRedirect(selectedContactResponse) ? selectedContactResponse : null;
   const canAssignContacts = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("contacts.write"));
+  const canSendMessages = Boolean(activeOrganizationId && currentUser?.permissionKeys.includes("messages.send"));
   const canRepairContacts = isSuperAdmin || canAssignContacts;
   const canAssignContactsToTeam = Boolean(
     canAssignContacts &&
@@ -337,6 +347,7 @@ export function ContactsPage() {
     [assignableUsers]
   );
   const selectedContactDialableNumber = useMemo(() => getDialablePhoneNumber(activeContact), [activeContact]);
+  const composeSources = useMemo(() => getMessageableSources(composeContact), [composeContact]);
   const contactsById = useMemo(
     () => new Map(contacts.map((contact) => [contact.id, contact])),
     [contacts]
@@ -455,6 +466,66 @@ export function ContactsPage() {
     if (!selectedContactId) return;
     await queryClient.invalidateQueries({ queryKey: ["contacts"] });
     await queryClient.invalidateQueries({ queryKey: ["contact", selectedContactId] });
+  }
+
+  function openCompose(contact: Contact) {
+    const sources = getMessageableSources(contact);
+
+    setComposeContact(contact);
+    setComposeAccountId(sources[0]?.id ?? "");
+    setComposeText("");
+    setComposeNotice(null);
+  }
+
+  function closeCompose() {
+    if (isSendingContactMessage) {
+      return;
+    }
+
+    setComposeContact(null);
+    setComposeAccountId("");
+    setComposeText("");
+    setComposeNotice(null);
+  }
+
+  async function handleSendContactMessage() {
+    if (!composeContact || !composeAccountId || !activeOrganizationId) {
+      setComposeNotice("Choose a contact and WhatsApp source before sending.");
+      return;
+    }
+
+    if (!composeText.trim()) {
+      setComposeNotice("Write a message before sending.");
+      return;
+    }
+
+    setIsSendingContactMessage(true);
+    setComposeNotice(null);
+
+    try {
+      const conversation = await startContactConversation({
+        contactId: composeContact.id,
+        whatsappAccountId: composeAccountId
+      });
+
+      await sendMessage({
+        whatsappAccountId: composeAccountId,
+        conversationId: conversation.id,
+        organizationId: activeOrganizationId,
+        text: composeText
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      setRedirectMessage("WhatsApp message queued.");
+      setComposeContact(null);
+      setComposeAccountId("");
+      setComposeText("");
+    } catch (error) {
+      setComposeNotice(error instanceof Error ? error.message : "Unable to send WhatsApp message.");
+    } finally {
+      setIsSendingContactMessage(false);
+    }
   }
 
   async function handleSaveContactProfile() {
@@ -599,12 +670,13 @@ export function ContactsPage() {
                 const sourceLabel = getPrimarySourceLabel(contact);
 
                 return (
-                  <motion.button
+                  <motion.div
                     key={contact.id}
-                    type="button"
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
+                    role="button"
+                    tabIndex={0}
                     className={`w-full rounded-2xl border p-4 text-left shadow-soft transition ${
                       selectedContactId === contact.id
                         ? "border-primary/30 bg-primary/5"
@@ -613,6 +685,13 @@ export function ContactsPage() {
                     onClick={() => {
                       setRedirectMessage(null);
                       setSelectedContactId(contact.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setRedirectMessage(null);
+                        setSelectedContactId(contact.id);
+                      }
                     }}
                   >
                     <div className="flex items-start gap-3">
@@ -663,6 +742,37 @@ export function ContactsPage() {
                       </span>
                     </div>
 
+                    <div className="mt-3 flex items-center gap-2">
+                      {getDialablePhoneNumber(contact) ? (
+                        <a
+                          href={`tel:${getDialablePhoneNumber(contact)}`}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary"
+                          title={`Call ${contact.display_name ?? "contact"}`}
+                          aria-label={`Call ${contact.display_name ?? "contact"}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Phone size={15} aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background-tint text-text-soft opacity-60">
+                          <Phone size={15} aria-hidden="true" />
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
+                        aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
+                        disabled={!canSendMessages || getMessageableSources(contact).length === 0}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openCompose(contact);
+                        }}
+                      >
+                        <MessageCircle size={15} aria-hidden="true" />
+                      </button>
+                    </div>
+
                     {canAssignContacts ? (
                       <div className="mt-3">
                         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">Owner</p>
@@ -704,7 +814,7 @@ export function ContactsPage() {
                         )}
                       </div>
                     ) : null}
-                  </motion.button>
+                  </motion.div>
                 );
               })
             )}
@@ -714,29 +824,30 @@ export function ContactsPage() {
             <table className="workspace-table workspace-table-compact w-full table-fixed">
               <thead>
                 <tr>
-                  <th className="w-[30%] px-2.5 py-2">Name</th>
-                  <th className="w-[23%] px-2.5 py-2">Normalized</th>
-                  <th className="w-[18%] px-2.5 py-2">Source</th>
-                  <th className="w-[14%] px-2.5 py-2">Status</th>
-                  {canAssignContacts ? <th className="w-[15%] px-2.5 py-2">Owner</th> : null}
+                  <th className="w-[26%] px-2.5 py-2">Name</th>
+                  <th className="w-[21%] px-2.5 py-2">Normalized</th>
+                  <th className="w-[17%] px-2.5 py-2">Source</th>
+                  <th className="w-[12%] px-2.5 py-2">Status</th>
+                  <th className="w-[10%] px-2.5 py-2">Actions</th>
+                  {canAssignContacts ? <th className="w-[14%] px-2.5 py-2">Owner</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 6 : 5}>
                       Loading contacts...
                     </td>
                   </tr>
                 ) : contactsIsError ? (
                   <tr>
-                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 6 : 5}>
                       {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
                     </td>
                   </tr>
                 ) : visibleContacts.length === 0 ? (
                   <tr>
-                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 5 : 4}>
+                    <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 6 : 5}>
                       {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
                     </td>
                   </tr>
@@ -804,6 +915,38 @@ export function ContactsPage() {
                             </span>
                           );
                         })()}
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          {getDialablePhoneNumber(contact) ? (
+                            <a
+                              href={`tel:${getDialablePhoneNumber(contact)}`}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary"
+                              title={`Call ${contact.display_name ?? "contact"}`}
+                              aria-label={`Call ${contact.display_name ?? "contact"}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Phone size={14} aria-hidden="true" />
+                            </a>
+                          ) : (
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background-tint text-text-soft opacity-60">
+                              <Phone size={14} aria-hidden="true" />
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                            title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
+                            aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
+                            disabled={!canSendMessages || getMessageableSources(contact).length === 0}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openCompose(contact);
+                            }}
+                          >
+                            <MessageCircle size={14} aria-hidden="true" />
+                          </button>
+                        </div>
                       </td>
                       {canAssignContacts ? (
                         <td className="px-2.5 py-1.5">
@@ -904,16 +1047,27 @@ export function ContactsPage() {
                 })()}
               </div>
             </div>
-            {selectedContactDialableNumber ? (
-              <a
-                href={`tel:${selectedContactDialableNumber}`}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90 xl:hidden"
-                aria-label={`Call ${activeContact.display_name ?? "contact"}`}
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedContactDialableNumber ? (
+                <a
+                  href={`tel:${selectedContactDialableNumber}`}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+                  aria-label={`Call ${activeContact.display_name ?? "contact"}`}
+                >
+                  <Phone size={16} aria-hidden="true" />
+                  <span>Call</span>
+                </a>
+              ) : null}
+              <Button
+                variant="secondary"
+                className="h-11 px-4 text-sm"
+                onClick={() => openCompose(activeContact)}
+                disabled={!canSendMessages || getMessageableSources(activeContact).length === 0}
               >
-                <Phone size={16} />
-                <span>Call contact</span>
-              </a>
-            ) : null}
+                <MessageCircle size={16} aria-hidden="true" />
+                Send WhatsApp
+              </Button>
+            </div>
             <CompactRepairTools
               contact={activeContact}
               canWrite={canRepairContacts}
@@ -1038,6 +1192,75 @@ export function ContactsPage() {
           </p>
         )}
       </Card>
+      {composeContact ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-white p-5 shadow-panel">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Send WhatsApp</p>
+                <p className="mt-2 truncate text-lg font-semibold text-text">
+                  {composeContact.display_name ?? composeContact.primary_phone_normalized ?? "Unknown"}
+                </p>
+                <p className="mt-1 break-all text-sm text-text-muted">
+                  {composeContact.primary_phone_normalized ?? composeContact.primary_phone_e164 ?? "No phone number"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint"
+                onClick={closeCompose}
+                aria-label="Close WhatsApp composer"
+                disabled={isSendingContactMessage}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">WhatsApp source</span>
+              <Select
+                value={composeAccountId}
+                onChange={(event) => setComposeAccountId(event.target.value)}
+                className="mt-1 h-10 w-full"
+                disabled={isSendingContactMessage || composeSources.length <= 1}
+              >
+                {composeSources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.label ?? source.id}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <label className="mt-4 block">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Message</span>
+              <textarea
+                value={composeText}
+                onChange={(event) => setComposeText(event.target.value)}
+                rows={5}
+                placeholder="Type your WhatsApp message..."
+                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSendingContactMessage}
+              />
+            </label>
+
+            {composeNotice ? <p className="mt-3 text-sm text-red-600">{composeNotice}</p> : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={closeCompose} disabled={isSendingContactMessage}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleSendContactMessage()}
+                disabled={isSendingContactMessage || !composeAccountId || !composeText.trim()}
+              >
+                <MessageCircle size={16} aria-hidden="true" />
+                {isSendingContactMessage ? "Sending..." : "Send message"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <ContactRepairQueueOverlay
         open={isRepairQueueOpen}
         onClose={() => setIsRepairQueueOpen(false)}

@@ -40,6 +40,7 @@ const envSchema = z.object({
   BAILEYS_AUTH_DIR: z.string().default("./data/baileys_auth"),
   CONNECTOR_BASE_URL: z.string().url().default("http://localhost:4010"),
   CONNECTOR_INTERNAL_SECRET: z.string().min(1).default("change-me"),
+  ALLOW_LOCAL_CONNECTOR_SEND: z.coerce.boolean().default(false),
   RAW_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(50),
   RAW_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   RAW_EVENT_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),

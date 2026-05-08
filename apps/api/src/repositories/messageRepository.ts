@@ -219,6 +219,7 @@ export class MessageRepository {
       `
         update messages
         set ack_status = case
+              when $2::text = 'failed' and coalesce(ack_status, 'pending') in ('pending', 'failed') then 'failed'
               when (
                 case ack_status
                   when 'played' then 5

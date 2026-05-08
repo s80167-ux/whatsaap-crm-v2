@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import { withTransaction } from "../config/database.js";
+import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { AppError } from "../lib/errors.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import type { SendMessageInput } from "../types/domain.js";
@@ -24,6 +26,8 @@ export class SendMessageService {
     if (!normalizedText && !hasAttachment) {
       throw new Error("Message text or one attachment is required");
     }
+
+    this.assertConnectorSendIsAllowed();
 
     const { message, outboxId } = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
@@ -193,5 +197,26 @@ export class SendMessageService {
   logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
 });
     return message;
+  }
+
+  private assertConnectorSendIsAllowed() {
+    if (env.NODE_ENV !== "development" || env.ALLOW_LOCAL_CONNECTOR_SEND || !isLocalConnectorUrl(env.CONNECTOR_BASE_URL)) {
+      return;
+    }
+
+    throw new AppError(
+      "Local WhatsApp sending is disabled because CONNECTOR_BASE_URL points to localhost. Set CONNECTOR_BASE_URL to the Railway connector for real dev sends, or set ALLOW_LOCAL_CONNECTOR_SEND=true only when the local connector owns a dev WhatsApp session.",
+      400,
+      "local_connector_send_disabled"
+    );
+  }
+}
+
+function isLocalConnectorUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  } catch {
+    return false;
   }
 }
