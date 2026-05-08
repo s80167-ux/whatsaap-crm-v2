@@ -295,7 +295,7 @@ function isConnectedAccount(status: string) {
 }
 
 function canResetPairing(status: string) {
-  return ["pairing", "reconnecting"].includes(status.toLowerCase());
+  return status.toLowerCase() !== "connected";
 }
 
 export function WhatsAppAccountDashboard() {
@@ -526,6 +526,8 @@ export function WhatsAppAccountDashboard() {
     await refetchAccounts();
   }
 
+  const editingAccount = editingAccountId ? accounts.find((account) => account.id === editingAccountId) : null;
+
   return (
     <section className="space-y-6">
       <Card elevated className="workspace-block">
@@ -645,6 +647,72 @@ export function WhatsAppAccountDashboard() {
         ) : null}
       </PopupOverlay>
 
+      <PopupOverlay
+        open={Boolean(editingAccount)}
+        onClose={() => setEditingAccountId(null)}
+        title="Edit WhatsApp account"
+        description={editingAccount ? editingAccount.name : undefined}
+        panelClassName="max-w-xl"
+      >
+        {editingAccount ? (
+          <form className="space-y-4" onSubmit={(event) => handleUpdateAccount(event, editingAccount.id)}>
+            <div className="workspace-form-panel space-y-3 p-4">
+              <Select
+                value={accountEdit.organizationId}
+                onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                required
+              >
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                value={accountEdit.name}
+                onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}
+                placeholder="Account name"
+                required
+              />
+              <Input
+                value={accountEdit.phoneNumber}
+                onChange={(event) => setAccountEdit((draft) => ({ ...draft, phoneNumber: event.target.value }))}
+                placeholder="+60123456789"
+              />
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
+                  Sync previous messages
+                </p>
+                <Select
+                  value={String(accountEdit.historySyncLookbackDays)}
+                  onChange={(event) => setAccountEdit((draft) => ({ ...draft, historySyncLookbackDays: Number(event.target.value) }))}
+                >
+                  {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
+                    <option key={days} value={days}>
+                      {formatHistorySyncWindow(days)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full sm:w-auto"
+                disabled={isWorking}
+                onClick={() => setEditingAccountId(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isWorking || !accountEdit.organizationId}>
+                Save changes
+              </Button>
+            </div>
+          </form>
+        ) : null}
+      </PopupOverlay>
+
       <Card elevated className="workspace-block mt-6 min-w-0 xl:col-span-3">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -695,53 +763,7 @@ export function WhatsAppAccountDashboard() {
               const hasSyncJobStatus = Boolean(syncJobSnapshots[account.id] || syncJobRefreshKeys[account.id]);
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
-                  {editingAccountId === account.id ? (
-                    <form className="workspace-form-panel space-y-3 p-4 lg:col-span-5" onSubmit={(event) => handleUpdateAccount(event, account.id)}>
-                      <Select
-                        value={accountEdit.organizationId}
-                        onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                        required
-                      >
-                        {organizations.map((organization) => (
-                          <option key={organization.id} value={organization.id}>
-                            {organization.name}
-                          </option>
-                        ))}
-                      </Select>
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <Input
-                          value={accountEdit.name}
-                          onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}
-                          placeholder="Account name"
-                          required
-                        />
-                        <Input
-                          value={accountEdit.phoneNumber}
-                          onChange={(event) => setAccountEdit((draft) => ({ ...draft, phoneNumber: event.target.value }))}
-                          placeholder="+60123456789"
-                        />
-                        <Select
-                          value={String(accountEdit.historySyncLookbackDays)}
-                          onChange={(event) => setAccountEdit((draft) => ({ ...draft, historySyncLookbackDays: Number(event.target.value) }))}
-                        >
-                          {WHATSAPP_HISTORY_SYNC_OPTIONS.map((days) => (
-                            <option key={days} value={days}>
-                              {formatHistorySyncWindow(days)}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="submit" className="min-w-32" disabled={isWorking || !accountEdit.organizationId}>
-                          Save changes
-                        </Button>
-                        <Button variant="secondary" className="min-w-32" disabled={isWorking} onClick={() => setEditingAccountId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
+                  <>
                       <div className={isMobile ? "rounded-2xl border border-border bg-background-tint/60 px-3 py-3" : ""}>
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Name</p>
                         <p className="break-words font-semibold leading-5 text-text">{account.name}</p>
@@ -864,7 +886,6 @@ export function WhatsAppAccountDashboard() {
                         </div>
                       </div>
                     </>
-                  )}
                 </div>
               );
             })}
