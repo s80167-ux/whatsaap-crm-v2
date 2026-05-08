@@ -12,7 +12,7 @@ import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useContact, useContacts } from "../hooks/useContacts";
-import { useIsMobileViewport } from "../hooks/useMediaQuery";
+import { useIsMobileViewport, useMediaQuery } from "../hooks/useMediaQuery";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 import type { Contact, ContactDetailResponse, MergedContactRedirect } from "../types/api";
@@ -290,6 +290,7 @@ function CompactRepairTools({
 export function ContactsPage() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
+  const isCompactDetailLayout = useMediaQuery("(max-width: 1023px)");
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
@@ -555,7 +556,7 @@ export function ContactsPage() {
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1.15fr)_400px]">
       <Card elevated className="workspace-block min-w-0">
         <div className={isMobile ? "space-y-3" : "workspace-page-header"}>
           <div>
@@ -1004,12 +1005,47 @@ export function ContactsPage() {
         />
       </Card>
 
-      <Card elevated className="workspace-block border-primary/10 bg-white shadow-panel xl:sticky xl:top-6 xl:self-start">
+      {(!isCompactDetailLayout || selectedContactId || selectedContactResponse) ? (
+        <div
+          className={
+            isCompactDetailLayout
+              ? "fixed inset-0 z-40 flex items-end bg-slate-950/45 px-3 pt-12"
+              : ""
+          }
+          onClick={() => {
+            if (isCompactDetailLayout) {
+              setSelectedContactId(null);
+              setRedirectMessage(null);
+            }
+          }}
+        >
+          <Card
+            elevated
+            className={
+              isCompactDetailLayout
+                ? "workspace-block max-h-[86vh] w-full overflow-y-auto rounded-b-none border-primary/10 bg-white shadow-panel"
+                : "workspace-block border-primary/10 bg-white shadow-panel lg:sticky lg:top-6 lg:self-start"
+            }
+            onClick={(event) => event.stopPropagation()}
+          >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-soft">Detail</p>
             <p className="mt-2 text-sm text-text-muted">Review profile health, ownership, and source records.</p>
           </div>
+          {isCompactDetailLayout ? (
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint"
+              onClick={() => {
+                setSelectedContactId(null);
+                setRedirectMessage(null);
+              }}
+              aria-label="Close contact details"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         {activeContact ? (
           <div className="mt-5 space-y-4">
@@ -1186,12 +1222,16 @@ export function ContactsPage() {
           </div>
         ) : (
           <p className="mt-5 text-sm leading-6 text-text-muted">
-            {isMergedContactRedirect(selectedContactResponse)
+            {selectedContactId && !selectedContactResponse
+              ? "Loading contact details..."
+              : isMergedContactRedirect(selectedContactResponse)
               ? "Redirecting to the active contact profile..."
               : "Select a contact to inspect the canonical record and ownership details."}
           </p>
         )}
-      </Card>
+          </Card>
+        </div>
+      ) : null}
       {composeContact ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
           <div className="w-full max-w-lg rounded-2xl border border-border bg-white p-5 shadow-panel">

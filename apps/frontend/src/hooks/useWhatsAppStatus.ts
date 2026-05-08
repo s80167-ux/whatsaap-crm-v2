@@ -13,6 +13,8 @@ export function useWhatsAppStatus(): WhatsAppStatus {
   // Find the first account with a status
   const status = accounts[0]?.status?.toLowerCase();
   if (status === "connected") return "connected";
-  if (status === "connecting" || status === "initializing") return "connecting";
+  if (["connecting", "initializing", "pairing", "reconnecting", "qr_required", "new"].includes(status ?? "")) {
+    return "connecting";
+  }
   return "disconnected";
 }

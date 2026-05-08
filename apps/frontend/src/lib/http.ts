@@ -58,6 +58,7 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
   try {
     response = await fetch(`${config.apiBaseUrl}${path}`, {
       credentials: "include",
+      cache: "no-store",
       ...options
     });
   } catch {

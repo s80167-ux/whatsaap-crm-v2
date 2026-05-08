@@ -25,6 +25,7 @@ export function useWhatsAppAccounts(organizationId?: string | null, enabled = tr
     queryKey: ["whatsapp-accounts", organizationId ?? "all"],
     queryFn: () => fetchWhatsAppAccounts(organizationId),
     enabled,
-    refetchInterval: organizationId ? 15000 : false
+    refetchInterval: organizationId ? 3000 : false,
+    staleTime: 0
   });
 }

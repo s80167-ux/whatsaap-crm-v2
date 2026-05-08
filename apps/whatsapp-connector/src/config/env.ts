@@ -12,7 +12,7 @@ const rootEnvPath = path.resolve(process.cwd(), ".env");
 
 for (const envPath of [connectorEnvPath, workspaceConnectorEnvPath, rootEnvPath]) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: process.env.NODE_ENV !== "production" });
   }
 }
 

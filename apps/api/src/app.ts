@@ -11,6 +11,8 @@ import { apiRouter } from "./routes/index.js";
 
 export const app = express();
 
+app.set("etag", false);
+
 if (env.TRUST_PROXY) {
   app.set("trust proxy", 1);
 }
@@ -55,6 +57,12 @@ app.use(
   })
 );
 app.use(requestContext);
+app.use((_request, response, next) => {
+  response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.setHeader("Pragma", "no-cache");
+  response.setHeader("Expires", "0");
+  next();
+});
 app.use(cookieParser());
 app.use(express.json({ limit: "8mb" }));
 app.use(morgan("dev"));

@@ -657,17 +657,25 @@ export function WhatsAppAccountDashboard() {
         {editingAccount ? (
           <form className="space-y-4" onSubmit={(event) => handleUpdateAccount(event, editingAccount.id)}>
             <div className="workspace-form-panel space-y-3 p-4">
-              <Select
-                value={accountEdit.organizationId}
-                onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
-                required
-              >
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.name}
-                  </option>
-                ))}
-              </Select>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
+                  Organization
+                </p>
+                <Select
+                  value={accountEdit.organizationId}
+                  onChange={(event) => setAccountEdit((draft) => ({ ...draft, organizationId: event.target.value }))}
+                  required
+                >
+                  {accountEdit.organizationId && !organizations.some((organization) => organization.id === accountEdit.organizationId) ? (
+                    <option value={accountEdit.organizationId}>Current organization</option>
+                  ) : null}
+                  {organizations.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
               <Input
                 value={accountEdit.name}
                 onChange={(event) => setAccountEdit((draft) => ({ ...draft, name: event.target.value }))}

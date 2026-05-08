@@ -227,6 +227,9 @@ export class WhatsAppSessionManager {
           { accountId: account.id, ownerId: env.CONNECTOR_INSTANCE_ID },
           "Skipping WhatsApp session initialization because another connector owns the lease"
         );
+        setTimeout(() => {
+          void this.initializeSession(account);
+        }, env.CONNECTOR_LEASE_TTL_MS + 1_000);
         return;
       }
 
