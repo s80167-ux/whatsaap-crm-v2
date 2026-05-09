@@ -100,6 +100,10 @@ const startCampaignBodySchema = z.object({
   speedPreset: z.enum(["safe", "normal", "custom"]).default("safe")
 });
 
+const campaignActionBodySchema = z.object({
+  organizationId: z.string().uuid().optional().nullable()
+});
+
 type AudienceGroupRecord = {
   id: string;
   organization_id: string;
@@ -135,6 +139,20 @@ type CampaignRecord = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type CampaignSummaryRecord = CampaignRecord & {
+  audience_group_name: string | null;
+  audience_valid_count: number | null;
+  sender_whatsapp_label: string | null;
+  sender_phone_number: string | null;
+  recipients: string;
+  pending: string;
+  queued: string;
+  sent: string;
+  failed: string;
+  skipped: string;
+  replied: string;
 };
 
 type CampaignAudienceContactRecord = {
@@ -197,17 +215,9 @@ export async function listAudienceGroups(request: Request, response: Response) {
 
 export async function listCampaigns(request: Request, response: Response) {
   const organizationId = resolveOrganizationId(request);
-  const result = await query<CampaignRecord>(
-    `
-      select *
-      from campaigns
-      where organization_id = $1
-      order by created_at desc, name asc
-    `,
-    [organizationId]
-  );
+  const result = await listCampaignSummaries(organizationId);
 
-  return response.json({ data: result.rows });
+  return response.json({ data: result });
 }
 
 export async function createCampaign(request: Request, response: Response) {
@@ -260,7 +270,7 @@ export async function createCampaign(request: Request, response: Response) {
 export async function getCampaign(request: Request, response: Response) {
   const organizationId = resolveOrganizationId(request);
   const { campaignId } = campaignParamsSchema.parse(request.params);
-  const campaign = await findCampaign(organizationId, campaignId);
+  const campaign = await getCampaignSummary(organizationId, campaignId);
 
   if (!campaign) {
     throw new AppError("Campaign not found", 404, "campaign_not_found");
@@ -394,6 +404,12 @@ export async function startCampaign(request: Request, response: Response) {
     throw new AppError("Campaign not found", 404, "campaign_not_found");
   }
 
+  if (!["draft", "scheduled", "failed"].includes(campaign.status)) {
+    throw new AppError("Only draft, scheduled or failed campaigns can be started", 409, "campaign_not_startable", {
+      status: campaign.status
+    });
+  }
+
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
 
@@ -436,6 +452,103 @@ export async function startCampaign(request: Request, response: Response) {
       message: `Campaign started. ${snapshot.length} recipient${snapshot.length === 1 ? "" : "s"} scheduled for paced dispatch.`,
       campaign: result.rows[0],
       scheduled: snapshot.length
+    }
+  });
+}
+
+export async function pauseCampaign(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = campaignActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+  const campaign = await transitionCampaignStatus({
+    organizationId,
+    campaignId,
+    fromStatuses: ["sending"],
+    toStatus: "paused",
+    errorMessage: "Only sending campaigns can be paused",
+    errorCode: "campaign_not_pausable"
+  });
+
+  return response.json({
+    data: {
+      ok: true,
+      message: "Campaign paused.",
+      campaign
+    }
+  });
+}
+
+export async function resumeCampaign(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = campaignActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+  const campaign = await transitionCampaignStatus({
+    organizationId,
+    campaignId,
+    fromStatuses: ["paused"],
+    toStatus: "sending",
+    errorMessage: "Only paused campaigns can be resumed",
+    errorCode: "campaign_not_resumable"
+  });
+
+  return response.json({
+    data: {
+      ok: true,
+      message: "Campaign resumed.",
+      campaign
+    }
+  });
+}
+
+export async function cancelCampaign(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = campaignActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+
+  const campaign = await findCampaign(organizationId, campaignId);
+
+  if (!campaign) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  if (["completed", "cancelled"].includes(campaign.status)) {
+    throw new AppError("Completed or cancelled campaigns cannot be cancelled again", 409, "campaign_not_cancellable", {
+      status: campaign.status
+    });
+  }
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        update campaigns
+        set status = 'cancelled',
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [organizationId, campaignId]
+    );
+
+    await client.query(
+      `
+        update campaign_recipients
+        set send_status = 'skipped',
+            next_attempt_at = null,
+            error_message = coalesce(error_message, 'Campaign cancelled before dispatch')
+        where organization_id = $1
+          and campaign_id = $2
+          and message_id is null
+          and send_status in ('pending', 'queued', 'failed')
+      `,
+      [organizationId, campaignId]
+    );
+  });
+
+  return response.json({
+    data: {
+      ok: true,
+      message: "Campaign cancelled. Unsent recipients were skipped.",
+      campaign: await getCampaignSummary(organizationId, campaignId)
     }
   });
 }
@@ -654,6 +767,138 @@ async function findCampaign(organizationId: string, campaignId: string) {
   );
 
   return result.rows[0] ?? null;
+}
+
+async function listCampaignSummaries(organizationId: string) {
+  const result = await query<CampaignSummaryRecord>(
+    `
+      select
+        c.*,
+        ag.name as audience_group_name,
+        ag.valid_count as audience_valid_count,
+        wa.label as sender_whatsapp_label,
+        coalesce(wa.account_phone_e164, wa.account_phone_normalized) as sender_phone_number,
+        count(cr.id)::text as recipients,
+        count(cr.id) filter (where cr.send_status = 'pending')::text as pending,
+        count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
+        count(cr.id) filter (where cr.send_status = 'sent')::text as sent,
+        count(cr.id) filter (where cr.send_status = 'failed')::text as failed,
+        count(cr.id) filter (where cr.send_status = 'skipped')::text as skipped,
+        0::text as replied
+      from campaigns c
+      left join campaign_audience_groups ag on ag.id = c.audience_group_id
+      left join whatsapp_accounts wa on wa.id = c.sender_whatsapp_account_id
+      left join campaign_recipients cr on cr.campaign_id = c.id
+      where c.organization_id = $1
+      group by c.id, ag.name, ag.valid_count, wa.label, wa.account_phone_e164, wa.account_phone_normalized
+      order by c.created_at desc, c.name asc
+    `,
+    [organizationId]
+  );
+
+  return result.rows.map(toCampaignSummary);
+}
+
+async function getCampaignSummary(organizationId: string, campaignId: string) {
+  const result = await query<CampaignSummaryRecord>(
+    `
+      select
+        c.*,
+        ag.name as audience_group_name,
+        ag.valid_count as audience_valid_count,
+        wa.label as sender_whatsapp_label,
+        coalesce(wa.account_phone_e164, wa.account_phone_normalized) as sender_phone_number,
+        count(cr.id)::text as recipients,
+        count(cr.id) filter (where cr.send_status = 'pending')::text as pending,
+        count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
+        count(cr.id) filter (where cr.send_status = 'sent')::text as sent,
+        count(cr.id) filter (where cr.send_status = 'failed')::text as failed,
+        count(cr.id) filter (where cr.send_status = 'skipped')::text as skipped,
+        0::text as replied
+      from campaigns c
+      left join campaign_audience_groups ag on ag.id = c.audience_group_id
+      left join whatsapp_accounts wa on wa.id = c.sender_whatsapp_account_id
+      left join campaign_recipients cr on cr.campaign_id = c.id
+      where c.organization_id = $1
+        and c.id = $2
+      group by c.id, ag.name, ag.valid_count, wa.label, wa.account_phone_e164, wa.account_phone_normalized
+      limit 1
+    `,
+    [organizationId, campaignId]
+  );
+
+  const row = result.rows[0];
+  return row ? toCampaignSummary(row) : null;
+}
+
+async function transitionCampaignStatus(input: {
+  organizationId: string;
+  campaignId: string;
+  fromStatuses: string[];
+  toStatus: string;
+  errorMessage: string;
+  errorCode: string;
+}) {
+  const existing = await findCampaign(input.organizationId, input.campaignId);
+
+  if (!existing) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  if (!input.fromStatuses.includes(existing.status)) {
+    throw new AppError(input.errorMessage, 409, input.errorCode, {
+      status: existing.status
+    });
+  }
+
+  await query(
+    `
+      update campaigns
+      set status = $3,
+          updated_at = timezone('utc', now())
+      where organization_id = $1
+        and id = $2
+    `,
+    [input.organizationId, input.campaignId, input.toStatus]
+  );
+
+  return getCampaignSummary(input.organizationId, input.campaignId);
+}
+
+function toCampaignSummary(row: CampaignSummaryRecord) {
+  return {
+    id: row.id,
+    name: row.name,
+    audience: row.audience_group_name ?? "Audience Group",
+    audienceGroupId: row.audience_group_id,
+    audienceGroupName: row.audience_group_name,
+    audienceValidCount: row.audience_valid_count ?? 0,
+    senderWhatsAppAccountId: row.sender_whatsapp_account_id,
+    senderWhatsAppLabel: row.sender_whatsapp_label,
+    senderPhoneNumber: row.sender_phone_number,
+    speedPreset: row.speed_preset,
+    delayPerMessageSeconds: row.delay_per_message_seconds,
+    batchSize: row.batch_size,
+    batchPauseSeconds: row.batch_pause_seconds,
+    dailyLimit: row.daily_limit,
+    stopOnHighFailure: row.stop_on_high_failure,
+    status: formatCampaignStatus(row.status),
+    recipients: Number(row.recipients),
+    pending: Number(row.pending),
+    queued: Number(row.queued),
+    sent: Number(row.sent),
+    failed: Number(row.failed),
+    skipped: Number(row.skipped),
+    replied: Number(row.replied),
+    createdAt: row.created_at
+  };
+}
+
+function formatCampaignStatus(status: string) {
+  return status
+    .split("_")
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 async function assertCampaignExists(organizationId: string, campaignId: string) {

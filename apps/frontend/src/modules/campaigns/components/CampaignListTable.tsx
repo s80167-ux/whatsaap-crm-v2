@@ -2,7 +2,19 @@ import { Button } from "../../../components/Button";
 import type { Campaign } from "../types/campaign.types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
 
-export function CampaignListTable({ campaigns, onAction }: { campaigns: Campaign[]; onAction: (message: string) => void }) {
+export function CampaignListTable({
+  campaigns,
+  onAction,
+  onPause,
+  onResume,
+  onCancel
+}: {
+  campaigns: Campaign[];
+  onAction: (message: string) => void;
+  onPause?: (campaign: Campaign) => void;
+  onResume?: (campaign: Campaign) => void;
+  onCancel?: (campaign: Campaign) => void;
+}) {
   return (
     <div className="workspace-table-wrap">
       <table className="workspace-table workspace-table-compact">
@@ -31,9 +43,26 @@ export function CampaignListTable({ campaigns, onAction }: { campaigns: Campaign
               <td>{campaign.replied.toLocaleString()}</td>
               <td>{campaign.createdAt}</td>
               <td>
-                <Button size="sm" variant="ghost" onClick={() => onAction("Campaign details are placeholder-only in this phase.")}>
-                  Review
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => onAction("Campaign progress is shown in the table.")}>
+                    Review
+                  </Button>
+                  {campaign.status === "Sending" && onPause ? (
+                    <Button size="sm" variant="secondary" onClick={() => onPause(campaign)}>
+                      Pause
+                    </Button>
+                  ) : null}
+                  {campaign.status === "Paused" && onResume ? (
+                    <Button size="sm" variant="secondary" onClick={() => onResume(campaign)}>
+                      Resume
+                    </Button>
+                  ) : null}
+                  {["Draft", "Scheduled", "Sending", "Paused", "Failed"].includes(campaign.status) && onCancel ? (
+                    <Button size="sm" variant="ghost" onClick={() => onCancel(campaign)}>
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}

@@ -55,7 +55,8 @@ export function CreateCampaignDrawer({
   onPlaceholderAction,
   whatsappAccounts,
   audienceGroups,
-  organizationId
+  organizationId,
+  onCampaignChanged
 }: {
   open: boolean;
   onClose: () => void;
@@ -63,6 +64,7 @@ export function CreateCampaignDrawer({
   whatsappAccounts: WhatsAppAccountSummary[];
   audienceGroups: AudienceGroup[];
   organizationId?: string | null;
+  onCampaignChanged?: () => void;
 }) {
   const [campaignName, setCampaignName] = useState("");
   const [senderWhatsAppAccountId, setSenderWhatsAppAccountId] = useState("");
@@ -195,6 +197,7 @@ export function CreateCampaignDrawer({
         tempo
       });
       onPlaceholderAction(`Campaign draft "${campaign.name}" saved.`, "success");
+      onCampaignChanged?.();
     } catch (error) {
       showError(error instanceof Error ? error.message : "Unable to save campaign draft.");
     } finally {
@@ -248,6 +251,7 @@ export function CreateCampaignDrawer({
 
       if (action === "Schedule Later") {
         onPlaceholderAction(`Campaign "${campaign.name}" saved for scheduling.`, "success");
+        onCampaignChanged?.();
         return;
       }
 
@@ -260,6 +264,7 @@ export function CreateCampaignDrawer({
         speedPreset: tempo.speedPreset
       });
       onPlaceholderAction(result.message, "success");
+      onCampaignChanged?.();
     } catch (error) {
       showError(error instanceof Error ? error.message : "Unable to start campaign.");
     } finally {

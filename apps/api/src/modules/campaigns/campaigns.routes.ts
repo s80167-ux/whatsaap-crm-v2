@@ -2,6 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requireRole } from "../../middleware/authMiddleware.js";
 import {
+  cancelCampaign,
   createCampaign,
   createAudienceGroup,
   deleteAudienceGroup,
@@ -11,6 +12,8 @@ import {
   importAudienceGroupContacts,
   listAudienceGroups,
   listCampaigns,
+  pauseCampaign,
+  resumeCampaign,
   sendCampaignTest,
   sendCampaignTestPreview,
   startCampaign,
@@ -36,3 +39,6 @@ campaignsRoutes.get("/:campaignId", asyncHandler(getCampaign));
 campaignsRoutes.patch("/:campaignId", asyncHandler(updateCampaign));
 campaignsRoutes.post("/:campaignId/send-test", asyncHandler(sendCampaignTest));
 campaignsRoutes.post("/:campaignId/start", asyncHandler(startCampaign));
+campaignsRoutes.post("/:campaignId/pause", asyncHandler(pauseCampaign));
+campaignsRoutes.post("/:campaignId/resume", asyncHandler(resumeCampaign));
+campaignsRoutes.post("/:campaignId/cancel", asyncHandler(cancelCampaign));

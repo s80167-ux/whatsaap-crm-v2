@@ -1,4 +1,4 @@
-export type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Completed" | "Failed";
+export type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Paused" | "Completed" | "Failed" | "Cancelled";
 
 export type CampaignSpeedPreset = "safe" | "normal" | "custom";
 
@@ -27,8 +27,11 @@ export type Campaign = {
   stopOnHighFailure?: boolean;
   status: CampaignStatus;
   recipients: number;
+  pending?: number;
+  queued?: number;
   sent: number;
   failed: number;
+  skipped?: number;
   replied: number;
   createdAt: string;
 };

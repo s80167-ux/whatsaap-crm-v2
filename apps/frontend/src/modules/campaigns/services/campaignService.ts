@@ -67,6 +67,17 @@ export function getMockCampaignStats(campaigns: Campaign[]): CampaignStats {
   };
 }
 
+export function getCampaignStats(campaigns: Campaign[]): CampaignStats {
+  return {
+    total: campaigns.length,
+    draft: campaigns.filter((campaign) => campaign.status === "Draft").length,
+    scheduled: campaigns.filter((campaign) => campaign.status === "Scheduled" || campaign.status === "Paused").length,
+    sent: campaigns.reduce((sum, campaign) => sum + campaign.sent, 0),
+    failed: campaigns.reduce((sum, campaign) => sum + campaign.failed, 0),
+    replied: campaigns.reduce((sum, campaign) => sum + campaign.replied, 0)
+  };
+}
+
 export type CreateCampaignInput = {
   organizationId?: string | null;
   name: string;
@@ -118,5 +129,29 @@ export async function startCampaign(input: {
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/start` : "/campaigns/preview/start";
   const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);
+  return response.data;
+}
+
+export async function pauseCampaign(input: { campaignId: string; organizationId?: string | null }) {
+  const response = await apiPost<{ data: { ok: true; message: string; campaign: Campaign | null } }>(
+    `/campaigns/${input.campaignId}/pause`,
+    input
+  );
+  return response.data;
+}
+
+export async function resumeCampaign(input: { campaignId: string; organizationId?: string | null }) {
+  const response = await apiPost<{ data: { ok: true; message: string; campaign: Campaign | null } }>(
+    `/campaigns/${input.campaignId}/resume`,
+    input
+  );
+  return response.data;
+}
+
+export async function cancelCampaign(input: { campaignId: string; organizationId?: string | null }) {
+  const response = await apiPost<{ data: { ok: true; message: string; campaign: Campaign | null } }>(
+    `/campaigns/${input.campaignId}/cancel`,
+    input
+  );
   return response.data;
 }

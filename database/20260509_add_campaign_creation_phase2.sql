@@ -93,6 +93,19 @@ do $$
 begin
   if exists (
     select 1
+    from information_schema.table_constraints
+    where table_name = 'campaigns'
+      and constraint_name = 'campaigns_status_check'
+  ) then
+    alter table campaigns drop constraint campaigns_status_check;
+  end if;
+
+  alter table campaigns
+    add constraint campaigns_status_check
+    check (status in ('draft', 'scheduled', 'sending', 'paused', 'completed', 'failed', 'cancelled'));
+
+  if exists (
+    select 1
     from pg_proc
     where proname = 'set_updated_at'
   ) and not exists (

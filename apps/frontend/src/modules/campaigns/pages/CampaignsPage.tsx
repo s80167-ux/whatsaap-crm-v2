@@ -1,5 +1,5 @@
 import { Megaphone } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
@@ -11,16 +11,23 @@ import { fetchAudienceGroups } from "../audience-groups/services/audienceGroupSe
 import { CampaignListTable } from "../components/CampaignListTable";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
 import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
-import { getMockCampaignStats, mockCampaigns } from "../services/campaignService";
+import { cancelCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign } from "../services/campaignService";
+import type { Campaign } from "../types/campaign.types";
 
 export function CampaignsPage() {
   const outletContext = useOutletContext<DashboardOutletContext>();
   const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : null;
   const shouldFetchOrganizationData = !outletContext.isSuperAdmin || Boolean(organizationId);
+  const queryClient = useQueryClient();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
-  const stats = useMemo(() => getMockCampaignStats(mockCampaigns), []);
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(organizationId, shouldFetchOrganizationData);
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["campaigns", organizationId],
+    queryFn: () => fetchCampaigns(organizationId),
+    enabled: shouldFetchOrganizationData
+  });
+  const stats = useMemo(() => getCampaignStats(campaigns), [campaigns]);
   const { data: audienceGroups = [] } = useQuery({
     queryKey: ["audience-groups", organizationId],
     queryFn: () => fetchAudienceGroups(organizationId),
@@ -30,6 +37,37 @@ export function CampaignsPage() {
   function showPlaceholderNotice(message: string, variant: "success" | "error" = "success") {
     setNotice({ message, variant });
   }
+
+  async function refreshCampaigns() {
+    await queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] });
+  }
+
+  const pauseMutation = useMutation({
+    mutationFn: (campaign: Campaign) => pauseCampaign({ campaignId: campaign.id, organizationId }),
+    onSuccess: async (result) => {
+      showPlaceholderNotice(result.message, "success");
+      await refreshCampaigns();
+    },
+    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to pause campaign.", "error")
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (campaign: Campaign) => resumeCampaign({ campaignId: campaign.id, organizationId }),
+    onSuccess: async (result) => {
+      showPlaceholderNotice(result.message, "success");
+      await refreshCampaigns();
+    },
+    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to resume campaign.", "error")
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (campaign: Campaign) => cancelCampaign({ campaignId: campaign.id, organizationId }),
+    onSuccess: async (result) => {
+      showPlaceholderNotice(result.message, "success");
+      await refreshCampaigns();
+    },
+    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to cancel campaign.", "error")
+  });
 
   return (
     <section className="space-y-5">
@@ -60,9 +98,15 @@ export function CampaignsPage() {
       <Card elevated className="space-y-4 p-4 sm:p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Campaign list</p>
-          <p className="mt-2 text-sm text-text-muted">Mock campaign data for module scaffolding. Sending is not connected.</p>
+          <p className="mt-2 text-sm text-text-muted">Live campaign progress from paced dispatch.</p>
         </div>
-        <CampaignListTable campaigns={mockCampaigns} onAction={showPlaceholderNotice} />
+        <CampaignListTable
+          campaigns={campaigns}
+          onAction={showPlaceholderNotice}
+          onPause={(campaign) => pauseMutation.mutate(campaign)}
+          onResume={(campaign) => resumeMutation.mutate(campaign)}
+          onCancel={(campaign) => cancelMutation.mutate(campaign)}
+        />
       </Card>
 
       <CreateCampaignDrawer
@@ -72,6 +116,7 @@ export function CampaignsPage() {
         whatsappAccounts={whatsappAccounts}
         audienceGroups={audienceGroups}
         organizationId={organizationId}
+        onCampaignChanged={() => void refreshCampaigns()}
       />
       <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} />
     </section>

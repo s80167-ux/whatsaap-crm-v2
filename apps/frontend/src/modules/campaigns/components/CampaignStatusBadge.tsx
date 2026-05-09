@@ -5,8 +5,10 @@ const statusClasses: Record<CampaignStatus, string> = {
   Draft: "border-slate-200 bg-slate-100 text-slate-600",
   Scheduled: "border-amber-200 bg-amber-50 text-amber-700",
   Sending: "border-blue-200 bg-blue-50 text-blue-700",
+  Paused: "border-violet-200 bg-violet-50 text-violet-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-coral/20 bg-coral/10 text-coral"
+  Failed: "border-coral/20 bg-coral/10 text-coral",
+  Cancelled: "border-slate-300 bg-white text-slate-500"
 };
 
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {

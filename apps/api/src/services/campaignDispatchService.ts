@@ -202,6 +202,26 @@ export class CampaignDispatchService {
 
   private async processRecipient(recipient: ClaimedCampaignRecipient) {
     try {
+      const campaignStatus = await this.getCampaignStatus(recipient.organization_id, recipient.campaign_id);
+
+      if (campaignStatus !== "sending") {
+        await query(
+          `
+            update campaign_recipients
+            set send_status = case when $4 = 'cancelled' then 'skipped' else 'pending' end,
+                queued_at = null,
+                next_attempt_at = null,
+                error_message = case when $4 = 'cancelled' then 'Campaign cancelled before dispatch' else null end
+            where organization_id = $1
+              and campaign_id = $2
+              and id = $3
+              and message_id is null
+          `,
+          [recipient.organization_id, recipient.campaign_id, recipient.id, campaignStatus]
+        );
+        return;
+      }
+
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
         campaignId: recipient.campaign_id,
@@ -266,6 +286,21 @@ export class CampaignDispatchService {
     } finally {
       await this.refreshCampaignCompletion(recipient.organization_id, recipient.campaign_id);
     }
+  }
+
+  private async getCampaignStatus(organizationId: string, campaignId: string) {
+    const result = await query<{ status: string }>(
+      `
+        select status
+        from campaigns
+        where organization_id = $1
+          and id = $2
+        limit 1
+      `,
+      [organizationId, campaignId]
+    );
+
+    return result.rows[0]?.status ?? null;
   }
 
   private async sendCampaignRecipientMessage(input: {
