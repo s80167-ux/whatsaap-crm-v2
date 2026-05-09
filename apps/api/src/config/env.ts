@@ -44,6 +44,7 @@ const envSchema = z.object({
   CONNECTOR_BASE_URL: z.string().url().default("http://localhost:4010"),
   CONNECTOR_INTERNAL_SECRET: z.string().min(1).default("rezeki_crm_connector_2026_x7Kp91LmQ2s8"),
   ALLOW_LOCAL_CONNECTOR_SEND: z.coerce.boolean().default(false),
+  EMBED_RAW_EVENT_WORKER: z.coerce.boolean().optional(),
   RAW_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(50),
   RAW_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(500),
   RAW_EVENT_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),
@@ -69,5 +70,6 @@ const parsedEnv = envSchema.parse({
 
 export const env = {
   ...parsedEnv,
-  COOKIE_SECURE: parsedEnv.COOKIE_SECURE ?? parsedEnv.NODE_ENV === "production"
+  COOKIE_SECURE: parsedEnv.COOKIE_SECURE ?? parsedEnv.NODE_ENV === "production",
+  EMBED_RAW_EVENT_WORKER: parsedEnv.EMBED_RAW_EVENT_WORKER ?? parsedEnv.NODE_ENV === "production"
 };

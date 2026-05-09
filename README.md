@@ -88,6 +88,7 @@ npm run create:user -- --email owner@example.com --password StrongPass123 --role
 9. Start backend: `npm run dev:backend`
 10. Start WhatsApp connector: `npm run dev:connector`
 11. Start raw event worker: `npm run worker:raw-events`
+  In production, `apps/api` now also starts an embedded raw event worker by default, so inbound WhatsApp events still drain if the standalone worker was not started. Set `EMBED_RAW_EVENT_WORKER=false` if you want only the dedicated worker process to handle raw events.
 12. Start outbound message worker: `npm run worker:message-outbox`
 13. Start frontend: `npm run dev:frontend`
 14. If you are migrating existing data, rebuild projection tables once:
