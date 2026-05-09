@@ -2,6 +2,14 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
+import { ContactService } from "../../services/contactService.js";
+import { ConversationService } from "../../services/conversationService.js";
+import { SendMessageService } from "../../services/sendMessageService.js";
+import { normalizePhoneNumber } from "../../utils/phone.js";
+
+const contactService = new ContactService();
+const conversationService = new ConversationService();
+const sendMessageService = new SendMessageService();
 
 const audienceGroupParamsSchema = z.object({
   audienceGroupId: z.string().uuid()
@@ -304,27 +312,47 @@ export async function updateCampaign(request: Request, response: Response) {
 }
 
 export async function sendCampaignTestPreview(request: Request, response: Response) {
+  const auth = requireAuth(request);
   const input = sendTestBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const message = await sendCampaignTestMessage({
+    organizationId,
+    organizationUserId: auth.organizationUserId,
+    senderWhatsAppAccountId: input.senderWhatsAppAccountId,
+    testPhoneNumber: input.testPhoneNumber,
+    messageTemplate: input.messageTemplate
+  });
+
   return response.json({
     data: {
       ok: true,
-      message: `Test message would be sent from ${input.senderWhatsAppAccountId} to ${input.testPhoneNumber}.`
+      message: `Test message sent to ${input.testPhoneNumber}.`,
+      messageId: message.id
     }
   });
 }
 
 export async function sendCampaignTest(request: Request, response: Response) {
+  const auth = requireAuth(request);
   const { campaignId } = campaignParamsSchema.parse(request.params);
   const input = sendTestBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
   await assertCampaignExists(organizationId, campaignId);
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const message = await sendCampaignTestMessage({
+    organizationId,
+    organizationUserId: auth.organizationUserId,
+    senderWhatsAppAccountId: input.senderWhatsAppAccountId,
+    testPhoneNumber: input.testPhoneNumber,
+    messageTemplate: input.messageTemplate
+  });
+
   return response.json({
     data: {
       ok: true,
-      message: `Test message would be sent from ${input.senderWhatsAppAccountId} to ${input.testPhoneNumber}.`
+      message: `Test message sent to ${input.testPhoneNumber}.`,
+      messageId: message.id
     }
   });
 }
@@ -619,4 +647,45 @@ async function assertReadyAudienceGroup(organizationId: string, audienceGroupId:
   if (!group || group.status !== "imported" || group.valid_count <= 0) {
     throw new AppError("Audience Group with valid contacts is required", 400, "audience_group_not_ready");
   }
+}
+
+async function sendCampaignTestMessage(input: {
+  organizationId: string;
+  organizationUserId?: string | null;
+  senderWhatsAppAccountId: string;
+  testPhoneNumber: string;
+  messageTemplate: string;
+}) {
+  const normalizedPhone = normalizePhoneNumber(input.testPhoneNumber);
+
+  if (!normalizedPhone) {
+    throw new AppError("Enter a valid test phone number", 400, "invalid_test_phone_number");
+  }
+
+  const recipientJid = `${normalizedPhone.replace(/\D/g, "")}@s.whatsapp.net`;
+  const conversation = await withTransaction(async (client) => {
+    const { contact } = await contactService.findOrCreateCanonicalContact(client, {
+      organizationId: input.organizationId,
+      whatsappAccountId: input.senderWhatsAppAccountId,
+      whatsappJid: recipientJid,
+      phoneRaw: normalizedPhone,
+      profileName: "Campaign Test",
+      profilePushName: null,
+      profileAvatarUrl: null
+    });
+
+    return conversationService.findOrCreateConversation(client, {
+      organizationId: input.organizationId,
+      whatsappAccountId: input.senderWhatsAppAccountId,
+      contactId: contact.id
+    });
+  });
+
+  return sendMessageService.send({
+    organizationId: input.organizationId,
+    whatsappAccountId: input.senderWhatsAppAccountId,
+    conversationId: conversation.id,
+    organizationUserId: input.organizationUserId ?? null,
+    text: input.messageTemplate
+  }, { waitForDispatch: true });
 }

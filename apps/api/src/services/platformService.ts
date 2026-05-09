@@ -247,7 +247,7 @@ export class PlatformService {
     if (input.processNow && retried > 0) {
       for (const outboxId of outboxIds) {
         const didProcess = await this.messageDispatchService.drainOne(outboxId);
-        processed += didProcess ? 1 : 0;
+        processed += didProcess.ok ? 1 : 0;
       }
     }
 

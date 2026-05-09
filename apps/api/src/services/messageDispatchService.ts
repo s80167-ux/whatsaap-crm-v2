@@ -82,7 +82,7 @@ export class MessageDispatchService {
     return claimed.length;
   }
 
-  async processJob(job: MessageDispatchOutboxRecord) {
+  async processJob(job: MessageDispatchOutboxRecord): Promise<{ ok: true } | { ok: false; errorMessage: string }> {
     try {
       const outbound = await this.connectorClient.sendMessage({
         accountId: job.whatsapp_account_id,
@@ -135,6 +135,8 @@ export class MessageDispatchService {
           payload: outbound ?? null
         });
       });
+
+      return { ok: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to dispatch message";
       const nextAttemptAt = new Date(Date.now() + Math.min(job.attempt_count, 5) * 15000);
@@ -161,6 +163,7 @@ export class MessageDispatchService {
       });
 
       logger.error({ error, outboxId: job.id, messageId: job.message_id }, "Failed to dispatch outbound message");
+      return { ok: false, errorMessage };
     }
   }
 
@@ -181,11 +184,10 @@ export class MessageDispatchService {
       const job = result.rows[0] ?? null;
 
       if (!job) {
-        return false;
+        return { ok: false as const, errorMessage: "Pending outbound job not found" };
       }
 
-      await this.processJob(job);
-      return true;
+      return this.processJob(job);
     } finally {
       client.release();
     }
@@ -207,7 +209,15 @@ export class MessageDispatchService {
         };
       }
 
-      await this.processJob(job);
+      const dispatchResult = await this.processJob(job);
+
+      if (!dispatchResult.ok) {
+        return {
+          ok: false,
+          reason: dispatchResult.errorMessage,
+          outboxId: job.id
+        };
+      }
 
       return {
         ok: true,

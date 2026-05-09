@@ -5,7 +5,7 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
-import type { SendMessageInput } from "../types/domain.js";
+import type { SendMessageInput, SendMessageOptions } from "../types/domain.js";
 import { MessageDispatchService } from "./messageDispatchService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
@@ -19,7 +19,7 @@ export class SendMessageService {
     private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
   ) {}
 
-  async send(input: SendMessageInput) {
+  async send(input: SendMessageInput, options: SendMessageOptions = {}) {
     const normalizedText = input.text?.trim() ?? "";
     const hasAttachment = Boolean(input.attachment);
 
@@ -193,9 +193,20 @@ export class SendMessageService {
 };
     });
 
-    void this.messageDispatchService.drainOne(outboxId).catch((error) => {
+    if (options.waitForDispatch) {
+      const dispatchResult = await this.messageDispatchService.drainOne(outboxId);
+
+      if (!dispatchResult.ok) {
+        throw new AppError(dispatchResult.errorMessage, 502, "message_dispatch_failed", {
+          messageId: message.id,
+          outboxId
+        });
+      }
+    } else {
+      void this.messageDispatchService.drainOne(outboxId).catch((error) => {
   logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
 });
+    }
     return message;
   }
 

@@ -109,6 +109,10 @@ export interface SendMessageInput {
   attachment?: OutboundMediaAttachmentInput | null;
 }
 
+export interface SendMessageOptions {
+  waitForDispatch?: boolean;
+}
+
 export interface OutboundMediaAttachmentInput {
   kind: "image" | "video" | "audio" | "document";
   fileName: string;

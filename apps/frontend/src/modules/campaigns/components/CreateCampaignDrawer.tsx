@@ -6,6 +6,7 @@ import { Input, Select } from "../../../components/Input";
 import type { WhatsAppAccountSummary } from "../../../types/admin";
 import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types";
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
+import { sendCampaignTest } from "../services/campaignService";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
 import type { CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
@@ -70,6 +71,7 @@ export function CreateCampaignDrawer({
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
   const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   const connectedAccounts = useMemo(
     () => whatsappAccounts.filter((account) => connectedStatuses.has(account.status.toLowerCase())),
@@ -174,7 +176,7 @@ export function CreateCampaignDrawer({
     onPlaceholderAction(`Campaign draft "${campaignName.trim()}" would be saved.`);
   }
 
-  function handleSendTest() {
+  async function handleSendTest() {
     if (!validateSender() || !validateTemplate()) {
       return;
     }
@@ -184,7 +186,21 @@ export function CreateCampaignDrawer({
       return;
     }
 
-    onPlaceholderAction(`Test message would be sent from ${senderLabel} to ${testPhoneNumber.trim()}.`);
+    setIsSendingTest(true);
+
+    try {
+      const result = await sendCampaignTest({
+        organizationId,
+        senderWhatsAppAccountId,
+        testPhoneNumber: testPhoneNumber.trim(),
+        messageTemplate: preview
+      });
+      onPlaceholderAction(result.message || `Test message queued from ${senderLabel} to ${testPhoneNumber.trim()}.`, "success");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to send test message.");
+    } finally {
+      setIsSendingTest(false);
+    }
   }
 
   function handleStartCampaign(action: "Schedule Later" | "Start Campaign") {
@@ -338,7 +354,9 @@ export function CreateCampaignDrawer({
 
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="secondary" onClick={handleSaveDraft}>Save Draft</Button>
-            <Button variant="secondary" disabled={actionDisabled} onClick={handleSendTest}>Send Test</Button>
+            <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
+              {isSendingTest ? "Sending..." : "Send Test"}
+            </Button>
             <Button variant="secondary" disabled={startDisabled} onClick={() => handleStartCampaign("Schedule Later")}>Schedule Later</Button>
             <Button disabled={startDisabled} onClick={() => handleStartCampaign("Start Campaign")}>Start Campaign</Button>
           </div>
