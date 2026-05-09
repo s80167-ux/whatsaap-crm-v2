@@ -32297,3 +32297,1334 @@
     [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
     [35mstatusCode[39m: 200
     [35mdurationMs[39m: 371
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 357.606 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 447.856 ms - 38604[0m
+[02:27:08.610] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "b1218953-aaf2-455b-8f78-bb227b841892"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:08.611] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "9a64ae9b-6fff-4416-9d35-1194c8e73112"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:08.969] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "9a64ae9b-6fff-4416-9d35-1194c8e73112"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 358
+[02:27:09.058] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "b1218953-aaf2-455b-8f78-bb227b841892"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 448
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 440.992 ms - 15052[0m
+[02:27:10.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "2325ec2a-9c11-4bb2-9563-5dbbe054eab4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:11.063] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "2325ec2a-9c11-4bb2-9563-5dbbe054eab4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 441
+[02:27:11.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d4a6dd47-5dad-4080-8f4e-f298634ab49d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 522.163 ms - 38604[0m
+[02:27:12.144] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d4a6dd47-5dad-4080-8f4e-f298634ab49d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 523
+[02:27:12.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "83b3ed00-09d6-4e41-a401-f6a203b76939"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 432.612 ms - 15052[0m
+[02:27:13.054] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "83b3ed00-09d6-4e41-a401-f6a203b76939"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 433
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 359.072 ms - 15052[0m
+[02:27:14.627] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "fa454571-818a-499b-9075-a9094cfce32e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:14.987] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "fa454571-818a-499b-9075-a9094cfce32e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 360
+[02:27:15.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d5f10470-beaa-4b60-9997-f2eb7c324030"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 438.900 ms - 38604[0m
+[02:27:16.057] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d5f10470-beaa-4b60-9997-f2eb7c324030"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 440
+[02:27:16.611] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e8dd6fbd-3788-41eb-a862-4e974ca4878f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 358.570 ms - 15052[0m
+[02:27:16.970] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e8dd6fbd-3788-41eb-a862-4e974ca4878f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 359
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 423.071 ms - 15052[0m
+[02:27:18.655] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "cc8df622-c556-4308-8469-16ab379cdd81"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:18.659] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "0b4c89bf-d30f-4329-900b-e37a17d17311"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:19.078] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "cc8df622-c556-4308-8469-16ab379cdd81"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 423
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 740.122 ms - 38604[0m
+[02:27:19.400] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "0b4c89bf-d30f-4329-900b-e37a17d17311"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 741
+[02:27:20.610] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "48e9819c-b33a-4d40-b156-765a475a015a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 501.559 ms - 15052[0m
+[02:27:21.113] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "48e9819c-b33a-4d40-b156-765a475a015a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 502
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 359.246 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 579.019 ms - 38604[0m
+[02:27:22.613] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "ce824a95-889a-494a-a6ec-02885a8f9c29"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:22.615] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "4f239859-75cd-4ca1-a8ec-8d6fb3220a33"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:22.974] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "4f239859-75cd-4ca1-a8ec-8d6fb3220a33"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 359
+[02:27:23.193] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "ce824a95-889a-494a-a6ec-02885a8f9c29"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 580
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 356.087 ms - 15052[0m
+[02:27:24.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "29a98565-550e-4ecd-8a0e-142ca783192e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:24.976] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "29a98565-550e-4ecd-8a0e-142ca783192e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 356
+[02:27:26.624] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "20bcc10e-5f02-4a30-aa5d-a9f433d55839"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:26.627] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "96430b3e-590e-4107-abf0-5b3d5622a649"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 371.080 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 455.496 ms - 38604[0m
+[02:27:26.999] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "96430b3e-590e-4107-abf0-5b3d5622a649"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[02:27:27.080] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "20bcc10e-5f02-4a30-aa5d-a9f433d55839"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 456
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 373.652 ms - 15052[0m
+[02:27:28.638] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "145a483c-5439-49c0-9523-8b1263b017ad"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:29.013] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "145a483c-5439-49c0-9523-8b1263b017ad"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 375
+[02:27:29.627] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6d57df0d-02e9-4df9-8525-0d7fce32e98c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 491.090 ms - 38604[0m
+[02:27:30.119] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6d57df0d-02e9-4df9-8525-0d7fce32e98c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 492
+[02:27:30.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "ead51d0f-3f09-4922-8f67-7ee8a5d5f3dc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 365.001 ms - 15052[0m
+[02:27:30.983] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "ead51d0f-3f09-4922-8f67-7ee8a5d5f3dc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 366
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 433.706 ms - 15052[0m
+[02:27:32.639] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "fba2d672-f65b-49ea-bf9e-5de79c54692c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:33.073] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "fba2d672-f65b-49ea-bf9e-5de79c54692c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 434
+[02:27:33.624] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6e86c129-1ad5-4d41-954e-539dc43fbbfb"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 524.053 ms - 38604[0m
+[02:27:34.149] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6e86c129-1ad5-4d41-954e-539dc43fbbfb"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 525
+[02:27:34.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d60610d8-2ce9-4d74-aaf4-4e0e7cc1ac91"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 450.242 ms - 15052[0m
+[02:27:35.072] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d60610d8-2ce9-4d74-aaf4-4e0e7cc1ac91"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 451
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 445.903 ms - 15052[0m
+[02:27:36.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a8f1677a-856e-4a57-af4d-32c4108505ec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:37.063] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a8f1677a-856e-4a57-af4d-32c4108505ec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 446
+[02:27:37.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "c1dee400-096f-448d-86c8-39174ce261e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 447.623 ms - 38604[0m
+[02:27:38.064] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "c1dee400-096f-448d-86c8-39174ce261e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 448
+[02:27:38.614] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6586ecfd-b8e9-411b-9493-2fe281d928b0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 392.778 ms - 15052[0m
+[02:27:39.007] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6586ecfd-b8e9-411b-9493-2fe281d928b0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 393
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 359.490 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 471.511 ms - 38604[0m
+[02:27:40.614] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "09770c72-5386-43af-bfd8-fa8e7920bf24"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:40.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "ea3bb6c9-1c98-41b0-a976-7f4711de9b3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:40.974] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "09770c72-5386-43af-bfd8-fa8e7920bf24"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 360
+[02:27:41.089] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "ea3bb6c9-1c98-41b0-a976-7f4711de9b3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 472
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 371.185 ms - 15052[0m
+[02:27:42.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "3c6e94ee-2fda-497b-8e5a-66841a0f56e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:42.991] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "3c6e94ee-2fda-497b-8e5a-66841a0f56e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 371
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 370.923 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 462.741 ms - 38604[0m
+[02:27:44.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "eb7fb114-ef62-46ad-bdaa-529e399c0fb8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:44.619] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a39945f9-6948-4d9a-b9c7-35b95ef12380"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:44.991] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a39945f9-6948-4d9a-b9c7-35b95ef12380"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[02:27:45.081] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "eb7fb114-ef62-46ad-bdaa-529e399c0fb8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 464
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 358.861 ms - 15052[0m
+[02:27:46.624] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "26c3d2b3-7962-4123-98ed-58842eda5606"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:46.984] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "26c3d2b3-7962-4123-98ed-58842eda5606"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 360
+[02:27:47.629] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "ec79c2c4-25b1-4718-8ac0-f909caa4f07c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 453.974 ms - 38604[0m
+[02:27:48.084] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "ec79c2c4-25b1-4718-8ac0-f909caa4f07c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 455
+[02:27:48.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "863a7a88-94a0-471d-bc53-91704bbcc344"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 377.185 ms - 15052[0m
+[02:27:48.999] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "863a7a88-94a0-471d-bc53-91704bbcc344"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 378
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 365.820 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 487.893 ms - 38604[0m
+[02:27:50.630] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "5fcd9dea-ecb0-4b68-8ced-18bd101b8951"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:50.633] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "54e30993-ae55-4aef-b97b-1464144c937e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:50.996] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "5fcd9dea-ecb0-4b68-8ced-18bd101b8951"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 366
+[02:27:51.122] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "54e30993-ae55-4aef-b97b-1464144c937e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 489
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 360.755 ms - 15052[0m
+[02:27:52.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "202f47d8-0c1d-4c41-9587-97e0999831d3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:52.974] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "202f47d8-0c1d-4c41-9587-97e0999831d3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 358
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 367.662 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 446.946 ms - 38604[0m
+[02:27:54.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "8ed1a53b-b798-4706-b317-0234171be730"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:54.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e95483ae-5bc9-4564-bd26-ff8cb1447ee8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:54.988] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e95483ae-5bc9-4564-bd26-ff8cb1447ee8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 368
+[02:27:55.063] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "8ed1a53b-b798-4706-b317-0234171be730"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 447
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 357.041 ms - 15052[0m
+[02:27:56.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e8ac496f-5750-440f-95d4-f7efe83f3607"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:56.974] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e8ac496f-5750-440f-95d4-f7efe83f3607"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 358
+[02:27:57.626] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d62a6afe-1731-4db8-b551-3d1247df8289"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 454.583 ms - 38604[0m
+[02:27:58.081] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d62a6afe-1731-4db8-b551-3d1247df8289"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 455
+[02:27:58.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "58106d1e-2938-493d-8713-65c054467e7f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:27:58.624] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "5795cf33-1130-41c6-9669-8dfce5de343d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 365.192 ms - 15052[0m
+[02:27:58.989] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "5795cf33-1130-41c6-9669-8dfce5de343d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 365
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 436.898 ms - 38604[0m
+[02:27:59.059] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "58106d1e-2938-493d-8713-65c054467e7f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 437
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 360.808 ms - 15052[0m
+[02:28:00.605] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "fe69832c-d454-4cd1-b154-9a5f1728cc57"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:00.966] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "fe69832c-d454-4cd1-b154-9a5f1728cc57"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 361
+[02:28:01.628] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "33a6b132-4df2-4332-b5b2-e936bed87fc7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 458.965 ms - 38604[0m
+[02:28:02.088] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "33a6b132-4df2-4332-b5b2-e936bed87fc7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 460
+[02:28:02.608] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "629e51bb-5360-43fe-9023-63d3bff539fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 394.910 ms - 15052[0m
+[02:28:03.003] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "629e51bb-5360-43fe-9023-63d3bff539fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 395
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 372.212 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 483.408 ms - 38604[0m
+[02:28:04.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d4952113-577b-45e9-ba15-027addbab3f2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:04.619] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "23dd054d-9290-42c3-8d25-19511c18a414"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:04.989] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d4952113-577b-45e9-ba15-027addbab3f2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[02:28:05.103] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "23dd054d-9290-42c3-8d25-19511c18a414"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 484
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 368.042 ms - 15052[0m
+[02:28:06.623] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "b6207a87-1ae7-4624-8b12-d70e324d8d72"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:06.992] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "b6207a87-1ae7-4624-8b12-d70e324d8d72"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 369
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 358.560 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 468.614 ms - 38604[0m
+[02:28:08.642] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "825c347c-3ddf-4cc6-9135-74f501943a15"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:08.647] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "f5bfc532-19f5-496d-a668-78adbef4c8cf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:09.006] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "f5bfc532-19f5-496d-a668-78adbef4c8cf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 359
+[02:28:09.111] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "825c347c-3ddf-4cc6-9135-74f501943a15"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 469
+[02:28:10.609] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "da6efc69-a215-4861-846b-92e83f5f12c6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 364.405 ms - 15052[0m
+[02:28:10.974] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "da6efc69-a215-4861-846b-92e83f5f12c6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 365
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 377.439 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 459.182 ms - 38604[0m
+[02:28:12.627] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "c8c09178-ebcc-409a-bd07-3c9fbce86d45"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:12.638] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "c095bb7d-88a3-44b2-9aaf-9010d6aef9ae"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:13.016] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "c095bb7d-88a3-44b2-9aaf-9010d6aef9ae"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 378
+[02:28:13.087] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "c8c09178-ebcc-409a-bd07-3c9fbce86d45"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 460
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 372.755 ms - 15052[0m
+[02:28:14.612] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a2a642de-e5a1-449b-af95-695678c64cb9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:14.985] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a2a642de-e5a1-449b-af95-695678c64cb9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 373
+[02:28:15.605] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e56817a4-7dc9-427e-acdf-9cd2206b4885"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 435.523 ms - 38604[0m
+[02:28:16.041] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e56817a4-7dc9-427e-acdf-9cd2206b4885"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 436
+[02:28:16.619] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e7fd857e-a6cc-4356-9efa-77aa0bbafd92"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 368.978 ms - 15052[0m
+[02:28:16.988] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e7fd857e-a6cc-4356-9efa-77aa0bbafd92"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 369
+[02:28:17.989] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "7ac255c9-b583-4e11-b444-31cb9639b5a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[02:28:17.992] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "2bcda573-ea55-4b50-9d3f-b57c3d57fbaf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[02:28:18.009] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "aca94eaa-f190-4156-b6c4-b4cc02bf757d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:18.011] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "3399b74c-92b8-4a83-adea-7afbde2fd2bc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:18.013] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "2da1525e-7e68-4725-b686-19b2b731e4c4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/quick-replies?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:18.022] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "901e73d4-f346-4e55-bf61-c86dacda2d42"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/sales/orders?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/auth/me [32m200[0m 478.144 ms - 725[0m
+[02:28:18.467] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "7ac255c9-b583-4e11-b444-31cb9639b5a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 478
+[02:28:18.469] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "faa3ff39-4f43-432c-99cb-d29edec4874f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/users?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/organizations [32m200[0m 812.520 ms - 176[0m
+[0mGET /api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 1024.633 ms - 782[0m
+[02:28:18.805] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "2bcda573-ea55-4b50-9d3f-b57c3d57fbaf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 813
+[02:28:18.806] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "664309ff-206d-4f9a-a602-230fef8b367f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/contacts/62492139-80e1-42cf-bf3d-ecbeb6e87e0c"
+[02:28:19.035] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "aca94eaa-f190-4156-b6c4-b4cc02bf757d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/whatsapp-accounts?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1026
+[02:28:19.037] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "06df981b-82e4-4b33-b9ef-5ca9d863210c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/quick-replies?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 1101.428 ms - 11[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 1124.991 ms - 38604[0m
+[02:28:19.115] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "2da1525e-7e68-4725-b686-19b2b731e4c4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/quick-replies?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1102
+[02:28:19.118] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "29d3dd4e-ac5c-4cd6-84e6-2277befa5dcd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:19.137] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "3399b74c-92b8-4a83-adea-7afbde2fd2bc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1126
+[02:28:19.139] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "8c3844bb-f3d5-4400-84b4-d5964b06b37a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/admin/users?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 751.257 ms - 925[0m
+[02:28:19.221] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "faa3ff39-4f43-432c-99cb-d29edec4874f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/admin/users?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 752
+[02:28:19.222] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "83adad9e-3987-4d76-a166-d8c12f14a7a5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/sales/orders?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 1285.029 ms - 3013[0m
+[02:28:19.308] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "901e73d4-f346-4e55-bf61-c86dacda2d42"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/sales/orders?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1286
+[02:28:19.310] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "2f3cbbaa-c848-4293-84af-f1f23aae01c9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/contacts/62492139-80e1-42cf-bf3d-ecbeb6e87e0c [32m200[0m 749.885 ms - 729[0m
+[02:28:19.557] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "664309ff-206d-4f9a-a602-230fef8b367f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/contacts/62492139-80e1-42cf-bf3d-ecbeb6e87e0c"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 751
+[02:28:19.613] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "fb8ff029-92b4-4789-af51-46a43206932b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 765.782 ms - 15052[0m
+[02:28:19.804] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "06df981b-82e4-4b33-b9ef-5ca9d863210c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 767
+[02:28:19.807] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "88daf40c-9e0d-4f5d-a537-ffee73443edc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 747.397 ms - 15052[0m
+[02:28:19.887] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "8c3844bb-f3d5-4400-84b4-d5964b06b37a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 748
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 806.305 ms - 38604[0m
+[02:28:19.925] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "29d3dd4e-ac5c-4cd6-84e6-2277befa5dcd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 807
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 755.443 ms - 38604[0m
+[02:28:19.978] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "83adad9e-3987-4d76-a166-d8c12f14a7a5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 756
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 755.045 ms - 15052[0m
+[02:28:20.066] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "2f3cbbaa-c848-4293-84af-f1f23aae01c9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 756
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 567.164 ms - 38604[0m
+[02:28:20.181] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "fb8ff029-92b4-4789-af51-46a43206932b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 568
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 508.579 ms - 15052[0m
+[02:28:20.316] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "88daf40c-9e0d-4f5d-a537-ffee73443edc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 509
+[02:28:20.619] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d14d5af8-341e-47c4-95e9-606d44a5ef7e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:20.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "0dfd709a-1fca-4926-9785-6964bc55ac5b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 362.894 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 447.825 ms - 38604[0m
+[02:28:20.984] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "0dfd709a-1fca-4926-9785-6964bc55ac5b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 363
+[02:28:21.068] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d14d5af8-341e-47c4-95e9-606d44a5ef7e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 449
+[02:28:21.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "bee463d8-d964-416e-a341-7f09a4aee6ea"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:21.623] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "286192de-46bd-41e2-8f29-f5673d16bca4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 358.857 ms - 15052[0m
+[02:28:21.983] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "286192de-46bd-41e2-8f29-f5673d16bca4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 360
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 446.466 ms - 38604[0m
+[02:28:22.069] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "bee463d8-d964-416e-a341-7f09a4aee6ea"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 447
+[02:28:22.605] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6ba83640-2525-446f-85f3-1bd61d109e7b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:22.607] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "df089f9e-b68b-474d-8b16-ea24e97f39fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 365.336 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 442.489 ms - 38604[0m
+[02:28:22.972] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "df089f9e-b68b-474d-8b16-ea24e97f39fc"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 365
+[02:28:23.048] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6ba83640-2525-446f-85f3-1bd61d109e7b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 443
+[02:28:23.629] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d1700968-12c6-4b3f-bfae-f7bdc9fe8b82"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:23.630] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "03f0b7d2-f3fc-46c0-a1f8-b83416b15fd6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 368.290 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 446.655 ms - 38604[0m
+[02:28:23.999] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "03f0b7d2-f3fc-46c0-a1f8-b83416b15fd6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 369
+[02:28:24.076] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d1700968-12c6-4b3f-bfae-f7bdc9fe8b82"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 447
+[02:28:24.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "cf7bbd9c-159f-4b8d-89ca-1c53e73e15e3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:24.623] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a3b92ac1-9a4d-4a3d-8034-b89eb8437c94"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 355.230 ms - 15052[0m
+[02:28:24.979] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a3b92ac1-9a4d-4a3d-8034-b89eb8437c94"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 356
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 456.495 ms - 38604[0m
+[02:28:25.078] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "cf7bbd9c-159f-4b8d-89ca-1c53e73e15e3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 456
+[02:28:25.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e0fc2e3c-56b9-4ecf-97f1-49e52b1313fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:25.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6e9ac11a-a679-4db6-bd23-a33a21cfccec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 375.162 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 466.313 ms - 38604[0m
+[02:28:25.993] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6e9ac11a-a679-4db6-bd23-a33a21cfccec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 376
+[02:28:26.083] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e0fc2e3c-56b9-4ecf-97f1-49e52b1313fd"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 467
+[02:28:26.627] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "089ab888-41b0-405e-904f-e354cd368770"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:26.629] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d3fd76cb-e7f3-432c-917b-b11f98c9cec8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 357.935 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 444.660 ms - 38604[0m
+[02:28:26.988] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d3fd76cb-e7f3-432c-917b-b11f98c9cec8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 359
+[02:28:27.073] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "089ab888-41b0-405e-904f-e354cd368770"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 446
+[02:28:27.628] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "9cf2f3fe-45a4-4758-ad5d-927c6b457967"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:27.631] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "8d859e45-352e-474f-9fcd-3c9d1395c981"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 376.451 ms - 15052[0m
+[02:28:28.009] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "8d859e45-352e-474f-9fcd-3c9d1395c981"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 378
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 462.423 ms - 38604[0m
+[02:28:28.091] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "9cf2f3fe-45a4-4758-ad5d-927c6b457967"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 463
+[02:28:28.610] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "b93646a6-3fe1-4f63-a006-d838355b229f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:28.612] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "bdd63cc1-4eaa-4173-9813-ad32c198f884"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 363.067 ms - 15052[0m
+[02:28:28.975] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "bdd63cc1-4eaa-4173-9813-ad32c198f884"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 363
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 442.877 ms - 38604[0m
+[02:28:29.053] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "b93646a6-3fe1-4f63-a006-d838355b229f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 443
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 365.554 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 445.390 ms - 38604[0m
+[02:28:29.608] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "118e593d-ff08-4b03-98eb-db4d5e0e1a79"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:29.610] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "fd039946-81a5-4547-9c04-a357682ff9fb"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:29.976] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "fd039946-81a5-4547-9c04-a357682ff9fb"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 366
+[02:28:30.054] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "118e593d-ff08-4b03-98eb-db4d5e0e1a79"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 446
+[02:28:30.626] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "33ffe7fb-467a-46c0-913e-869e274e094e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:30.629] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "c3317b8d-d3fa-4509-861c-124716d70089"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 368.422 ms - 15052[0m
+[02:28:30.998] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "c3317b8d-d3fa-4509-861c-124716d70089"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 369
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 445.405 ms - 38604[0m
+[02:28:31.072] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "33ffe7fb-467a-46c0-913e-869e274e094e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 446
+[02:28:31.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "c737d130-4d70-4f1a-b8b1-004011882b28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:31.624] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "380095ca-f160-4404-9efe-9c06b7b6ff9d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 354.483 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 453.630 ms - 38604[0m
+[02:28:31.979] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "380095ca-f160-4404-9efe-9c06b7b6ff9d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 355
+[02:28:32.076] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "c737d130-4d70-4f1a-b8b1-004011882b28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 454
+[02:28:32.610] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "92a00fe4-5b24-41b3-9369-436bded10982"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:32.611] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "1ec942d2-72d8-448e-9e6b-7e6759c2ffd5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 371.022 ms - 15052[0m
+[02:28:32.983] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "1ec942d2-72d8-448e-9e6b-7e6759c2ffd5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 454.285 ms - 38604[0m
+[02:28:33.065] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "92a00fe4-5b24-41b3-9369-436bded10982"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 455
+[02:28:33.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "5e75deac-05c6-4ae1-9c0c-2697b9ff0be9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:33.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a9f3088c-789b-49f4-822f-b00907189380"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 356.329 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 455.958 ms - 38604[0m
+[02:28:33.979] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a9f3088c-789b-49f4-822f-b00907189380"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 358
+[02:28:34.077] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "5e75deac-05c6-4ae1-9c0c-2697b9ff0be9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 457
+[02:28:34.614] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "6e2f12c4-8017-4b26-b155-53e3107a88b4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:34.616] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "7cd47090-a1ce-480f-a2ce-c8553c4eb29f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 372.368 ms - 15052[0m
+[02:28:34.989] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "7cd47090-a1ce-480f-a2ce-c8553c4eb29f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 454.929 ms - 38604[0m
+[02:28:35.070] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "6e2f12c4-8017-4b26-b155-53e3107a88b4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 456
+[02:28:35.629] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e651c5a5-6dd9-48a2-93cc-9ccc5c9d09e5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:35.635] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "9cb04808-b380-45c0-aab8-e8a92c15c13b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 370.943 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 453.040 ms - 38604[0m
+[02:28:36.007] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "9cb04808-b380-45c0-aab8-e8a92c15c13b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[02:28:36.083] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e651c5a5-6dd9-48a2-93cc-9ccc5c9d09e5"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 454
+[02:28:36.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "67476602-5c75-4ed0-98d7-bc558919f60e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:36.623] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e61626c0-1bae-414e-90db-e228d449d525"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 349.693 ms - 15052[0m
+[02:28:36.973] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e61626c0-1bae-414e-90db-e228d449d525"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 350
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 453.446 ms - 38604[0m
+[02:28:37.074] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "67476602-5c75-4ed0-98d7-bc558919f60e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 454
+[02:28:37.634] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "54dc72cf-833e-4bdc-a1b5-2507080fe2e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:37.637] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "4d93bbcb-bf16-4cb5-8561-8a963d657024"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 362.428 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 450.209 ms - 38604[0m
+[02:28:38.000] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "4d93bbcb-bf16-4cb5-8561-8a963d657024"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 363
+[02:28:38.085] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "54dc72cf-833e-4bdc-a1b5-2507080fe2e7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 451
+[02:28:38.618] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "54756f74-795c-43a8-88de-d2cf63839396"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:38.621] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d8612cbe-0e43-46e0-b4d3-3dd1896ba99a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 361.642 ms - 15052[0m
+[02:28:38.983] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d8612cbe-0e43-46e0-b4d3-3dd1896ba99a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 362
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 452.189 ms - 38604[0m
+[02:28:39.071] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "54756f74-795c-43a8-88de-d2cf63839396"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 453
+[02:28:39.630] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "a696bfbc-0aa0-4270-90bf-b74981d3d277"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:39.634] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "4e167098-5ef2-4cb3-89e1-1c92f4691326"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 371.212 ms - 15052[0m
+[02:28:40.006] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "4e167098-5ef2-4cb3-89e1-1c92f4691326"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 372
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 455.010 ms - 38604[0m
+[02:28:40.086] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "a696bfbc-0aa0-4270-90bf-b74981d3d277"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 456
+[02:28:40.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "24d609bf-e7ef-499b-a4b6-8e03fc68845d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:40.618] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "b4449f3f-3e56-4997-8ad3-c0fe7a9d9784"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 356.832 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 441.884 ms - 38604[0m
+[02:28:40.975] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "b4449f3f-3e56-4997-8ad3-c0fe7a9d9784"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 357
+[02:28:41.059] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "24d609bf-e7ef-499b-a4b6-8e03fc68845d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 442
+[02:28:41.619] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "d87b9817-2c2e-40ad-a4f3-6d16888a81f7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:41.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "65b5a2b7-8f4a-4135-8ad7-b73b950c8990"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 352.270 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 447.729 ms - 38604[0m
+[02:28:41.972] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "65b5a2b7-8f4a-4135-8ad7-b73b950c8990"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 352
+[02:28:42.068] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "d87b9817-2c2e-40ad-a4f3-6d16888a81f7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 449
+[02:28:42.620] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "855b17ed-8fa4-4c7b-9164-d18cd0e403ec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:42.632] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "43e11601-3f1d-4dc2-a30b-a198119741a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 367.935 ms - 15052[0m
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 459.615 ms - 38604[0m
+[02:28:43.001] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "43e11601-3f1d-4dc2-a30b-a198119741a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 369
+[02:28:43.080] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "855b17ed-8fa4-4c7b-9164-d18cd0e403ec"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 460
+[02:28:43.628] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "68f32a27-26a0-4a47-8650-34ec556adea4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:43.633] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "8e71d66c-398d-4582-a473-97a6d67838a8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 373.578 ms - 15052[0m
+[02:28:44.007] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "8e71d66c-398d-4582-a473-97a6d67838a8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 374
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 459.784 ms - 38604[0m
+[02:28:44.088] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "68f32a27-26a0-4a47-8650-34ec556adea4"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 460
+[02:28:44.617] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "ef88b549-34dd-4941-a8b1-40c9e3533830"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[02:28:44.622] [32mINFO[39m (19836): [36mRequest started[39m
+    [35mrequestId[39m: "e52ec5f3-cffc-4787-9ea1-c284f5e7175a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+[0mGET /api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 361.214 ms - 15052[0m
+[02:28:44.983] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "e52ec5f3-cffc-4787-9ea1-c284f5e7175a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads/44427162-2e36-4d16-b835-f2d4af6129b4/messages?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 361
+[0mGET /api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622 [32m200[0m 461.114 ms - 38604[0m
+[02:28:45.079] [32mINFO[39m (19836): [36mRequest completed[39m
+    [35mrequestId[39m: "ef88b549-34dd-4941-a8b1-40c9e3533830"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/inbox/threads?days=30&organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 462
