@@ -31,6 +31,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  API_PUBLIC_URL: z.string().url().optional(),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   SESSION_COOKIE_NAME: z.string().min(1).default("crm_session"),
   REFRESH_COOKIE_NAME: z.string().min(1).default("crm_refresh"),
@@ -68,8 +69,17 @@ const parsedEnv = envSchema.parse({
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 });
 
+const apiPublicUrl =
+  parsedEnv.API_PUBLIC_URL ??
+  (parsedEnv.NODE_ENV === "production"
+    ? (() => {
+        throw new Error("API_PUBLIC_URL is required in production for OAuth callbacks");
+      })()
+    : `http://localhost:${parsedEnv.PORT}`);
+
 export const env = {
   ...parsedEnv,
+  API_PUBLIC_URL: apiPublicUrl,
   COOKIE_SECURE: parsedEnv.COOKIE_SECURE ?? parsedEnv.NODE_ENV === "production",
   EMBED_RAW_EVENT_WORKER: parsedEnv.EMBED_RAW_EVENT_WORKER ?? parsedEnv.NODE_ENV === "production"
 };

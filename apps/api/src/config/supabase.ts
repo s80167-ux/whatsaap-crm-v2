@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClientOptions } from "@supabase/supabase-js";
 import { env } from "./env.js";
 
 const sharedAuthConfig = {
@@ -12,6 +13,11 @@ export function createSupabaseAdminClient() {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, sharedAuthConfig);
 }
 
-export function createSupabasePublicClient() {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, sharedAuthConfig);
+export function createSupabasePublicClient(authOptions?: SupabaseClientOptions<"public">["auth"]) {
+  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+    auth: {
+      ...sharedAuthConfig.auth,
+      ...authOptions
+    }
+  });
 }

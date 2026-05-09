@@ -117,7 +117,11 @@ npm run worker:usage-daily -- --days 7
 - `SUPABASE_URL`: Supabase project URL
 - `SUPABASE_ANON_KEY`: Supabase anon key for user auth flows
 - `SUPABASE_SERVICE_ROLE_KEY`: backend-only admin key
+- `API_PUBLIC_URL`: public backend origin used for OAuth callbacks, for example `https://api.example.com`. Local development falls back to `http://localhost:<PORT>`.
 - `FRONTEND_URL`: allowed frontend origin for CORS
+- `COOKIE_SECURE`: set to `true` in production
+- `COOKIE_SAME_SITE`: defaults to `lax`; keep this unless your deployment requires a different cookie policy
+- `COOKIE_DOMAIN`: set only when cookies must be shared across a parent domain
 - `BAILEYS_AUTH_DIR`: persistent auth directory, e.g. `/data/baileys_auth` on Railway
 - `CONNECTOR_BASE_URL`: internal URL for the standalone WhatsApp connector
 - `CONNECTOR_INTERNAL_SECRET`: shared secret between backend and connector
@@ -161,6 +165,38 @@ Use `ALLOW_LOCAL_CONNECTOR_SEND=true` only for connector-specific development wi
 - `VITE_API_BASE_URL`: backend API base URL
 - `VITE_SUPABASE_URL`: Supabase project URL
 - `VITE_SUPABASE_ANON_KEY`: Supabase anon key
+
+## Hybrid Google Login Setup
+
+Email/password login remains available and continues to use the backend session cookie model. Google login is optional: it authenticates the user through Supabase Google OAuth, then the backend resolves that Supabase user against CRM access tables before issuing the same CRM cookies.
+
+To enable Google in Supabase:
+
+1. Go to the Supabase Dashboard.
+2. Open Authentication.
+3. Open Providers.
+4. Enable the Google provider.
+5. Add the Google Client ID.
+6. Add the Google Client Secret.
+7. Add the callback URL:
+
+```text
+Production: https://<api-domain>/api/auth/google/callback
+Local: http://localhost:4000/api/auth/google/callback
+```
+
+Backend production env should include:
+
+```env
+API_PUBLIC_URL=https://<api-domain>
+FRONTEND_URL=https://<frontend-domain>
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=lax
+```
+
+Set `COOKIE_DOMAIN` only if your deployment requires cross-subdomain cookies.
+
+Google login does not create public signup. Unknown Google accounts are blocked, and CRM access still depends on `platform_super_admins` or an active `organization_users.auth_user_id` mapping with the existing organization, role, status, and permission checks.
 
 ## Smoke Test
 

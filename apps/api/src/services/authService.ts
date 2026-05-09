@@ -1,4 +1,5 @@
 import { pool, withTransaction } from "../config/database.js";
+import { env } from "../config/env.js";
 import { createSupabaseAdminClient, createSupabasePublicClient } from "../config/supabase.js";
 import { AppError } from "../lib/errors.js";
 import { AuthzRepository } from "../repositories/authzRepository.js";
@@ -29,20 +30,67 @@ export class AuthService {
       avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
     });
 
-    return {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      user: {
-        id: resolvedUser.authUserId,
-        organizationUserId: resolvedUser.organizationUserId,
-        organizationId: resolvedUser.organizationId,
-        email: resolvedUser.email,
-        fullName: resolvedUser.fullName,
-        avatarUrl: resolvedUser.avatarUrl,
-        role: resolvedUser.role,
-        permissionKeys: resolvedUser.permissionKeys
+    return this.buildLoginResult(data.session.access_token, data.session.refresh_token, resolvedUser);
+  }
+
+  async getGoogleOAuthUrl() {
+    let codeVerifier: string | null = null;
+    const supabasePublic = createSupabasePublicClient({
+      persistSession: true,
+      flowType: "pkce",
+      storageKey: "crm-google-oauth",
+      storage: {
+        getItem: () => null,
+        setItem: (key, value) => {
+          if (key.endsWith("-code-verifier")) {
+            codeVerifier = value;
+          }
+        },
+        removeItem: () => undefined
       }
+    });
+    const { data, error } = await supabasePublic.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${env.API_PUBLIC_URL}/api/auth/google/callback`
+      }
+    });
+
+    if (error || !data.url || !codeVerifier) {
+      throw new AppError("Unable to start Google sign-in", 500, "google_oauth_start_failed");
+    }
+
+    return {
+      url: data.url,
+      codeVerifier
     };
+  }
+
+  async completeGoogleLogin(code: string, codeVerifier: string) {
+    const supabasePublic = createSupabasePublicClient({
+      persistSession: true,
+      flowType: "pkce",
+      storageKey: "crm-google-oauth",
+      storage: {
+        getItem: (key) => (key.endsWith("-code-verifier") ? codeVerifier : null),
+        setItem: () => undefined,
+        removeItem: () => undefined
+      }
+    });
+    const { data, error } = await supabasePublic.auth.exchangeCodeForSession(code);
+
+    if (error || !data.session || !data.user) {
+      throw new AppError("Google sign-in failed", 401, "google_login_failed");
+    }
+
+    const resolvedUser = await this.resolveAuthUser({
+      authUserId: data.user.id,
+      email: data.user.email ?? "",
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
+    });
+
+    return this.buildLoginResult(data.session.access_token, data.session.refresh_token, resolvedUser);
   }
 
   async refreshSession(refreshToken: string) {
@@ -252,8 +300,12 @@ export class AuthService {
 
       const organizationUser = await this.authzRepository.findOrganizationUserByAuthUserId(client, input.authUserId);
 
-      if (!organizationUser || organizationUser.status !== "active") {
-        throw new Error("Authenticated user is not linked to an active organization user");
+      if (!organizationUser) {
+        throw new AppError("Account is not linked to a CRM workspace", 403, "crm_account_not_linked");
+      }
+
+      if (organizationUser.status !== "active") {
+        throw new AppError("Account is not active", 403, "crm_account_inactive");
       }
 
       const permissionKeys = await this.authzRepository.listPermissionKeys(client, {
@@ -274,5 +326,22 @@ export class AuthService {
     } finally {
       client.release();
     }
+  }
+
+  private buildLoginResult(accessToken: string, refreshToken: string, resolvedUser: AuthUser) {
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: resolvedUser.authUserId,
+        organizationUserId: resolvedUser.organizationUserId,
+        organizationId: resolvedUser.organizationId,
+        email: resolvedUser.email,
+        fullName: resolvedUser.fullName,
+        avatarUrl: resolvedUser.avatarUrl,
+        role: resolvedUser.role,
+        permissionKeys: resolvedUser.permissionKeys
+      }
+    };
   }
 }

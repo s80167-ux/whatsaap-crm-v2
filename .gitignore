@@ -12,3 +12,6 @@ frontend/.vite
 playwright-report
 test-results
 visual-pass-artifacts
+
+google client.txt
+.runtime-api-dev.log

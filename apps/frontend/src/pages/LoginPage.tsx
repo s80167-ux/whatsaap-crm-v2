@@ -1,19 +1,29 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import brandBanner from "../../asset/rezeki_dashboard_banner.png";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
-import { login } from "../api/auth";
+import { login, startGoogleLogin } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const queryError = searchParams.get("error");
+  const googleError =
+    queryError === "google_account_not_linked"
+      ? "This Google account is not linked to an active CRM workspace. Please contact your admin."
+      : queryError === "google_login_failed"
+        ? "Google sign-in failed. Please try again or use email/password."
+        : null;
+  const visibleError = error ?? googleError;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,9 +81,12 @@ export function LoginPage() {
                   required
                 />
               </label>
-              {error ? <p className="text-sm text-coral">{error}</p> : null}
+              {visibleError ? <p className="text-sm text-coral">{visibleError}</p> : null}
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
+              <Button type="button" variant="secondary" className="w-full" onClick={startGoogleLogin}>
+                Continue with Google
               </Button>
             </form>
           </div>
