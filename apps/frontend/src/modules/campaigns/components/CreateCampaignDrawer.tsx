@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../../components/Button";
 import { Input, Select } from "../../../components/Input";
+import { PopupOverlay } from "../../../components/PopupOverlay";
 import type { WhatsAppAccountSummary } from "../../../types/admin";
 import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types";
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
@@ -271,104 +271,112 @@ export function CreateCampaignDrawer({
   const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign;
 
   return (
-    <div className="fixed inset-0 z-[90] flex justify-end bg-slate-950/45">
-      <button type="button" className="absolute inset-0" aria-label="Close campaign drawer" onClick={onClose} />
-      <aside className="relative h-full w-full max-w-2xl overflow-y-auto border-l border-border bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/95 px-5 py-4 backdrop-blur">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Campaigns</p>
-            <h3 className="mt-1 text-xl font-semibold tracking-tight text-text">Create Campaign</h3>
-          </div>
-          <Button size="icon" variant="ghost" aria-label="Close campaign drawer" onClick={onClose}>
-            <X size={18} />
-          </Button>
-        </div>
-
-        <div className="space-y-5 px-5 py-5">
-          <label className="block">
-            <span className="workspace-label">Campaign Name</span>
-            <Input value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder="May promo campaign" />
-          </label>
-
-          <label className="block">
-            <span className="workspace-label">Sender WhatsApp Number</span>
-            <Select value={senderWhatsAppAccountId} onChange={(event) => setSenderWhatsAppAccountId(event.target.value)}>
-              <option value="">Select connected sender</option>
-              {connectedAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {formatSenderLabel(account)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          {connectedAccounts.length === 0 ? (
-            <div className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-              No connected WhatsApp number available. Please connect a WhatsApp account before starting a campaign.
+    <PopupOverlay
+      open={open}
+      onClose={onClose}
+      title="Create Campaign"
+      description="Set sender, audience, message template and sending tempo before launching the campaign."
+      panelClassName="rounded-[28px] max-w-6xl"
+    >
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+            <div className="mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Campaign setup</p>
+                <p className="mt-1 text-sm text-text-muted">Choose the sender and target audience before writing the message.</p>
+              </div>
             </div>
-          ) : null}
 
-          <label className="block">
-            <span className="workspace-label">Audience Group</span>
-            <Select value={audienceGroupId} onChange={(event) => void handleAudienceGroupChange(event.target.value)}>
-              <option value="">Select Audience Group</option>
-              {readyAudienceGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name} - {group.valid_count} valid contacts
-                </option>
-              ))}
-            </Select>
-          </label>
-          {selectedAudienceGroup?.invalid_count || selectedAudienceGroup?.duplicate_count ? (
-            <p className="text-xs text-text-muted">
-              {selectedAudienceGroup.invalid_count} invalid skipped, {selectedAudienceGroup.duplicate_count} duplicates skipped
-            </p>
-          ) : null}
-          {readyAudienceGroups.length === 0 ? (
-            <div className="border border-dashed border-border bg-background-tint px-4 py-4">
-              <p className="text-sm font-semibold text-text">No Audience Groups yet.</p>
-              <p className="mt-1 text-sm text-text-muted">Create an Audience Group before starting a campaign.</p>
-              <Link className="mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-dark" to="/campaigns/audience-groups">
-                Create Audience Group
-              </Link>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block md:col-span-2">
+                <span className="workspace-label">Campaign Name</span>
+                <Input value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder="May promo campaign" />
+              </label>
+
+              <label className="block">
+                <span className="workspace-label">Sender WhatsApp Number</span>
+                <Select value={senderWhatsAppAccountId} onChange={(event) => setSenderWhatsAppAccountId(event.target.value)}>
+                  <option value="">Select connected sender</option>
+                  {connectedAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {formatSenderLabel(account)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+
+              <label className="block">
+                <span className="workspace-label">Audience Group</span>
+                <Select value={audienceGroupId} onChange={(event) => void handleAudienceGroupChange(event.target.value)}>
+                  <option value="">Select Audience Group</option>
+                  {readyAudienceGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name} - {group.valid_count} valid contacts
+                    </option>
+                  ))}
+                </Select>
+              </label>
             </div>
-          ) : null}
 
-          <label className="block">
-            <span className="workspace-label">Message Template</span>
-            <textarea
-              value={messageTemplate}
-              onChange={(event) => setMessageTemplate(event.target.value)}
-              className="input-base min-h-36 w-full resize-y"
-              placeholder={defaultTemplate}
-            />
-          </label>
+            {connectedAccounts.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                No connected WhatsApp number available. Please connect a WhatsApp account before starting a campaign.
+              </div>
+            ) : null}
 
-          <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dynamic variables</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-text-muted">
-              <span>{"{{name}}"}</span>
-              <span>{"{{phone}}"}</span>
-              <span>{"{{salutation}}"}</span>
-              <span>{"{{tag}}"}</span>
+            {selectedAudienceGroup?.invalid_count || selectedAudienceGroup?.duplicate_count ? (
+              <p className="mt-4 text-xs text-text-muted">
+                {selectedAudienceGroup.invalid_count} invalid skipped, {selectedAudienceGroup.duplicate_count} duplicates skipped
+              </p>
+            ) : null}
+
+            {readyAudienceGroups.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-border bg-background-tint px-4 py-4">
+                <p className="text-sm font-semibold text-text">No Audience Groups yet.</p>
+                <p className="mt-1 text-sm text-text-muted">Create an Audience Group before starting a campaign.</p>
+                <Link className="mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-dark" to="/campaigns/audience-groups">
+                  Create Audience Group
+                </Link>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-text">Message Template</p>
+              <p className="mt-1 text-sm text-text-muted">Use variables to personalise the message automatically for each contact.</p>
             </div>
-          </div>
 
-          <CampaignPreviewCard
-            preview={preview}
-            senderLabel={senderLabel}
-            audienceLabel={selectedAudienceGroup?.name}
-            validRecipients={selectedAudienceGroup?.valid_count}
-            tempoLabel={tempoLabel}
-          />
+            <label className="block">
+              <span className="workspace-label">Template Content</span>
+              <textarea
+                value={messageTemplate}
+                onChange={(event) => setMessageTemplate(event.target.value)}
+                className="input-base min-h-44 w-full resize-y"
+                placeholder={defaultTemplate}
+              />
+            </label>
 
-          <section className="space-y-3 border border-border bg-background-tint p-4">
+            <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dynamic variables</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-text-muted">
+                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{name}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{phone}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{salutation}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{tag}}"}</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-border bg-background-tint p-5">
             <div>
               <p className="text-sm font-semibold text-text">Sending Tempo</p>
               <p className="mt-1 text-xs leading-5 text-text-muted">
                 Use a slower tempo for new or recently reconnected WhatsApp numbers to reduce delivery risk.
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
               {(["safe", "normal", "custom"] as CampaignSpeedPreset[]).map((preset) => (
                 <Button
                   key={preset}
@@ -380,14 +388,14 @@ export function CreateCampaignDrawer({
               ))}
             </div>
             {tempo.speedPreset === "custom" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <TempoInput label="Delay per message seconds" value={tempo.delayPerMessageSeconds} onChange={(value) => handleTempoNumberChange("delayPerMessageSeconds", value)} />
                 <TempoInput label="Batch size" value={tempo.batchSize} onChange={(value) => handleTempoNumberChange("batchSize", value)} />
                 <TempoInput label="Batch pause seconds" value={tempo.batchPauseSeconds} onChange={(value) => handleTempoNumberChange("batchPauseSeconds", value)} />
                 <TempoInput label="Daily limit" value={tempo.dailyLimit} onChange={(value) => handleTempoNumberChange("dailyLimit", value)} />
               </div>
             ) : null}
-            <label className="flex items-center gap-2 text-sm text-text-muted">
+            <label className="mt-4 flex items-center gap-2 text-sm text-text-muted">
               <input
                 type="checkbox"
                 checked={tempo.stopOnHighFailure}
@@ -396,31 +404,50 @@ export function CreateCampaignDrawer({
               Stop on high failure
             </label>
           </section>
-
-          <label className="block">
-            <span className="workspace-label">Test Phone Number</span>
-            <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="+60123456789" />
-          </label>
-
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            Campaigns should only be sent to customers who have given permission to receive messages. Always provide a clear way for customers to opt out.
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
-              {isSavingDraft ? "Saving..." : "Save Draft"}
-            </Button>
-            <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
-              {isSendingTest ? "Sending..." : "Send Test"}
-            </Button>
-            <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>Schedule Later</Button>
-            <Button disabled={startDisabled} onClick={() => void handleStartCampaign("Start Campaign")}>
-              {isStartingCampaign ? "Starting..." : "Start Campaign"}
-            </Button>
-          </div>
         </div>
-      </aside>
-    </div>
+
+        <div className="space-y-5 xl:sticky xl:top-0 xl:self-start">
+          <CampaignPreviewCard
+            preview={preview}
+            senderLabel={senderLabel}
+            audienceLabel={selectedAudienceGroup?.name}
+            validRecipients={selectedAudienceGroup?.valid_count}
+            tempoLabel={tempoLabel}
+          />
+
+          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+            <div>
+              <p className="text-sm font-semibold text-text">Test Delivery</p>
+              <p className="mt-1 text-sm text-text-muted">Send one preview message before you launch the campaign.</p>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="workspace-label">Test Phone Number</span>
+              <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="+60123456789" />
+            </label>
+
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              Campaigns should only be sent to customers who have given permission to receive messages. Always provide a clear way for customers to opt out.
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
+                {isSavingDraft ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
+                {isSendingTest ? "Sending..." : "Send Test"}
+              </Button>
+              <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>
+                Schedule Later
+              </Button>
+              <Button disabled={startDisabled} onClick={() => void handleStartCampaign("Start Campaign")}>
+                {isStartingCampaign ? "Starting..." : "Start Campaign"}
+              </Button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </PopupOverlay>
   );
 }
 

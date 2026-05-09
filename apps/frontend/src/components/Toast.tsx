@@ -15,7 +15,7 @@ export function Toast({ message, variant = "success" }: ToastProps) {
 
   return (
     <div
-      className={`pointer-events-none fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${tone}`}
+      className={`pointer-events-none fixed bottom-5 right-5 z-[120] max-w-sm rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${tone}`}
     >
       <p className="text-sm font-medium">{message}</p>
     </div>
