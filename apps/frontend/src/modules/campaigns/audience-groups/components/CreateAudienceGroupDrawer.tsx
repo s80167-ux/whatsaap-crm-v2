@@ -71,7 +71,11 @@ export function CreateAudienceGroupDrawer({
       return Boolean(mapping.phone);
     }
 
-    if (stepIndex === 3 || stepIndex === 4 || stepIndex === 5) {
+    if (stepIndex === 3) {
+      return Boolean(mapping.phone) && rows.length > 0;
+    }
+
+    if (stepIndex === 4 || stepIndex === 5) {
       return Boolean(result);
     }
 
@@ -245,7 +249,16 @@ export function CreateAudienceGroupDrawer({
         {stepIndex === 3 ? (
           <div className="space-y-3">
             <p className="text-sm text-text-muted">Run validation before import. Invalid, duplicate, and opted-out rows will not become active recipients.</p>
-            <AudienceValidationSummary result={result} />
+            <div className="border border-border bg-background-tint p-4">
+              <p className="text-sm font-semibold text-text">Ready to validate {rows.length} CSV rows.</p>
+              <p className="mt-1 text-sm text-text-muted">
+                Validation will normalize Malaysia phone numbers, detect duplicates, link existing CRM Contacts when possible, and block invalid recipients before import.
+              </p>
+              <div className="mt-3 grid gap-2 text-xs text-text-muted sm:grid-cols-2">
+                <span className="border border-border bg-white px-3 py-2">Phone column: {mapping.phone ?? "Not mapped"}</span>
+                <span className="border border-border bg-white px-3 py-2">Name column: {mapping.name ?? "Not mapped"}</span>
+              </div>
+            </div>
           </div>
         ) : null}
 

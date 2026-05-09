@@ -7,9 +7,12 @@ import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccounts";
+import { getStoredUser } from "../lib/auth";
+import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookUser, Link2, QrCode, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
 import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
   backfillWhatsAppAccount,
   createWhatsAppAccount,
@@ -300,14 +303,22 @@ function canResetPairing(status: string) {
 
 export function WhatsAppAccountDashboard() {
   const isMobile = useIsMobileViewport();
+  const dashboardContext = useOutletContext<DashboardOutletContext>();
+  const currentUser = getStoredUser();
+  const isSuperAdmin = dashboardContext.isSuperAdmin;
   const [backfillPopupAccount, setBackfillPopupAccount] = useState<{
     id: string;
     name: string;
   } | null>(null);
   const queryClient = useQueryClient();
   const { data: organizations = [] } = useOrganizations();
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
-  const activeOrganizationId = selectedOrganizationId || null;
+  const selectedOrganizationId = isSuperAdmin
+    ? dashboardContext.selectedOrganizationId
+    : currentUser?.organizationId ?? "";
+  const setSelectedOrganizationId = isSuperAdmin
+    ? dashboardContext.setSelectedOrganizationId
+    : (_organizationId: string) => {};
+  const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: accounts = [], isFetching: isRefreshingAccounts, refetch: refetchAccounts } = useWhatsAppAccounts(activeOrganizationId);
   const accountPagination = usePanelPagination(accounts);
 
@@ -566,6 +577,9 @@ export function WhatsAppAccountDashboard() {
               required
             >
               <option value="">Select organization</option>
+              {selectedOrganizationId && !organizations.some((organization) => organization.id === selectedOrganizationId) ? (
+                <option value={selectedOrganizationId}>Current organization</option>
+              ) : null}
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.name}
@@ -743,7 +757,7 @@ export function WhatsAppAccountDashboard() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-soft">
-          <p className="min-w-0 flex-1">Auto-refreshes every 15 seconds while an organization is selected.</p>
+          <p className="min-w-0 flex-1">Auto-refreshes every 3 seconds while an organization is selected.</p>
         </div>
         <div className="workspace-table-wrap mt-4 overflow-hidden text-sm shadow-soft">
           <div className="hidden grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] gap-3 border-b border-border bg-background-tint px-4 py-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-text-soft lg:grid">
