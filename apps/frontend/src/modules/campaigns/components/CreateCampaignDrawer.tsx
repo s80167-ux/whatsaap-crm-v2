@@ -6,7 +6,7 @@ import { Input, Select } from "../../../components/Input";
 import type { WhatsAppAccountSummary } from "../../../types/admin";
 import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types";
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
-import { sendCampaignTest } from "../services/campaignService";
+import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
 import type { CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
@@ -72,6 +72,8 @@ export function CreateCampaignDrawer({
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
   const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isStartingCampaign, setIsStartingCampaign] = useState(false);
 
   const connectedAccounts = useMemo(
     () => whatsappAccounts.filter((account) => connectedStatuses.has(account.status.toLowerCase())),
@@ -167,13 +169,37 @@ export function CreateCampaignDrawer({
     }));
   }
 
-  function handleSaveDraft() {
+  function validateCampaignName() {
     if (!campaignName.trim()) {
       showError("Campaign Name is required.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function handleSaveDraft() {
+    if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate()) {
       return;
     }
 
-    onPlaceholderAction(`Campaign draft "${campaignName.trim()}" would be saved.`);
+    setIsSavingDraft(true);
+
+    try {
+      const campaign = await createCampaign({
+        organizationId,
+        name: campaignName.trim(),
+        senderWhatsAppAccountId,
+        audienceGroupId,
+        messageTemplate,
+        tempo
+      });
+      onPlaceholderAction(`Campaign draft "${campaign.name}" saved.`, "success");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to save campaign draft.");
+    } finally {
+      setIsSavingDraft(false);
+    }
   }
 
   async function handleSendTest() {
@@ -203,18 +229,46 @@ export function CreateCampaignDrawer({
     }
   }
 
-  function handleStartCampaign(action: "Schedule Later" | "Start Campaign") {
-    if (!validateSender() || !validateAudience() || !validateTemplate()) {
+  async function handleStartCampaign(action: "Schedule Later" | "Start Campaign") {
+    if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate()) {
       return;
     }
 
-    onPlaceholderAction(
-      `${action === "Schedule Later" ? "Campaign would be scheduled" : "Campaign queued"} using ${senderLabel} for ${selectedAudienceGroup?.name} with ${tempo.speedPreset} tempo.`
-    );
+    setIsStartingCampaign(true);
+
+    try {
+      const campaign = await createCampaign({
+        organizationId,
+        name: campaignName.trim(),
+        senderWhatsAppAccountId,
+        audienceGroupId,
+        messageTemplate,
+        tempo
+      });
+
+      if (action === "Schedule Later") {
+        onPlaceholderAction(`Campaign "${campaign.name}" saved for scheduling.`, "success");
+        return;
+      }
+
+      const result = await startCampaign({
+        campaignId: campaign.id,
+        organizationId,
+        senderWhatsAppAccountId,
+        audienceGroupId,
+        messageTemplate,
+        speedPreset: tempo.speedPreset
+      });
+      onPlaceholderAction(result.message, "success");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to start campaign.");
+    } finally {
+      setIsStartingCampaign(false);
+    }
   }
 
   const actionDisabled = !selectedSender;
-  const startDisabled = actionDisabled || !selectedAudienceGroup;
+  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign;
 
   return (
     <div className="fixed inset-0 z-[90] flex justify-end bg-slate-950/45">
@@ -353,12 +407,16 @@ export function CreateCampaignDrawer({
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <Button variant="secondary" onClick={handleSaveDraft}>Save Draft</Button>
+            <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
+              {isSavingDraft ? "Saving..." : "Save Draft"}
+            </Button>
             <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
               {isSendingTest ? "Sending..." : "Send Test"}
             </Button>
-            <Button variant="secondary" disabled={startDisabled} onClick={() => handleStartCampaign("Schedule Later")}>Schedule Later</Button>
-            <Button disabled={startDisabled} onClick={() => handleStartCampaign("Start Campaign")}>Start Campaign</Button>
+            <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>Schedule Later</Button>
+            <Button disabled={startDisabled} onClick={() => void handleStartCampaign("Start Campaign")}>
+              {isStartingCampaign ? "Starting..." : "Start Campaign"}
+            </Button>
           </div>
         </div>
       </aside>

@@ -137,6 +137,20 @@ type CampaignRecord = {
   updated_at: string;
 };
 
+type CampaignAudienceContactRecord = {
+  id: string;
+  crm_contact_id: string | null;
+  name: string | null;
+  phone_normalized: string;
+  gender: "male" | "female" | "unknown";
+  salutation: string | null;
+  tag: string | null;
+  location: string | null;
+  product_interest: string | null;
+  customer_type: string | null;
+  notes: string | null;
+};
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -374,27 +388,111 @@ export async function startCampaign(request: Request, response: Response) {
   const { campaignId } = campaignParamsSchema.parse(request.params);
   const input = startCampaignBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
-  await assertCampaignExists(organizationId, campaignId);
+  const campaign = await findCampaign(organizationId, campaignId);
+
+  if (!campaign) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
 
+  const snapshot = await snapshotCampaignRecipients({
+    organizationId,
+    campaignId,
+    audienceGroupId: input.audienceGroupId
+  });
+
+  if (snapshot.length === 0) {
+    throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
+  }
+
+  let queued = 0;
+  let failed = 0;
+
+  for (const recipient of snapshot) {
+    const text = renderCampaignMessage(input.messageTemplate, {
+      name: recipient.name,
+      phone: recipient.phone_normalized,
+      gender: recipient.gender,
+      salutation: recipient.salutation,
+      tag: recipient.tag,
+      location: recipient.location,
+      product_interest: recipient.product_interest,
+      customer_type: recipient.customer_type,
+      notes: recipient.notes
+    });
+
+    try {
+      await sendCampaignRecipientMessage({
+        organizationId,
+        senderWhatsAppAccountId: input.senderWhatsAppAccountId,
+        phoneNumber: recipient.phone_normalized,
+        profileName: recipient.name,
+        text
+      });
+
+      await query(
+        `
+          update campaign_recipients
+          set send_status = 'queued',
+              error_message = null
+          where organization_id = $1
+            and campaign_id = $2
+            and audience_group_contact_id = $3
+        `,
+        [organizationId, campaignId, recipient.id]
+      );
+      queued += 1;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unable to queue campaign message";
+      await query(
+        `
+          update campaign_recipients
+          set send_status = 'failed',
+              error_message = $4
+          where organization_id = $1
+            and campaign_id = $2
+            and audience_group_contact_id = $3
+        `,
+        [organizationId, campaignId, recipient.id, errorMessage]
+      );
+      failed += 1;
+    }
+  }
+
+  const nextStatus = queued > 0 ? "sending" : "failed";
   const result = await query<CampaignRecord>(
     `
       update campaigns
-      set status = 'scheduled',
+      set status = $3,
+          sender_whatsapp_account_id = $4,
+          audience_group_id = $5,
+          message_template = $6,
+          speed_preset = $7,
           updated_at = timezone('utc', now())
       where organization_id = $1
         and id = $2
       returning *
     `,
-    [organizationId, campaignId]
+    [
+      organizationId,
+      campaignId,
+      nextStatus,
+      input.senderWhatsAppAccountId,
+      input.audienceGroupId,
+      input.messageTemplate,
+      input.speedPreset
+    ]
   );
 
   return response.json({
     data: {
       ok: true,
-      message: `Campaign queued using ${input.senderWhatsAppAccountId} for ${input.audienceGroupId} with ${input.speedPreset} tempo.`,
-      campaign: result.rows[0]
+      message: `Campaign started. ${queued} message${queued === 1 ? "" : "s"} queued${failed > 0 ? `, ${failed} failed` : ""}.`,
+      campaign: result.rows[0],
+      queued,
+      failed
     }
   });
 }
@@ -656,10 +754,30 @@ async function sendCampaignTestMessage(input: {
   testPhoneNumber: string;
   messageTemplate: string;
 }) {
-  const normalizedPhone = normalizePhoneNumber(input.testPhoneNumber);
+  return sendCampaignRecipientMessage({
+    organizationId: input.organizationId,
+    organizationUserId: input.organizationUserId ?? null,
+    senderWhatsAppAccountId: input.senderWhatsAppAccountId,
+    phoneNumber: input.testPhoneNumber,
+    profileName: "Campaign Test",
+    text: input.messageTemplate,
+    waitForDispatch: true
+  });
+}
+
+async function sendCampaignRecipientMessage(input: {
+  organizationId: string;
+  organizationUserId?: string | null;
+  senderWhatsAppAccountId: string;
+  phoneNumber: string;
+  profileName?: string | null;
+  text: string;
+  waitForDispatch?: boolean;
+}) {
+  const normalizedPhone = normalizePhoneNumber(input.phoneNumber);
 
   if (!normalizedPhone) {
-    throw new AppError("Enter a valid test phone number", 400, "invalid_test_phone_number");
+    throw new AppError("Enter a valid recipient phone number", 400, "invalid_recipient_phone_number");
   }
 
   const recipientJid = `${normalizedPhone.replace(/\D/g, "")}@s.whatsapp.net`;
@@ -669,7 +787,7 @@ async function sendCampaignTestMessage(input: {
       whatsappAccountId: input.senderWhatsAppAccountId,
       whatsappJid: recipientJid,
       phoneRaw: normalizedPhone,
-      profileName: "Campaign Test",
+      profileName: input.profileName ?? null,
       profilePushName: null,
       profileAvatarUrl: null
     });
@@ -686,6 +804,105 @@ async function sendCampaignTestMessage(input: {
     whatsappAccountId: input.senderWhatsAppAccountId,
     conversationId: conversation.id,
     organizationUserId: input.organizationUserId ?? null,
-    text: input.messageTemplate
-  }, { waitForDispatch: true });
+    text: input.text
+  }, { waitForDispatch: input.waitForDispatch ?? false });
+}
+
+async function snapshotCampaignRecipients(input: {
+  organizationId: string;
+  campaignId: string;
+  audienceGroupId: string;
+}) {
+  const result = await query<CampaignAudienceContactRecord>(
+    `
+      with deleted as (
+        delete from campaign_recipients
+        where organization_id = $1
+          and campaign_id = $2
+      ),
+      inserted as (
+        insert into campaign_recipients (
+          organization_id,
+          campaign_id,
+          audience_group_contact_id,
+          crm_contact_id,
+          name,
+          phone_normalized,
+          gender,
+          salutation,
+          tag,
+          location,
+          product_interest,
+          customer_type,
+          notes
+        )
+        select
+          organization_id,
+          $2,
+          id,
+          crm_contact_id,
+          name,
+          phone_normalized,
+          gender,
+          salutation,
+          tag,
+          location,
+          product_interest,
+          customer_type,
+          notes
+        from campaign_audience_contacts
+        where organization_id = $1
+          and audience_group_id = $3
+          and validation_status = 'valid'
+          and is_duplicate = false
+          and is_opted_out = false
+        returning
+          audience_group_contact_id as id,
+          crm_contact_id,
+          name,
+          phone_normalized,
+          gender,
+          salutation,
+          tag,
+          location,
+          product_interest,
+          customer_type,
+          notes
+      )
+      select * from inserted
+    `,
+    [input.organizationId, input.campaignId, input.audienceGroupId]
+  );
+
+  return result.rows;
+}
+
+function renderCampaignMessage(template: string, recipient: {
+  name: string | null;
+  phone: string | null;
+  gender: string | null;
+  salutation: string | null;
+  tag: string | null;
+  location: string | null;
+  product_interest: string | null;
+  customer_type: string | null;
+  notes: string | null;
+}) {
+  const salutation =
+    recipient.salutation ??
+    (recipient.gender === "male" ? "Encik" : recipient.gender === "female" ? "Puan" : "");
+
+  const values: Record<string, string> = {
+    name: recipient.name ?? "",
+    phone: recipient.phone ?? "",
+    gender: recipient.gender ?? "",
+    salutation,
+    tag: recipient.tag ?? "",
+    location: recipient.location ?? "",
+    product_interest: recipient.product_interest ?? "",
+    customer_type: recipient.customer_type ?? "",
+    notes: recipient.notes ?? ""
+  };
+
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
 }
