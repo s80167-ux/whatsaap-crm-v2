@@ -407,69 +407,14 @@ export async function startCampaign(request: Request, response: Response) {
     throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
   }
 
-  let queued = 0;
-  let failed = 0;
-
-  for (const recipient of snapshot) {
-    const text = renderCampaignMessage(input.messageTemplate, {
-      name: recipient.name,
-      phone: recipient.phone_normalized,
-      gender: recipient.gender,
-      salutation: recipient.salutation,
-      tag: recipient.tag,
-      location: recipient.location,
-      product_interest: recipient.product_interest,
-      customer_type: recipient.customer_type,
-      notes: recipient.notes
-    });
-
-    try {
-      await sendCampaignRecipientMessage({
-        organizationId,
-        senderWhatsAppAccountId: input.senderWhatsAppAccountId,
-        phoneNumber: recipient.phone_normalized,
-        profileName: recipient.name,
-        text
-      });
-
-      await query(
-        `
-          update campaign_recipients
-          set send_status = 'queued',
-              error_message = null
-          where organization_id = $1
-            and campaign_id = $2
-            and audience_group_contact_id = $3
-        `,
-        [organizationId, campaignId, recipient.id]
-      );
-      queued += 1;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unable to queue campaign message";
-      await query(
-        `
-          update campaign_recipients
-          set send_status = 'failed',
-              error_message = $4
-          where organization_id = $1
-            and campaign_id = $2
-            and audience_group_contact_id = $3
-        `,
-        [organizationId, campaignId, recipient.id, errorMessage]
-      );
-      failed += 1;
-    }
-  }
-
-  const nextStatus = queued > 0 ? "sending" : "failed";
   const result = await query<CampaignRecord>(
     `
       update campaigns
-      set status = $3,
-          sender_whatsapp_account_id = $4,
-          audience_group_id = $5,
-          message_template = $6,
-          speed_preset = $7,
+      set status = 'sending',
+          sender_whatsapp_account_id = $3,
+          audience_group_id = $4,
+          message_template = $5,
+          speed_preset = $6,
           updated_at = timezone('utc', now())
       where organization_id = $1
         and id = $2
@@ -478,7 +423,6 @@ export async function startCampaign(request: Request, response: Response) {
     [
       organizationId,
       campaignId,
-      nextStatus,
       input.senderWhatsAppAccountId,
       input.audienceGroupId,
       input.messageTemplate,
@@ -489,10 +433,9 @@ export async function startCampaign(request: Request, response: Response) {
   return response.json({
     data: {
       ok: true,
-      message: `Campaign started. ${queued} message${queued === 1 ? "" : "s"} queued${failed > 0 ? `, ${failed} failed` : ""}.`,
+      message: `Campaign started. ${snapshot.length} recipient${snapshot.length === 1 ? "" : "s"} scheduled for paced dispatch.`,
       campaign: result.rows[0],
-      queued,
-      failed
+      scheduled: snapshot.length
     }
   });
 }

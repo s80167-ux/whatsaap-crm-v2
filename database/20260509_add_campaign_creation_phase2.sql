@@ -43,11 +43,25 @@ create table if not exists campaign_recipients (
   customer_type text null,
   notes text null,
   send_status text not null default 'pending',
+  message_id uuid null references messages(id) on delete set null,
+  attempt_count integer not null default 0,
+  queued_at timestamptz null,
+  sent_at timestamptz null,
+  failed_at timestamptz null,
+  next_attempt_at timestamptz null,
   error_message text null,
   created_at timestamptz not null default timezone('utc', now()),
   constraint campaign_recipients_gender_check check (gender in ('male', 'female', 'unknown')),
   constraint campaign_recipients_send_status_check check (send_status in ('pending', 'queued', 'sent', 'failed', 'skipped'))
 );
+
+alter table campaign_recipients
+  add column if not exists message_id uuid null references messages(id) on delete set null,
+  add column if not exists attempt_count integer not null default 0,
+  add column if not exists queued_at timestamptz null,
+  add column if not exists sent_at timestamptz null,
+  add column if not exists failed_at timestamptz null,
+  add column if not exists next_attempt_at timestamptz null;
 
 create index if not exists campaigns_organization_id_idx
   on campaigns (organization_id);
@@ -66,6 +80,9 @@ create index if not exists campaign_recipients_campaign_id_idx
 
 create index if not exists campaign_recipients_phone_normalized_idx
   on campaign_recipients (phone_normalized);
+
+create index if not exists campaign_recipients_dispatch_idx
+  on campaign_recipients (campaign_id, send_status, next_attempt_at, created_at);
 
 -- Phase 2 design note:
 -- campaign_recipients should be snapshotted only when a campaign is scheduled or started,

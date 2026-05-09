@@ -112,6 +112,15 @@ export class SendMessageService {
                 messageId: input.forwardedFromMessageId
               }
             }
+          : {}),
+        ...(input.campaignContext
+          ? {
+              source: "campaign",
+              campaign: {
+                campaignId: input.campaignContext.campaignId,
+                campaignRecipientId: input.campaignContext.campaignRecipientId
+              }
+            }
           : {})
       };
 

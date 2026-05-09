@@ -49,6 +49,10 @@ const envSchema = z.object({
   MESSAGE_OUTBOX_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),
   MESSAGE_OUTBOX_WORKER_MAX_RETRIES: z.coerce.number().int().min(1).default(10),
+  CAMPAIGN_DISPATCH_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+  CAMPAIGN_DISPATCH_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
+  CAMPAIGN_DISPATCH_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(600000),
+  CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES: z.coerce.number().int().min(1).default(3),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()
 });
 
