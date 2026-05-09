@@ -35,4 +35,38 @@ const envSchema = z.object({
   ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR: z.coerce.boolean().default(false)
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+
+function resolveBaileysAuthDir(rawAuthDir: string): string {
+  const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID);
+  const isProductionLike = parsedEnv.NODE_ENV === "production" || isRailway;
+
+  if (!isProductionLike || path.isAbsolute(rawAuthDir)) {
+    return rawAuthDir;
+  }
+
+  const normalizedRelativePath = rawAuthDir.replace(/\\/g, "/").replace(/^\.\//, "");
+  const candidateMounts = ["/data", "/app/data"];
+
+  for (const candidateMount of candidateMounts) {
+    if (!fs.existsSync(candidateMount)) {
+      continue;
+    }
+
+    const relativeSuffix =
+      candidateMount.endsWith("/data") && normalizedRelativePath.startsWith("data/")
+        ? normalizedRelativePath.slice("data/".length)
+        : normalizedRelativePath;
+
+    return path.posix.join(candidateMount, relativeSuffix);
+  }
+
+  return rawAuthDir;
+}
+
+export const rawBaileysAuthDir = parsedEnv.BAILEYS_AUTH_DIR;
+
+export const env = {
+  ...parsedEnv,
+  BAILEYS_AUTH_DIR: resolveBaileysAuthDir(parsedEnv.BAILEYS_AUTH_DIR)
+};
