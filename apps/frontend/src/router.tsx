@@ -41,6 +41,9 @@ const SuperAdminAuditLogsPage = lazy(() =>
 const CampaignsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsPage }))
 );
+const AudienceGroupsPage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.AudienceGroupsPage }))
+);
 const CampaignsRouteGuard = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsRouteGuard }))
 );
@@ -83,6 +86,14 @@ export const router = createBrowserRouter([
             element: withRouteFallback(
               <CampaignsRouteGuard>
                 <CampaignsPage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/audience-groups",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <AudienceGroupsPage />
               </CampaignsRouteGuard>
             )
           },

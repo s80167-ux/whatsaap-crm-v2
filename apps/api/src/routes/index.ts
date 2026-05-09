@@ -3,6 +3,7 @@ import { requireAuth, requireCsrf, requireOrganizationContext } from "../middlew
 import { adminRoutes } from "../modules/admin/admin.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
 import { contactRoutes } from "../modules/contacts/contacts.routes.js";
+import { campaignsRoutes } from "../modules/campaigns/campaigns.routes.js";
 import { conversationRoutes } from "../modules/conversations/conversations.routes.js";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { inboxRoutes } from "../modules/inbox/inbox.routes.js";
@@ -50,6 +51,7 @@ apiRouter.use((req, res, next) => {
 });
 
 apiRouter.use("/inbox", inboxRoutes);
+apiRouter.use("/campaigns", campaignsRoutes);
 apiRouter.use("/conversations", conversationRoutes);
 apiRouter.use("/contacts", contactRoutes);
 apiRouter.use("/leads", leadRoutes);

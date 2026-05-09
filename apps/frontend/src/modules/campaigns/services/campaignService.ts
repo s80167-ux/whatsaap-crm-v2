@@ -1,10 +1,19 @@
-import type { Campaign, CampaignStats } from "../types/campaign.types";
+import { apiGet, apiPatch, apiPost } from "../../../lib/http";
+import type { Campaign, CampaignSpeedPreset, CampaignStats, CampaignTempo } from "../types/campaign.types";
 
 export const mockCampaigns: Campaign[] = [
   {
     id: "campaign-001",
     name: "Raya Returning Customers",
     audience: "Existing CRM Contacts",
+    audienceGroupId: null,
+    senderWhatsAppAccountId: null,
+    speedPreset: "safe",
+    delayPerMessageSeconds: 12,
+    batchSize: 20,
+    batchPauseSeconds: 120,
+    dailyLimit: 300,
+    stopOnHighFailure: true,
     status: "Draft",
     recipients: 240,
     sent: 0,
@@ -56,4 +65,58 @@ export function getMockCampaignStats(campaigns: Campaign[]): CampaignStats {
     failed: campaigns.reduce((sum, campaign) => sum + campaign.failed, 0),
     replied: campaigns.reduce((sum, campaign) => sum + campaign.replied, 0)
   };
+}
+
+export type CreateCampaignInput = {
+  organizationId?: string | null;
+  name: string;
+  senderWhatsAppAccountId: string;
+  audienceGroupId: string;
+  messageTemplate: string;
+  tempo: CampaignTempo;
+};
+
+export type UpdateCampaignInput = Partial<CreateCampaignInput> & {
+  campaignId: string;
+};
+
+export async function fetchCampaigns(organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: Campaign[] }>(`/campaigns${suffix}`);
+  return response.data;
+}
+
+export async function createCampaign(input: CreateCampaignInput) {
+  const response = await apiPost<{ data: Campaign }>("/campaigns", input);
+  return response.data;
+}
+
+export async function updateCampaign(input: UpdateCampaignInput) {
+  const response = await apiPatch<{ data: Campaign }>(`/campaigns/${input.campaignId}`, input);
+  return response.data;
+}
+
+export async function sendCampaignTest(input: {
+  campaignId?: string;
+  organizationId?: string | null;
+  senderWhatsAppAccountId: string;
+  testPhoneNumber: string;
+  messageTemplate: string;
+}) {
+  const path = input.campaignId ? `/campaigns/${input.campaignId}/send-test` : "/campaigns/preview/send-test";
+  const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);
+  return response.data;
+}
+
+export async function startCampaign(input: {
+  campaignId?: string;
+  organizationId?: string | null;
+  senderWhatsAppAccountId: string;
+  audienceGroupId: string;
+  messageTemplate: string;
+  speedPreset: CampaignSpeedPreset;
+}) {
+  const path = input.campaignId ? `/campaigns/${input.campaignId}/start` : "/campaigns/preview/start";
+  const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);
+  return response.data;
 }

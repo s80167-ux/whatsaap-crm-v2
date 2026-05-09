@@ -1,20 +1,34 @@
 import { Megaphone } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { Toast } from "../../../components/Toast";
+import { useWhatsAppAccounts } from "../../../hooks/useAdmin";
+import type { DashboardOutletContext } from "../../../layouts/DashboardLayout";
+import { fetchAudienceGroups } from "../audience-groups/services/audienceGroupService";
 import { CampaignListTable } from "../components/CampaignListTable";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
 import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
 import { getMockCampaignStats, mockCampaigns } from "../services/campaignService";
 
 export function CampaignsPage() {
+  const outletContext = useOutletContext<DashboardOutletContext>();
+  const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : null;
+  const shouldFetchOrganizationData = !outletContext.isSuperAdmin || Boolean(organizationId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const stats = useMemo(() => getMockCampaignStats(mockCampaigns), []);
+  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(organizationId, shouldFetchOrganizationData);
+  const { data: audienceGroups = [] } = useQuery({
+    queryKey: ["audience-groups", organizationId],
+    queryFn: () => fetchAudienceGroups(organizationId),
+    enabled: shouldFetchOrganizationData
+  });
 
-  function showPlaceholderNotice(message: string) {
-    setNotice({ message, variant: "success" });
+  function showPlaceholderNotice(message: string, variant: "success" | "error" = "success") {
+    setNotice({ message, variant });
   }
 
   return (
@@ -34,6 +48,15 @@ export function CampaignsPage() {
 
       <CampaignStatsCards stats={stats} />
 
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex min-h-[2.25rem] items-center border border-primary bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
+          Campaigns
+        </span>
+        <Link className="inline-flex min-h-[2.25rem] items-center border border-border bg-white px-3 py-2 text-xs font-semibold text-text transition hover:bg-background-tint" to="/campaigns/audience-groups">
+          Audience Groups
+        </Link>
+      </div>
+
       <Card elevated className="space-y-4 p-4 sm:p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Campaign list</p>
@@ -46,6 +69,9 @@ export function CampaignsPage() {
         open={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onPlaceholderAction={showPlaceholderNotice}
+        whatsappAccounts={whatsappAccounts}
+        audienceGroups={audienceGroups}
+        organizationId={organizationId}
       />
       <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} />
     </section>

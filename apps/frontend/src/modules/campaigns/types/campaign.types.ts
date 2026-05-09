@@ -1,18 +1,30 @@
 export type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Completed" | "Failed";
 
-export type AudienceSource = "Upload CSV" | "Existing CRM Contacts";
+export type CampaignSpeedPreset = "safe" | "normal" | "custom";
 
 export type CampaignContact = {
   name: string;
   phone: string;
   tag?: string | null;
-  gender?: "male" | "female" | null;
+  gender?: "male" | "female" | "unknown" | null;
 };
 
 export type Campaign = {
   id: string;
   name: string;
   audience: string;
+  audienceGroupId?: string | null;
+  audienceGroupName?: string | null;
+  audienceValidCount?: number;
+  senderWhatsAppAccountId?: string | null;
+  senderWhatsAppLabel?: string | null;
+  senderPhoneNumber?: string | null;
+  speedPreset?: CampaignSpeedPreset;
+  delayPerMessageSeconds?: number;
+  batchSize?: number;
+  batchPauseSeconds?: number;
+  dailyLimit?: number;
+  stopOnHighFailure?: boolean;
   status: CampaignStatus;
   recipients: number;
   sent: number;
@@ -28,4 +40,13 @@ export type CampaignStats = {
   sent: number;
   failed: number;
   replied: number;
+};
+
+export type CampaignTempo = {
+  speedPreset: CampaignSpeedPreset;
+  delayPerMessageSeconds: number;
+  batchSize: number;
+  batchPauseSeconds: number;
+  dailyLimit: number;
+  stopOnHighFailure: boolean;
 };
