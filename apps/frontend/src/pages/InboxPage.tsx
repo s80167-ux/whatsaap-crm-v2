@@ -111,6 +111,20 @@ export function InboxPage() {
   );
   const stableSelectedConversation =
     visibleConversations.find((conversation) => conversation.id === selectedConversation?.id) ?? visibleConversations[0];
+  const conversationQueryKey = useMemo(
+    () => ["conversations", chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin ? activeOrganizationId ?? "current" : "current"] as const,
+    [activeOrganizationId, chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin]
+  );
+  const messagesQueryKey = useMemo(
+    () => [
+      "messages",
+      stableSelectedConversation?.id,
+      chatHistoryRange.unit,
+      chatHistoryRange.value,
+      isSuperAdmin ? activeOrganizationId ?? "current" : "current"
+    ] as const,
+    [activeOrganizationId, chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin, stableSelectedConversation?.id]
+  );
   const { data: messages = [] } = useMessages(
     stableSelectedConversation?.id,
     chatHistoryRange,
@@ -132,6 +146,23 @@ export function InboxPage() {
     setMobilePane("list");
     setIsContactSheetOpen(false);
   }, [isMobile, activeOrganizationId]);
+
+  useEffect(() => {
+    const refetchInbox = () => {
+      void queryClient.refetchQueries({ queryKey: conversationQueryKey, exact: true, type: "active" });
+
+      if (stableSelectedConversation?.id) {
+        void queryClient.refetchQueries({ queryKey: messagesQueryKey, exact: true, type: "active" });
+      }
+    };
+
+    refetchInbox();
+    const intervalId = window.setInterval(refetchInbox, stableSelectedConversation?.id ? 1000 : 2500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [conversationQueryKey, messagesQueryKey, queryClient, stableSelectedConversation?.id]);
 
   function handleConversationSelect(conversation: Conversation) {
     setSelectedConversation(conversation);
