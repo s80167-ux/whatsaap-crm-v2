@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { getStoredUser } from "../lib/auth";
 
-export function useRealtimeInbox(organizationIdOverride?: string | null) {
+export function useRealtimeInbox(organizationIdOverride?: string | null, activeConversationId?: string) {
   const queryClient = useQueryClient();
   const organizationId = organizationIdOverride ?? getStoredUser()?.organizationId;
 
@@ -25,7 +25,7 @@ export function useRealtimeInbox(organizationIdOverride?: string | null) {
           filter: `organization_id=eq.${organizationId}`
         },
         () => {
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          void queryClient.refetchQueries({ queryKey: ["conversations"], type: "active" });
         }
       )
       .subscribe();
@@ -41,8 +41,15 @@ export function useRealtimeInbox(organizationIdOverride?: string | null) {
           filter: `organization_id=eq.${organizationId}`
         },
         () => {
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
-          void queryClient.invalidateQueries({ queryKey: ["messages"] });
+          void queryClient.refetchQueries({ queryKey: ["conversations"], type: "active" });
+          void queryClient.refetchQueries({ queryKey: ["messages"], type: "active" });
+
+          if (activeConversationId) {
+            void queryClient.refetchQueries({
+              queryKey: ["messages", activeConversationId],
+              type: "active"
+            });
+          }
         }
       )
       .subscribe();
@@ -51,5 +58,5 @@ export function useRealtimeInbox(organizationIdOverride?: string | null) {
       void supabaseClient.removeChannel(conversationsChannel);
       void supabaseClient.removeChannel(messagesChannel);
     };
-  }, [organizationId, queryClient]);
+  }, [activeConversationId, organizationId, queryClient]);
 }

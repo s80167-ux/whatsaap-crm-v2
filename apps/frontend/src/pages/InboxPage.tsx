@@ -31,8 +31,6 @@ export function InboxPage() {
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const activeOrganizationId = isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
 
-  useRealtimeInbox(activeOrganizationId);
-
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
   const {
@@ -42,7 +40,9 @@ export function InboxPage() {
     isLoading
   } = useConversations(
     chatHistoryRange,
-    isSuperAdmin ? activeOrganizationId : undefined
+    isSuperAdmin ? activeOrganizationId : undefined,
+    true,
+    { refetchIntervalMs: 2500 }
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
@@ -114,8 +114,11 @@ export function InboxPage() {
   const { data: messages = [] } = useMessages(
     stableSelectedConversation?.id,
     chatHistoryRange,
-    isSuperAdmin ? activeOrganizationId : undefined
+    isSuperAdmin ? activeOrganizationId : undefined,
+    { refetchIntervalMs: stableSelectedConversation?.id ? 1000 : false }
   );
+
+  useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);
 
   const conversationCountLabel = `${visibleConversations.length} conversation${visibleConversations.length === 1 ? "" : "s"}`;
 
