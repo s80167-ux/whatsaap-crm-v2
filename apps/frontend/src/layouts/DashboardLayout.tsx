@@ -6,6 +6,7 @@ import {
   FileBarChart,
   KeyRound,
   LogOut,
+  Megaphone,
   Menu,
   MessageSquare,
   Settings2,
@@ -33,9 +34,10 @@ import { NavLinkItem } from "../components/NavLinkItem";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
-import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
+import { useCampaignsModuleStatus, useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
+import { canAccessCampaigns } from "../lib/moduleAccess";
 import type { OrganizationSummary, WhatsAppAccountSummary } from "../types/admin";
 
 const SUPER_ADMIN_ORGANIZATION_KEY = "crm_super_admin_organization_id";
@@ -160,6 +162,7 @@ function SidebarContent({
   selectedOrganizationName,
   setSelectedOrganizationId,
   whatsappAccounts,
+  showCampaigns,
   onNavigate,
   mobile = false
 }: {
@@ -169,6 +172,7 @@ function SidebarContent({
   selectedOrganizationName: string | null;
   setSelectedOrganizationId: (organizationId: string) => void;
   whatsappAccounts: WhatsAppAccountSummary[];
+  showCampaigns: boolean;
   onNavigate?: () => void;
   mobile?: boolean;
 }) {
@@ -240,6 +244,9 @@ function SidebarContent({
           onNavigate={onNavigate}
           compact={mobile}
         />
+        {showCampaigns ? (
+          <NavLinkItem to="/campaigns" icon={<Megaphone size={18} />} label="Campaigns" onClick={onNavigate} compact={mobile} />
+        ) : null}
         <SidebarNavGroup
           icon={<Settings2 size={18} />}
           label="Setup"
@@ -302,6 +309,11 @@ export function DashboardLayout() {
   const { data: organizations = [] } = useOrganizations();
   const selectedOrganizationName = organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId);
+  const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
+  const showCampaigns = canAccessCampaigns({
+    role: user?.role,
+    moduleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
+  });
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -498,6 +510,7 @@ export function DashboardLayout() {
                 selectedOrganizationName={selectedOrganizationName}
                 setSelectedOrganizationId={setSelectedOrganizationId}
                 whatsappAccounts={whatsappAccounts}
+                showCampaigns={showCampaigns}
                 onNavigate={() => setIsMobileNavOpen(false)}
                 mobile
               />
@@ -661,6 +674,7 @@ export function DashboardLayout() {
               selectedOrganizationName={selectedOrganizationName}
               setSelectedOrganizationId={setSelectedOrganizationId}
               whatsappAccounts={whatsappAccounts}
+              showCampaigns={showCampaigns}
             />
           </Card>
         </motion.aside>

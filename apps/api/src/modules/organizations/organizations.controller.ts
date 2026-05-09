@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { AppError } from "../../lib/errors.js";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { AdminService } from "../../services/adminService.js";
@@ -14,6 +15,10 @@ const createOrganizationSchema = z.object({
 
 const updateOrganizationSchema = createOrganizationSchema.extend({
   status: z.enum(["active", "trial", "suspended", "closed"]).optional()
+});
+
+const updateCampaignsModuleSchema = z.object({
+  isEnabled: z.boolean()
 });
 
 export async function listOrganizations(_request: Request, response: Response) {
@@ -77,4 +82,35 @@ export async function deleteOrganization(request: Request, response: Response) {
   });
 
   return response.json({ ok: true });
+}
+
+export async function listOrganizationModules(request: Request, response: Response) {
+  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const modules = await adminService.listOrganizationModules(organizationId);
+
+  return response.json({ data: modules });
+}
+
+export async function updateCampaignsModule(request: Request, response: Response) {
+  if (!request.auth) {
+    throw new AppError("Authentication required", 401, "auth_required");
+  }
+
+  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const input = updateCampaignsModuleSchema.parse(request.body);
+  const module = await adminService.updateCampaignsModule(request.auth, organizationId, input.isEnabled);
+
+  await auditLogService.record(request.auth, {
+    organizationId,
+    action: "organization_module.updated",
+    entityType: "organization_module",
+    entityId: module.id ?? organizationId,
+    metadata: {
+      module_key: "campaigns",
+      is_enabled: input.isEnabled
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: module });
 }

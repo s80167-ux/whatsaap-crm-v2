@@ -196,16 +196,7 @@ export function SuperAdminFlowMap() {
       </div>
 
       <div className="overflow-auto bg-[#f2f3f3]">
-        <div
-          className="relative"
-          style={{
-            width: canvas.width,
-            height: canvas.height,
-            backgroundImage:
-              "linear-gradient(rgba(20,32,51,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(20,32,51,0.055) 1px, transparent 1px)",
-            backgroundSize: "62px 62px"
-          }}
-        >
+        <div className="super-admin-flow-canvas relative">
           <svg className="pointer-events-none absolute inset-0" width={canvas.width} height={canvas.height} viewBox={`0 0 ${canvas.width} ${canvas.height}`}>
             <defs>
               <marker id="flow-arrow" markerHeight="8" markerWidth="8" orient="auto" refX="6" refY="3">

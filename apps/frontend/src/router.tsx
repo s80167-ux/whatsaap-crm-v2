@@ -38,6 +38,12 @@ const ClearOrganizationDataPage = lazy(() =>
 const SuperAdminAuditLogsPage = lazy(() =>
   import("./pages/SuperAdminAuditLogsPage").then((module) => ({ default: module.SuperAdminAuditLogsPage }))
 );
+const CampaignsPage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.CampaignsPage }))
+);
+const CampaignsRouteGuard = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.CampaignsRouteGuard }))
+);
 
 function withRouteFallback(page: ReactElement) {
   return (
@@ -45,6 +51,10 @@ function withRouteFallback(page: ReactElement) {
       <RouteTransition>{page}</RouteTransition>
     </Suspense>
   );
+}
+
+function withSuspense(page: ReactElement) {
+  return <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading page...</div>}>{page}</Suspense>;
 }
 
 export const router = createBrowserRouter([
@@ -58,7 +68,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: withRouteFallback(<DashboardLayout />),
+        element: withSuspense(<DashboardLayout />),
         errorElement: <GlobalErrorElement />, // Dashboard-level error boundary
         children: [
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
@@ -68,6 +78,14 @@ export const router = createBrowserRouter([
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
           { path: "reports", element: withRouteFallback(<ReportsPage />) },
+          {
+            path: "campaigns",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <CampaignsPage />
+              </CampaignsRouteGuard>
+            )
+          },
           {
             path: "setup",
             element: withRouteFallback(<SetupPage />)

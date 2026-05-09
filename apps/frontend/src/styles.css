@@ -30,6 +30,16 @@
   color: #1976d2;
   text-decoration: underline;
 }
+
+.super-admin-flow-canvas {
+  width: 1520px;
+  height: 1180px;
+  background-image:
+    linear-gradient(rgba(20, 32, 51, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 32, 51, 0.055) 1px, transparent 1px);
+  background-size: 62px 62px;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -383,6 +393,32 @@ canvas {
     background: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.28);
     color: #ffffff;
+  }
+
+  .dashboard-shell:fullscreen,
+  .dashboard-shell:-webkit-full-screen,
+  :fullscreen .dashboard-shell,
+  :-webkit-full-screen .dashboard-shell {
+    height: 100vh;
+    min-height: 100vh;
+    padding-top: 0 !important;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .dashboard-shell:fullscreen .dashboard-topbar,
+  .dashboard-shell:-webkit-full-screen .dashboard-topbar,
+  :fullscreen .dashboard-topbar,
+  :-webkit-full-screen .dashboard-topbar {
+    position: sticky !important;
+    top: 0 !important;
+  }
+
+  .dashboard-shell:fullscreen .dashboard-content,
+  .dashboard-shell:-webkit-full-screen .dashboard-content,
+  :fullscreen .dashboard-content,
+  :-webkit-full-screen .dashboard-content {
+    min-height: calc(100vh - 3rem);
   }
 
   @media (max-width: 767px) {

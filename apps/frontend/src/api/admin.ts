@@ -5,6 +5,7 @@ import type {
   WhatsAppAccountSummary,
   WhatsAppSyncJobSummary
 } from "../types/admin";
+import type { ModuleKey, OrganizationModule, OrganizationModuleStatus } from "../types/modules";
 
 export type ContactRepairProposal = {
   id: string;
@@ -158,6 +159,33 @@ export async function updateOrganization(
 
 export async function deleteOrganization(organizationId: string) {
   return apiDelete<{ ok: true }>(`/organizations/${organizationId}`);
+}
+
+export async function fetchOrganizationModuleStatus(moduleKey: ModuleKey, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: OrganizationModuleStatus }>(
+    `/admin/organization-modules/${moduleKey}/status${suffix}`
+  );
+  return response.data;
+}
+
+export async function fetchOrganizationModules(organizationId: string) {
+  const response = await apiGet<{ data: OrganizationModule[] }>(
+    `/admin/organizations/${organizationId}/modules`
+  );
+  return response.data;
+}
+
+export async function updateOrganizationModule(
+  organizationId: string,
+  moduleKey: ModuleKey,
+  isEnabled: boolean
+) {
+  const response = await apiPatch<{ data: OrganizationModule }>(
+    `/admin/organizations/${organizationId}/modules/${moduleKey}`,
+    { isEnabled }
+  );
+  return response.data;
 }
 
 export async function fetchUsers(organizationId?: string | null) {

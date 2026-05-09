@@ -57,6 +57,10 @@ const listRawEventsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional()
 });
 
+const campaignsModuleStatusQuerySchema = z.object({
+  organization_id: z.string().uuid().optional()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -130,6 +134,16 @@ export async function deleteOrganization(request: Request, response: Response) {
   });
 
   return response.json({ ok: true });
+}
+
+export async function getCampaignsModuleStatus(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { organization_id: organizationId } = campaignsModuleStatusQuerySchema.parse(request.query);
+  const status = await adminService.getCampaignsModuleStatus(auth, organizationId ?? null);
+
+  return response.json({
+    data: status
+  });
 }
 
 export async function listOrganizationUsers(request: Request, response: Response) {

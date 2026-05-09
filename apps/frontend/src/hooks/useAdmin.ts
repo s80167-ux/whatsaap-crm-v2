@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchOrganizations, fetchUsers, fetchWhatsAppAccounts } from "../api/admin";
+import {
+  fetchOrganizationModules,
+  fetchOrganizationModuleStatus,
+  fetchOrganizations,
+  fetchUsers,
+  fetchWhatsAppAccounts
+} from "../api/admin";
 import { getStoredUser } from "../lib/auth";
 
 export function useOrganizations() {
@@ -27,5 +33,21 @@ export function useWhatsAppAccounts(organizationId?: string | null, enabled = tr
     enabled,
     refetchInterval: organizationId ? 3000 : false,
     staleTime: 0
+  });
+}
+
+export function useCampaignsModuleStatus(organizationId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["organization-module-status", "campaigns", organizationId ?? "current"],
+    queryFn: () => fetchOrganizationModuleStatus("campaigns", organizationId),
+    enabled
+  });
+}
+
+export function useOrganizationModules(organizationId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["organization-modules", organizationId],
+    queryFn: () => fetchOrganizationModules(organizationId ?? ""),
+    enabled: enabled && Boolean(organizationId)
   });
 }

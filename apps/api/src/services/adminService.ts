@@ -10,6 +10,8 @@ import type { AuthUser, UserRole } from "../types/auth.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
 
+const CAMPAIGNS_MODULE_KEY = "campaigns";
+
 function slugifyOrganizationName(name: string) {
   return name
     .toLowerCase()
@@ -98,6 +100,128 @@ export class AdminService {
       }
 
       return organization;
+    });
+  }
+
+  async getCampaignsModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    const resolvedOrganizationId = authUser.role === "super_admin" ? organizationId ?? null : authUser.organizationId;
+
+    if (!resolvedOrganizationId) {
+      return {
+        organizationId: null,
+        moduleKey: CAMPAIGNS_MODULE_KEY,
+        isEnabled: false
+      };
+    }
+
+    const client = await pool.connect();
+    try {
+      const result = await client.query<{ is_enabled: boolean }>(
+        `
+          select is_enabled
+          from organization_modules
+          where organization_id = $1
+            and module_key = $2
+          limit 1
+        `,
+        [resolvedOrganizationId, CAMPAIGNS_MODULE_KEY]
+      );
+
+      return {
+        organizationId: resolvedOrganizationId,
+        moduleKey: CAMPAIGNS_MODULE_KEY,
+        isEnabled: result.rows[0]?.is_enabled ?? false
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async listOrganizationModules(organizationId: string) {
+    const client = await pool.connect();
+    try {
+      const result = await client.query<{
+        id: string;
+        organization_id: string;
+        module_key: string;
+        is_enabled: boolean;
+        enabled_by: string | null;
+        enabled_at: string | null;
+        created_at: string;
+        updated_at: string;
+      }>(
+        `
+          select
+            id,
+            organization_id,
+            module_key,
+            is_enabled,
+            enabled_by,
+            enabled_at,
+            created_at,
+            updated_at
+          from organization_modules
+          where organization_id = $1
+          order by module_key asc
+        `,
+        [organizationId]
+      );
+
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  }
+
+  async updateCampaignsModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
+    return withTransaction(async (client) => {
+      const result = await client.query<{
+        id: string;
+        organization_id: string;
+        module_key: string;
+        is_enabled: boolean;
+        enabled_by: string | null;
+        enabled_at: string | null;
+        created_at: string;
+        updated_at: string;
+      }>(
+        `
+          insert into organization_modules (
+            organization_id,
+            module_key,
+            is_enabled,
+            enabled_by,
+            enabled_at,
+            updated_at
+          )
+          values (
+            $1,
+            $2,
+            $3,
+            $4,
+            case when $3 then timezone('utc', now()) else null end,
+            timezone('utc', now())
+          )
+          on conflict (organization_id, module_key)
+          do update set
+            is_enabled = excluded.is_enabled,
+            enabled_by = excluded.enabled_by,
+            enabled_at = excluded.enabled_at,
+            updated_at = timezone('utc', now())
+          returning
+            id,
+            organization_id,
+            module_key,
+            is_enabled,
+            enabled_by,
+            enabled_at,
+            created_at,
+            updated_at
+        `,
+        [organizationId, CAMPAIGNS_MODULE_KEY, isEnabled, authUser.authUserId ?? null]
+      );
+
+      return result.rows[0];
     });
   }
 

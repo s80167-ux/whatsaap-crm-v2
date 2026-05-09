@@ -22,6 +22,7 @@ import {
   listRawEvents,
   listWhatsAppAccounts,
   disconnectWhatsAppAccount,
+  getCampaignsModuleStatus,
   reconnectWhatsAppAccount,
   resetWhatsAppAccountPairing,
   replayRawEvents,
@@ -29,6 +30,8 @@ import {
 } from "./admin.controller.js";
 
 export const adminRoutes = Router();
+
+adminRoutes.get("/organization-modules/campaigns/status", asyncHandler(getCampaignsModuleStatus));
 
 adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));
