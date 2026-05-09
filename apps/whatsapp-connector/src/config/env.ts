@@ -12,7 +12,7 @@ const rootEnvPath = path.resolve(process.cwd(), ".env");
 
 for (const envPath of [connectorEnvPath, workspaceConnectorEnvPath, rootEnvPath]) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: process.env.NODE_ENV !== "production" });
+    dotenv.config({ path: envPath, override: false });
   }
 }
 
@@ -31,7 +31,8 @@ const envSchema = z.object({
   CONNECTOR_INSTANCE_ID: z.string().min(1).default(`connector-${process.pid}`),
   CONNECTOR_LEASE_TTL_MS: z.coerce.number().int().positive().default(30000),
   CONNECTOR_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10000),
-  CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES: z.coerce.number().int().min(1).default(5)
+  CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES: z.coerce.number().int().min(1).default(5),
+  ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR: z.coerce.boolean().default(false)
 });
 
 export const env = envSchema.parse(process.env);

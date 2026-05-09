@@ -140,12 +140,14 @@ npm run worker:usage-daily -- --days 7
 - `CONNECTOR_HEARTBEAT_INTERVAL_MS`: lease heartbeat interval
 
 For Railway deployments, do not leave `BAILEYS_AUTH_DIR` on the default relative path such as `./data/baileys_auth`.
-Mount a persistent volume to `/data` and set:
+Set it inside the persistent volume mount. For example, if Railway mounts the connector volume at `/app/data`, set:
 
 ```env
-BAILEYS_AUTH_DIR=/data/baileys_auth
+BAILEYS_AUTH_DIR=/app/data/baileys_auth
 CONNECTOR_INSTANCE_ID=connector-railway-1
 ```
+
+Never run a local development connector against the production/shared database unless you are intentionally taking ownership of those WhatsApp sessions. The connector refuses this by default with `ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR=false`.
 
 ### Dev WhatsApp Sends
 

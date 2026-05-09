@@ -11,7 +11,7 @@ const rootEnvPath = path.resolve(process.cwd(), ".env");
 
 for (const envPath of [backendEnvPath, rootEnvPath]) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: false });
   }
 }
 

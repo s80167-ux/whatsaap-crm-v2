@@ -81,6 +81,19 @@ function mapBaileysStatusToAckStatus(status: number | null | undefined) {
   }
 }
 
+function isLocalDatabaseUrl(databaseUrl: string) {
+  try {
+    const hostname = new URL(databaseUrl).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+function shouldBlockSessionMutationInThisEnvironment() {
+  return env.NODE_ENV !== "production" && !env.ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR && !isLocalDatabaseUrl(env.DATABASE_URL);
+}
+
 export class WhatsAppSessionManager {
   private static instance: WhatsAppSessionManager;
 
@@ -178,6 +191,18 @@ export class WhatsAppSessionManager {
     display_name: string | null;
     history_sync_lookback_days?: number | null;
   }) {
+    if (shouldBlockSessionMutationInThisEnvironment()) {
+      logger.error(
+        {
+          accountId: account.id,
+          nodeEnv: env.NODE_ENV,
+          connectorInstanceId: env.CONNECTOR_INSTANCE_ID
+        },
+        "Refusing to reconnect WhatsApp session from a non-production connector pointed at a remote database"
+      );
+      return;
+    }
+
     this.disabledAccounts.delete(account.id);
     this.connectedAccounts.delete(account.id);
     this.reconnectFailureCounts.delete(account.id);
@@ -197,6 +222,18 @@ export class WhatsAppSessionManager {
     display_name: string | null;
     history_sync_lookback_days?: number | null;
   }) {
+    if (shouldBlockSessionMutationInThisEnvironment()) {
+      logger.error(
+        {
+          accountId: account.id,
+          nodeEnv: env.NODE_ENV,
+          connectorInstanceId: env.CONNECTOR_INSTANCE_ID
+        },
+        "Refusing to initialize WhatsApp session from a non-production connector pointed at a remote database"
+      );
+      return;
+    }
+
     if (this.disabledAccounts.has(account.id)) {
       return;
     }
@@ -235,6 +272,23 @@ export class WhatsAppSessionManager {
 
       const authDir = path.resolve(path.join(env.BAILEYS_AUTH_DIR, account.id));
       await fs.mkdir(authDir, { recursive: true });
+      const credsPath = path.join(authDir, "creds.json");
+      const hasExistingCreds = await fs
+        .access(credsPath)
+        .then(() => true)
+        .catch(() => false);
+
+      logger.info(
+        { accountId: account.id, authDir, hasExistingCreds },
+        "Initializing WhatsApp auth state"
+      );
+
+      if (!hasExistingCreds) {
+        logger.warn(
+          { accountId: account.id, authDir, credsPath },
+          "WhatsApp auth credentials were not found before socket startup; Baileys will require QR pairing"
+        );
+      }
 
       const { state, saveCreds } = await useMultiFileAuthState(authDir);
       const { version } = await fetchLatestBaileysVersion();
@@ -639,6 +693,18 @@ export class WhatsAppSessionManager {
   }
 
   async terminateSession(accountId: string) {
+    if (shouldBlockSessionMutationInThisEnvironment()) {
+      logger.error(
+        {
+          accountId,
+          nodeEnv: env.NODE_ENV,
+          connectorInstanceId: env.CONNECTOR_INSTANCE_ID
+        },
+        "Refusing to terminate WhatsApp session from a non-production connector pointed at a remote database"
+      );
+      return;
+    }
+
     this.disabledAccounts.add(accountId);
     await this.cleanupRuntime(accountId, "terminated");
 
