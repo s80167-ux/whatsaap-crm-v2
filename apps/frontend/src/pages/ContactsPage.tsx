@@ -3,13 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, MessageCircle, Phone, X } from "lucide-react";
-import { assignContact, sendMessage, startContactConversation, updateContact } from "../api/crm";
+import { assignContact, mergeContacts, sendMessage, startContactConversation, updateContact } from "../api/crm";
 import { detectContactRepairProposal } from "../api/admin";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { ContactRepairQueueOverlay } from "../components/ContactRepairQueueOverlay";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
+import { PopupOverlay } from "../components/PopupOverlay";
 import { useOrganizationUsers, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useContact, useContacts } from "../hooks/useContacts";
 import { useIsMobileViewport, useMediaQuery } from "../hooks/useMediaQuery";
@@ -98,13 +99,15 @@ function CompactRepairTools({
   canWrite,
   organizationId,
   onChanged,
-  onOpenQueue
+  onOpenQueue,
+  onOpenManualMerge
 }: {
   contact: Contact;
   canWrite: boolean;
   organizationId?: string | null;
   onChanged: () => Promise<void>;
   onOpenQueue: () => void;
+  onOpenManualMerge: () => void;
 }) {
   const isMobile = useIsMobileViewport();
   const [expanded, setExpanded] = useState(false);
@@ -213,6 +216,14 @@ function CompactRepairTools({
               >
                 Review queue
               </Button>
+              <Button
+                variant="secondary"
+                className="px-3 py-2 text-xs"
+                onClick={onOpenManualMerge}
+                disabled={!canWrite}
+              >
+                Manual merge
+              </Button>
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
@@ -302,6 +313,11 @@ export function ContactsPage() {
   const [selectedWhatsAppAccountId, setSelectedWhatsAppAccountId] = useState<string>("");
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null);
   const [isRepairQueueOpen, setIsRepairQueueOpen] = useState(false);
+  const [isManualMergeOpen, setIsManualMergeOpen] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const [mergeNote, setMergeNote] = useState("");
+  const [isMergingContact, setIsMergingContact] = useState(false);
+  const [mergeMessage, setMergeMessage] = useState<string | null>(null);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editPhoneNumber, setEditPhoneNumber] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -353,6 +369,14 @@ export function ContactsPage() {
     () => new Map(contacts.map((contact) => [contact.id, contact])),
     [contacts]
   );
+  const mergeTargetOptions = useMemo(
+    () =>
+      contacts
+        .filter((contact) => contact.id !== activeContact?.id && contact.status !== "merged")
+        .sort((a, b) => getContactLabel(a).localeCompare(getContactLabel(b))),
+    [activeContact?.id, contacts]
+  );
+  const mergeTargetContact = mergeTargetId ? contactsById.get(mergeTargetId) ?? null : null;
 
   const visibleContacts = useMemo(() => {
     const ownNumbers = new Set<string>();
@@ -445,6 +469,13 @@ export function ContactsPage() {
     setSaveMessage(null);
   }, [activeContact]);
 
+  useEffect(() => {
+    setIsManualMergeOpen(false);
+    setMergeTargetId("");
+    setMergeNote("");
+    setMergeMessage(null);
+  }, [activeContact?.id]);
+
   async function handleAssignContact(contactId: string, organizationUserId: string) {
     if (!organizationUserId) {
       return;
@@ -467,6 +498,35 @@ export function ContactsPage() {
     if (!selectedContactId) return;
     await queryClient.invalidateQueries({ queryKey: ["contacts"] });
     await queryClient.invalidateQueries({ queryKey: ["contact", selectedContactId] });
+  }
+
+  async function handleManualMerge() {
+    if (!activeContact || !mergeTargetId || isMergingContact) {
+      return;
+    }
+
+    setIsMergingContact(true);
+    setMergeMessage(null);
+
+    try {
+      await mergeContacts({
+        sourceContactId: activeContact.id,
+        targetContactId: mergeTargetId,
+        note: emptyToNull(mergeNote)
+      });
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.invalidateQueries({ queryKey: ["contact", activeContact.id] });
+      await queryClient.invalidateQueries({ queryKey: ["contact", mergeTargetId] });
+      setSelectedContactId(mergeTargetId);
+      setRedirectMessage("Contacts merged. Showing the active profile.");
+      setIsManualMergeOpen(false);
+      setMergeTargetId("");
+      setMergeNote("");
+    } catch (error) {
+      setMergeMessage(error instanceof Error ? error.message : "Unable to merge contacts.");
+    } finally {
+      setIsMergingContact(false);
+    }
   }
 
   function openCompose(contact: Contact) {
@@ -1110,6 +1170,10 @@ export function ContactsPage() {
               organizationId={activeOrganizationId}
               onChanged={refreshSelectedContact}
               onOpenQueue={() => setIsRepairQueueOpen(true)}
+              onOpenManualMerge={() => {
+                setMergeMessage(null);
+                setIsManualMergeOpen(true);
+              }}
             />
             <div className="workspace-subtle text-sm leading-6 text-text-muted">
               <p>Contact ID: {activeContact.id}</p>
@@ -1301,6 +1365,93 @@ export function ContactsPage() {
           </div>
         </div>
       ) : null}
+      <PopupOverlay
+        open={isManualMergeOpen}
+        onClose={() => {
+          if (!isMergingContact) {
+            setIsManualMergeOpen(false);
+          }
+        }}
+        title="Manual merge"
+        description="Merge the selected contact into an existing canonical profile."
+        panelClassName="max-w-[min(38rem,calc(100vw-2rem))]"
+      >
+        {activeContact ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-border bg-background-tint/60 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Merge away</p>
+                <p className="mt-2 text-sm font-semibold text-text">{getContactLabel(activeContact) || "Unknown"}</p>
+                <p className="mt-1 text-xs text-text-muted">{activeContact.primary_phone_normalized ?? "No phone"}</p>
+              </div>
+              <div className="rounded-xl border border-border bg-background-tint/60 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Keep as canonical</p>
+                <p className="mt-2 text-sm font-semibold text-text">
+                  {mergeTargetContact ? getContactLabel(mergeTargetContact) || "Unknown" : "Choose target"}
+                </p>
+                <p className="mt-1 text-xs text-text-muted">{mergeTargetContact?.primary_phone_normalized ?? "No target selected"}</p>
+              </div>
+            </div>
+
+            {mergeMessage ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mergeMessage}</div>
+            ) : null}
+
+            <label className="block">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Target contact</span>
+              <Select
+                className="mt-1 h-11 w-full"
+                value={mergeTargetId}
+                onChange={(event) => setMergeTargetId(event.target.value)}
+                disabled={isMergingContact}
+              >
+                <option value="">Select contact to keep</option>
+                {mergeTargetOptions.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {(getContactLabel(contact) || "Unknown") +
+                      (contact.primary_phone_normalized ? ` - ${contact.primary_phone_normalized}` : "")}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <label className="block">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">Note</span>
+              <Input
+                className="mt-1 h-11 w-full"
+                value={mergeNote}
+                onChange={(event) => setMergeNote(event.target.value)}
+                placeholder="Optional reason"
+                disabled={isMergingContact}
+              />
+            </label>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+              Conversations, messages, WhatsApp identities, leads, activities, sales orders, dispatch records, and quick reply outcomes will move to the target contact. The selected contact will be marked as merged.
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="secondary"
+                className="px-4 py-2 text-sm"
+                onClick={() => setIsManualMergeOpen(false)}
+                disabled={isMergingContact}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="px-4 py-2 text-sm"
+                onClick={() => void handleManualMerge()}
+                disabled={!mergeTargetId || isMergingContact}
+              >
+                {isMergingContact ? "Merging..." : "Merge contact"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted">Select a contact before merging.</p>
+        )}
+      </PopupOverlay>
       <ContactRepairQueueOverlay
         open={isRepairQueueOpen}
         onClose={() => setIsRepairQueueOpen(false)}

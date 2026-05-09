@@ -4,6 +4,7 @@ import { withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ContactAssignmentService } from "../../services/contactAssignmentService.js";
 import { ContactCommandService } from "../../services/contactCommandService.js";
+import { ContactRepairProposalService } from "../../services/contactRepairProposalService.js";
 import { ConversationService } from "../../services/conversationService.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
@@ -53,6 +54,12 @@ const updateContactBodySchema = z.object({
     input.ownerUserId !== undefined,
   { message: "At least one field must be provided" }
 );
+
+const mergeContactsBodySchema = z.object({
+  sourceContactId: z.string().uuid(),
+  targetContactId: z.string().uuid(),
+  note: z.string().trim().max(500).optional().nullable()
+});
 
 const organizationQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
@@ -233,6 +240,25 @@ export async function assignContact(request: Request, response: Response) {
   );
 
   return response.status(201).json({ data: contact });
+}
+
+export async function mergeContacts(request: Request, response: Response) {
+  const auth = requireAuth(request);
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const input = mergeContactsBodySchema.parse(request.body);
+
+  const result = await ContactRepairProposalService.mergeContactsManually({
+    sourceContactId: input.sourceContactId,
+    targetContactId: input.targetContactId,
+    note: input.note ?? null,
+    user: auth
+  });
+
+  return response.json({ data: result });
 }
 
 export async function startContactConversation(request: Request, response: Response) {

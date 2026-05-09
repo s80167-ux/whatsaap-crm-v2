@@ -221,6 +221,28 @@ export async function assignContact(payload: { contactId: string; organizationUs
   });
 }
 
+export async function mergeContacts(payload: {
+  sourceContactId: string;
+  targetContactId: string;
+  note?: string | null;
+}) {
+  const response = await apiPost<{
+    data: {
+      status: "applied";
+      sourceContactId: string;
+      targetContactId: string;
+      appliedDuplicateMerge?: {
+        movedCounts?: Record<string, number>;
+      } | null;
+    };
+  }>("/contacts/merge", {
+    sourceContactId: payload.sourceContactId,
+    targetContactId: payload.targetContactId,
+    note: payload.note ?? null
+  });
+  return response.data;
+}
+
 export async function startContactConversation(payload: { contactId: string; whatsappAccountId: string }) {
   const response = await apiPost<{ data: Conversation }>(`/contacts/${payload.contactId}/conversation`, {
     whatsappAccountId: payload.whatsappAccountId

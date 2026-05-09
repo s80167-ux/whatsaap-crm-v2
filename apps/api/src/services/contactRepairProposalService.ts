@@ -159,7 +159,24 @@ async function tableExists(client: any, tableName: string) {
   return Boolean(result.rows[0]?.exists);
 }
 
-async function applyDuplicateContactMerge(
+async function tableColumnExists(client: any, tableName: string, columnName: string) {
+  const result = await client.query(
+    `
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = $1
+          and column_name = $2
+      ) as exists
+    `,
+    [tableName, columnName]
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+export async function applyDuplicateContactMerge(
   client: any,
   input: {
     organizationId: string;
@@ -193,8 +210,51 @@ async function applyDuplicateContactMerge(
   const movedCounts: Record<string, number> = {
     conversations: 0,
     conversationsMerged: 0,
-    messages: 0
+    messages: 0,
+    contactIdentities: 0,
+    contactOwners: 0
   };
+
+  const movedIdentities = await client.query(
+    `
+      update contact_identities
+      set contact_id = $1,
+          is_primary = false,
+          updated_at = timezone('utc', now())
+      where organization_id = $2
+        and contact_id = $3
+      returning id
+    `,
+    [input.targetContactId, input.organizationId, input.sourceContactId]
+  );
+  movedCounts.contactIdentities = movedIdentities.rowCount ?? 0;
+
+  if (await tableExists(client, "contact_owners")) {
+    await client.query(
+      `
+        delete from contact_owners source_owner
+        using contact_owners target_owner
+        where source_owner.organization_id = $1
+          and source_owner.contact_id = $2
+          and target_owner.organization_id = source_owner.organization_id
+          and target_owner.contact_id = $3
+          and target_owner.organization_user_id = source_owner.organization_user_id
+      `,
+      [input.organizationId, input.sourceContactId, input.targetContactId]
+    );
+
+    const movedOwners = await client.query(
+      `
+        update contact_owners
+        set contact_id = $1
+        where organization_id = $2
+          and contact_id = $3
+        returning id
+      `,
+      [input.targetContactId, input.organizationId, input.sourceContactId]
+    );
+    movedCounts.contactOwners = movedOwners.rowCount ?? 0;
+  }
 
   const sourceConversations = await client.query(
     `
@@ -319,16 +379,25 @@ async function applyDuplicateContactMerge(
   );
   movedCounts.messages += remainingMessages.rowCount ?? 0;
 
-  const optionalContactTables = ["leads", "activities", "sales_orders"];
-  for (const tableName of optionalContactTables) {
+  const optionalContactTables = [
+    { tableName: "leads", columnName: "contact_id" },
+    { tableName: "activities", columnName: "contact_id" },
+    { tableName: "sales_orders", columnName: "contact_id" },
+    { tableName: "message_dispatch_outbox", columnName: "contact_id" },
+    { tableName: "quick_reply_message_events", columnName: "contact_id" },
+    { tableName: "campaign_audience_contacts", columnName: "crm_contact_id" },
+    { tableName: "campaign_dispatches", columnName: "crm_contact_id" }
+  ];
+  for (const { tableName, columnName } of optionalContactTables) {
     if (!(await tableExists(client, tableName))) continue;
+    if (!(await tableColumnExists(client, tableName, columnName))) continue;
 
     const result = await client.query(
       `
         update ${tableName}
-        set contact_id = $1
+        set ${columnName} = $1
         where organization_id = $2
-          and contact_id = $3
+          and ${columnName} = $3
         returning id
       `,
       [input.targetContactId, input.organizationId, input.sourceContactId]
@@ -351,6 +420,28 @@ async function applyDuplicateContactMerge(
     `,
     [input.targetContactId, input.mergedBy, input.sourceContactId, input.organizationId]
   );
+
+  if (await tableExists(client, "contact_merge_history")) {
+    await client.query(
+      `
+        insert into contact_merge_history (
+          organization_id,
+          source_contact_id,
+          target_contact_id,
+          reason,
+          merged_by
+        )
+        values ($1, $2, $3, $4, $5)
+      `,
+      [
+        input.organizationId,
+        input.sourceContactId,
+        input.targetContactId,
+        "manual_duplicate_contact_merge",
+        input.mergedBy
+      ]
+    );
+  }
 
   return {
     sourceContact: source.rows[0] ?? null,
@@ -717,6 +808,55 @@ export class ContactRepairProposalService {
       status: "applied",
       applied,
       appliedPhoneRepair,
+      appliedDuplicateMerge
+    };
+  }
+
+  static async mergeContactsManually(input: {
+    sourceContactId: string;
+    targetContactId: string;
+    user: any;
+    note?: string | null;
+  }) {
+    if (!input.user?.organizationId) {
+      throw new Error("organization_id is required");
+    }
+
+    let appliedDuplicateMerge: any = null;
+
+    await withTransaction(async (client: any) => {
+      appliedDuplicateMerge = await applyDuplicateContactMerge(client, {
+        organizationId: input.user.organizationId,
+        sourceContactId: input.sourceContactId,
+        targetContactId: input.targetContactId,
+        mergedBy: input.user.organizationUserId ?? null
+      });
+    });
+
+    const applied = await ContactIdentityRepairService.refreshContactIdentity(input.targetContactId, {
+      dry_run: false,
+      confirm: true,
+      user: input.user
+    });
+
+    await new AuditLogService().record(input.user, {
+      action: "contact.manual_merge.applied",
+      entityType: "contact",
+      entityId: input.targetContactId,
+      metadata: {
+        sourceContactId: input.sourceContactId,
+        targetContactId: input.targetContactId,
+        note: input.note ?? null,
+        applied,
+        appliedDuplicateMerge
+      }
+    });
+
+    return {
+      status: "applied",
+      sourceContactId: input.sourceContactId,
+      targetContactId: input.targetContactId,
+      applied,
       appliedDuplicateMerge
     };
   }
