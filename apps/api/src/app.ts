@@ -17,6 +17,31 @@ if (env.TRUST_PROXY) {
   app.set("trust proxy", 1);
 }
 
+function isLocalOrigin(origin: string) {
+  try {
+    const parsedOrigin = new URL(origin);
+    return (
+      parsedOrigin.protocol === "http:" &&
+      (parsedOrigin.hostname === "localhost" || parsedOrigin.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isProjectVercelOrigin(origin: string) {
+  try {
+    const parsedOrigin = new URL(origin);
+    return (
+      parsedOrigin.protocol === "https:" &&
+      parsedOrigin.hostname.endsWith(".vercel.app") &&
+      /^whats(?:app|aap)-crm-v2-/i.test(parsedOrigin.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isAllowedOrigin(origin: string | undefined) {
   if (!origin) {
     return true;
@@ -27,15 +52,11 @@ function isAllowedOrigin(origin: string | undefined) {
   }
 
   if (env.NODE_ENV !== "production") {
-    try {
-      const parsedOrigin = new URL(origin);
-      return (
-        parsedOrigin.protocol === "http:" &&
-        (parsedOrigin.hostname === "localhost" || parsedOrigin.hostname === "127.0.0.1")
-      );
-    } catch {
-      return false;
-    }
+    return isLocalOrigin(origin);
+  }
+
+  if (isProjectVercelOrigin(origin)) {
+    return true;
   }
 
   return false;
