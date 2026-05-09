@@ -36,6 +36,14 @@ export class ConnectorClient {
     });
   }
 
+  async getAccountStatus(accountId: string) {
+    return this.request<{
+      accountId: string;
+      connected: boolean;
+      connectionStatus: string;
+    }>(`/internal/accounts/${accountId}/status`);
+  }
+
   async backfillAccount(accountId: string) {
     return this.request<{ accountId: string }>(`/internal/accounts/${accountId}/backfill`, {
       method: "POST"

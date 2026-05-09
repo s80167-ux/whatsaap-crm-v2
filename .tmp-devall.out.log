@@ -1,0 +1,82 @@
+
+> whatsapp-crm-v2@2.0.0 dev:all
+> concurrently -k -n backend,connector,raw-events,outbox,campaign,frontend -c blue,green,yellow,magenta,red,cyan "npm run dev:backend" "npm run dev:connector" "npm run worker:raw-events" "npm run worker:message-outbox" "npm run worker:campaign-dispatch" "npm run dev:frontend"
+
+[backend] 
+[backend] > whatsapp-crm-v2@2.0.0 dev:backend
+[backend] > npm --workspace apps/api run dev
+[backend] 
+[connector] 
+[connector] > whatsapp-crm-v2@2.0.0 dev:connector
+[connector] > npm --workspace apps/whatsapp-connector run dev
+[connector] 
+[raw-events] 
+[raw-events] > whatsapp-crm-v2@2.0.0 worker:raw-events
+[raw-events] > npm --workspace apps/api run worker:raw-events
+[raw-events] 
+[frontend] 
+[frontend] > whatsapp-crm-v2@2.0.0 dev:frontend
+[frontend] > npm --workspace apps/frontend run dev
+[frontend] 
+[campaign] 
+[campaign] > whatsapp-crm-v2@2.0.0 worker:campaign-dispatch
+[campaign] > npm --workspace apps/api run worker:campaign-dispatch
+[campaign] 
+[outbox] 
+[outbox] > whatsapp-crm-v2@2.0.0 worker:message-outbox
+[outbox] > npm --workspace apps/api run worker:message-outbox
+[outbox] 
+[backend] 
+[backend] > api@2.0.0 dev
+[backend] > tsx watch src/server.ts
+[backend] 
+[raw-events] 
+[raw-events] > api@2.0.0 worker:raw-events
+[raw-events] > tsx src/workers/processRawEvents.ts
+[raw-events] 
+[connector] 
+[connector] > whatsapp-connector@2.0.0 dev
+[connector] > tsx watch src/server.ts
+[connector] 
+[frontend] 
+[frontend] > frontend-app@2.0.0 dev
+[frontend] > vite
+[frontend] 
+[outbox] 
+[outbox] > api@2.0.0 worker:message-outbox
+[outbox] > tsx src/workers/processMessageOutbox.ts
+[outbox] 
+[campaign] 
+[campaign] > api@2.0.0 worker:campaign-dispatch
+[campaign] > tsx src/workers/processCampaignDispatch.ts
+[campaign] 
+[frontend] 
+[frontend]   [32m[1mVITE[22m v6.4.2[39m  [2mready in [0m[1m1906[22m[2m[0m ms[22m
+[frontend] 
+[frontend]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[frontend] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[connector] [19:09:51.724] [32mINFO[39m (16332): [36mConnector database connection established[39m
+[connector] [19:09:51.725] [32mINFO[39m (16332): [36mConnector runtime configuration[39m
+[connector]     [35mnodeEnv[39m: "development"
+[connector]     [35misRailway[39m: false
+[connector]     [35mrawBaileysAuthDir[39m: "./data/baileys_auth"
+[connector]     [35mbaileysAuthDir[39m: "./data/baileys_auth"
+[connector]     [35mauthDirExists[39m: true
+[connector]     [35mauthDirEntryCount[39m: 2
+[connector]     [35mdetectedPersistentMounts[39m: []
+[connector]     [35mconnectorInstanceId[39m: "connector-local-1"
+[connector] [19:09:51.726] [32mINFO[39m (16332): [36mConnector auth directory snapshot[39m
+[connector]     [35mbaileysAuthDir[39m: "./data/baileys_auth"
+[connector]     [35mauthDirEntries[39m: [
+[connector]       "6e45e6c5-8785-42ca-9f39-9064305e492c",
+[connector]       "75fd95e0-795d-46e2-bebb-72598cae5b3e"
+[connector]     ]
+[connector] [19:09:51.904] [31mERROR[39m (16332): [36mRefusing to initialize WhatsApp session from a non-production connector pointed at a remote database[39m
+[connector]     [35maccountId[39m: "6e45e6c5-8785-42ca-9f39-9064305e492c"
+[connector]     [35mnodeEnv[39m: "development"
+[connector]     [35mconnectorInstanceId[39m: "connector-local-1"
+[connector] [19:09:51.904] [31mERROR[39m (16332): [36mRefusing to initialize WhatsApp session from a non-production connector pointed at a remote database[39m
+[connector]     [35maccountId[39m: "75fd95e0-795d-46e2-bebb-72598cae5b3e"
+[connector]     [35mnodeEnv[39m: "development"
+[connector]     [35mconnectorInstanceId[39m: "connector-local-1"
+[connector] [19:09:51.908] [32mINFO[39m (16332): [36mWhatsApp connector listening on port 4010[39m

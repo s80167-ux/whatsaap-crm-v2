@@ -6,6 +6,7 @@ import {
   initializeAllSessions,
   reconnectAccountSession,
   backfillAccountSession,
+  getAccountSessionStatus,
   listAccountContacts,
   syncAccountContacts,
   sendAccountMessage,
@@ -21,6 +22,7 @@ router.post("/internal/sessions/initialize-all", asyncHandler(initializeAllSessi
 router.post("/internal/accounts/:accountId/connect", asyncHandler(initializeAccountSession));
 router.post("/internal/accounts/:accountId/reconnect", asyncHandler(reconnectAccountSession));
 router.post("/internal/accounts/:accountId/backfill", asyncHandler(backfillAccountSession));
+router.get("/internal/accounts/:accountId/status", asyncHandler(getAccountSessionStatus));
 router.get("/internal/accounts/:accountId/contacts", asyncHandler(listAccountContacts));
 router.post("/internal/accounts/:accountId/contacts/sync", asyncHandler(syncAccountContacts));
 router.delete("/internal/accounts/:accountId/session", asyncHandler(terminateAccountSession));

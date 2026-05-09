@@ -6,10 +6,12 @@ import {
   createCampaign,
   createAudienceGroup,
   deleteAudienceGroup,
+  exportCampaignRecipients,
   getAudienceGroup,
   getAudienceGroupContacts,
   getCampaign,
   importAudienceGroupContacts,
+  listCampaignRecipients,
   listAudienceGroups,
   listCampaigns,
   pauseCampaign,
@@ -36,6 +38,8 @@ campaignsRoutes.post("/audience-groups/:audienceGroupId/import", asyncHandler(im
 campaignsRoutes.get("/audience-groups/:audienceGroupId/contacts", asyncHandler(getAudienceGroupContacts));
 campaignsRoutes.delete("/audience-groups/:audienceGroupId", asyncHandler(deleteAudienceGroup));
 campaignsRoutes.get("/:campaignId", asyncHandler(getCampaign));
+campaignsRoutes.get("/:campaignId/recipients", asyncHandler(listCampaignRecipients));
+campaignsRoutes.get("/:campaignId/recipients/export", asyncHandler(exportCampaignRecipients));
 campaignsRoutes.patch("/:campaignId", asyncHandler(updateCampaign));
 campaignsRoutes.post("/:campaignId/send-test", asyncHandler(sendCampaignTest));
 campaignsRoutes.post("/:campaignId/start", asyncHandler(startCampaign));

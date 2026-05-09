@@ -485,6 +485,7 @@ canvas {
     display: grid;
     gap: 1.25rem;
     grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.4fr) minmax(280px, 0.72fr);
+    grid-template-areas: "queue chat detail";
     align-items: start;
   }
 
@@ -492,6 +493,19 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .inbox-queue-rail {
+    grid-area: queue;
+  }
+
+  .inbox-chat-rail {
+    grid-area: chat;
+    min-width: 0;
+  }
+
+  .inbox-detail-rail {
+    grid-area: detail;
   }
 
   .sidebar-hero-copy {
@@ -548,6 +562,10 @@ canvas {
 @media (max-width: 1400px) {
   .inbox-workspace-grid {
     grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.35fr);
+    grid-template-areas:
+      "queue chat"
+      "detail chat";
+    row-gap: 1rem;
   }
 }
 
@@ -555,6 +573,10 @@ canvas {
   .dashboard-focus-grid,
   .inbox-workspace-grid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "queue"
+      "chat"
+      "detail";
   }
 }
 

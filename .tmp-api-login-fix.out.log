@@ -1,0 +1,14 @@
+
+> api@2.0.0 dev
+> tsx watch src/server.ts
+
+[startup] app module initialized
+[startup] bootstrap begin
+7:20:33 pm [tsx] change in ./src\config\database.ts Restarting...
+c[startup] app module initialized
+[startup] bootstrap begin
+[startup] database select 1 complete
+[startup] organization_users migration check complete
+[startup] app.listen callback on port 4000
+[19:20:37.012] [32mINFO[39m (19052): [36mDatabase connection established[39m
+[19:20:37.021] [32mINFO[39m (19052): [36mBackend listening on port 4000[39m

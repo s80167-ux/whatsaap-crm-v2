@@ -114,6 +114,41 @@ export class MessageDispatchOutboxRepository {
     return result.rows;
   }
 
+  async claimById(client: PoolClient, input: { outboxId: string; maxRetries: number }): Promise<MessageDispatchOutboxRecord | null> {
+    const result = await client.query<MessageDispatchOutboxRecord>(
+      `
+        update message_dispatch_outbox
+        set processing_status = 'processing',
+            attempt_count = attempt_count + 1,
+            last_attempt_at = timezone('utc', now()),
+            claimed_at = timezone('utc', now()),
+            updated_at = timezone('utc', now())
+        where id = $1
+          and processing_status in ('pending', 'failed')
+          and attempt_count < $2
+          and coalesce(next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
+        returning *
+      `,
+      [input.outboxId, input.maxRetries]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async findById(client: PoolClient, outboxId: string): Promise<MessageDispatchOutboxRecord | null> {
+    const result = await client.query<MessageDispatchOutboxRecord>(
+      `
+        select *
+        from message_dispatch_outbox
+        where id = $1
+        limit 1
+      `,
+      [outboxId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async markDispatched(
     client: PoolClient,
     input: {

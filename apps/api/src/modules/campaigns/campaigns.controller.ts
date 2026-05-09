@@ -3,11 +3,13 @@ import { z } from "zod";
 import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ContactService } from "../../services/contactService.js";
+import { ConnectorClient } from "../../services/connectorClient.js";
 import { ConversationService } from "../../services/conversationService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
 import { normalizePhoneNumber } from "../../utils/phone.js";
 
 const contactService = new ContactService();
+const connectorClient = new ConnectorClient();
 const conversationService = new ConversationService();
 const sendMessageService = new SendMessageService();
 
@@ -104,6 +106,14 @@ const campaignActionBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable()
 });
 
+const campaignRecipientsQuerySchema = z.object({
+  organization_id: z.string().uuid().optional(),
+  status: z.enum(["pending", "queued", "sent", "failed", "skipped"]).optional(),
+  q: z.string().trim().max(120).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(250).default(50)
+});
+
 type AudienceGroupRecord = {
   id: string;
   organization_id: string;
@@ -167,6 +177,32 @@ type CampaignAudienceContactRecord = {
   product_interest: string | null;
   customer_type: string | null;
   notes: string | null;
+};
+
+type CampaignRecipientRecord = {
+  id: string;
+  campaign_id: string;
+  audience_group_contact_id: string | null;
+  crm_contact_id: string | null;
+  name: string | null;
+  phone_normalized: string;
+  gender: "male" | "female" | "unknown";
+  salutation: string | null;
+  tag: string | null;
+  location: string | null;
+  product_interest: string | null;
+  customer_type: string | null;
+  notes: string | null;
+  send_status: "pending" | "queued" | "sent" | "failed" | "skipped";
+  message_id: string | null;
+  attempt_count: number;
+  queued_at: string | null;
+  sent_at: string | null;
+  failed_at: string | null;
+  next_attempt_at: string | null;
+  error_message: string | null;
+  created_at: string;
+  total_count: string;
 };
 
 function requireAuth(request: Request) {
@@ -277,6 +313,164 @@ export async function getCampaign(request: Request, response: Response) {
   }
 
   return response.json({ data: campaign });
+}
+
+export async function listCampaignRecipients(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = campaignRecipientsQuerySchema.parse(request.query);
+  const organizationId = resolveOrganizationId(request);
+  await assertCampaignExists(organizationId, campaignId);
+
+  const offset = (input.page - 1) * input.limit;
+  const values: unknown[] = [organizationId, campaignId];
+  const filters = [
+    "cr.organization_id = $1",
+    "cr.campaign_id = $2"
+  ];
+
+  if (input.status) {
+    values.push(input.status);
+    filters.push(`cr.send_status = $${values.length}`);
+  }
+
+  if (input.q) {
+    values.push(`%${input.q}%`);
+    filters.push(`(
+      cr.name ilike $${values.length}
+      or cr.phone_normalized ilike $${values.length}
+      or cr.tag ilike $${values.length}
+      or cr.location ilike $${values.length}
+      or cr.customer_type ilike $${values.length}
+      or cr.error_message ilike $${values.length}
+    )`);
+  }
+
+  values.push(input.limit, offset);
+  const result = await query<CampaignRecipientRecord>(
+    `
+      select
+        cr.*,
+        count(*) over()::text as total_count
+      from campaign_recipients cr
+      where ${filters.join(" and ")}
+      order by
+        case cr.send_status
+          when 'failed' then 1
+          when 'queued' then 2
+          when 'pending' then 3
+          when 'sent' then 4
+          when 'skipped' then 5
+          else 6
+        end,
+        coalesce(cr.failed_at, cr.sent_at, cr.queued_at, cr.created_at) desc,
+        cr.created_at asc
+      limit $${values.length - 1}
+      offset $${values.length}
+    `,
+    values
+  );
+
+  return response.json({
+    data: result.rows.map(toCampaignRecipient),
+    pagination: {
+      page: input.page,
+      limit: input.limit,
+      total: Number(result.rows[0]?.total_count ?? 0)
+    }
+  });
+}
+
+export async function exportCampaignRecipients(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = campaignRecipientsQuerySchema.parse({ ...request.query, page: 1, limit: 250 });
+  const organizationId = resolveOrganizationId(request);
+  const campaign = await findCampaign(organizationId, campaignId);
+
+  if (!campaign) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  const values: unknown[] = [organizationId, campaignId];
+  const filters = [
+    "cr.organization_id = $1",
+    "cr.campaign_id = $2"
+  ];
+
+  if (input.status) {
+    values.push(input.status);
+    filters.push(`cr.send_status = $${values.length}`);
+  }
+
+  if (input.q) {
+    values.push(`%${input.q}%`);
+    filters.push(`(
+      cr.name ilike $${values.length}
+      or cr.phone_normalized ilike $${values.length}
+      or cr.tag ilike $${values.length}
+      or cr.location ilike $${values.length}
+      or cr.customer_type ilike $${values.length}
+      or cr.error_message ilike $${values.length}
+    )`);
+  }
+
+  const result = await query<CampaignRecipientRecord>(
+    `
+      select cr.*, count(*) over()::text as total_count
+      from campaign_recipients cr
+      where ${filters.join(" and ")}
+      order by cr.created_at asc
+    `,
+    values
+  );
+
+  const headers = [
+    "Campaign Name",
+    "Contact Name",
+    "Phone Number",
+    "Gender",
+    "Salutation",
+    "Tag",
+    "Location",
+    "Product Interest",
+    "Customer Type",
+    "Send Status",
+    "Attempt Count",
+    "Queued At",
+    "Sent At",
+    "Failed At",
+    "Next Attempt At",
+    "Error Message",
+    "Message ID",
+    "Notes"
+  ];
+
+  const csv = toCsv([
+    headers,
+    ...result.rows.map((recipient) => [
+      campaign.name,
+      recipient.name ?? "",
+      recipient.phone_normalized,
+      recipient.gender,
+      recipient.salutation ?? "",
+      recipient.tag ?? "",
+      recipient.location ?? "",
+      recipient.product_interest ?? "",
+      recipient.customer_type ?? "",
+      recipient.send_status,
+      String(recipient.attempt_count),
+      recipient.queued_at ?? "",
+      recipient.sent_at ?? "",
+      recipient.failed_at ?? "",
+      recipient.next_attempt_at ?? "",
+      recipient.error_message ?? "",
+      recipient.message_id ?? "",
+      recipient.notes ?? ""
+    ])
+  ]);
+
+  response.setHeader("Content-Type", "text/csv; charset=utf-8");
+  response.setHeader("Content-Disposition", `attachment; filename="${toSafeFilename(campaign.name)}-recipients.csv"`);
+  return response.send(`\uFEFF${csv}`);
 }
 
 export async function updateCampaign(request: Request, response: Response) {
@@ -776,8 +970,13 @@ async function listCampaignSummaries(organizationId: string) {
         c.*,
         ag.name as audience_group_name,
         ag.valid_count as audience_valid_count,
-        wa.label as sender_whatsapp_label,
-        coalesce(wa.account_phone_e164, wa.account_phone_normalized) as sender_phone_number,
+        max(coalesce(to_jsonb(wa)->>'label', to_jsonb(wa)->>'name', to_jsonb(wa)->>'display_name')) as sender_whatsapp_label,
+        max(coalesce(
+          to_jsonb(wa)->>'account_phone_e164',
+          to_jsonb(wa)->>'phone_number',
+          to_jsonb(wa)->>'account_phone_normalized',
+          to_jsonb(wa)->>'phone_number_normalized'
+        )) as sender_phone_number,
         count(cr.id)::text as recipients,
         count(cr.id) filter (where cr.send_status = 'pending')::text as pending,
         count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
@@ -790,7 +989,7 @@ async function listCampaignSummaries(organizationId: string) {
       left join whatsapp_accounts wa on wa.id = c.sender_whatsapp_account_id
       left join campaign_recipients cr on cr.campaign_id = c.id
       where c.organization_id = $1
-      group by c.id, ag.name, ag.valid_count, wa.label, wa.account_phone_e164, wa.account_phone_normalized
+      group by c.id, ag.name, ag.valid_count
       order by c.created_at desc, c.name asc
     `,
     [organizationId]
@@ -806,8 +1005,13 @@ async function getCampaignSummary(organizationId: string, campaignId: string) {
         c.*,
         ag.name as audience_group_name,
         ag.valid_count as audience_valid_count,
-        wa.label as sender_whatsapp_label,
-        coalesce(wa.account_phone_e164, wa.account_phone_normalized) as sender_phone_number,
+        max(coalesce(to_jsonb(wa)->>'label', to_jsonb(wa)->>'name', to_jsonb(wa)->>'display_name')) as sender_whatsapp_label,
+        max(coalesce(
+          to_jsonb(wa)->>'account_phone_e164',
+          to_jsonb(wa)->>'phone_number',
+          to_jsonb(wa)->>'account_phone_normalized',
+          to_jsonb(wa)->>'phone_number_normalized'
+        )) as sender_phone_number,
         count(cr.id)::text as recipients,
         count(cr.id) filter (where cr.send_status = 'pending')::text as pending,
         count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
@@ -821,7 +1025,7 @@ async function getCampaignSummary(organizationId: string, campaignId: string) {
       left join campaign_recipients cr on cr.campaign_id = c.id
       where c.organization_id = $1
         and c.id = $2
-      group by c.id, ag.name, ag.valid_count, wa.label, wa.account_phone_e164, wa.account_phone_normalized
+      group by c.id, ag.name, ag.valid_count
       limit 1
     `,
     [organizationId, campaignId]
@@ -894,6 +1098,55 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
   };
 }
 
+function toCampaignRecipient(row: CampaignRecipientRecord) {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    audienceGroupContactId: row.audience_group_contact_id,
+    crmContactId: row.crm_contact_id,
+    name: row.name,
+    phoneNormalized: row.phone_normalized,
+    gender: row.gender,
+    salutation: row.salutation,
+    tag: row.tag,
+    location: row.location,
+    productInterest: row.product_interest,
+    customerType: row.customer_type,
+    notes: row.notes,
+    sendStatus: row.send_status,
+    messageId: row.message_id,
+    attemptCount: row.attempt_count,
+    queuedAt: row.queued_at,
+    sentAt: row.sent_at,
+    failedAt: row.failed_at,
+    nextAttemptAt: row.next_attempt_at,
+    errorMessage: row.error_message,
+    createdAt: row.created_at
+  };
+}
+
+function toCsv(rows: string[][]) {
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          const normalized = cell.replace(/\r?\n/g, " ");
+          return /[",\n]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+        })
+        .join(",")
+    )
+    .join("\r\n");
+}
+
+function toSafeFilename(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "campaign";
+}
+
 function formatCampaignStatus(status: string) {
   return status
     .split("_")
@@ -916,7 +1169,7 @@ async function assertConnectedSender(organizationId: string, senderWhatsAppAccou
       from whatsapp_accounts
       where organization_id = $1
         and id = $2
-        and lower(status) = any($3::text[])
+        and lower(coalesce(to_jsonb(whatsapp_accounts)->>'connection_status', to_jsonb(whatsapp_accounts)->>'status', '')) = any($3::text[])
       limit 1
     `,
     [organizationId, senderWhatsAppAccountId, ["connected", "open", "ready"]]
@@ -924,6 +1177,22 @@ async function assertConnectedSender(organizationId: string, senderWhatsAppAccou
 
   if (!result.rows[0]) {
     throw new AppError("Connected WhatsApp sender is required", 400, "sender_not_connected");
+  }
+
+  try {
+    const liveStatus = await connectorClient.getAccountStatus(senderWhatsAppAccountId);
+
+    if (!liveStatus.connected) {
+      throw new AppError(
+        "Selected WhatsApp sender is not live connected. Reconnect the sender and try again.",
+        400,
+        "sender_not_connected"
+      );
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
   }
 }
 
@@ -947,7 +1216,7 @@ async function sendCampaignTestMessage(input: {
     organizationUserId: input.organizationUserId ?? null,
     senderWhatsAppAccountId: input.senderWhatsAppAccountId,
     phoneNumber: input.testPhoneNumber,
-    profileName: "Campaign Test",
+    profileName: null,
     text: input.messageTemplate,
     waitForDispatch: true
   });

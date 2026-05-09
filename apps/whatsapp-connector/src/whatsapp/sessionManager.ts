@@ -123,6 +123,13 @@ export class WhatsAppSessionManager {
     return this.sockets.get(accountId);
   }
 
+  isConnected(accountId: string) {
+    const socket = this.getSocket(accountId);
+    const socketUserId = (socket as { user?: { id?: string } } | undefined)?.user?.id;
+
+    return Boolean(socket && socketUserId && this.connectedAccounts.has(accountId));
+  }
+
   listStoredContacts(accountId: string): StoredContactSnapshot[] {
     const contacts = new Map<string, StoredContactSnapshot>();
 
@@ -622,7 +629,7 @@ export class WhatsAppSessionManager {
   async sendMessage(accountId: string, recipientJid: string, text: string | null, attachment: OutboundMediaAttachment | null) {
     const socket = this.getSocket(accountId);
 
-    if (!socket) {
+    if (!socket || !this.isConnected(accountId)) {
       throw new Error("WhatsApp session is not connected");
     }
 

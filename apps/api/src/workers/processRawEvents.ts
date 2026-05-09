@@ -9,10 +9,16 @@ const runOnce = process.argv.includes("--once");
 
 async function main() {
   do {
-    const processed = await processor.processPendingBatch(env.RAW_EVENT_WORKER_BATCH_SIZE);
+    let totalProcessed = 0;
+    let processed = 0;
 
-    if (processed > 0) {
-      logger.info({ processed }, "Processed pending raw events");
+    do {
+      processed = await processor.processPendingBatch(env.RAW_EVENT_WORKER_BATCH_SIZE);
+      totalProcessed += processed;
+    } while (processed === env.RAW_EVENT_WORKER_BATCH_SIZE);
+
+    if (totalProcessed > 0) {
+      logger.info({ processed: totalProcessed }, "Processed pending raw events");
     }
 
     if (runOnce) {

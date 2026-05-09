@@ -3,7 +3,7 @@ import type { CampaignStats } from "../types/campaign.types";
 
 export function CampaignStatsCards({ stats }: { stats: CampaignStats }) {
   const items = [
-    { label: "Total Campaigns", value: stats.total },
+    { label: "Total", value: stats.total },
     { label: "Draft", value: stats.draft },
     { label: "Scheduled", value: stats.scheduled },
     { label: "Sent", value: stats.sent },
@@ -12,11 +12,11 @@ export function CampaignStatsCards({ stats }: { stats: CampaignStats }) {
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-6">
       {items.map((item) => (
-        <Card key={item.label} className="min-h-[112px] p-4" elevated>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{item.label}</p>
-          <p className="mt-3 text-2xl font-semibold tracking-tight text-text">{item.value.toLocaleString()}</p>
+        <Card key={item.label} className="min-h-[86px] p-3 sm:min-h-[112px] sm:p-4" elevated>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft sm:text-[11px]">{item.label}</p>
+          <p className="mt-2 text-xl font-semibold tracking-tight text-text sm:mt-3 sm:text-2xl">{item.value.toLocaleString()}</p>
         </Card>
       ))}
     </div>

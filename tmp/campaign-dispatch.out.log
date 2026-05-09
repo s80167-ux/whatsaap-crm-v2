@@ -1,0 +1,44 @@
+
+> whatsapp-crm-v2@2.0.0 worker:campaign-dispatch
+> npm --workspace apps/api run worker:campaign-dispatch
+
+
+> api@2.0.0 worker:campaign-dispatch
+> tsx src/workers/processCampaignDispatch.ts
+
+[17:22:54.251] [31mERROR[39m (16804): [36mFailed to dispatch outbound message[39m
+    [35moutboxId[39m: "fe915259-c196-4800-b4c2-c1f5537fb847"
+    [35mmessageId[39m: "84c1504c-16f4-44e0-9eae-b64e897bddbc"
+    error: {}
+[17:22:54.341] [31mERROR[39m (16804): [36mCampaign recipient dispatch failed[39m
+    [35mcampaignId[39m: "dc04e848-7d38-455e-b058-111eaebacb27"
+    [35mcampaignRecipientId[39m: "181772b3-5242-4d8a-addc-44946627ae65"
+    error: {
+      "statusCode": 502,
+      "code": "message_dispatch_failed",
+      "details": {
+        "messageId": "84c1504c-16f4-44e0-9eae-b64e897bddbc",
+        "outboxId": "fe915259-c196-4800-b4c2-c1f5537fb847"
+      },
+      "name": "AppError"
+    }
+[17:22:54.509] [32mINFO[39m (16804): [36mProcessed pending campaign dispatch jobs[39m
+    [35mprocessed[39m: 1
+[17:23:59.767] [31mERROR[39m (16804): [36mFailed to dispatch outbound message[39m
+    [35moutboxId[39m: "fb94548c-db41-4e98-aa1f-b910ec807975"
+    [35mmessageId[39m: "f8bef674-2b0d-4665-ad10-dc1a77a80456"
+    error: {}
+[17:23:59.854] [31mERROR[39m (16804): [36mCampaign recipient dispatch failed[39m
+    [35mcampaignId[39m: "dc04e848-7d38-455e-b058-111eaebacb27"
+    [35mcampaignRecipientId[39m: "181772b3-5242-4d8a-addc-44946627ae65"
+    error: {
+      "statusCode": 502,
+      "code": "message_dispatch_failed",
+      "details": {
+        "messageId": "f8bef674-2b0d-4665-ad10-dc1a77a80456",
+        "outboxId": "fb94548c-db41-4e98-aa1f-b910ec807975"
+      },
+      "name": "AppError"
+    }
+[17:24:00.031] [32mINFO[39m (16804): [36mProcessed pending campaign dispatch jobs[39m
+    [35mprocessed[39m: 1

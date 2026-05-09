@@ -8,24 +8,45 @@ const dispatcher = new CampaignDispatchService();
 const runOnce = process.argv.includes("--once");
 
 async function main() {
+  let consecutiveFailures = 0;
+
   do {
-    const processed = await dispatcher.processPendingBatch(env.CAMPAIGN_DISPATCH_WORKER_BATCH_SIZE);
+    try {
+      const processed = await dispatcher.processPendingBatch(env.CAMPAIGN_DISPATCH_WORKER_BATCH_SIZE);
+      consecutiveFailures = 0;
 
-    if (processed > 0) {
-      logger.info({ processed }, "Processed pending campaign dispatch jobs");
+      if (processed > 0) {
+        logger.info({ processed }, "Processed pending campaign dispatch jobs");
+      }
+
+      if (runOnce) {
+        break;
+      }
+    } catch (err) {
+      logger.error({ err }, "Campaign dispatch worker iteration failed");
+
+      if (runOnce) {
+        throw err;
+      }
+
+      consecutiveFailures += 1;
     }
 
-    if (runOnce) {
-      break;
-    }
-
-    await sleep(env.CAMPAIGN_DISPATCH_WORKER_POLL_INTERVAL_MS);
+    await sleep(getDelayMs(consecutiveFailures, env.CAMPAIGN_DISPATCH_WORKER_POLL_INTERVAL_MS));
   } while (true);
 }
 
+function getDelayMs(consecutiveFailures: number, baseDelayMs: number) {
+  if (consecutiveFailures === 0) {
+    return baseDelayMs;
+  }
+
+  return Math.min(baseDelayMs * 2 ** Math.min(consecutiveFailures, 5), 60000);
+}
+
 main()
-  .catch((error) => {
-    logger.error({ error }, "Campaign dispatch worker failed");
+  .catch((err) => {
+    logger.error({ err }, "Campaign dispatch worker failed");
     process.exitCode = 1;
   })
   .finally(async () => {

@@ -1,5 +1,13 @@
 import { apiGet, apiPatch, apiPost } from "../../../lib/http";
-import type { Campaign, CampaignSpeedPreset, CampaignStats, CampaignTempo } from "../types/campaign.types";
+import { config } from "../../../lib/config";
+import type {
+  Campaign,
+  CampaignRecipient,
+  CampaignRecipientSendStatus,
+  CampaignSpeedPreset,
+  CampaignStats,
+  CampaignTempo
+} from "../types/campaign.types";
 
 export const mockCampaigns: Campaign[] = [
   {
@@ -97,6 +105,82 @@ export async function fetchCampaigns(organizationId?: string | null) {
   return response.data;
 }
 
+export async function fetchCampaignRecipients(input: {
+  campaignId: string;
+  organizationId?: string | null;
+  status?: CampaignRecipientSendStatus | "all";
+  q?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+
+  if (input.organizationId) {
+    params.set("organization_id", input.organizationId);
+  }
+
+  if (input.status && input.status !== "all") {
+    params.set("status", input.status);
+  }
+
+  if (input.q?.trim()) {
+    params.set("q", input.q.trim());
+  }
+
+  params.set("page", String(input.page ?? 1));
+  params.set("limit", String(input.limit ?? 50));
+
+  const response = await apiGet<{
+    data: CampaignRecipient[];
+    pagination: { page: number; limit: number; total: number };
+  }>(`/campaigns/${input.campaignId}/recipients?${params.toString()}`);
+
+  return response;
+}
+
+export async function downloadCampaignRecipients(input: {
+  campaignId: string;
+  campaignName: string;
+  organizationId?: string | null;
+  status?: CampaignRecipientSendStatus | "all";
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (input.organizationId) {
+    params.set("organization_id", input.organizationId);
+  }
+
+  if (input.status && input.status !== "all") {
+    params.set("status", input.status);
+  }
+
+  if (input.q?.trim()) {
+    params.set("q", input.q.trim());
+  }
+
+  const response = await fetch(
+    `${config.apiBaseUrl}/campaigns/${input.campaignId}/recipients/export?${params.toString()}`,
+    {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to download campaign recipients (${response.status}).`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${toSafeFilename(input.campaignName)}-recipients.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function createCampaign(input: CreateCampaignInput) {
   const response = await apiPost<{ data: Campaign }>("/campaigns", input);
   return response.data;
@@ -154,4 +238,13 @@ export async function cancelCampaign(input: { campaignId: string; organizationId
     input
   );
   return response.data;
+}
+
+function toSafeFilename(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "campaign";
 }

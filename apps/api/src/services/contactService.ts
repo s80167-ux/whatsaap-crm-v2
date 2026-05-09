@@ -30,12 +30,27 @@ export class ContactService {
       input.whatsappAccountId,
       input.whatsappJid
     );
-    let contact =
-      normalizedPhone &&
-      (await this.contactRepository.findByNormalizedPhone(client, input.organizationId, normalizedPhone));
+    const existingPhoneIdentity =
+      normalizedPhone
+        ? await this.identityRepository.findByNormalizedPhone(
+            client,
+            input.organizationId,
+            input.whatsappAccountId,
+            normalizedPhone
+          )
+        : null;
+    let contact: ContactRecord | null = null;
 
-    if (!contact && existingIdentity) {
+    if (existingIdentity) {
       contact = await this.contactRepository.findById(client, input.organizationId, existingIdentity.contact_id);
+    }
+
+    if (!contact && existingPhoneIdentity) {
+      contact = await this.contactRepository.findById(client, input.organizationId, existingPhoneIdentity.contact_id);
+    }
+
+    if (!contact && normalizedPhone) {
+      contact = await this.contactRepository.findByNormalizedPhone(client, input.organizationId, normalizedPhone);
     }
 
     if (!contact) {
@@ -67,6 +82,14 @@ export class ContactService {
       profilePushName: input.profilePushName ?? null,
       profileAvatarUrl: input.profileAvatarUrl ?? null
     });
+
+    if (identity.contact_id !== contact.id) {
+      const canonicalContact = await this.contactRepository.findById(client, input.organizationId, identity.contact_id);
+
+      if (canonicalContact) {
+        contact = canonicalContact;
+      }
+    }
 
     return { contact, identity };
   }

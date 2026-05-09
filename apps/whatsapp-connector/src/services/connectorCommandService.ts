@@ -47,6 +47,16 @@ export class ConnectorCommandService {
     };
   }
 
+  async getAccountStatus(accountId: string) {
+    const account = await this.getAccount(accountId);
+
+    return {
+      accountId,
+      connected: this.sessionManager.isConnected(accountId),
+      connectionStatus: account.connection_status
+    };
+  }
+
   async terminateAccount(accountId: string) {
     await this.sessionManager.terminateSession(accountId);
     return { accountId };

@@ -53,3 +53,30 @@ export type CampaignTempo = {
   dailyLimit: number;
   stopOnHighFailure: boolean;
 };
+
+export type CampaignRecipientSendStatus = "pending" | "queued" | "sent" | "failed" | "skipped";
+
+export type CampaignRecipient = {
+  id: string;
+  campaignId: string;
+  audienceGroupContactId?: string | null;
+  crmContactId?: string | null;
+  name?: string | null;
+  phoneNormalized: string;
+  gender: "male" | "female" | "unknown";
+  salutation?: string | null;
+  tag?: string | null;
+  location?: string | null;
+  productInterest?: string | null;
+  customerType?: string | null;
+  notes?: string | null;
+  sendStatus: CampaignRecipientSendStatus;
+  messageId?: string | null;
+  attemptCount: number;
+  queuedAt?: string | null;
+  sentAt?: string | null;
+  failedAt?: string | null;
+  nextAttemptAt?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+};

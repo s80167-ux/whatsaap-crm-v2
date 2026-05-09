@@ -1,4 +1,4 @@
-import { Phone, UserRound } from "lucide-react";
+import { ChevronDown, ChevronUp, Phone, UserRound } from "lucide-react";
 import { useState } from "react";
 import type { ContactDetailResponse, Conversation, MergedContactRedirect } from "../types/api";
 import { assignConversation } from "../api/crm";
@@ -60,6 +60,7 @@ export function ContactInfoPanel({
   mobileSheet?: boolean;
 }) {
   const [isAssigning, setIsAssigning] = useState(false);
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
   const { data: contactResponse, isLoading: contactLoading } = useContact(conversation?.contact_id);
@@ -78,6 +79,14 @@ export function ContactInfoPanel({
   const organizationId = currentUser?.organizationId ?? conversation?.organization_id;
   const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(organizationId);
   const assignableUsers = organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin");
+  const ownerUser = activeContact?.owner_user_id
+    ? organizationUsers.find((user) => user.id === activeContact.owner_user_id)
+    : null;
+  const ownerLabel = activeContact?.owner_user_id
+    ? isContactAssignedToCurrentUser
+      ? "You"
+      : ownerUser?.full_name || ownerUser?.email || "Assigned teammate"
+    : "Unassigned";
 
   async function handleAssign(userId: string) {
     if (!conversation || !userId) return;
@@ -183,25 +192,27 @@ export function ContactInfoPanel({
           </div>
 
           <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3" : "workspace-subtle mt-1 p-3"}`}>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Details</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Customer status</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical ID</p>
-                <p className="mt-1 text-xs text-text-muted">{conversation.contact_id}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Owner</p>
+                <p className="mt-1 truncate text-xs font-medium text-text">{ownerLabel}</p>
               </div>
               <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Owner</p>
-                <p className="mt-1 text-xs text-text-muted">
-                  {activeContact?.owner_user_id ? (isContactAssignedToCurrentUser ? "You" : activeContact.owner_user_id) : "Unassigned"}
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Queue</p>
+                <p className={`mt-1 text-xs font-medium ${conversation.assigned_user_id ? "text-emerald-700" : "text-amber-700"}`}>
+                  {conversation.assigned_user_id ? "Assigned" : "Needs owner"}
                 </p>
               </div>
               <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Phone</p>
-                <p className="mt-1 text-xs text-text-muted">{e164Number ?? "--"}</p>
+                <p className="mt-1 truncate text-xs text-text-muted">{e164Number ?? normalizedNumber ?? "--"}</p>
               </div>
               <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Normalized</p>
-                <p className="mt-1 text-xs text-text-muted">{normalizedNumber ?? "--"}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Sales</p>
+                <p className={`mt-1 text-xs font-medium ${conversation.has_sales || conversation.has_sales_lead_tag ? "text-emerald-700" : "text-text-muted"}`}>
+                  {conversation.has_sales ? "Order linked" : conversation.has_sales_lead_tag ? "Lead tagged" : "No sales yet"}
+                </p>
               </div>
             </div>
             {contactLoading ? (
@@ -240,6 +251,33 @@ export function ContactInfoPanel({
               )}
             </div>
           ) : null}
+          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-white p-3" : "workspace-subtle mt-1 p-3"}`}>
+            <button
+              type="button"
+              onClick={() => setShowTechnicalDetails((current) => !current)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+              aria-expanded={showTechnicalDetails}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">More details</span>
+              {showTechnicalDetails ? <ChevronUp size={16} className="text-text-soft" /> : <ChevronDown size={16} className="text-text-soft" />}
+            </button>
+            {showTechnicalDetails ? (
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical ID</p>
+                  <p className="mt-1 break-all text-xs text-text-muted">{conversation.contact_id}</p>
+                </div>
+                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Normalized</p>
+                  <p className="mt-1 break-all text-xs text-text-muted">{normalizedNumber ?? "--"}</p>
+                </div>
+                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Source</p>
+                  <p className="mt-1 break-all text-xs text-text-muted">{getConversationSourceLabel(conversation)}</p>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : (
         <p className="mt-2 text-xs leading-5 text-text-muted">

@@ -2,7 +2,12 @@ import { Pool, type PoolClient } from "pg";
 import { env } from "./env.js";
 
 export const pool = new Pool({
-  connectionString: env.DATABASE_URL
+  connectionString: env.DATABASE_URL,
+  max: env.DATABASE_POOL_MAX,
+  connectionTimeoutMillis: env.DATABASE_CONNECTION_TIMEOUT_MS,
+  idleTimeoutMillis: env.DATABASE_IDLE_TIMEOUT_MS,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000
 });
 
 export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {

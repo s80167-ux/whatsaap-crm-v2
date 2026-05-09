@@ -168,29 +168,35 @@ export class MessageDispatchService {
   }
 
   async drainOne(outboxId: string) {
-    const client = await pool.connect();
+    const claimResult = await withTransaction(async (client) => {
+      const claimedJob = await this.outboxRepository.claimById(client, {
+        outboxId,
+        maxRetries: env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES
+      });
 
-    try {
-      const result = await client.query<MessageDispatchOutboxRecord>(
-        `
-          select *
-          from message_dispatch_outbox
-          where id = $1
-          limit 1
-        `,
-        [outboxId]
-      );
-
-      const job = result.rows[0] ?? null;
-
-      if (!job) {
-        return { ok: false as const, errorMessage: "Pending outbound job not found" };
+      if (claimedJob) {
+        return { claimedJob, existingJob: null };
       }
 
-      return this.processJob(job);
-    } finally {
-      client.release();
+      const existingJob = await this.outboxRepository.findById(client, outboxId);
+      return { claimedJob: null, existingJob };
+    });
+
+    if (claimResult.claimedJob) {
+      return this.processJob(claimResult.claimedJob);
     }
+
+    const job = claimResult.existingJob;
+
+    if (!job) {
+      return { ok: false as const, errorMessage: "Pending outbound job not found" };
+    }
+
+    if (job.processing_status === "processing" || job.processing_status === "dispatched") {
+      return { ok: true as const };
+    }
+
+    return { ok: false as const, errorMessage: "Pending outbound job is not ready for dispatch" };
   }
 
   async retryMessage(input: { messageId: string; organizationId: string | null }) {
@@ -209,7 +215,7 @@ export class MessageDispatchService {
         };
       }
 
-      const dispatchResult = await this.processJob(job);
+      const dispatchResult = await this.drainOne(job.id);
 
       if (!dispatchResult.ok) {
         return {

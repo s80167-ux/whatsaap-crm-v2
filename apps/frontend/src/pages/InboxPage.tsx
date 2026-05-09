@@ -21,7 +21,7 @@ import type { Conversation } from "../types/api";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
-type ConversationFilterMode = "all" | "unread" | "sales" | "assigned";
+type ConversationFilterMode = "mine" | "unread" | "unassigned" | "sales" | "all";
 
 export function InboxPage() {
   const queryClient = useQueryClient();
@@ -48,7 +48,20 @@ export function InboxPage() {
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
   const [isContactSheetOpen, setIsContactSheetOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [filterMode, setFilterMode] = useState<ConversationFilterMode>("all");
+  const currentOrganizationUserId = currentUser?.organizationUserId ?? null;
+  const [filterMode, setFilterMode] = useState<ConversationFilterMode>(currentOrganizationUserId ? "mine" : "all");
+  const queueCounts = useMemo(
+    () => ({
+      all: conversations.length,
+      unread: conversations.filter((conversation) => conversation.unread_count > 0).length,
+      mine: currentOrganizationUserId
+        ? conversations.filter((conversation) => conversation.assigned_user_id === currentOrganizationUserId).length
+        : 0,
+      unassigned: conversations.filter((conversation) => !conversation.assigned_user_id).length,
+      sales: conversations.filter((conversation) => Boolean(conversation.has_sales || conversation.has_sales_lead_tag)).length
+    }),
+    [conversations, currentOrganizationUserId]
+  );
   const visibleConversations = useMemo(
     () =>
       conversations
@@ -66,12 +79,14 @@ export function InboxPage() {
           }
 
           switch (filterMode) {
+            case "mine":
+              return currentOrganizationUserId ? conversation.assigned_user_id === currentOrganizationUserId : true;
             case "unread":
               return conversation.unread_count > 0;
+            case "unassigned":
+              return !conversation.assigned_user_id;
             case "sales":
               return Boolean(conversation.has_sales || conversation.has_sales_lead_tag);
-            case "assigned":
-              return Boolean(conversation.assigned_user_id);
             default:
               return true;
           }
@@ -92,7 +107,7 @@ export function InboxPage() {
           return rightTime - leftTime || left.index - right.index;
         })
         .map(({ conversation }) => conversation),
-    [conversationSortMode, conversations, filterMode, searchText]
+    [conversationSortMode, conversations, currentOrganizationUserId, filterMode, searchText]
   );
   const stableSelectedConversation =
     visibleConversations.find((conversation) => conversation.id === selectedConversation?.id) ?? visibleConversations[0];
@@ -127,11 +142,11 @@ export function InboxPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
       <Card className="workspace-block grid min-h-[420px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[520px] md:max-h-[calc(100vh-9.5rem)]" elevated>
         <header className="pb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Queue</p>
           <div className="mt-3 flex items-end justify-between gap-4">
             <div>
-              <h2 className="section-title">Latest conversations</h2>
-              <p className="mt-1 text-sm text-text-muted">{conversationCountLabel}</p>
+              <h2 className="section-title">Work queue</h2>
+              <p className="mt-1 text-sm text-text-muted">{conversationCountLabel} visible</p>
             </div>
           </div>
           <div className="mt-4 space-y-3">
@@ -147,10 +162,11 @@ export function InboxPage() {
             </label>
             <div className="flex flex-wrap gap-2">
               {[
-                { key: "all", label: "All" },
-                { key: "unread", label: "Unread" },
-                { key: "sales", label: "Sales" },
-                { key: "assigned", label: "Assigned" }
+                { key: "mine", label: "Mine", count: queueCounts.mine },
+                { key: "unread", label: "Unread", count: queueCounts.unread },
+                { key: "unassigned", label: "Unassigned", count: queueCounts.unassigned },
+                { key: "sales", label: "Sales", count: queueCounts.sales },
+                { key: "all", label: "All", count: queueCounts.all }
               ].map((item) => (
                 <button
                   key={item.key}
@@ -162,7 +178,8 @@ export function InboxPage() {
                   }`}
                   onClick={() => setFilterMode(item.key as ConversationFilterMode)}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span className="ml-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] text-inherit">{item.count}</span>
                 </button>
               ))}
             </div>
@@ -219,21 +236,36 @@ export function InboxPage() {
   return (
     <section className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-        <Card elevated className="workspace-page-header">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+        <Card elevated className="workspace-page-header p-4 sm:p-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <h1 className="mt-3 section-title">Conversation workspace</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-                Work live conversations here, then switch to the reply library when the team needs to manage approved responses.
+              <h1 className="mt-2 section-title">Conversation cockpit</h1>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
+                Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace.
               </p>
             </div>
-            <InboxSubTabs
-              tabs={[
-                { to: "/inbox", label: "Conversations" },
-                { to: "/inbox/replies", label: "Reply library" }
-              ]}
-            />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { label: "Unread", value: queueCounts.unread },
+                  { label: "Mine", value: queueCounts.mine },
+                  { label: "Open", value: queueCounts.all },
+                  { label: "Unassigned", value: queueCounts.unassigned }
+                ].map((metric) => (
+                  <div key={metric.label} className="rounded-xl border border-border bg-white px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-text">{metric.value}</p>
+                  </div>
+                ))}
+              </div>
+              <InboxSubTabs
+                tabs={[
+                  { to: "/inbox", label: "Conversations" },
+                  { to: "/inbox/replies", label: "Reply library" }
+                ]}
+              />
+            </div>
           </div>
         </Card>
       </motion.div>
@@ -307,23 +339,25 @@ export function InboxPage() {
         </>
       ) : (
         <div className="inbox-workspace-grid">
-          <div className="inbox-side-rail">
+          <div className="inbox-side-rail inbox-queue-rail">
             {conversationListCard}
           </div>
-          <ChatPanel
-            conversation={stableSelectedConversation}
-            conversations={visibleConversations}
-            messages={messages}
-            historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
-            organizationId={activeOrganizationId}
-            onMessageSent={() => {
-              void queryClient.invalidateQueries({
-                queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-              });
-              void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-            }}
-          />
-          <div className="inbox-side-rail">
+          <div className="inbox-chat-rail">
+            <ChatPanel
+              conversation={stableSelectedConversation}
+              conversations={visibleConversations}
+              messages={messages}
+              historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
+              organizationId={activeOrganizationId}
+              onMessageSent={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
+                });
+                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
+              }}
+            />
+          </div>
+          <div className="inbox-side-rail inbox-detail-rail">
             <ContactInfoPanel
               className="workspace-block border-primary/10 bg-white text-xs"
               conversation={stableSelectedConversation}

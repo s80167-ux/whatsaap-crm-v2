@@ -35,8 +35,8 @@ import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
-const INITIAL_VISIBLE_MESSAGES = 4;
-const LOAD_OLDER_MESSAGES_STEP = 4;
+const INITIAL_VISIBLE_MESSAGES = 12;
+const LOAD_OLDER_MESSAGES_STEP = 12;
 const QUICK_REPLIES = [
   "Hi, thanks for reaching out. How can I help you today?",
   "Noted, let me check and get back to you shortly.",
@@ -625,14 +625,34 @@ export function ChatPanel({
     <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[640px] max-h-[calc(100vh-9.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Live conversation</p>
-            <p className="mt-2 text-xl font-semibold text-text">{conversation.contact_name}</p>
+            <p className="mt-2 truncate text-xl font-semibold text-text">{conversation.contact_name}</p>
             <p className="mt-1 text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
           </div>
-          <div className="workspace-subtle px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace note</p>
-            <p className="mt-1 text-xs leading-5 text-text-muted">Reply quickly, then use the side panel for assignment and contact details.</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="rounded-full border border-border bg-background-tint px-3 py-1.5 text-xs font-medium text-text-muted">
+              {conversation.whatsapp_account_label ?? "WhatsApp account"}
+            </span>
+            {conversation.unread_count > 0 ? (
+              <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
+                {conversation.unread_count} unread
+              </span>
+            ) : null}
+            <span
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                conversation.assigned_user_id
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-amber-200 bg-amber-50 text-amber-700"
+              }`}
+            >
+              {conversation.assigned_user_id ? "Assigned" : "Unassigned"}
+            </span>
+            {conversation.has_sales || conversation.has_sales_lead_tag ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                Sales context
+              </span>
+            ) : null}
           </div>
         </div>
         {latestOutgoingStatusLabel ? (
@@ -812,61 +832,7 @@ export function ChatPanel({
               <Wand2 className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="hidden items-stretch gap-3 sm:flex">
-              <Button
-                type="button"
-                variant="ghost"
-                title="Attach a file"
-                aria-label="Attach a file"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
-                aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
-                onClick={() => {
-                  const shouldOpen = !isEmojiOpen;
-                  closeComposerPopups();
-                  setIsEmojiOpen(shouldOpen);
-                }}
-                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-                aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-                onClick={() => {
-                  const shouldOpen = !isQuickReplyOpen;
-                  closeComposerPopups();
-                  setIsQuickReplyOpen(shouldOpen);
-                }}
-                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-                aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-                onClick={() => {
-                  const shouldOpen = !isActionsOpen;
-                  closeComposerPopups();
-                  setIsActionsOpen(shouldOpen);
-                }}
-                className="h-14 px-3 text-primary hover:bg-primary-soft/50"
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex flex-col gap-3">
             <textarea
               ref={textareaRef}
               value={text}
@@ -883,12 +849,69 @@ export function ChatPanel({
                 }
               }}
               placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
-              rows={isMobile ? 2 : 1}
-              className="min-h-[56px] w-full flex-1 resize-none rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-[15px] text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+              rows={isMobile ? 3 : 4}
+              className="min-h-[96px] w-full resize-y rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-3 text-[15px] leading-6 text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 sm:min-h-[118px]"
             />
-            <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto sm:h-auto">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="hidden items-center gap-2 sm:flex">
+              <Button
+                type="button"
+                variant="ghost"
+                title="Attach a file"
+                aria-label="Attach a file"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-10 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+                aria-label={isEmojiOpen ? "Close emoji picker" : "Open emoji picker"}
+                onClick={() => {
+                  const shouldOpen = !isEmojiOpen;
+                  closeComposerPopups();
+                  setIsEmojiOpen(shouldOpen);
+                }}
+                className="h-10 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Smile className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+                aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+                onClick={() => {
+                  const shouldOpen = !isQuickReplyOpen;
+                  closeComposerPopups();
+                  setIsQuickReplyOpen(shouldOpen);
+                }}
+                className="h-10 gap-2 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden text-xs font-semibold lg:inline">Replies</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+                aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
+                onClick={() => {
+                  const shouldOpen = !isActionsOpen;
+                  closeComposerPopups();
+                  setIsActionsOpen(shouldOpen);
+                }}
+                className="h-10 px-3 text-primary hover:bg-primary-soft/50"
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </div>
+              <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
               {isSending ? "Sending..." : "Send"}
-            </Button>
+              </Button>
+            </div>
           </div>
         </div>
         <p className="mt-2 text-xs leading-5 text-text-soft">

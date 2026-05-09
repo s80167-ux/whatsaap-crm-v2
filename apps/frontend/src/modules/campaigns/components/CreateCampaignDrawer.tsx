@@ -198,6 +198,7 @@ export function CreateCampaignDrawer({
       });
       onPlaceholderAction(`Campaign draft "${campaign.name}" saved.`, "success");
       onCampaignChanged?.();
+      onClose();
     } catch (error) {
       showError(error instanceof Error ? error.message : "Unable to save campaign draft.");
     } finally {
@@ -252,6 +253,7 @@ export function CreateCampaignDrawer({
       if (action === "Schedule Later") {
         onPlaceholderAction(`Campaign "${campaign.name}" saved for scheduling.`, "success");
         onCampaignChanged?.();
+        onClose();
         return;
       }
 
@@ -265,6 +267,7 @@ export function CreateCampaignDrawer({
       });
       onPlaceholderAction(result.message, "success");
       onCampaignChanged?.();
+      onClose();
     } catch (error) {
       showError(error instanceof Error ? error.message : "Unable to start campaign.");
     } finally {
