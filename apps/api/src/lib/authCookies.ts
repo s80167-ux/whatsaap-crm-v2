@@ -12,6 +12,7 @@ type SessionCookieInput = SessionTokens & {
 };
 
 const GOOGLE_OAUTH_VERIFIER_COOKIE_NAME = "crm_google_oauth_verifier";
+const GOOGLE_OAUTH_RETURN_TO_COOKIE_NAME = "crm_google_oauth_return_to";
 const GOOGLE_OAUTH_COOKIE_MAX_AGE_MS = 1000 * 60 * 10;
 
 function getCookieOptions(httpOnly: boolean, includeMaxAge = true): CookieOptions {
@@ -60,13 +61,26 @@ export function setGoogleOAuthVerifierCookie(response: Response, codeVerifier: s
   response.cookie(GOOGLE_OAUTH_VERIFIER_COOKIE_NAME, codeVerifier, getGoogleOAuthVerifierCookieOptions());
 }
 
+export function setGoogleOAuthReturnToCookie(response: Response, returnTo: string) {
+  response.cookie(GOOGLE_OAUTH_RETURN_TO_COOKIE_NAME, returnTo, getGoogleOAuthVerifierCookieOptions());
+}
+
 export function getGoogleOAuthVerifierCookie(requestCookies: Record<string, unknown> | undefined) {
   const cookieValue = requestCookies?.[GOOGLE_OAUTH_VERIFIER_COOKIE_NAME];
   return typeof cookieValue === "string" && cookieValue.length > 0 ? cookieValue : null;
 }
 
+export function getGoogleOAuthReturnToCookie(requestCookies: Record<string, unknown> | undefined) {
+  const cookieValue = requestCookies?.[GOOGLE_OAUTH_RETURN_TO_COOKIE_NAME];
+  return typeof cookieValue === "string" && cookieValue.length > 0 ? cookieValue : null;
+}
+
 export function clearGoogleOAuthVerifierCookie(response: Response) {
   response.clearCookie(GOOGLE_OAUTH_VERIFIER_COOKIE_NAME, getGoogleOAuthVerifierCookieOptions(false));
+}
+
+export function clearGoogleOAuthReturnToCookie(response: Response) {
+  response.clearCookie(GOOGLE_OAUTH_RETURN_TO_COOKIE_NAME, getGoogleOAuthVerifierCookieOptions(false));
 }
 
 export function setNoStore(response: Response) {

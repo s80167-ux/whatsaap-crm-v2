@@ -2,11 +2,14 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { env } from "../../config/env.js";
 import {
+  clearGoogleOAuthReturnToCookie,
   clearGoogleOAuthVerifierCookie,
   clearSessionCookies,
+  getGoogleOAuthReturnToCookie,
   getGoogleOAuthVerifierCookie,
   issueCsrfToken,
   setCsrfCookie,
+  setGoogleOAuthReturnToCookie,
   setGoogleOAuthVerifierCookie,
   setNoStore,
   setSessionCookies
@@ -37,6 +40,70 @@ const updateProfileSchema = z.object({
   avatarUrl: avatarUrlSchema
 });
 
+function getOrigin(input: string) {
+  try {
+    return new URL(input).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isLocalFrontendOrigin(origin: string) {
+  try {
+    const parsedOrigin = new URL(origin);
+    return (
+      parsedOrigin.protocol === "http:" &&
+      (parsedOrigin.hostname === "localhost" || parsedOrigin.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isProjectVercelOrigin(origin: string) {
+  try {
+    const parsedOrigin = new URL(origin);
+    return (
+      parsedOrigin.protocol === "https:" &&
+      parsedOrigin.hostname.endsWith(".vercel.app") &&
+      /^whats(?:app|aap)-crm-v2-/i.test(parsedOrigin.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedFrontendRedirectOrigin(origin: string, request?: Request) {
+  if (origin === new URL(env.FRONTEND_URL).origin) {
+    return true;
+  }
+
+  if (env.NODE_ENV !== "production" && isLocalFrontendOrigin(origin)) {
+    return true;
+  }
+
+  if (isProjectVercelOrigin(origin)) {
+    return true;
+  }
+
+  const requestOrigin = typeof request?.headers.origin === "string" ? getOrigin(request.headers.origin) : null;
+  const requestReferer = typeof request?.headers.referer === "string" ? getOrigin(request.headers.referer) : null;
+
+  return origin === requestOrigin || origin === requestReferer;
+}
+
+function getRequestedFrontendOrigin(request: Request) {
+  const returnTo = typeof request.query.return_to === "string" ? request.query.return_to : null;
+  const origin = returnTo ? getOrigin(returnTo) : null;
+
+  return origin && isAllowedFrontendRedirectOrigin(origin, request) ? origin : null;
+}
+
+function clearGoogleOAuthCookies(response: Response) {
+  clearGoogleOAuthVerifierCookie(response);
+  clearGoogleOAuthReturnToCookie(response);
+}
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -45,8 +112,15 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
-function buildFrontendLoginUrl(errorCode: "google_login_failed" | "google_account_not_linked") {
-  const loginUrl = new URL("/login", env.FRONTEND_URL);
+function getFrontendRedirectBase(request: Request) {
+  const returnTo = getGoogleOAuthReturnToCookie(request.cookies);
+  const origin = returnTo ? getOrigin(returnTo) : null;
+
+  return origin && isAllowedFrontendRedirectOrigin(origin) ? origin : env.FRONTEND_URL;
+}
+
+function buildFrontendLoginUrl(request: Request, errorCode: "google_login_failed" | "google_account_not_linked") {
+  const loginUrl = new URL("/login", getFrontendRedirectBase(request));
   loginUrl.searchParams.set("error", errorCode);
   return loginUrl.toString();
 }
@@ -64,9 +138,14 @@ export async function login(request: Request, response: Response) {
   return response.json({ data: { user: result.user }, csrfToken });
 }
 
-export async function startGoogleLogin(_request: Request, response: Response) {
+export async function startGoogleLogin(request: Request, response: Response) {
   const { url, codeVerifier } = await authService.getGoogleOAuthUrl();
+  const requestedFrontendOrigin = getRequestedFrontendOrigin(request);
+
   setGoogleOAuthVerifierCookie(response, codeVerifier);
+  if (requestedFrontendOrigin) {
+    setGoogleOAuthReturnToCookie(response, requestedFrontendOrigin);
+  }
   setNoStore(response);
   return response.redirect(url);
 }
@@ -76,30 +155,31 @@ export async function handleGoogleCallback(request: Request, response: Response)
   const codeVerifier = getGoogleOAuthVerifierCookie(request.cookies);
 
   if (!code || !codeVerifier) {
-    clearGoogleOAuthVerifierCookie(response);
+    clearGoogleOAuthCookies(response);
     clearSessionCookies(response);
     setNoStore(response);
-    return response.redirect(buildFrontendLoginUrl("google_login_failed"));
+    return response.redirect(buildFrontendLoginUrl(request, "google_login_failed"));
   }
 
   try {
     const result = await authService.completeGoogleLogin(code, codeVerifier);
     const csrfToken = issueCsrfToken();
-    clearGoogleOAuthVerifierCookie(response);
+    const frontendRedirectBase = getFrontendRedirectBase(request);
+    clearGoogleOAuthCookies(response);
     setSessionCookies(response, {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       csrfToken
     });
     setNoStore(response);
-    return response.redirect(new URL("/", env.FRONTEND_URL).toString());
+    return response.redirect(new URL("/", frontendRedirectBase).toString());
   } catch (error) {
-    clearGoogleOAuthVerifierCookie(response);
+    clearGoogleOAuthCookies(response);
     clearSessionCookies(response);
     setNoStore(response);
     const errorCode =
       isAppError(error) && error.code === "crm_account_not_linked" ? "google_account_not_linked" : "google_login_failed";
-    return response.redirect(buildFrontendLoginUrl(errorCode));
+    return response.redirect(buildFrontendLoginUrl(request, errorCode));
   }
 }
 

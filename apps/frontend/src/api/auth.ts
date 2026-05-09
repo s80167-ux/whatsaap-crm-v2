@@ -10,7 +10,13 @@ export async function login(payload: { email: string; password: string }) {
 }
 
 export function startGoogleLogin() {
-  window.location.assign(`${config.apiBaseUrl}/auth/google/start`);
+  const startUrl = new URL(`${config.apiBaseUrl}/auth/google/start`);
+
+  if (typeof window !== "undefined") {
+    startUrl.searchParams.set("return_to", window.location.origin);
+  }
+
+  window.location.assign(startUrl.toString());
 }
 
 export async function fetchMe() {
