@@ -9,8 +9,6 @@ import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { apiRouter } from "./routes/index.js";
 
-console.log("[startup] app module initialized");
-
 export const app = express();
 
 app.set("etag", false);

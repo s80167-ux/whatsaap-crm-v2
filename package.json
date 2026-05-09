@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev:all": "concurrently -k -n backend,connector,raw-events,outbox,campaign,frontend -c blue,green,yellow,magenta,red,cyan \"npm run dev:backend\" \"npm run dev:connector\" \"npm run worker:raw-events\" \"npm run worker:message-outbox\" \"npm run worker:campaign-dispatch\" \"npm run dev:frontend\"",
+    "dev:local-railway-wa": "concurrently -k -n backend,raw-events,outbox,campaign,frontend -c blue,yellow,magenta,red,cyan \"npm run dev:backend\" \"npm run worker:raw-events\" \"npm run worker:message-outbox\" \"npm run worker:campaign-dispatch\" \"npm run dev:frontend\"",
     "dev:backend": "npm --workspace apps/api run dev",
     "start": "npm --workspace apps/api start",
     "dev:frontend": "npm --workspace apps/frontend run dev",

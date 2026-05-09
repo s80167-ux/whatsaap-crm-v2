@@ -6,6 +6,7 @@ import { logger } from "../config/logger.js";
 import { MessageDispatchOutboxRepository, type MessageDispatchOutboxRecord } from "../repositories/messageDispatchOutboxRepository.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
+import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { ConnectorClient } from "./connectorClient.js";
 import { ProjectionService } from "./projectionService.js";
 
@@ -14,6 +15,7 @@ export class MessageDispatchService {
     private readonly outboxRepository = new MessageDispatchOutboxRepository(),
     private readonly messageRepository = new MessageRepository(),
     private readonly conversationRepository = new ConversationRepository(),
+    private readonly rawEventRepository = new RawEventRepository(),
     private readonly connectorClient = new ConnectorClient(),
     private readonly projectionService = new ProjectionService()
   ) {}
@@ -104,6 +106,14 @@ export class MessageDispatchService {
           sentAt
         });
 
+        if (connectorMessageId) {
+          await this.rawEventRepository.requeueStatusEventsByExternalEventId(client, {
+            organizationId: job.organization_id,
+            whatsappAccountId: job.whatsapp_account_id,
+            externalEventId: connectorMessageId
+          });
+        }
+
         await this.messageRepository.appendStatusEvent(client, {
           messageId: job.message_id,
           status: "server_ack",
@@ -140,19 +150,23 @@ export class MessageDispatchService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to dispatch message";
       const nextAttemptAt = new Date(Date.now() + Math.min(job.attempt_count, 5) * 15000);
+      const willRetry = job.attempt_count < env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES;
+      const keepMessagePending = willRetry && isTransientConnectorSessionError(errorMessage);
 
       await withTransaction(async (client) => {
-        await this.messageRepository.appendStatusEvent(client, {
-          messageId: job.message_id,
-          status: "failed",
-          payload: { error: errorMessage }
-        });
+        if (!keepMessagePending) {
+          await this.messageRepository.appendStatusEvent(client, {
+            messageId: job.message_id,
+            status: "failed",
+            payload: { error: errorMessage }
+          });
 
-        await this.messageRepository.updateAckStatus(client, {
-          messageId: job.message_id,
-          ackStatus: "failed",
-          failedAt: new Date()
-        });
+          await this.messageRepository.updateAckStatus(client, {
+            messageId: job.message_id,
+            ackStatus: "failed",
+            failedAt: new Date()
+          });
+        }
 
         await this.outboxRepository.markFailed(client, {
           outboxId: job.id,
@@ -162,7 +176,7 @@ export class MessageDispatchService {
         });
       });
 
-      logger.error({ error, outboxId: job.id, messageId: job.message_id }, "Failed to dispatch outbound message");
+      logger.error({ err: error, outboxId: job.id, messageId: job.message_id }, "Failed to dispatch outbound message");
       return { ok: false, errorMessage };
     }
   }
@@ -278,4 +292,13 @@ export class MessageDispatchService {
       dataBase64: candidate.dataBase64
     };
   }
+}
+
+function isTransientConnectorSessionError(errorMessage: string) {
+  const normalized = errorMessage.toLowerCase();
+  return (
+    normalized.includes("session is not connected") ||
+    normalized.includes("did not reconnect before the send timeout") ||
+    normalized.includes("session is not fully connected")
+  );
 }

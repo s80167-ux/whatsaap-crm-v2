@@ -39,6 +39,9 @@ export class ContactService {
             normalizedPhone
           )
         : null;
+    const existingPhoneContact = normalizedPhone
+      ? await this.contactRepository.findByNormalizedPhone(client, input.organizationId, normalizedPhone)
+      : null;
     let contact: ContactRecord | null = null;
 
     if (existingIdentity) {
@@ -49,8 +52,8 @@ export class ContactService {
       contact = await this.contactRepository.findById(client, input.organizationId, existingPhoneIdentity.contact_id);
     }
 
-    if (!contact && normalizedPhone) {
-      contact = await this.contactRepository.findByNormalizedPhone(client, input.organizationId, normalizedPhone);
+    if (existingPhoneContact && (!contact || contact.id !== existingPhoneContact.id)) {
+      contact = existingPhoneContact;
     }
 
     if (!contact) {

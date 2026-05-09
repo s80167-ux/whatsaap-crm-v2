@@ -282,7 +282,7 @@ export class CampaignDispatchService {
         ]
       );
 
-      logger.error({ error, campaignId: recipient.campaign_id, campaignRecipientId: recipient.id }, "Campaign recipient dispatch failed");
+      logger.error({ err: error, campaignId: recipient.campaign_id, campaignRecipientId: recipient.id }, "Campaign recipient dispatch failed");
     } finally {
       await this.refreshCampaignCompletion(recipient.organization_id, recipient.campaign_id);
     }

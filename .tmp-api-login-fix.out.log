@@ -12,3 +12,83 @@
 [startup] app.listen callback on port 4000
 [19:20:37.012] [32mINFO[39m (19052): [36mDatabase connection established[39m
 [19:20:37.021] [32mINFO[39m (19052): [36mBackend listening on port 4000[39m
+[0mPOST /api/auth/login [33m400[0m 5.359 ms - 183[0m
+[0mGET /api/auth/me [33m401[0m 2.097 ms - 58[0m
+[19:20:48.500] [32mINFO[39m (19052): [36mRequest started[39m
+    [35mrequestId[39m: "49b446a6-e69a-49fc-bf22-8662ba3b1885"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/api/auth/login"
+[19:20:48.534] [33mWARN[39m (19052): [36mValidation failed[39m
+    [35mrequestId[39m: "49b446a6-e69a-49fc-bf22-8662ba3b1885"
+    [35mpath[39m: "/api/auth/login"
+    [35mdetails[39m: {
+      "formErrors": [],
+      "fieldErrors": {
+        "password": [
+          "String must contain at least 8 character(s)"
+        ]
+      }
+    }
+[19:20:48.540] [32mINFO[39m (19052): [36mRequest completed[39m
+    [35mrequestId[39m: "49b446a6-e69a-49fc-bf22-8662ba3b1885"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/api/auth/login"
+    [35mstatusCode[39m: 400
+    [35mdurationMs[39m: 40
+[19:20:48.545] [32mINFO[39m (19052): [36mRequest started[39m
+    [35mrequestId[39m: "699b3d98-a224-4624-9b35-0112a69fd04f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[19:20:48.549] [32mINFO[39m (19052): [36mRequest completed[39m
+    [35mrequestId[39m: "699b3d98-a224-4624-9b35-0112a69fd04f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 401
+    [35mdurationMs[39m: 4
+[0mGET /api/health [32m200[0m 0.416 ms - 11[0m
+[19:21:19.369] [32mINFO[39m (19052): [36mRequest started[39m
+    [35mrequestId[39m: "a6a48f0f-503f-4f3c-ab60-b7e2970da851"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[19:21:19.370] [32mINFO[39m (19052): [36mRequest completed[39m
+    [35mrequestId[39m: "a6a48f0f-503f-4f3c-ab60-b7e2970da851"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+7:23:29 pm [tsx] change in ./src\app.ts Restarting...
+c[19:23:33.335] [32mINFO[39m (10856): [36mDatabase connection established[39m
+[19:23:33.340] [32mINFO[39m (10856): [36mBackend listening on port 4000[39m
+[0mGET /api/health [32m200[0m 2.657 ms - 11[0m
+[19:23:40.282] [32mINFO[39m (10856): [36mRequest started[39m
+    [35mrequestId[39m: "fc985bcd-673a-4e98-8525-c2fa3bcbab3b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[19:23:40.289] [32mINFO[39m (10856): [36mRequest completed[39m
+    [35mrequestId[39m: "fc985bcd-673a-4e98-8525-c2fa3bcbab3b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 7
+[19:23:58.950] [32mINFO[39m (10856): [36mRequest started[39m
+    [35mrequestId[39m: "05826512-a300-47d6-a135-5c249edfa468"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/api/auth/login"
+[0mPOST /api/auth/login [32m200[0m 1164.782 ms - 583[0m
+[19:24:00.158] [32mINFO[39m (10856): [36mRequest completed[39m
+    [35mrequestId[39m: "05826512-a300-47d6-a135-5c249edfa468"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/api/auth/login"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1208
+[19:24:00.200] [32mINFO[39m (10856): [36mRequest started[39m
+    [35mrequestId[39m: "287f3a1a-5037-40a1-a7c2-7a3a40d04f28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[0mGET /api/auth/me [32m200[0m 634.499 ms - 574[0m
+[19:24:00.835] [32mINFO[39m (10856): [36mRequest completed[39m
+    [35mrequestId[39m: "287f3a1a-5037-40a1-a7c2-7a3a40d04f28"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 636

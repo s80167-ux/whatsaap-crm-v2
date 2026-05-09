@@ -245,8 +245,8 @@ export function InboxPage() {
                 Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace.
               </p>
             </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
+              <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
                   { label: "Unread", value: queueCounts.unread },
                   { label: "Mine", value: queueCounts.mine },

@@ -2,6 +2,7 @@ import {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  WAMessageStatus,
   useMultiFileAuthState
 } from "baileys";
 import makeWASocket from "baileys";
@@ -17,6 +18,25 @@ import { detectMessageType, extractTextContent } from "../utils/message.js";
 import { isWhatsAppDirectChatJid, jidToPhone } from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
+
+function mapBaileysStatusToAckStatus(status: number | null | undefined) {
+  switch (status) {
+    case WAMessageStatus.PENDING:
+      return "pending" as const;
+    case WAMessageStatus.SERVER_ACK:
+      return "server_ack" as const;
+    case WAMessageStatus.DELIVERY_ACK:
+      return "device_delivered" as const;
+    case WAMessageStatus.READ:
+      return "read" as const;
+    case WAMessageStatus.PLAYED:
+      return "played" as const;
+    case WAMessageStatus.ERROR:
+      return "failed" as const;
+    default:
+      return null;
+  }
+}
 
 export class WhatsAppSessionManager {
   private static instance: WhatsAppSessionManager;
@@ -141,6 +161,41 @@ export class WhatsAppSessionManager {
           });
         } catch (error) {
           logger.error({ error, accountId: account.id, messageId: message.key.id }, "Failed to ingest message");
+        }
+      }
+    });
+
+    socket.ev.on("messages.update", async (updates) => {
+      for (const { key, update } of updates) {
+        if (!key?.id || !key?.remoteJid || !key.fromMe) {
+          continue;
+        }
+
+        if (!isWhatsAppDirectChatJid(key.remoteJid)) {
+          continue;
+        }
+
+        const ackStatus = mapBaileysStatusToAckStatus(update.status ?? null);
+
+        if (!ackStatus) {
+          continue;
+        }
+
+        try {
+          await this.rawEventIngestionService.enqueueMessageStatusEvent({
+            organizationId: account.organization_id,
+            whatsappAccountId: account.id,
+            externalMessageId: key.id,
+            remoteJid: key.remoteJid,
+            ackStatus,
+            eventAt: new Date(),
+            rawPayload: {
+              key,
+              update
+            }
+          });
+        } catch (error) {
+          logger.error({ error, accountId: account.id, messageId: key.id, ackStatus }, "Failed to ingest message status");
         }
       }
     });

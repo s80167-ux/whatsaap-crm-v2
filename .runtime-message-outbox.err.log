@@ -1,7 +1,7 @@
-npm error Lifecycle script `dev` failed with error:
+npm error Lifecycle script `worker:message-outbox` failed with error:
 npm error code 4294967295
 npm error path C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api
 npm error workspace api@2.0.0
 npm error location C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api
 npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsx watch src/server.ts
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsx src/workers/processMessageOutbox.ts

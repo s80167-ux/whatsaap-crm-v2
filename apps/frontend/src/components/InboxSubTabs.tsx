@@ -8,7 +8,7 @@ type InboxSubTab = {
 
 export function InboxSubTabs({ tabs }: { tabs: InboxSubTab[] }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex shrink-0 flex-wrap gap-2">
       {tabs.map((tab) => (
         <NavLink
           key={tab.to}

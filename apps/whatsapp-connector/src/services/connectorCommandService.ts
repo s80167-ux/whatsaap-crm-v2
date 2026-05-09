@@ -1,4 +1,4 @@
-import { pool } from "../config/database.js";
+import { pool, withTransaction } from "../config/database.js";
 import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountRepository.js";
 import { WhatsAppSessionManager } from "../whatsapp/sessionManager.js";
 
@@ -49,11 +49,17 @@ export class ConnectorCommandService {
 
   async getAccountStatus(accountId: string) {
     const account = await this.getAccount(accountId);
+    const connected = this.sessionManager.isConnected(accountId);
+    const connectionStatus = account.connection_status === "connected" && !connected ? "reconnecting" : account.connection_status;
+
+    if (connectionStatus !== account.connection_status) {
+      await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, connectionStatus));
+    }
 
     return {
       accountId,
-      connected: this.sessionManager.isConnected(accountId),
-      connectionStatus: account.connection_status
+      connected,
+      connectionStatus
     };
   }
 

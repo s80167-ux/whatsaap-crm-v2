@@ -48,9 +48,15 @@ type ContactSyncWaiter = {
   reject: (error: Error) => void;
   timeout: NodeJS.Timeout;
 };
+type ConnectionWaiter = {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
+};
 
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
+const SEND_RECONNECT_TIMEOUT_MS = 20_000;
 
 function isWithinHistorySyncWindow(sentAt: Date, lookbackDays: number | null | undefined) {
   if (lookbackDays === -1) {
@@ -118,6 +124,7 @@ export class WhatsAppSessionManager {
   private readonly avatarUrlByJid = new Map<string, string>();
   private readonly contactByJid = new Map<string, ContactSnapshot>();
   private readonly contactSyncWaiters = new Map<string, ContactSyncWaiter[]>();
+  private readonly connectionWaiters = new Map<string, ConnectionWaiter[]>();
 
   getSocket(accountId: string) {
     return this.sockets.get(accountId);
@@ -370,6 +377,7 @@ export class WhatsAppSessionManager {
           if (connection === "open") {
             this.connectedAccounts.add(account.id);
             this.reconnectFailureCounts.delete(account.id);
+            this.flushConnectionWaiters(account.id);
 
             await withTransaction(async (client) => {
               await this.runtimeRepository.touchConnected(client, session.id);
@@ -416,6 +424,7 @@ export class WhatsAppSessionManager {
 
             if (autoReconnectSuppressed) {
               this.disabledAccounts.add(account.id);
+              this.rejectConnectionWaiters(account.id, new Error("WhatsApp reconnect was suppressed after repeated failures"));
             }
 
             this.sockets.delete(account.id);
@@ -490,6 +499,8 @@ export class WhatsAppSessionManager {
               setTimeout(() => {
                 void this.initializeSession(account);
               }, 5_000);
+            } else {
+              this.rejectConnectionWaiters(account.id, new Error("WhatsApp session is not connected"));
             }
           }
         } catch (error) {
@@ -627,16 +638,11 @@ export class WhatsAppSessionManager {
   }
 
   async sendMessage(accountId: string, recipientJid: string, text: string | null, attachment: OutboundMediaAttachment | null) {
-    const socket = this.getSocket(accountId);
-
-    if (!socket || !this.isConnected(accountId)) {
-      throw new Error("WhatsApp session is not connected");
-    }
-
     if (!text && !attachment) {
       throw new Error("Message text or attachment is required");
     }
 
+    const socket = await this.ensureConnectedForSend(accountId);
     const socketUserId = (socket as { user?: { id?: string } }).user?.id;
 
     if (!socketUserId) {
@@ -760,6 +766,88 @@ export class WhatsAppSessionManager {
       waiters.push(waiter);
       this.contactSyncWaiters.set(accountId, waiters);
     });
+  }
+
+  private waitForConnection(accountId: string, timeoutMs: number) {
+    if (this.isConnected(accountId)) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const waiters = this.connectionWaiters.get(accountId) ?? [];
+        this.connectionWaiters.set(
+          accountId,
+          waiters.filter((waiter) => waiter.timeout !== timeout)
+        );
+        reject(new Error("WhatsApp session did not reconnect before the send timeout"));
+      }, timeoutMs);
+
+      const waiter: ConnectionWaiter = { resolve, reject, timeout };
+      const waiters = this.connectionWaiters.get(accountId) ?? [];
+      waiters.push(waiter);
+      this.connectionWaiters.set(accountId, waiters);
+    });
+  }
+
+  private flushConnectionWaiters(accountId: string) {
+    const waiters = this.connectionWaiters.get(accountId);
+    if (!waiters?.length) {
+      return;
+    }
+
+    this.connectionWaiters.delete(accountId);
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timeout);
+      waiter.resolve();
+    }
+  }
+
+  private rejectConnectionWaiters(accountId: string, error: Error) {
+    const waiters = this.connectionWaiters.get(accountId);
+    if (!waiters?.length) {
+      return;
+    }
+
+    this.connectionWaiters.delete(accountId);
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timeout);
+      waiter.reject(error);
+    }
+  }
+
+  private async ensureConnectedForSend(accountId: string) {
+    const existingSocket = this.getSocket(accountId);
+
+    if (existingSocket && this.isConnected(accountId)) {
+      return existingSocket;
+    }
+
+    logger.warn({ accountId }, "WhatsApp send requested while session is not connected; reconnecting before send");
+
+    const account = await withTransaction((client) => this.accountRepository.findById(client, accountId));
+
+    if (!account) {
+      throw new Error("WhatsApp account not found");
+    }
+
+    await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, "reconnecting"));
+    await this.reconnectSession(account);
+
+    try {
+      await this.waitForConnection(accountId, SEND_RECONNECT_TIMEOUT_MS);
+    } catch (error) {
+      await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, "reconnecting"));
+      throw error;
+    }
+
+    const socket = this.getSocket(accountId);
+
+    if (!socket || !this.isConnected(accountId)) {
+      throw new Error("WhatsApp session is not connected");
+    }
+
+    return socket;
   }
 
   private flushContactSyncWaiters(accountId: string) {

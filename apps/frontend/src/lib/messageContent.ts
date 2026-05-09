@@ -76,6 +76,42 @@ function getRawMessageNode(contentJson: unknown): RawMessageNode | null {
   return null;
 }
 
+function unwrapRawMessageNode(node: RawMessageNode | null, depth = 0): RawMessageNode | null {
+  if (!node || depth > 8) {
+    return null;
+  }
+
+  const wrapped =
+    asRecord(asRecord(node.ephemeralMessage)?.message) ||
+    asRecord(asRecord(node.viewOnceMessage)?.message) ||
+    asRecord(asRecord(node.viewOnceMessageV2)?.message) ||
+    asRecord(asRecord(node.viewOnceMessageV2Extension)?.message) ||
+    asRecord(asRecord(node.documentWithCaptionMessage)?.message) ||
+    asRecord(asRecord(node.editedMessage)?.message) ||
+    asRecord(asRecord(asRecord(node.protocolMessage)?.editedMessage)?.message);
+
+  return wrapped ? unwrapRawMessageNode(wrapped, depth + 1) : node;
+}
+
+function getRawMessageText(contentJson: unknown) {
+  const rawMessage = unwrapRawMessageNode(getRawMessageNode(contentJson));
+  if (!rawMessage) {
+    return null;
+  }
+
+  return (
+    asString(rawMessage.conversation) ||
+    asString(asRecord(rawMessage.extendedTextMessage)?.text) ||
+    asString(asRecord(rawMessage.imageMessage)?.caption) ||
+    asString(asRecord(rawMessage.videoMessage)?.caption) ||
+    asString(asRecord(rawMessage.documentMessage)?.caption) ||
+    asString(asRecord(rawMessage.templateButtonReplyMessage)?.selectedDisplayText) ||
+    asString(asRecord(rawMessage.buttonsResponseMessage)?.selectedDisplayText) ||
+    asString(asRecord(rawMessage.listResponseMessage)?.title) ||
+    asString(asRecord(rawMessage.reactionMessage)?.text)
+  );
+}
+
 function getOutboundMediaNode(contentJson: unknown) {
   const root = asRecord(contentJson);
   if (!root) {
@@ -99,10 +135,11 @@ function getNodeByKey(node: RawMessageNode | null, key: string) {
 
 function buildFallbackPresentation(message: Message): MessagePresentation {
   const label = message.message_type !== "text" ? message.message_type.toUpperCase() : null;
+  const contentText = message.content_text ?? getRawMessageText(message.content_json);
   return {
     label,
-    title: message.content_text ?? (message.message_type === "text" ? "Message" : `${message.message_type} message`),
-    caption: message.content_text,
+    title: contentText ?? (message.message_type === "text" ? "Message" : `${message.message_type} message`),
+    caption: contentText,
     details: [],
     isMedia: message.message_type !== "text",
     previewUrl: null,
@@ -112,14 +149,15 @@ function buildFallbackPresentation(message: Message): MessagePresentation {
 }
 
 export function getMessagePresentation(message: Message): MessagePresentation {
-  const rawMessage = getRawMessageNode(message.content_json);
+  const rawMessage = unwrapRawMessageNode(getRawMessageNode(message.content_json));
   const outboundMedia = getOutboundMediaNode(message.content_json);
+  const contentText = message.content_text ?? getRawMessageText(message.content_json);
 
   switch (message.message_type) {
     case "text":
       return {
         label: null,
-        title: message.content_text ?? "Message",
+        title: contentText ?? "Message",
         caption: null,
         details: [],
         isMedia: false,
@@ -132,8 +170,8 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       return {
         label: "Image",
-        title: message.content_text ?? asString(outboundMedia?.fileName) ?? "Photo received",
-        caption: message.content_text,
+        title: contentText ?? asString(outboundMedia?.fileName) ?? "Photo received",
+        caption: contentText,
         details: [
           mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes))
@@ -150,8 +188,8 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       return {
         label: "Video",
-        title: message.content_text ?? asString(outboundMedia?.fileName) ?? "Video received",
-        caption: message.content_text,
+        title: contentText ?? asString(outboundMedia?.fileName) ?? "Video received",
+        caption: contentText,
         details: [
           mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes)),
@@ -170,7 +208,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       return {
         label: "Audio",
         title: asString(outboundMedia?.fileName) ?? "Audio message",
-        caption: message.content_text,
+        caption: contentText,
         details: [
           mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes)),
@@ -189,7 +227,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       return {
         label: "Document",
         title: fileName ?? "Document received",
-        caption: message.content_text,
+        caption: contentText,
         details: [
           mimeType,
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes))
@@ -204,7 +242,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       return {
         label: "Sticker",
         title: "Sticker",
-        caption: message.content_text,
+        caption: contentText,
         details: [],
         isMedia: true,
         previewUrl: null,

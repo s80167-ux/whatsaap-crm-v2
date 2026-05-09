@@ -4,6 +4,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { ProcessedEventKeyRepository } from "../repositories/processedEventKeyRepository.js";
 import { RawEventRepository, type RawChannelEventRecord } from "../repositories/rawEventRepository.js";
+import { detectMessageType, extractTextContent } from "../utils/message.js";
 import { bestPhoneFromWhatsAppPayload, isWhatsAppDirectChatJid } from "../utils/phone.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
@@ -177,6 +178,10 @@ export class RawEventProcessorService {
 
         const payloadPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload);
         const phoneRaw = payloadPhone?.startsWith("+60") ? payloadPhone : payload.phoneRaw ?? payloadPhone;
+        const textBody = payload.textBody ?? extractTextContent(payload.rawPayload);
+        const messageType = payload.messageType === "system" || payload.messageType === "unknown"
+          ? detectMessageType(payload.rawPayload)
+          : payload.messageType;
 
         await this.messageIngestionService.ingest({
           organizationId: payload.organizationId,
@@ -187,8 +192,8 @@ export class RawEventProcessorService {
           profileName: payload.profileName,
           profilePushName: payload.profilePushName ?? null,
           profileAvatarUrl: payload.profileAvatarUrl ?? null,
-          textBody: payload.textBody,
-          messageType: payload.messageType,
+          textBody,
+          messageType,
           direction: payload.direction,
           sentAt,
           rawPayload: payload.rawPayload

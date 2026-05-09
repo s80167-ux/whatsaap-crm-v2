@@ -267,4 +267,37 @@ export class RawEventRepository {
 
     return Number(result.rows[0]?.count ?? 0);
   }
+
+  async requeueStatusEventsByExternalEventId(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      whatsappAccountId: string;
+      externalEventId: string;
+      statuses?: Array<RawChannelEventRecord["processing_status"]>;
+    }
+  ): Promise<number> {
+    const statuses = input.statuses ?? ["failed"];
+
+    const result = await client.query<{ count: string }>(
+      `
+        with updated as (
+          update raw_channel_events
+          set processing_status = 'pending',
+              error_message = null
+          where organization_id = $1
+            and whatsapp_account_id = $2
+            and event_type = 'message.status'
+            and external_event_id = $3
+            and processing_status = any($4::text[])
+          returning 1
+        )
+        select count(*)::text as count
+        from updated
+      `,
+      [input.organizationId, input.whatsappAccountId, input.externalEventId, statuses]
+    );
+
+    return Number(result.rows[0]?.count ?? 0);
+  }
 }

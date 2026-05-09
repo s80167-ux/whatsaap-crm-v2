@@ -189,6 +189,18 @@ export class ContactRepository {
           primary_avatar_url
         )
         values ($1, nullif(trim($2), ''), $3, $4, nullif(trim($5), ''), nullif(trim($6), ''), nullif(trim($7), ''), $8)
+        on conflict (organization_id, primary_phone_normalized)
+        where primary_phone_normalized is not null and deleted_at is null
+        do update set
+          display_name = case
+            when contacts.is_anchor_locked then contacts.display_name
+            when nullif(trim(excluded.display_name), '') is null then contacts.display_name
+            when nullif(trim(contacts.display_name), '') is null then excluded.display_name
+            when length(trim(excluded.display_name)) > length(trim(contacts.display_name)) then excluded.display_name
+            else contacts.display_name
+          end,
+          primary_phone_e164 = coalesce(contacts.primary_phone_e164, excluded.primary_phone_e164),
+          primary_avatar_url = coalesce(excluded.primary_avatar_url, contacts.primary_avatar_url)
         returning
           id,
           organization_id,
