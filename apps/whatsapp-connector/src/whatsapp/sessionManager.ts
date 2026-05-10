@@ -18,7 +18,13 @@ import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountReposi
 import { WhatsAppRuntimeRepository } from "../repositories/whatsAppRuntimeRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
-import { bestPhoneFromWhatsAppMessageKey, isWhatsAppDirectChatJid, jidToPhone } from "../utils/phone.js";
+import {
+  bestPhoneFromWhatsAppMessageKey,
+  extractAllWhatsAppJidCandidates,
+  isWhatsAppDirectChatJid,
+  jidToPhone,
+  normalizeWhatsAppJid
+} from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 type SessionRuntimeState = {
@@ -593,8 +599,11 @@ export class WhatsAppSessionManager {
       });
 
       socket.ev.on("chats.phoneNumberShare", ({ lid, jid }) => {
-        if (lid && jid) {
-          this.phoneJidByLid.set(lid, jid);
+        const normalizedLid = normalizeWhatsAppJid(lid);
+        const normalizedJid = normalizeWhatsAppJid(jid);
+
+        if (normalizedLid && normalizedJid) {
+          this.phoneJidByLid.set(this.scopedContactKey(account.id, normalizedLid), normalizedJid);
         }
       });
 
@@ -869,16 +878,29 @@ export class WhatsAppSessionManager {
   }
 
   private lookupPhoneFromLid(accountId: string, jid: string | null | undefined) {
-    if (!jid?.includes("@lid")) {
+    const normalizedJid = normalizeWhatsAppJid(jid);
+
+    if (!normalizedJid?.endsWith("@lid")) {
       return null;
     }
 
-    return jidToPhone(this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)));
+    return jidToPhone(this.phoneJidByLid.get(this.scopedContactKey(accountId, normalizedJid)));
   }
 
   private storeContactSnapshots(accountId: string, contacts: Array<Partial<Contact>>) {
     for (const contact of contacts) {
-      const ids = [contact.id, contact.jid, contact.lid].filter((value): value is string => typeof value === "string" && value.length > 0);
+      const ids = [
+        ...new Set(
+          [contact.id, contact.jid, contact.lid].flatMap((value) => {
+            if (typeof value !== "string" || value.length === 0) {
+              return [];
+            }
+
+            const normalizedJid = normalizeWhatsAppJid(value);
+            return normalizedJid && normalizedJid !== value ? [value, normalizedJid] : [value];
+          })
+        )
+      ];
 
       if (ids.length === 0) {
         continue;
@@ -904,8 +926,11 @@ export class WhatsAppSessionManager {
         });
       }
 
-      if (contact.lid && contact.jid) {
-        this.phoneJidByLid.set(this.scopedContactKey(accountId, contact.lid), contact.jid);
+      const normalizedLid = normalizeWhatsAppJid(contact.lid);
+      const normalizedJid = normalizeWhatsAppJid(contact.jid);
+
+      if (normalizedLid && normalizedJid) {
+        this.phoneJidByLid.set(this.scopedContactKey(accountId, normalizedLid), normalizedJid);
       }
 
       if (typeof contact.imgUrl === "string" && contact.imgUrl.length > 0 && contact.imgUrl !== "changed") {
@@ -919,17 +944,24 @@ export class WhatsAppSessionManager {
   }
 
   private getStoredContactSnapshot(accountId: string, jid: string, key: Record<string, unknown>) {
+    const normalizedJid = normalizeWhatsAppJid(jid);
+    const mappedPhoneJid = normalizedJid ? this.phoneJidByLid.get(this.scopedContactKey(accountId, normalizedJid)) : null;
     const candidates = [
       jid,
-      this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)),
+      normalizedJid,
+      mappedPhoneJid,
       key.remoteJid,
       key.senderPn,
       key.participantPn,
-      key.participant
+      key.participant,
+      key.remoteJidAlt,
+      key.participantAlt,
+      ...extractAllWhatsAppJidCandidates({ key })
     ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
 
     for (const candidate of candidates) {
-      const snapshot = this.contactByJid.get(this.scopedContactKey(accountId, candidate));
+      const normalizedCandidate = normalizeWhatsAppJid(candidate) ?? candidate;
+      const snapshot = this.contactByJid.get(this.scopedContactKey(accountId, normalizedCandidate));
 
       if (snapshot) {
         return snapshot;
@@ -966,17 +998,24 @@ export class WhatsAppSessionManager {
   }
 
   private async resolveProfileAvatarUrl(accountId: string, socket: ReturnType<typeof makeWASocket>, jid: string, key: Record<string, unknown>) {
+    const normalizedJid = normalizeWhatsAppJid(jid);
+    const mappedPhoneJid = normalizedJid ? this.phoneJidByLid.get(this.scopedContactKey(accountId, normalizedJid)) : null;
     const candidates = [
       jid,
-      this.phoneJidByLid.get(this.scopedContactKey(accountId, jid)),
+      normalizedJid,
+      mappedPhoneJid,
       key.senderPn,
       key.participantPn,
       key.participant,
-      key.remoteJid
+      key.remoteJid,
+      key.remoteJidAlt,
+      key.participantAlt,
+      ...extractAllWhatsAppJidCandidates({ key })
     ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0);
 
     for (const candidate of candidates) {
-      const scopedCandidate = this.scopedContactKey(accountId, candidate);
+      const normalizedCandidate = normalizeWhatsAppJid(candidate) ?? candidate;
+      const scopedCandidate = this.scopedContactKey(accountId, normalizedCandidate);
       const cached = this.avatarUrlByJid.get(scopedCandidate);
 
       if (cached) {
@@ -988,7 +1027,7 @@ export class WhatsAppSessionManager {
 
         if (avatarUrl) {
           this.avatarUrlByJid.set(scopedCandidate, avatarUrl);
-          this.avatarUrlByJid.set(this.scopedContactKey(accountId, jid), avatarUrl);
+          this.avatarUrlByJid.set(this.scopedContactKey(accountId, normalizedJid ?? jid), avatarUrl);
           return avatarUrl;
         }
       } catch (error) {
