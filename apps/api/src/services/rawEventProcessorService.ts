@@ -5,7 +5,12 @@ import { logger } from "../config/logger.js";
 import { ProcessedEventKeyRepository } from "../repositories/processedEventKeyRepository.js";
 import { RawEventRepository, type RawChannelEventRecord } from "../repositories/rawEventRepository.js";
 import { detectMessageType, extractTextContent } from "../utils/message.js";
-import { bestPhoneFromWhatsAppPayload, isWhatsAppDirectChatJid } from "../utils/phone.js";
+import {
+  bestPhoneFromWhatsAppPayload,
+  extractAllPhoneCandidatesFromWhatsAppPayload,
+  getWhatsAppJidType,
+  isWhatsAppDirectChatJid
+} from "../utils/phone.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
 
@@ -15,6 +20,7 @@ type WhatsAppMessageEventPayload = {
   externalMessageId: string;
   remoteJid: string;
   phoneRaw: string | null;
+  phone?: string | null;
   profileName: string | null;
   profilePushName?: string | null;
   profileAvatarUrl?: string | null;
@@ -176,12 +182,27 @@ export class RawEventProcessorService {
           return "ignored" as const;
         }
 
-        const payloadPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload);
-        const phoneRaw = payloadPhone?.startsWith("+60") ? payloadPhone : payload.phoneRaw ?? payloadPhone;
+        const extractedPhoneCandidates = extractAllPhoneCandidatesFromWhatsAppPayload(payload.rawPayload);
+        const payloadPhone = payload.phone ?? null;
+        const extractedPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload);
+        const phoneRaw = payloadPhone ?? payload.phoneRaw ?? extractedPhone;
         const textBody = payload.textBody ?? extractTextContent(payload.rawPayload);
         const messageType = payload.messageType === "system" || payload.messageType === "unknown"
           ? detectMessageType(payload.rawPayload)
           : payload.messageType;
+
+        logger.debug(
+          {
+            organizationId: payload.organizationId,
+            whatsappAccountId: payload.whatsappAccountId,
+            externalMessageId: payload.externalMessageId,
+            remoteJid: payload.remoteJid,
+            phoneCandidateCount: extractedPhoneCandidates.length,
+            selectedPhoneRaw: phoneRaw,
+            isRemoteJidLid: getWhatsAppJidType(payload.remoteJid) === "lid"
+          },
+          "Resolved WhatsApp message phone candidates"
+        );
 
         await this.messageIngestionService.ingest({
           organizationId: payload.organizationId,

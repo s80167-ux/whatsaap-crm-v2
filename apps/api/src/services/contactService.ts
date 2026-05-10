@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import { ContactIdentityRepository } from "../repositories/contactIdentityRepository.js";
 import { ContactRepository } from "../repositories/contactRepository.js";
 import type { ContactIdentityRecord, ContactRecord } from "../types/domain.js";
-import { normalizePhoneNumber } from "../utils/phone.js";
+import { normalizePhoneNumber, normalizeWhatsAppJid } from "../utils/phone.js";
 
 export class ContactService {
   constructor(
@@ -24,11 +24,13 @@ export class ContactService {
   ): Promise<{ contact: ContactRecord; identity: ContactIdentityRecord }> {
     const normalizedPhone = normalizePhoneNumber(input.phoneRaw);
     const primaryPhone = normalizedPhone ?? input.phoneRaw;
+    const whatsappJid = normalizeWhatsAppJid(input.whatsappJid) ?? input.whatsappJid;
+    const bestProfileName = input.profileName ?? input.profilePushName ?? null;
     const existingIdentity = await this.identityRepository.findByJid(
       client,
       input.organizationId,
       input.whatsappAccountId,
-      input.whatsappJid
+      whatsappJid
     );
     const existingPhoneIdentity =
       normalizedPhone
@@ -52,14 +54,14 @@ export class ContactService {
       contact = await this.contactRepository.findById(client, input.organizationId, existingPhoneIdentity.contact_id);
     }
 
-    if (existingPhoneContact && (!contact || contact.id !== existingPhoneContact.id)) {
+    if (!existingIdentity && existingPhoneContact && (!contact || contact.id !== existingPhoneContact.id)) {
       contact = existingPhoneContact;
     }
 
     if (!contact) {
       contact = await this.contactRepository.create(client, {
         organizationId: input.organizationId,
-        displayName: input.profileName,
+        displayName: bestProfileName,
         primaryPhoneE164: primaryPhone,
         primaryPhoneNormalized: normalizedPhone,
         primaryAvatarUrl: input.profileAvatarUrl ?? null
@@ -67,7 +69,7 @@ export class ContactService {
     } else {
       contact = await this.contactRepository.anchor(client, {
         contactId: contact.id,
-        displayName: input.profileName,
+        displayName: bestProfileName,
         primaryPhoneE164: primaryPhone,
         primaryPhoneNormalized: normalizedPhone,
         primaryAvatarUrl: input.profileAvatarUrl ?? null
@@ -78,10 +80,10 @@ export class ContactService {
       organizationId: input.organizationId,
       contactId: contact.id,
       whatsappAccountId: input.whatsappAccountId,
-      whatsappJid: input.whatsappJid,
+      whatsappJid,
       phoneE164: primaryPhone,
       phoneNormalized: normalizedPhone,
-      profileName: input.profileName,
+      profileName: bestProfileName,
       profilePushName: input.profilePushName ?? null,
       profileAvatarUrl: input.profileAvatarUrl ?? null
     });
