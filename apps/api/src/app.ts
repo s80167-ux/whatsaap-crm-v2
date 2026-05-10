@@ -74,7 +74,8 @@ app.use(
       callback(new Error(`CORS blocked for origin: ${origin ?? "unknown"}`));
     },
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    exposedHeaders: ["Content-Disposition", "X-Export-Row-Count"]
   })
 );
 app.use(requestContext);

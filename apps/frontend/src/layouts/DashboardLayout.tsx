@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Check,
   FileBarChart,
+  Download,
   KeyRound,
   LogOut,
   Megaphone,
@@ -90,15 +91,17 @@ function SidebarNavGroup({
         type="button"
         className={clsx(
           compact
-            ? "flex w-full items-center gap-2.5 rounded-none px-3 py-2.5 text-left text-[13px] font-medium transition duration-200"
-            : "flex w-full items-center gap-3 rounded-none px-4 py-3 text-left text-sm font-medium transition duration-200",
-          isGroupActive ? "bg-white/10 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+            ? "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition duration-200"
+            : "flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-medium transition duration-200",
+          isGroupActive
+            ? "bg-white text-slate-900 shadow-[0_10px_24px_rgba(8,15,32,0.16)]"
+            : "text-white/72 hover:bg-white/10 hover:text-white"
         )}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
       >
         <span className={clsx("flex items-center justify-center rounded-sm text-current", compact ? "h-7 w-7" : "h-8 w-8")}>{icon}</span>
-        <span>{label}</span>
+        <span className="leading-tight">{label}</span>
         <ChevronDown
           size={16}
           className={clsx("ml-auto transition-transform duration-200", isOpen ? "rotate-180" : "rotate-0")}
@@ -164,6 +167,7 @@ function SidebarContent({
   setSelectedOrganizationId,
   whatsappAccounts,
   showCampaigns,
+  showDataExport,
   onNavigate,
   mobile = false
 }: {
@@ -174,6 +178,7 @@ function SidebarContent({
   setSelectedOrganizationId: (organizationId: string) => void;
   whatsappAccounts: WhatsAppAccountSummary[];
   showCampaigns: boolean;
+  showDataExport: boolean;
   onNavigate?: () => void;
   mobile?: boolean;
 }) {
@@ -240,7 +245,8 @@ function SidebarContent({
           items={[
             { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
             { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
-            { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" }
+            { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" },
+            ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
           ]}
           onNavigate={onNavigate}
           compact={mobile}
@@ -316,6 +322,7 @@ export function DashboardLayout() {
     role: user?.role,
     moduleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
   });
+  const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -513,6 +520,7 @@ export function DashboardLayout() {
                 setSelectedOrganizationId={setSelectedOrganizationId}
                 whatsappAccounts={whatsappAccounts}
                 showCampaigns={showCampaigns}
+                showDataExport={showDataExport}
                 onNavigate={() => setIsMobileNavOpen(false)}
                 mobile
               />
@@ -677,6 +685,7 @@ export function DashboardLayout() {
               setSelectedOrganizationId={setSelectedOrganizationId}
               whatsappAccounts={whatsappAccounts}
               showCampaigns={showCampaigns}
+              showDataExport={showDataExport}
             />
           </Card>
         </motion.aside>

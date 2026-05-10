@@ -18,6 +18,7 @@ const DashboardLayout = lazy(() =>
 );
 const ContactsPage = lazy(() => import("./pages/ContactsPage").then((module) => ({ default: module.ContactsPage })));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+const DataExportPage = lazy(() => import("./pages/DataExportPage").then((module) => ({ default: module.DataExportPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((module) => ({ default: module.InboxPage })));
 const InboxReplyLibraryPage = lazy(() =>
   import("./pages/InboxReplyLibraryPage").then((module) => ({ default: module.InboxReplyLibraryPage }))
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
           { path: "reports", element: withRouteFallback(<ReportsPage />) },
+          { path: "exports", element: withRouteFallback(<DataExportPage />) },
           {
             path: "campaigns",
             element: withRouteFallback(
