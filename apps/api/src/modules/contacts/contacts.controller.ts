@@ -278,7 +278,12 @@ export async function startContactConversation(request: Request, response: Respo
     throw new AppError("Contact not found", 404, "contact_not_found");
   }
 
-  const hasSelectedSource = contact.whatsapp_sources?.some((source) => source.id === whatsappAccountId);
+  if ("is_merged" in contact && contact.is_merged) {
+    throw new AppError("Contact has been merged", 409, "contact_merged");
+  }
+
+  const activeContact = contact as Exclude<typeof contact, { is_merged: boolean }>;
+  const hasSelectedSource = activeContact.whatsapp_sources?.some((source) => source.id === whatsappAccountId);
 
   if (!hasSelectedSource) {
     throw new AppError("Contact has no WhatsApp source for the selected account", 400, "contact_whatsapp_source_missing");

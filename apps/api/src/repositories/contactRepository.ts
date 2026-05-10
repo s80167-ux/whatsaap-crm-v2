@@ -15,6 +15,8 @@ export class ContactRepository {
         select
           id,
           organization_id,
+          status,
+          merged_into_contact_id,
           display_name,
           primary_phone_e164,
           primary_phone_normalized,
@@ -50,6 +52,8 @@ export class ContactRepository {
         select
           c.id,
           c.organization_id,
+          c.status,
+          c.merged_into_contact_id,
           case
             when c.is_anchor_locked and nullif(trim(c.display_name), '') is not null then c.display_name
             else coalesce(

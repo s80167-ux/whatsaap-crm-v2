@@ -421,7 +421,13 @@ export async function detectContactRepairProposal(input: {
   contactId: string;
   organizationId?: string | null;
 }) {
-  const response = await apiPost<{ data: unknown }>(
+  const response = await apiPost<{
+    data: {
+      created?: boolean;
+      status?: string;
+      proposal?: ContactRepairProposal;
+    };
+  }>(
     `/admin/contacts/${input.contactId}/repair-proposal/detect`,
     {
       organizationId: input.organizationId,

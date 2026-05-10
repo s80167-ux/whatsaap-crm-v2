@@ -3,6 +3,8 @@ export type UUID = string;
 export interface ContactRecord {
   id: UUID;
   organization_id: UUID;
+  status?: "active" | "merged" | string | null;
+  merged_into_contact_id?: UUID | null;
   display_name: string | null;
   primary_phone_e164: string | null;
   primary_phone_normalized: string | null;

@@ -168,12 +168,16 @@ function CompactRepairTools({
 
   const refreshDiagnosis = () =>
     runAction("refresh", async () => {
-      await detectContactRepairProposal({
+      const result = await detectContactRepairProposal({
         contactId: contact.id,
         organizationId
       });
 
-      return "Diagnosis refreshed. Check Repair Queue for pending proposals.";
+      if (result.status === "pending" || result.created || result.proposal) {
+        return "Diagnosis refreshed. Open Repair Queue to review the pending proposal.";
+      }
+
+      return "Diagnosis refreshed. No repair proposal was found for this contact.";
     });
 
   const disabled = !canWrite || busyAction !== null;
@@ -433,13 +437,7 @@ export function ContactsPage() {
 
     if (selectedWhatsAppAccountId) {
       filteredContacts = filteredContacts.filter((contact) => {
-        return (
-          whatsappAccounts.find(
-            (wa) =>
-              wa.id === selectedWhatsAppAccountId &&
-              (wa.phone_number === contact.primary_phone_e164 || wa.phone_number_normalized === contact.primary_phone_normalized)
-          )
-        );
+        return contact.whatsapp_sources?.some((source) => source.id === selectedWhatsAppAccountId) ?? false;
       });
     }
 

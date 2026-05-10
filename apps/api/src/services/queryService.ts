@@ -45,7 +45,17 @@ export class QueryService {
   async getContact(authUser: AuthUser, organizationId: string | null, contactId: string) {
     const client = await pool.connect();
     try {
-      return await this.contactRepository.findById(client, organizationId, contactId, this.getScope(authUser));
+      const contact = await this.contactRepository.findById(client, organizationId, contactId, this.getScope(authUser));
+
+      if (contact?.status === "merged" && contact.merged_into_contact_id) {
+        return {
+          is_merged: true,
+          redirect_to_contact_id: contact.merged_into_contact_id,
+          redirect_to_conversation_id: null
+        };
+      }
+
+      return contact;
     } finally {
       client.release();
     }

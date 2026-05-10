@@ -156,6 +156,8 @@ export class ProjectionRepository {
         select
           ct.id,
           ct.organization_id,
+          ct.status,
+          ct.merged_into_contact_id,
           case
             when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
             else coalesce(
@@ -599,6 +601,7 @@ export class ProjectionRepository {
           from source_accounts
         ) src on true
         where ($1::uuid is null or ct.organization_id = $1)
+          and coalesce(ct.status, 'active') != 'merged'
           and (
             $4::timestamptz is null
             or greatest(
