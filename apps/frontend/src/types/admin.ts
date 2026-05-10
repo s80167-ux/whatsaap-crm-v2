@@ -34,6 +34,24 @@ export interface WhatsAppAccountSummary {
   history_sync_lookback_days?: number | null;
 }
 
+export interface GoogleSignupRequestSummary {
+  id: string;
+  auth_user_id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  provider: string;
+  status: "pending" | "approved" | "rejected";
+  requested_at: string;
+  reviewed_at: string | null;
+  reviewed_by_auth_user_id: string | null;
+  approved_organization_id: string | null;
+  approved_organization_user_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type WhatsAppSyncJobStatus =
   | "queued"
   | "running"

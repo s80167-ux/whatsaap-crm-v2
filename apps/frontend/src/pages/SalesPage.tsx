@@ -23,6 +23,8 @@ import { useLeadDetail, useLeadHistory, useLeads } from "../hooks/useLeads";
 import { useSalesOrderDetail, useSalesOrderHistory, useSalesOrders, useSalesSummary } from "../hooks/useSales";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
+import type { Contact, Lead, SalesOrder } from "../types/api";
+import type { UserSummary } from "../types/admin";
 
 const ORDER_TABLE_SCROLL_KEY = "sales-orders-table-scroll-top";
 const LEAD_TABLE_SCROLL_KEY = "sales-leads-table-scroll-top";
@@ -69,6 +71,11 @@ type TimelineEntry = {
   entityId: string | null;
 };
 
+const EMPTY_SALES_ORDERS: SalesOrder[] = [];
+const EMPTY_LEADS: Lead[] = [];
+const EMPTY_CONTACTS: Contact[] = [];
+const EMPTY_ORGANIZATION_USERS: UserSummary[] = [];
+
 export function SalesPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,18 +104,22 @@ export function SalesPage() {
     [activeOrganizationId, canLoadSales, isSuperAdmin, searchParams]
   );
 
-  const { data: orders = [], isLoading: ordersLoading } = useSalesOrders(salesFilters);
+  const { data: ordersData, isLoading: ordersLoading } = useSalesOrders(salesFilters);
+  const orders = ordersData ?? EMPTY_SALES_ORDERS;
   const { data: summary } = useSalesSummary(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
-  const { data: leads = [], isLoading: leadsLoading } = useLeads(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
-  const { data: contacts = [] } = useContacts(
+  const { data: leadsData, isLoading: leadsLoading } = useLeads(isSuperAdmin ? activeOrganizationId : undefined, canLoadSales);
+  const leads = leadsData ?? EMPTY_LEADS;
+  const { data: contactsData } = useContacts(
     undefined,
     isSuperAdmin ? activeOrganizationId : undefined,
     canLoadOrganizationScopedInputs
   );
-  const { data: organizationUsers = [] } = useOrganizationUsers(
+  const contacts = contactsData ?? EMPTY_CONTACTS;
+  const { data: organizationUsersData } = useOrganizationUsers(
     activeOrganizationId,
     canManageUsers && canLoadOrganizationScopedInputs
   );
+  const organizationUsers = organizationUsersData ?? EMPTY_ORGANIZATION_USERS;
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -519,7 +530,7 @@ export function SalesPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="sales-page space-y-6">
       <CreateSalesModal
         isOpen={isCreateSalesModalOpen}
         onClose={() => setIsCreateSalesModalOpen(false)}
@@ -692,8 +703,8 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{orders.length} records</p>
           </div>
 
-          <div ref={ordersTableContainerRef} className="workspace-table-wrap mt-6 max-h-[520px]">
-            <table className="workspace-table">
+          <div ref={ordersTableContainerRef} className="workspace-table-wrap sales-table-wrap mt-6 max-h-[520px]">
+            <table className="workspace-table sales-orders-table">
               <thead>
                 <tr>
                   <th className="px-5 py-4">Contact</th>
@@ -906,8 +917,8 @@ export function SalesPage() {
             <p className="text-sm text-text-muted">{leads.length} leads</p>
           </div>
 
-          <div ref={leadsTableContainerRef} className="workspace-table-wrap mt-6 max-h-[520px]">
-            <table className="workspace-table">
+          <div ref={leadsTableContainerRef} className="workspace-table-wrap sales-table-wrap mt-6 max-h-[520px]">
+            <table className="workspace-table sales-leads-table">
               <thead>
                 <tr>
                   <th className="px-5 py-4">Contact</th>
@@ -1305,8 +1316,8 @@ export function SalesPage() {
                     {orderNotice ? <p className="mt-4 text-sm leading-6 text-text-muted">{orderNotice}</p> : null}
                   </div>
 
-                  <div className="workspace-table-wrap">
-                    <table className="workspace-table workspace-table-compact">
+                  <div className="workspace-table-wrap sales-table-wrap">
+                    <table className="workspace-table workspace-table-compact sales-items-table">
                       <thead>
                         <tr>
                           <th className="px-5 py-4">Item</th>
@@ -1514,8 +1525,8 @@ export function SalesPage() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="rounded-2xl border border-border bg-white p-4">
-                <div className="flex items-end justify-between gap-4">
+              <div ref={timelineRef} className="sales-timeline-panel rounded-2xl border border-border bg-white p-4">
+                <div className="sales-timeline-header flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Unified Timeline</p>
                     <h4 className="mt-2 text-base font-semibold text-text">Lead and sales activity</h4>

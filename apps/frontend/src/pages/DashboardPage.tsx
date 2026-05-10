@@ -91,7 +91,7 @@ export function DashboardPage() {
   }
 
   return (
-    <section className="dashboard-main-grid">
+    <section className="dashboard-main-grid dashboard-page">
       <Card elevated className="workspace-page-header p-5 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),340px] xl:items-end">
           <div>

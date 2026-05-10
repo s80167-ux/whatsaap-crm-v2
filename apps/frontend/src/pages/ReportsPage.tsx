@@ -195,8 +195,8 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="workspace-page-header">
+    <div className="reports-page space-y-6">
+      <section className="workspace-page-header reports-hero">
         <div>
           <div className="flex items-center gap-3">
             <div className="rounded-2xl bg-primary-soft p-3 text-primary">
@@ -216,7 +216,7 @@ export function ReportsPage() {
         </div>
       </section>
 
-      <div className="grid gap-2 rounded-2xl border border-border/70 bg-white/80 p-1.5 shadow-soft md:grid-cols-5">
+      <div className="reports-tabs grid gap-2 rounded-2xl border border-border/70 bg-white/80 p-1.5 shadow-soft md:grid-cols-5">
         {REPORT_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -323,7 +323,7 @@ function DailyReportDashboard(props: {
   const [hoveredDayKey, setHoveredDayKey] = useState<string | null>(null);
 
   return (
-    <div className="space-y-4">
+    <div className="daily-report-dashboard space-y-4">
       <Card className="workspace-block report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -450,8 +450,8 @@ function DailyReportDashboard(props: {
           </div>
           <p className="text-sm font-semibold text-slate-200">Working Days: {props.workingDays}</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-[720px] w-full border-collapse text-left text-[11px]">
+        <div className="report-table-wrap overflow-x-auto">
+          <table className="daily-report-table w-full border-collapse text-left text-[11px]">
             <thead>
               <tr className="bg-slate-800 text-[11px] uppercase tracking-[0.04em] text-white">
                 <th className="w-8 px-2 py-2">No.</th>

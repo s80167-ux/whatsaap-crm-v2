@@ -3,13 +3,15 @@ import { env } from "../config/env.js";
 import { createSupabaseAdminClient, createSupabasePublicClient } from "../config/supabase.js";
 import { AppError } from "../lib/errors.js";
 import { AuthzRepository } from "../repositories/authzRepository.js";
+import { GoogleSignupRequestRepository } from "../repositories/googleSignupRequestRepository.js";
 import { OrganizationUserRepository } from "../repositories/organizationUserRepository.js";
 import type { AuthUser, UserRole } from "../types/auth.js";
 
 export class AuthService {
   constructor(
     private readonly authzRepository = new AuthzRepository(),
-    private readonly organizationUserRepository = new OrganizationUserRepository()
+    private readonly organizationUserRepository = new OrganizationUserRepository(),
+    private readonly googleSignupRequestRepository = new GoogleSignupRequestRepository()
   ) {}
 
   async login(email: string, password: string) {
@@ -87,7 +89,9 @@ export class AuthService {
       authUserId: data.user.id,
       email: data.user.email ?? "",
       fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
-      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null,
+      allowSignupRequest: true,
+      isEmailVerified: Boolean(data.user.email_confirmed_at)
     });
 
     return this.buildLoginResult(data.session.access_token, data.session.refresh_token, resolvedUser);
@@ -275,6 +279,8 @@ export class AuthService {
     email: string;
     fullName: string | null;
     avatarUrl: string | null;
+    allowSignupRequest?: boolean;
+    isEmailVerified?: boolean;
   }): Promise<AuthUser> {
     const client = await pool.connect();
     try {
@@ -301,6 +307,25 @@ export class AuthService {
       const organizationUser = await this.authzRepository.findOrganizationUserByAuthUserId(client, input.authUserId);
 
       if (!organizationUser) {
+        if (input.allowSignupRequest) {
+          if (!input.email) {
+            throw new AppError("Google account email is required", 403, "google_email_missing");
+          }
+
+          if (!input.isEmailVerified) {
+            throw new AppError("Google account email must be verified", 403, "google_email_unverified");
+          }
+
+          await this.googleSignupRequestRepository.createOrRefreshPending(client, {
+            authUserId: input.authUserId,
+            email: input.email,
+            fullName: input.fullName,
+            avatarUrl: input.avatarUrl
+          });
+
+          throw new AppError("Google signup request is pending approval", 403, "google_signup_pending");
+        }
+
         throw new AppError("Account is not linked to a CRM workspace", 403, "crm_account_not_linked");
       }
 

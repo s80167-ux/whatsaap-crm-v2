@@ -3,6 +3,7 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
 import type { PoolClient } from "pg";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
+import { GoogleSignupRequestRepository, type GoogleSignupRequestStatus } from "../repositories/googleSignupRequestRepository.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { UserAdminRepository } from "../repositories/userAdminRepository.js";
 import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
@@ -62,6 +63,7 @@ export class AdminService {
   constructor(
     private readonly organizationRepository = new OrganizationAdminRepository(),
     private readonly userRepository = new UserAdminRepository(),
+    private readonly googleSignupRequestRepository = new GoogleSignupRequestRepository(),
     private readonly whatsappRepository = new WhatsAppAdminRepository(),
     private readonly rawEventRepository = new RawEventRepository(),
     private readonly authService = new AuthService(),
@@ -469,6 +471,112 @@ export class AdminService {
       avatarUrl: input.avatarUrl ?? null,
       password: input.password,
       role: input.role
+    });
+  }
+
+  async listGoogleSignupRequests(authUser: AuthUser, status: GoogleSignupRequestStatus | "all" = "pending") {
+    if (authUser.role !== "super_admin") {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    const client = await pool.connect();
+    try {
+      return this.googleSignupRequestRepository.list(client, status);
+    } finally {
+      client.release();
+    }
+  }
+
+  async approveGoogleSignupRequest(
+    authUser: AuthUser,
+    requestId: string,
+    input: {
+      organizationId: string;
+      role: Exclude<UserRole, "super_admin">;
+      fullName?: string | null;
+    }
+  ) {
+    if (authUser.role !== "super_admin") {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    return withTransaction(async (client) => {
+      const request = await this.googleSignupRequestRepository.findById(client, requestId);
+
+      if (!request || request.status !== "pending") {
+        throw new AppError("Signup request not found", 404, "signup_request_not_found");
+      }
+
+      const existingUser = await this.userRepository.findByOrganizationAndEmail(client, input.organizationId, request.email);
+      let user;
+
+      if (existingUser) {
+        if (existingUser.auth_user_id && existingUser.auth_user_id !== request.auth_user_id) {
+          throw new AppError(
+            "A different auth account is already linked to this email in the selected organization",
+            409,
+            "signup_email_already_linked"
+          );
+        }
+
+        const linkedUser = await this.userRepository.linkGoogleSignup(client, existingUser.id, {
+          authUserId: request.auth_user_id,
+          fullName: input.fullName ?? request.full_name,
+          avatarUrl: request.avatar_url,
+          role: input.role
+        });
+
+        if (!linkedUser) {
+          throw new AppError("User not found", 404, "user_not_found");
+        }
+
+        user = linkedUser;
+      } else {
+        user = await this.userRepository.createFromGoogleSignup(client, {
+          organizationId: input.organizationId,
+          authUserId: request.auth_user_id,
+          email: request.email,
+          fullName: input.fullName ?? request.full_name,
+          avatarUrl: request.avatar_url,
+          role: input.role
+        });
+      }
+
+      const approvedRequest = await this.googleSignupRequestRepository.approve(client, {
+        requestId,
+        reviewedByAuthUserId: authUser.authUserId,
+        organizationId: input.organizationId,
+        organizationUserId: user.id
+      });
+
+      if (!approvedRequest) {
+        throw new AppError("Signup request not found", 404, "signup_request_not_found");
+      }
+
+      return {
+        request: approvedRequest,
+        user
+      };
+    });
+  }
+
+  async rejectGoogleSignupRequest(authUser: AuthUser, requestId: string, reason: string | null) {
+    if (authUser.role !== "super_admin") {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    return withTransaction(async (client) => {
+      const rejectedRequest = await this.googleSignupRequestRepository.reject(client, {
+        requestId,
+        reviewedByAuthUserId: authUser.authUserId,
+        reason
+      });
+
+      if (!rejectedRequest) {
+        throw new AppError("Signup request not found", 404, "signup_request_not_found");
+      }
+
+      return rejectedRequest;
     });
   }
 

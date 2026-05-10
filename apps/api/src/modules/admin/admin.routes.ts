@@ -19,6 +19,8 @@ import {
   createWhatsAppAccount,
   deleteWhatsAppAccount,
   getWhatsAppAccountQr,
+  approveGoogleSignupRequest,
+  listGoogleSignupRequests,
   listRawEvents,
   listWhatsAppAccounts,
   disconnectWhatsAppAccount,
@@ -26,6 +28,7 @@ import {
   getOrganizationAccessLimits,
   reconnectWhatsAppAccount,
   resetWhatsAppAccountPairing,
+  rejectGoogleSignupRequest,
   replayRawEvents,
   updateOrganizationAccessLimits,
   updateWhatsAppAccount
@@ -36,6 +39,17 @@ export const adminRoutes = Router();
 adminRoutes.get("/organization-modules/campaigns/status", asyncHandler(getCampaignsModuleStatus));
 adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
 adminRoutes.patch("/organizations/:organizationId/access-limits", asyncHandler(updateOrganizationAccessLimits));
+adminRoutes.get("/google-signup-requests", requirePermission("platform.manage_organizations"), asyncHandler(listGoogleSignupRequests));
+adminRoutes.post(
+  "/google-signup-requests/:requestId/approve",
+  requirePermission("platform.manage_organizations"),
+  asyncHandler(approveGoogleSignupRequest)
+);
+adminRoutes.post(
+  "/google-signup-requests/:requestId/reject",
+  requirePermission("platform.manage_organizations"),
+  asyncHandler(rejectGoogleSignupRequest)
+);
 
 adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));

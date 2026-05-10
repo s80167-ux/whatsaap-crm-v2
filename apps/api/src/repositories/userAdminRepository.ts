@@ -58,6 +58,83 @@ export class UserAdminRepository {
     return result.rows[0] ?? null;
   }
 
+  async findByOrganizationAndEmail(
+    client: PoolClient,
+    organizationId: string,
+    email: string
+  ): Promise<UserSummaryRecord | null> {
+    const result = await client.query<UserSummaryRecord>(
+      `
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
+        from organization_users
+        where organization_id = $1
+          and lower(email) = lower($2)
+        limit 1
+      `,
+      [organizationId, email]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async createFromGoogleSignup(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      authUserId: string;
+      email: string;
+      fullName: string | null;
+      avatarUrl: string | null;
+      role: EditableUserRole;
+    }
+  ): Promise<UserSummaryRecord> {
+    const result = await client.query<UserSummaryRecord>(
+      `
+        insert into organization_users (
+          organization_id,
+          auth_user_id,
+          email,
+          full_name,
+          avatar_url,
+          role,
+          status
+        )
+        values ($1, $2, lower($3), $4, $5, $6, 'active')
+        returning id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
+      `,
+      [input.organizationId, input.authUserId, input.email, input.fullName, input.avatarUrl, input.role]
+    );
+
+    return result.rows[0];
+  }
+
+  async linkGoogleSignup(
+    client: PoolClient,
+    userId: string,
+    input: {
+      authUserId: string;
+      fullName: string | null;
+      avatarUrl: string | null;
+      role: EditableUserRole;
+    }
+  ): Promise<UserSummaryRecord | null> {
+    const result = await client.query<UserSummaryRecord>(
+      `
+        update organization_users
+        set auth_user_id = $2,
+            full_name = coalesce($3, full_name),
+            avatar_url = coalesce($4, avatar_url),
+            role = $5,
+            status = 'active'
+        where id = $1
+        returning id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
+      `,
+      [userId, input.authUserId, input.fullName, input.avatarUrl, input.role]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async updateById(
     client: PoolClient,
     userId: string,

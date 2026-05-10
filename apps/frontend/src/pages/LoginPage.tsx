@@ -18,7 +18,9 @@ export function LoginPage() {
 
   const queryError = searchParams.get("error");
   const googleError =
-    queryError === "google_account_not_linked"
+    queryError === "google_signup_pending"
+      ? "Your Google signup request has been submitted and is pending approval."
+      : queryError === "google_account_not_linked"
       ? "This Google account is not linked to an active CRM workspace. Please contact your admin."
       : queryError === "google_login_failed"
         ? "Google sign-in failed. Please try again or use email/password."
@@ -87,6 +89,9 @@ export function LoginPage() {
               </Button>
               <Button type="button" variant="secondary" className="w-full" onClick={startGoogleLogin}>
                 Continue with Google
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={startGoogleLogin}>
+                Request access with Google
               </Button>
             </form>
           </div>

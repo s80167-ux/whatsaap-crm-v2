@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
 import type {
+  GoogleSignupRequestSummary,
   OrganizationSummary,
   UserSummary,
   WhatsAppAccountSummary,
@@ -92,6 +93,7 @@ type WhatsAppAccountApiRecord = {
 };
 
 type WhatsAppSyncJobApiRecord = WhatsAppSyncJobSummary;
+type GoogleSignupRequestApiRecord = GoogleSignupRequestSummary;
 
 function mapOrganization(record: OrganizationApiRecord): OrganizationSummary {
   return {
@@ -249,6 +251,38 @@ export async function deleteUser(userId: string) {
 
 export async function resetUserPassword(userId: string, payload: { password: string }) {
   return apiPost<{ ok: true }>(`/admin/users/${userId}/reset-password`, payload);
+}
+
+export async function fetchGoogleSignupRequests(status: "pending" | "approved" | "rejected" | "all" = "pending") {
+  const response = await apiGet<{ data: GoogleSignupRequestApiRecord[] }>(
+    `/admin/google-signup-requests?status=${encodeURIComponent(status)}`
+  );
+  return response.data;
+}
+
+export async function approveGoogleSignupRequest(
+  requestId: string,
+  payload: {
+    organizationId: string;
+    role: Exclude<UserSummary["role"], "super_admin">;
+    fullName?: string | null;
+  }
+) {
+  const response = await apiPost<{
+    data: {
+      request: GoogleSignupRequestApiRecord;
+      user: UserListApiRecord;
+    };
+  }>(`/admin/google-signup-requests/${requestId}/approve`, payload);
+  return response.data;
+}
+
+export async function rejectGoogleSignupRequest(requestId: string, payload: { reason?: string | null }) {
+  const response = await apiPost<{ data: GoogleSignupRequestApiRecord }>(
+    `/admin/google-signup-requests/${requestId}/reject`,
+    payload
+  );
+  return response.data;
 }
 
 export async function fetchWhatsAppAccounts(organizationId?: string | null) {

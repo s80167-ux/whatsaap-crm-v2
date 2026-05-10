@@ -119,7 +119,10 @@ function getFrontendRedirectBase(request: Request) {
   return origin && isAllowedFrontendRedirectOrigin(origin) ? origin : env.FRONTEND_URL;
 }
 
-function buildFrontendLoginUrl(request: Request, errorCode: "google_login_failed" | "google_account_not_linked") {
+function buildFrontendLoginUrl(
+  request: Request,
+  errorCode: "google_login_failed" | "google_account_not_linked" | "google_signup_pending"
+) {
   const loginUrl = new URL("/login", getFrontendRedirectBase(request));
   loginUrl.searchParams.set("error", errorCode);
   return loginUrl.toString();
@@ -178,7 +181,11 @@ export async function handleGoogleCallback(request: Request, response: Response)
     clearSessionCookies(response);
     setNoStore(response);
     const errorCode =
-      isAppError(error) && error.code === "crm_account_not_linked" ? "google_account_not_linked" : "google_login_failed";
+      isAppError(error) && error.code === "google_signup_pending"
+        ? "google_signup_pending"
+        : isAppError(error) && error.code === "crm_account_not_linked"
+          ? "google_account_not_linked"
+          : "google_login_failed";
     return response.redirect(buildFrontendLoginUrl(request, errorCode));
   }
 }

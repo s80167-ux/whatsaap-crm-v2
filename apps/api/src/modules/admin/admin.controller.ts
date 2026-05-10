@@ -68,6 +68,20 @@ const updateOrganizationAccessLimitsSchema = z.object({
   maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional()
 });
 
+const listGoogleSignupRequestsQuerySchema = z.object({
+  status: z.enum(["pending", "approved", "rejected", "all"]).optional()
+});
+
+const approveGoogleSignupRequestSchema = z.object({
+  organizationId: z.string().uuid(),
+  role: z.enum(["org_admin", "manager", "agent", "user"]),
+  fullName: z.string().min(1).optional().nullable()
+});
+
+const rejectGoogleSignupRequestSchema = z.object({
+  reason: z.string().min(1).max(500).optional().nullable()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -219,6 +233,60 @@ export async function createOrganizationUser(request: Request, response: Respons
       status: user.status
     }
   });
+}
+
+export async function listGoogleSignupRequests(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { status } = listGoogleSignupRequestsQuerySchema.parse(request.query);
+  const requests = await adminService.listGoogleSignupRequests(auth, status ?? "pending");
+  return response.json({ data: requests });
+}
+
+export async function approveGoogleSignupRequest(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const requestId = z.string().uuid().parse(request.params.requestId);
+  const input = approveGoogleSignupRequestSchema.parse(request.body);
+  const result = await adminService.approveGoogleSignupRequest(auth, requestId, {
+    organizationId: input.organizationId,
+    role: input.role,
+    fullName: input.fullName ?? null
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: result.user.organization_id,
+    action: "google_signup_request.approved",
+    entityType: "google_signup_request",
+    entityId: result.request.id,
+    metadata: {
+      email: result.request.email,
+      organization_user_id: result.user.id,
+      role: result.user.role
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: result });
+}
+
+export async function rejectGoogleSignupRequest(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const requestId = z.string().uuid().parse(request.params.requestId);
+  const input = rejectGoogleSignupRequestSchema.parse(request.body);
+  const signupRequest = await adminService.rejectGoogleSignupRequest(auth, requestId, input.reason ?? null);
+
+  await auditLogService.record(auth, {
+    organizationId: null,
+    action: "google_signup_request.rejected",
+    entityType: "google_signup_request",
+    entityId: signupRequest.id,
+    metadata: {
+      email: signupRequest.email,
+      reason: signupRequest.rejection_reason
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: signupRequest });
 }
 
 export async function deleteOrganizationUser(request: Request, response: Response) {

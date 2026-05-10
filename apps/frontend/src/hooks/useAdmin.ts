@@ -3,6 +3,7 @@ import {
   fetchOrganizationModules,
   fetchOrganizationModuleStatus,
   fetchOrganizationAccessLimits,
+  fetchGoogleSignupRequests,
   fetchOrganizations,
   fetchUsers,
   fetchWhatsAppAccounts
@@ -58,5 +59,15 @@ export function useOrganizationAccessLimits(organizationId?: string | null, enab
     queryKey: ["organization-access-limits", organizationId],
     queryFn: () => fetchOrganizationAccessLimits(organizationId ?? ""),
     enabled: enabled && Boolean(organizationId)
+  });
+}
+
+export function useGoogleSignupRequests(enabled = true) {
+  const role = getStoredUser()?.role;
+
+  return useQuery({
+    queryKey: ["google-signup-requests", "pending"],
+    queryFn: () => fetchGoogleSignupRequests("pending"),
+    enabled: enabled && role === "super_admin"
   });
 }

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { Info, Link2, PlugZap, RefreshCw, Trash2, Unplug, UserCircle, Zap } from "lucide-react";
 import {
+  approveGoogleSignupRequest,
   createOrganization,
   createUser,
   createWhatsAppAccount,
@@ -12,6 +13,7 @@ import {
   deleteUser,
   deleteWhatsAppAccount,
   resetUserPassword,
+  rejectGoogleSignupRequest,
   updateOrganization,
   updateUser,
   updateWhatsAppAccount
@@ -21,10 +23,10 @@ import { PopupOverlay } from "../components/PopupOverlay";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
-import { useOrganizations, useOrganizationUsers } from "../hooks/useAdmin";
+import { useGoogleSignupRequests, useOrganizations, useOrganizationUsers } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser, updateStoredUser } from "../lib/auth";
-import type { OrganizationSummary, UserSummary } from "../types/admin";
+import type { GoogleSignupRequestSummary, OrganizationSummary, UserSummary } from "../types/admin";
 
 function formatTimestamp(value?: string | null) {
   if (!value) {
@@ -106,6 +108,7 @@ export function SetupPage() {
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const { data: organizations = [] } = useOrganizations();
+  const { data: googleSignupRequests = [] } = useGoogleSignupRequests(isSuperAdmin);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: users = [] } = useOrganizationUsers(activeOrganizationId);
@@ -137,6 +140,11 @@ export function SetupPage() {
   }>({ organizationId: "", fullName: "", avatarUrl: null, role: "agent", status: "active" });
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [signupApproval, setSignupApproval] = useState<Record<string, {
+    organizationId: string;
+    role: Exclude<UserSummary["role"], "super_admin">;
+    fullName: string;
+  }>>({});
   // WhatsApp account edit state moved to WhatsAppAccountDashboard
   const [notice, setNotice] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -161,6 +169,14 @@ export function SetupPage() {
       user.organization_id === currentUser.organizationId &&
       user.role !== "org_admin"
     );
+  }
+
+  function getSignupApprovalDraft(request: GoogleSignupRequestSummary) {
+    return signupApproval[request.id] ?? {
+      organizationId: selectedOrganizationId || organizations[0]?.id || "",
+      role: "agent",
+      fullName: request.full_name ?? ""
+    };
   }
 
   function beginEditOrganization(organization: OrganizationSummary) {
@@ -384,6 +400,59 @@ export function SetupPage() {
     }
   }
 
+  async function handleApproveGoogleSignup(request: GoogleSignupRequestSummary) {
+    const draft = getSignupApprovalDraft(request);
+
+    if (!draft.organizationId) {
+      setNotice("Select an organization before approving this request.");
+      return;
+    }
+
+    setIsWorking(true);
+    setNotice(null);
+
+    try {
+      await approveGoogleSignupRequest(request.id, {
+        organizationId: draft.organizationId,
+        role: draft.role,
+        fullName: draft.fullName || request.full_name || null
+      });
+      setSignupApproval((current) => {
+        const next = { ...current };
+        delete next[request.id];
+        return next;
+      });
+      setNotice(`Approved Google signup for ${request.email}.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["google-signup-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      ]);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to approve signup request");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleRejectGoogleSignup(request: GoogleSignupRequestSummary) {
+    if (!window.confirm(`Reject Google signup request from ${request.email}?`)) {
+      return;
+    }
+
+    setIsWorking(true);
+    setNotice(null);
+
+    try {
+      await rejectGoogleSignupRequest(request.id, { reason: "Rejected by super admin" });
+      setNotice(`Rejected Google signup for ${request.email}.`);
+      await queryClient.invalidateQueries({ queryKey: ["google-signup-requests"] });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to reject signup request");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   // WhatsApp account delete handler moved to WhatsAppAccountDashboard
 
   // WhatsApp account update handler moved to WhatsAppAccountDashboard
@@ -414,6 +483,110 @@ export function SetupPage() {
         </div>
         {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
       </Card>
+
+      {isSuperAdmin ? (
+        <Card elevated className="workspace-block">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Access requests</p>
+              <h3 className="mt-2 text-lg font-semibold text-text">Pending Google signups</h3>
+            </div>
+            <span className="rounded-full border border-border bg-background-tint px-3 py-1 text-xs font-semibold text-text-muted">
+              {googleSignupRequests.length} pending
+            </span>
+          </div>
+
+          {googleSignupRequests.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+              No pending Google signup requests.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {googleSignupRequests.map((request) => {
+                const draft = getSignupApprovalDraft(request);
+
+                return (
+                  <div key={request.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                    <div className="grid gap-4 lg:grid-cols-[1.1fr,1.4fr] lg:items-center">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <UserAvatarPreview src={request.avatar_url} label={request.full_name ?? request.email} />
+                        <div className="min-w-0">
+                          <p className="break-words font-semibold text-text">{request.full_name ?? request.email}</p>
+                          <p className="mt-1 break-all text-sm text-text-muted">{request.email}</p>
+                          <p className="mt-2 text-xs text-text-soft">Requested {formatTimestamp(request.requested_at)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 md:grid-cols-[1.2fr,0.8fr,1fr,auto] md:items-center">
+                        <Select
+                          value={draft.organizationId}
+                          onChange={(event) =>
+                            setSignupApproval((current) => ({
+                              ...current,
+                              [request.id]: { ...draft, organizationId: event.target.value }
+                            }))
+                          }
+                        >
+                          <option value="">Select organization</option>
+                          {organizations.map((organization) => (
+                            <option key={organization.id} value={organization.id}>
+                              {organization.name}
+                            </option>
+                          ))}
+                        </Select>
+                        <Select
+                          value={draft.role}
+                          onChange={(event) =>
+                            setSignupApproval((current) => ({
+                              ...current,
+                              [request.id]: {
+                                ...draft,
+                                role: event.target.value as Exclude<UserSummary["role"], "super_admin">
+                              }
+                            }))
+                          }
+                        >
+                          <option value="org_admin">org_admin</option>
+                          <option value="manager">manager</option>
+                          <option value="agent">agent</option>
+                          <option value="user">user</option>
+                        </Select>
+                        <Input
+                          value={draft.fullName}
+                          onChange={(event) =>
+                            setSignupApproval((current) => ({
+                              ...current,
+                              [request.id]: { ...draft, fullName: event.target.value }
+                            }))
+                          }
+                          placeholder="Full name"
+                        />
+                        <div className="grid grid-cols-2 gap-2 md:w-40">
+                          <Button
+                            className="w-full px-3 py-2 text-xs"
+                            disabled={isWorking || !draft.organizationId}
+                            onClick={() => handleApproveGoogleSignup(request)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="w-full px-3 py-2 text-xs text-coral"
+                            disabled={isWorking}
+                            onClick={() => handleRejectGoogleSignup(request)}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      ) : null}
 
       <div className="space-y-6">
         {isSuperAdmin ? (
