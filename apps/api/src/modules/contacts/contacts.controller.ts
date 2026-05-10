@@ -181,8 +181,10 @@ export async function createContact(request: Request, response: Response) {
 
 export async function updateContact(request: Request, response: Response) {
   const auth = requireAuth(request);
+  const { organization_id } = organizationQuerySchema.parse(request.query);
+  const organizationId = auth.organizationId ?? organization_id ?? "";
 
-  if (!auth.organizationId) {
+  if (!organizationId) {
     throw new AppError("organization_id is required", 400, "organization_required");
   }
 
@@ -191,7 +193,7 @@ export async function updateContact(request: Request, response: Response) {
 
   const contact = await withTransaction((client) =>
     contactCommandService.update(client, {
-      organizationId: auth.organizationId!,
+      organizationId,
       contactId,
       displayName: input.displayName,
       phoneNumber: input.phoneNumber,
@@ -203,7 +205,7 @@ export async function updateContact(request: Request, response: Response) {
   );
 
   await auditLogService.record(auth, {
-    organizationId: auth.organizationId,
+    organizationId,
     action: "contact.updated",
     entityType: "contact",
     entityId: contact.id,

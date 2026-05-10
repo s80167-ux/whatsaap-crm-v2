@@ -52,9 +52,10 @@ function getContactStatusInfo(contact: Contact, contactsById: Map<string, Contac
   };
 }
 
-async function updateContactDisplayName(contactId: string, displayName: string | null) {
+async function updateContactDisplayName(contactId: string, displayName: string | null, organizationId?: string | null) {
   return updateContact({
     contactId,
+    organizationId,
     displayName
   });
 }
@@ -156,13 +157,13 @@ function CompactRepairTools({
 
   const clearCanonicalName = () =>
     runAction("clear-name", async () => {
-      await updateContactDisplayName(contact.id, null);
+      await updateContactDisplayName(contact.id, null, organizationId);
     });
 
   const saveManualName = () =>
     runAction("save-name", async () => {
       const trimmed = manualName.trim();
-      await updateContactDisplayName(contact.id, trimmed || null);
+      await updateContactDisplayName(contact.id, trimmed || null, organizationId);
     });
 
   const refreshDiagnosis = () =>
@@ -626,6 +627,7 @@ export function ContactsPage() {
     try {
       await updateContact({
         contactId: activeContact.id,
+        organizationId: activeOrganizationId,
         displayName: emptyToNull(editDisplayName),
         phoneNumber: emptyToNull(editPhoneNumber),
         email: emptyToNull(editEmail),

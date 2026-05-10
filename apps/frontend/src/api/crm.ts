@@ -252,6 +252,7 @@ export async function startContactConversation(payload: { contactId: string; wha
 
 export async function updateContact(payload: {
   contactId: string;
+  organizationId?: string | null;
   displayName?: string | null;
   phoneNumber?: string | null;
   email?: string | null;
@@ -259,7 +260,8 @@ export async function updateContact(payload: {
   notes?: string | null;
   ownerUserId?: string | null;
 }) {
-  const response = await apiPatch<{ data: Contact }>(`/contacts/${payload.contactId}`, {
+  const suffix = payload.organizationId ? `?organization_id=${encodeURIComponent(payload.organizationId)}` : "";
+  const response = await apiPatch<{ data: Contact }>(`/contacts/${payload.contactId}${suffix}`, {
     displayName: payload.displayName,
     phoneNumber: payload.phoneNumber,
     email: payload.email,
