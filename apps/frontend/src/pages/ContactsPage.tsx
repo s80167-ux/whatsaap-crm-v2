@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, MessageCircle, Phone, X } from "lucide-react";
 import { assignContact, mergeContacts, sendMessage, startContactConversation, updateContact } from "../api/crm";
@@ -100,7 +100,8 @@ function CompactRepairTools({
   organizationId,
   onChanged,
   onOpenQueue,
-  onOpenManualMerge
+  onOpenManualMerge,
+  repairRequested = false
 }: {
   contact: Contact;
   canWrite: boolean;
@@ -108,6 +109,7 @@ function CompactRepairTools({
   onChanged: () => Promise<void>;
   onOpenQueue: () => void;
   onOpenManualMerge: () => void;
+  repairRequested?: boolean;
 }) {
   const isMobile = useIsMobileViewport();
   const [expanded, setExpanded] = useState(false);
@@ -122,6 +124,12 @@ function CompactRepairTools({
     setExpanded(false);
     setManualOpen(false);
   }, [contact.id, contact.display_name]);
+
+  useEffect(() => {
+    if (repairRequested) {
+      setExpanded(true);
+    }
+  }, [contact.id, repairRequested]);
 
   async function runAction(action: string, handler: () => Promise<string | void>) {
     if (!canWrite) {
@@ -300,6 +308,7 @@ function CompactRepairTools({
 
 export function ContactsPage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobileViewport();
   const isCompactDetailLayout = useMediaQuery("(max-width: 1023px)");
   const currentUser = getStoredUser();
@@ -363,6 +372,18 @@ export function ContactsPage() {
     () => new Map(assignableUsers.map((user) => [user.id, user])),
     [assignableUsers]
   );
+
+  useEffect(() => {
+    const linkedContactId = searchParams.get("contactId");
+    if (!linkedContactId) {
+      return;
+    }
+
+    setSelectedContactId(linkedContactId);
+    if (searchParams.get("repair") === "1") {
+      setRedirectMessage("Opened repair tools for this inbox contact.");
+    }
+  }, [searchParams]);
   const selectedContactDialableNumber = useMemo(() => getDialablePhoneNumber(activeContact), [activeContact]);
   const composeSources = useMemo(() => getMessageableSources(composeContact), [composeContact]);
   const contactsById = useMemo(
@@ -437,9 +458,14 @@ export function ContactsPage() {
   const sourcePagination = usePanelPagination(activeContact?.whatsapp_sources ?? []);
 
   useEffect(() => {
+    const linkedContactId = searchParams.get("contactId");
+    if (linkedContactId) {
+      return;
+    }
+
     setSelectedContactId(null);
     setRedirectMessage(null);
-  }, [activeOrganizationId]);
+  }, [activeOrganizationId, searchParams]);
 
   useEffect(() => {
     if (!isMergedContactRedirect(selectedContactResponse)) {
@@ -1174,6 +1200,7 @@ export function ContactsPage() {
                 setMergeMessage(null);
                 setIsManualMergeOpen(true);
               }}
+              repairRequested={searchParams.get("repair") === "1"}
             />
             <div className="workspace-subtle text-sm leading-6 text-text-muted">
               <p>Contact ID: {activeContact.id}</p>

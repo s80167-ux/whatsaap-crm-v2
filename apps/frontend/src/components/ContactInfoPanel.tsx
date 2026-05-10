@@ -1,5 +1,6 @@
-import { ChevronDown, ChevronUp, Phone, UserRound } from "lucide-react";
+import { ChevronDown, ChevronUp, Phone, UserRound, Wrench } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ContactDetailResponse, Conversation, MergedContactRedirect } from "../types/api";
 import { assignConversation } from "../api/crm";
 import { useContact } from "../hooks/useContacts";
@@ -61,12 +62,14 @@ export function ContactInfoPanel({
 }) {
   const [isAssigning, setIsAssigning] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const navigate = useNavigate();
   const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
   const { data: contactResponse, isLoading: contactLoading } = useContact(conversation?.contact_id);
   const activeContact = contactResponse && !isMergedContactRedirect(contactResponse) ? contactResponse : null;
   const mergedRedirect = isMergedContactRedirect(contactResponse) ? contactResponse : null;
   const canAssign = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("conversations.assign"));
+  const canRepairContact = Boolean(currentUser?.permissionKeys.includes("contacts.write"));
   const isContactAssignedToCurrentUser =
     currentUser?.organizationUserId && activeContact?.owner_user_id === currentUser.organizationUserId;
   const displayName = activeContact?.display_name ?? conversation?.contact_name ?? null;
@@ -100,6 +103,11 @@ export function ContactInfoPanel({
     } finally {
       setIsAssigning(false);
     }
+  }
+
+  function openRepairTools() {
+    if (!conversation?.contact_id) return;
+    navigate(`/contacts?contactId=${encodeURIComponent(conversation.contact_id)}&repair=1`);
   }
 
   return (
@@ -182,11 +190,29 @@ export function ContactInfoPanel({
                   <UserRound size={16} />
                   <span className="ml-2">Copy number</span>
                 </Button>
+                <button
+                  type="button"
+                  className="col-span-2 inline-flex h-6 items-center justify-self-start text-[11px] font-medium text-primary transition hover:text-primary/80 disabled:cursor-not-allowed disabled:opacity-45"
+                  onClick={openRepairTools}
+                  disabled={!canRepairContact}
+                >
+                  <Wrench size={12} />
+                  <span className="ml-1.5">Repair</span>
+                </button>
               </div>
             ) : (
-              <div className="mt-1">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="truncate text-xs text-text-soft">Source: {getConversationSourceLabel(conversation)}</p>
                 {e164Number ? <p className="mt-1 text-xs text-text-soft">{e164Number}</p> : null}
+                <button
+                  type="button"
+                  className="inline-flex h-6 items-center text-[11px] font-medium text-primary transition hover:text-primary/80 disabled:cursor-not-allowed disabled:opacity-45"
+                  onClick={openRepairTools}
+                  disabled={!canRepairContact}
+                >
+                  <Wrench size={12} />
+                  <span className="ml-1.5">Repair</span>
+                </button>
               </div>
             )}
           </div>

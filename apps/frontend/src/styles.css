@@ -161,7 +161,7 @@ canvas {
 
   /* List/Conversation item */
   .conversation-item {
-    @apply border border-border bg-white p-6 text-left shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-background-tint;
+    @apply border border-border bg-white px-4 py-3 text-left shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-background-tint;
     border-radius: var(--surface-radius-md);
   }
   .conversation-item-active {

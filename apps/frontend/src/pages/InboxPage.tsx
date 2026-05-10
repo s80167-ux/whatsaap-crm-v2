@@ -174,27 +174,27 @@ export function InboxPage() {
 
   const conversationListCard = (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Card className="workspace-block grid min-h-[420px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[520px] md:max-h-[calc(100vh-9.5rem)]" elevated>
-        <header className="pb-4">
+      <Card className="workspace-block grid h-[calc(100dvh-6rem)] min-h-[560px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[640px] md:max-h-[calc(100vh-5.5rem)]" elevated>
+        <header className="pb-3">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Queue</p>
-          <div className="mt-3 flex items-end justify-between gap-4">
+          <div className="mt-2 flex items-end justify-between gap-4">
             <div>
               <h2 className="section-title">Work queue</h2>
-              <p className="mt-1 text-sm text-text-muted">{conversationCountLabel} visible</p>
+              <p className="mt-0.5 text-sm text-text-muted">{conversationCountLabel} visible</p>
             </div>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-soft" />
               <input
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder="Search contact, number, account, or message..."
-                className="input-base h-11 pl-10"
+                className="input-base h-10 py-2 pl-10"
                 aria-label="Search conversations"
               />
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {[
                 { key: "mine", label: "Mine", count: queueCounts.mine },
                 { key: "unread", label: "Unread", count: queueCounts.unread },
@@ -205,7 +205,7 @@ export function InboxPage() {
                 <button
                   key={item.key}
                   type="button"
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                     filterMode === item.key
                       ? "border-primary/20 bg-primary-soft text-primary"
                       : "border-border bg-white text-text-muted hover:border-primary/20 hover:text-text"
@@ -217,7 +217,7 @@ export function InboxPage() {
                 </button>
               ))}
             </div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
+            <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
             <div className="flex items-center gap-1">
               <button
                 type="button"
