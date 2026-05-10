@@ -593,6 +593,33 @@ canvas {
     padding: 1.1rem !important;
   }
 
+  .clear-org-page .workspace-page-header,
+  .clear-org-page .workspace-block {
+    padding: 0.875rem !important;
+  }
+
+  .clear-org-page .card-surface,
+  .clear-org-page .workspace-page-header,
+  .clear-org-page .workspace-block,
+  .clear-org-page .workspace-subtle,
+  .clear-org-page .clear-org-hero-stat,
+  .clear-org-page .clear-org-revenue-tile {
+    box-shadow: 0 8px 18px rgba(20, 32, 51, 0.05);
+  }
+
+  .clear-org-page .card-surface:hover {
+    transform: none;
+  }
+
+  .clear-org-page .metric-card::after {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 10px;
+    opacity: 0.6;
+  }
+
   .workspace-table th,
   .workspace-table td {
     @apply px-3 py-2.5;

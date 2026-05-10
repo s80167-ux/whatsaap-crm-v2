@@ -245,7 +245,7 @@ export function OrganizationAccessLimitsPage() {
         </div>
       </Card>
 
-      <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} />
+      <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} onClose={() => setNotice(null)} />
     </section>
   );
 }

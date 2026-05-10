@@ -163,8 +163,8 @@ export function ClearOrganizationDataPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="workspace-page-header p-5 sm:p-6">
+    <div className="clear-org-page space-y-3 sm:space-y-4">
+      <section className="workspace-page-header p-4 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_320px]">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -185,7 +185,7 @@ export function ClearOrganizationDataPage() {
                 </div>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <HeroStat label="Organization" value={selectedOrganizationName ?? "Unknown"} icon={<Building2 size={16} />} />
                 <HeroStat label="Tracked Records" value={formatCount(totalTrackedRecords)} icon={<Database size={16} />} />
                 <HeroStat label="Core CRM Impact" value={formatCount(highImpactCount)} icon={<AlertTriangle size={16} />} />
@@ -193,14 +193,14 @@ export function ClearOrganizationDataPage() {
             </div>
           </div>
 
-          <div className="workspace-subtle p-4">
+          <div className="workspace-subtle p-3.5 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">What stays</p>
             <div className="mt-3 space-y-2">
               <RetentionRow label="Organization record" value="Preserved" />
               <RetentionRow label="Database structure" value="Preserved" />
               <RetentionRow label="Tenant shell" value="Preserved" />
             </div>
-            <div className="mt-3 rounded-2xl border border-border bg-white/80 p-3 text-sm leading-5 text-text-muted">
+            <div className="mt-3 rounded-xl border border-border bg-white/80 p-3 text-sm leading-5 text-text-muted">
               The page now separates operational counts from sales metrics so admins can judge both data volume and business impact before confirming.
             </div>
           </div>
@@ -208,7 +208,7 @@ export function ClearOrganizationDataPage() {
       </section>
 
       <Card elevated className="border-border bg-white p-0">
-        <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
           <div className="flex gap-3">
             <div className="rounded-xl bg-primary-soft p-2.5 text-primary">
               <AlertTriangle size={18} />
@@ -220,7 +220,7 @@ export function ClearOrganizationDataPage() {
               </p>
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-background-tint px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
+          <div className="rounded-xl border border-border bg-background-tint px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-soft sm:tracking-[0.18em]">
             Review sales before continuing
           </div>
         </div>
@@ -244,9 +244,9 @@ export function ClearOrganizationDataPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] 2xl:gap-6">
         <div className="space-y-4">
-          <section className="workspace-block p-5">
+          <section className="workspace-block p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Data Volume</p>
@@ -255,7 +255,7 @@ export function ClearOrganizationDataPage() {
               {previewLoading ? <span className="text-sm text-text-muted">Loading...</span> : null}
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {PREVIEW_METRICS.map((metric) => (
                 <MetricCard
                   key={metric.key}
@@ -268,7 +268,7 @@ export function ClearOrganizationDataPage() {
             </div>
           </section>
 
-          <section className="workspace-block p-5">
+          <section className="workspace-block p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-primary-soft p-2.5 text-primary">
                 <ShoppingBag size={18} />
@@ -279,7 +279,7 @@ export function ClearOrganizationDataPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-2 xl:grid-cols-4">
               <SalesStat label="Total orders" value={formatCount(salesSummary?.totalOrders ?? 0)} tone="text-slate-900" />
               <SalesStat label="Open pipeline" value={formatCount(salesSummary?.openOrders ?? 0)} tone="text-sky-700" />
               <SalesStat label="Won orders" value={formatCount(salesSummary?.wonOrders ?? 0)} tone="text-emerald-700" />
@@ -287,7 +287,7 @@ export function ClearOrganizationDataPage() {
             </div>
 
             <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)]">
-              <div className="workspace-subtle p-4">
+              <div className="workspace-subtle p-3.5 sm:p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-text">Revenue snapshot</p>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">
@@ -295,14 +295,14 @@ export function ClearOrganizationDataPage() {
                   </span>
                 </div>
 
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <RevenueTile label="Open pipeline value" value={formatCurrency(salesSummary?.pipelineValue ?? 0)} />
                   <RevenueTile label="Won value" value={formatCurrency(salesSummary?.wonValue ?? 0)} />
                   <RevenueTile label="Average order value" value={formatCurrency(salesSummary?.averageOrderValue ?? 0)} />
                 </div>
               </div>
 
-              <div className="workspace-subtle p-4">
+              <div className="workspace-subtle p-3.5 sm:p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Logic Recommendation</p>
                 <p className="mt-2 text-sm leading-5 text-text">
                   If won value or open pipeline value is still meaningful, require a manual sales export step before allowing deletion in production workflow.
@@ -411,12 +411,12 @@ export function ClearOrganizationDataPage() {
 
 function HeroStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-[1rem] border border-border bg-white px-3 py-3 shadow-soft">
+    <div className="clear-org-hero-stat rounded-[0.85rem] border border-border bg-white px-2.5 py-2.5 shadow-soft sm:rounded-[1rem] sm:px-3 sm:py-3">
       <div className="flex items-center gap-2 text-text-soft">
         {icon}
-        <span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] sm:text-xs sm:tracking-[0.16em]">{label}</span>
       </div>
-      <p className="mt-2 text-base font-semibold text-text">{value}</p>
+      <p className="mt-1.5 min-w-0 break-words text-sm font-semibold text-text sm:mt-2 sm:text-base">{value}</p>
     </div>
   );
 }
@@ -442,30 +442,34 @@ function MetricCard({
   icon: ReactNode;
 }) {
   return (
-    <Card elevated className="metric-card rounded-[1rem] p-3.5">
-      <div className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${tone}`}>
-        {icon}
-        {label}
+    <Card elevated className="clear-org-metric-card metric-card rounded-[0.85rem] p-2.5 sm:rounded-[1rem] sm:p-3.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+          {icon}
+        </span>
+        <span className="min-w-0 text-[10px] font-semibold uppercase leading-4 tracking-[0.1em] text-text-soft sm:text-[11px] sm:tracking-[0.16em]">
+          {label}
+        </span>
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-text">{value}</p>
+      <p className="mt-2 text-xl font-semibold tracking-tight text-text sm:mt-3 sm:text-2xl">{value}</p>
     </Card>
   );
 }
 
 function SalesStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <Card elevated className="rounded-[1rem] p-3.5">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
-      <p className={`mt-2 text-xl font-semibold ${tone}`}>{value}</p>
+    <Card elevated className="clear-org-stat-card rounded-[0.85rem] p-2.5 sm:rounded-[1rem] sm:p-3.5">
+      <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.1em] text-text-soft sm:text-xs sm:tracking-[0.16em]">{label}</p>
+      <p className={`mt-1.5 text-lg font-semibold sm:mt-2 sm:text-xl ${tone}`}>{value}</p>
     </Card>
   );
 }
 
 function RevenueTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[0.95rem] border border-border bg-white px-3 py-3 shadow-soft">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
-      <p className="mt-2 text-base font-semibold text-text">{value}</p>
+    <div className="clear-org-revenue-tile rounded-[0.85rem] border border-border bg-white px-2.5 py-2.5 shadow-soft sm:rounded-[0.95rem] sm:px-3 sm:py-3">
+      <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.1em] text-text-soft sm:text-xs sm:tracking-[0.16em]">{label}</p>
+      <p className="mt-1.5 break-words text-sm font-semibold text-text sm:mt-2 sm:text-base">{value}</p>
     </div>
   );
 }
@@ -473,7 +477,7 @@ function RevenueTile({ label, value }: { label: string; value: string }) {
 function FlowStep({ index, label, active }: { index: string; label: string; active: boolean }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3 ${
         active
           ? "border-primary/20 bg-primary-soft text-text"
           : "border-border bg-background-tint/70 text-text-muted"
