@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchOrganizationModules,
   fetchOrganizationModuleStatus,
+  fetchOrganizationAccessLimits,
   fetchOrganizations,
   fetchUsers,
   fetchWhatsAppAccounts
@@ -48,6 +49,14 @@ export function useOrganizationModules(organizationId?: string | null, enabled =
   return useQuery({
     queryKey: ["organization-modules", organizationId],
     queryFn: () => fetchOrganizationModules(organizationId ?? ""),
+    enabled: enabled && Boolean(organizationId)
+  });
+}
+
+export function useOrganizationAccessLimits(organizationId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["organization-access-limits", organizationId],
+    queryFn: () => fetchOrganizationAccessLimits(organizationId ?? ""),
     enabled: enabled && Boolean(organizationId)
   });
 }

@@ -16,3 +16,24 @@ export interface OrganizationModuleStatus {
   moduleKey: ModuleKey;
   isEnabled: boolean;
 }
+
+export interface OrganizationAccessLimits {
+  organizationId: string;
+  modules: Array<{
+    moduleKey: ModuleKey;
+    isEnabled: boolean;
+  }>;
+  limits: {
+    maxWhatsappAccounts: number;
+    historySyncDays: number;
+    maxUsers?: number | null;
+  };
+  usage: {
+    whatsappAccounts: number;
+  };
+  coreFeatures: {
+    whatsappCrm: {
+      availableByDefault: boolean;
+    };
+  };
+}

@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Settings2,
   ShieldAlert,
+  SlidersHorizontal,
   TrendingUp,
   UserCircle,
   Users,
@@ -276,6 +277,7 @@ function SidebarContent({
             icon={<ShieldAlert size={18} />}
             label="System Tools"
             items={[
+              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
               { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
               { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
             ]}

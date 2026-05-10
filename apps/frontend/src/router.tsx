@@ -38,6 +38,9 @@ const ClearOrganizationDataPage = lazy(() =>
 const SuperAdminAuditLogsPage = lazy(() =>
   import("./pages/SuperAdminAuditLogsPage").then((module) => ({ default: module.SuperAdminAuditLogsPage }))
 );
+const OrganizationAccessLimitsPage = lazy(() =>
+  import("./pages/OrganizationAccessLimitsPage").then((module) => ({ default: module.OrganizationAccessLimitsPage }))
+);
 const CampaignsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsPage }))
 );
@@ -107,6 +110,7 @@ export const router = createBrowserRouter([
           { path: "super-admin-map/data-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "platform", element: withRouteFallback(<PlatformPage />) },
+          { path: "super-admin/access-limits", element: withRouteFallback(<OrganizationAccessLimitsPage />) },
           { path: "super-admin/clear-organization-data", element: withRouteFallback(<ClearOrganizationDataPage />) },
           { path: "super-admin/audit-logs", element: withRouteFallback(<SuperAdminAuditLogsPage />) },
           { path: "profile", element: withRouteFallback(<ProfilePage />) }

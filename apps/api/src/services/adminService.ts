@@ -1,6 +1,7 @@
 import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
+import type { PoolClient } from "pg";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { UserAdminRepository } from "../repositories/userAdminRepository.js";
@@ -11,6 +12,23 @@ import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
 
 const CAMPAIGNS_MODULE_KEY = "campaigns";
+const MAX_WHATSAPP_ACCOUNTS_KEY = "max_whatsapp_accounts";
+const HISTORY_SYNC_DAYS_KEY = "history_sync_days";
+const MAX_USERS_KEY = "max_users";
+const DEFAULT_MAX_WHATSAPP_ACCOUNTS = 1;
+const DEFAULT_HISTORY_SYNC_DAYS = 7;
+
+type OrganizationLimitKey =
+  | typeof MAX_WHATSAPP_ACCOUNTS_KEY
+  | typeof HISTORY_SYNC_DAYS_KEY
+  | typeof MAX_USERS_KEY;
+
+type OrganizationAccessLimitsUpdateInput = {
+  campaignsEnabled?: boolean;
+  maxWhatsappAccounts?: number;
+  historySyncDays?: number;
+  maxUsers?: number | null;
+};
 
 function slugifyOrganizationName(name: string) {
   return name
@@ -174,8 +192,16 @@ export class AdminService {
   }
 
   async updateCampaignsModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
-    return withTransaction(async (client) => {
-      const result = await client.query<{
+    return withTransaction((client) => this.updateCampaignsModuleWithClient(client, authUser, organizationId, isEnabled));
+  }
+
+  private async updateCampaignsModuleWithClient(
+    client: PoolClient,
+    authUser: AuthUser,
+    organizationId: string,
+    isEnabled: boolean
+  ) {
+    const result = await client.query<{
         id: string;
         organization_id: string;
         module_key: string;
@@ -221,8 +247,179 @@ export class AdminService {
         [organizationId, CAMPAIGNS_MODULE_KEY, isEnabled, authUser.authUserId ?? null]
       );
 
-      return result.rows[0];
+    return result.rows[0];
+  }
+
+  private async getOrganizationLimitValueWithClient(
+    client: PoolClient,
+    organizationId: string,
+    limitKey: OrganizationLimitKey,
+    defaultValue: number | null
+  ) {
+    const result = await client.query<{ limit_value: number }>(
+      `
+        select limit_value
+        from organization_limits
+        where organization_id = $1
+          and limit_key = $2
+        limit 1
+      `,
+      [organizationId, limitKey]
+    );
+
+    return result.rows[0]?.limit_value ?? defaultValue;
+  }
+
+  async getOrganizationLimitValue(organizationId: string, limitKey: OrganizationLimitKey, defaultValue: number | null) {
+    const client = await pool.connect();
+    try {
+      return this.getOrganizationLimitValueWithClient(client, organizationId, limitKey, defaultValue);
+    } finally {
+      client.release();
+    }
+  }
+
+  private async updateOrganizationLimitWithClient(
+    client: PoolClient,
+    organizationId: string,
+    limitKey: OrganizationLimitKey,
+    value: number | null
+  ) {
+    if (value === null) {
+      await client.query(
+        `
+          delete from organization_limits
+          where organization_id = $1
+            and limit_key = $2
+        `,
+        [organizationId, limitKey]
+      );
+      return null;
+    }
+
+    const result = await client.query<{
+      id: string;
+      organization_id: string;
+      limit_key: string;
+      limit_value: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `
+        insert into organization_limits (
+          organization_id,
+          limit_key,
+          limit_value,
+          updated_at
+        )
+        values ($1, $2, $3, timezone('utc', now()))
+        on conflict (organization_id, limit_key)
+        do update set
+          limit_value = excluded.limit_value,
+          updated_at = timezone('utc', now())
+        returning
+          id,
+          organization_id,
+          limit_key,
+          limit_value,
+          created_at,
+          updated_at
+      `,
+      [organizationId, limitKey, value]
+    );
+
+    return result.rows[0];
+  }
+
+  async updateOrganizationLimit(organizationId: string, limitKey: OrganizationLimitKey, value: number | null) {
+    return withTransaction((client) =>
+      this.updateOrganizationLimitWithClient(client, organizationId, limitKey, value)
+    );
+  }
+
+  async getOrganizationAccessLimits(authUser: AuthUser, organizationId: string) {
+    if (authUser.role !== "super_admin") {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    const client = await pool.connect();
+    try {
+      const campaignsStatus = await this.getCampaignsModuleStatus(authUser, organizationId);
+      const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        MAX_WHATSAPP_ACCOUNTS_KEY,
+        DEFAULT_MAX_WHATSAPP_ACCOUNTS
+      );
+      const historySyncDays = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        HISTORY_SYNC_DAYS_KEY,
+        DEFAULT_HISTORY_SYNC_DAYS
+      );
+      const maxUsers = await this.getOrganizationLimitValueWithClient(client, organizationId, MAX_USERS_KEY, null);
+      const whatsappAccounts = await this.whatsappRepository.countByOrganization(client, organizationId);
+
+      return {
+        organizationId,
+        modules: [
+          {
+            moduleKey: CAMPAIGNS_MODULE_KEY,
+            isEnabled: campaignsStatus.isEnabled
+          }
+        ],
+        limits: {
+          maxWhatsappAccounts: maxWhatsappAccounts ?? DEFAULT_MAX_WHATSAPP_ACCOUNTS,
+          historySyncDays: historySyncDays ?? DEFAULT_HISTORY_SYNC_DAYS,
+          maxUsers
+        },
+        usage: {
+          whatsappAccounts
+        },
+        coreFeatures: {
+          whatsappCrm: {
+            availableByDefault: true
+          }
+        }
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async updateOrganizationAccessLimits(
+    authUser: AuthUser,
+    organizationId: string,
+    input: OrganizationAccessLimitsUpdateInput
+  ) {
+    if (authUser.role !== "super_admin") {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    await withTransaction(async (client) => {
+      if (input.campaignsEnabled !== undefined) {
+        await this.updateCampaignsModuleWithClient(client, authUser, organizationId, input.campaignsEnabled);
+      }
+
+      if (input.maxWhatsappAccounts !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          MAX_WHATSAPP_ACCOUNTS_KEY,
+          input.maxWhatsappAccounts
+        );
+      }
+
+      if (input.historySyncDays !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, HISTORY_SYNC_DAYS_KEY, input.historySyncDays);
+      }
+
+      if (input.maxUsers !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, MAX_USERS_KEY, input.maxUsers);
+      }
     });
+
+    return this.getOrganizationAccessLimits(authUser, organizationId);
   }
 
   async listUsers(authUser: AuthUser, organizationId?: string) {
@@ -455,6 +652,22 @@ export class AdminService {
     }
 
     const account = await withTransaction(async (client) => {
+      const currentAccounts = await this.whatsappRepository.countByOrganization(client, resolvedOrganizationId);
+      const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
+        client,
+        resolvedOrganizationId,
+        MAX_WHATSAPP_ACCOUNTS_KEY,
+        DEFAULT_MAX_WHATSAPP_ACCOUNTS
+      );
+
+      if (currentAccounts >= (maxWhatsappAccounts ?? DEFAULT_MAX_WHATSAPP_ACCOUNTS)) {
+        throw new AppError(
+          "This organization has reached its WhatsApp connection limit.",
+          403,
+          "WHATSAPP_ACCOUNT_LIMIT_REACHED"
+        );
+      }
+
       return this.whatsappRepository.create(client, {
         organizationId: resolvedOrganizationId,
         name: input.name.trim(),

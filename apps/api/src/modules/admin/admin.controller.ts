@@ -61,6 +61,13 @@ const campaignsModuleStatusQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
 
+const updateOrganizationAccessLimitsSchema = z.object({
+  campaignsEnabled: z.boolean().optional(),
+  maxWhatsappAccounts: z.coerce.number().int().min(0).max(20).optional(),
+  historySyncDays: z.coerce.number().int().min(0).max(365).optional(),
+  maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -144,6 +151,34 @@ export async function getCampaignsModuleStatus(request: Request, response: Respo
   return response.json({
     data: status
   });
+}
+
+export async function getOrganizationAccessLimits(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const accessLimits = await adminService.getOrganizationAccessLimits(auth, organizationId);
+
+  return response.json({ data: accessLimits });
+}
+
+export async function updateOrganizationAccessLimits(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const input = updateOrganizationAccessLimitsSchema.parse(request.body);
+  const accessLimits = await adminService.updateOrganizationAccessLimits(auth, organizationId, input);
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "organization_access_limits.updated",
+    entityType: "organization_access_limits",
+    entityId: organizationId,
+    metadata: {
+      changed_values: input
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: accessLimits });
 }
 
 export async function listOrganizationUsers(request: Request, response: Response) {

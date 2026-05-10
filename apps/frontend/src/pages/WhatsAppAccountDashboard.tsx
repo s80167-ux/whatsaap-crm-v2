@@ -373,7 +373,12 @@ export function WhatsAppAccountDashboard() {
       setNotice("WhatsApp account created and session initialization started.");
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create WhatsApp account");
+      const message = error instanceof Error ? error.message : "Unable to create WhatsApp account";
+      setNotice(
+        message === "This organization has reached its WhatsApp connection limit."
+          ? "WhatsApp connection limit reached. Please contact Super Admin to increase the limit."
+          : message
+      );
     } finally {
       setIsWorking(false);
     }

@@ -23,15 +23,19 @@ import {
   listWhatsAppAccounts,
   disconnectWhatsAppAccount,
   getCampaignsModuleStatus,
+  getOrganizationAccessLimits,
   reconnectWhatsAppAccount,
   resetWhatsAppAccountPairing,
   replayRawEvents,
+  updateOrganizationAccessLimits,
   updateWhatsAppAccount
 } from "./admin.controller.js";
 
 export const adminRoutes = Router();
 
 adminRoutes.get("/organization-modules/campaigns/status", asyncHandler(getCampaignsModuleStatus));
+adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
+adminRoutes.patch("/organizations/:organizationId/access-limits", asyncHandler(updateOrganizationAccessLimits));
 
 adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
 adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));

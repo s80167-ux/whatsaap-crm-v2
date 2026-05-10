@@ -126,6 +126,21 @@ export class WhatsAppAdminRepository {
     return result.rows;
   }
 
+  async countByOrganization(client: PoolClient, organizationId: string): Promise<number> {
+    const columns = await this.getColumns(client);
+    const result = await client.query<{ count: string }>(
+      `
+        select count(*)::text as count
+        from whatsapp_accounts
+        where organization_id = $1
+          ${columns.deleted_at ? "and deleted_at is null" : ""}
+      `,
+      [organizationId]
+    );
+
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
   async listByOrganizationAndCreator(
     client: PoolClient,
     organizationId: string,

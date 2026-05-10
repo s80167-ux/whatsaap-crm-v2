@@ -5,7 +5,7 @@ import type {
   WhatsAppAccountSummary,
   WhatsAppSyncJobSummary
 } from "../types/admin";
-import type { ModuleKey, OrganizationModule, OrganizationModuleStatus } from "../types/modules";
+import type { ModuleKey, OrganizationAccessLimits, OrganizationModule, OrganizationModuleStatus } from "../types/modules";
 
 export type ContactRepairProposal = {
   id: string;
@@ -184,6 +184,29 @@ export async function updateOrganizationModule(
   const response = await apiPatch<{ data: OrganizationModule }>(
     `/admin/organizations/${organizationId}/modules/${moduleKey}`,
     { isEnabled }
+  );
+  return response.data;
+}
+
+export async function fetchOrganizationAccessLimits(organizationId: string) {
+  const response = await apiGet<{ data: OrganizationAccessLimits }>(
+    `/admin/organizations/${organizationId}/access-limits`
+  );
+  return response.data;
+}
+
+export async function updateOrganizationAccessLimits(
+  organizationId: string,
+  payload: {
+    campaignsEnabled?: boolean;
+    maxWhatsappAccounts?: number;
+    historySyncDays?: number;
+    maxUsers?: number | null;
+  }
+) {
+  const response = await apiPatch<{ data: OrganizationAccessLimits }>(
+    `/admin/organizations/${organizationId}/access-limits`,
+    payload
   );
   return response.data;
 }

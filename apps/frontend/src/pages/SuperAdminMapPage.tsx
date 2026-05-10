@@ -1,15 +1,10 @@
 import clsx from "clsx";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Database, GitBranch, Network } from "lucide-react";
-import { useState } from "react";
+import { Database, GitBranch, Network, SlidersHorizontal } from "lucide-react";
 import { Navigate, useLocation, useNavigate, useOutletContext } from "react-router-dom";
-import { updateOrganizationModule } from "../api/admin";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
-import { Toast } from "../components/Toast";
 import { SuperAdminFlowMap } from "../components/SuperAdminFlowMap";
 import { SuperAdminDataStructureMap, SuperAdminOrganizationStructureMap } from "../components/SuperAdminStructureMaps";
-import { useCampaignsModuleStatus } from "../hooks/useAdmin";
 import { getStoredUser } from "../lib/auth";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 
@@ -49,40 +44,10 @@ export function SuperAdminMapPage() {
   const user = getStoredUser();
   const location = useLocation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { selectedOrganizationId, selectedOrganizationName } = useOutletContext<DashboardOutletContext>();
-  const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const activeTab = resolveActiveTab(location.pathname);
   const activeTabConfig = mapTabs.find((tab) => tab.id === activeTab) ?? mapTabs[0];
   const isSuperAdmin = user?.role === "super_admin";
-  const campaignsStatusQuery = useCampaignsModuleStatus(
-    selectedOrganizationId || null,
-    isSuperAdmin && Boolean(selectedOrganizationId)
-  );
-  const campaignsEnabled = campaignsStatusQuery.data?.isEnabled ?? false;
-  const updateCampaignsModuleMutation = useMutation({
-    mutationFn: (isEnabled: boolean) => updateOrganizationModule(selectedOrganizationId, "campaigns", isEnabled),
-    onSuccess: async (_module, isEnabled) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["organization-module-status", "campaigns", selectedOrganizationId]
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["organization-modules", selectedOrganizationId]
-        })
-      ]);
-      setNotice({
-        message: `Campaigns ${isEnabled ? "enabled" : "disabled"} for ${selectedOrganizationName ?? "the selected organization"}.`,
-        variant: "success"
-      });
-    },
-    onError: (error) => {
-      setNotice({
-        message: error instanceof Error ? error.message : "Unable to update Campaigns module.",
-        variant: "error"
-      });
-    }
-  });
 
   if (!isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -138,48 +103,37 @@ export function SuperAdminMapPage() {
 
       <Card elevated className="space-y-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Organization Modules</p>
-          <h3 className="mt-2 text-xl font-semibold tracking-tight text-text">Module access</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Organization Access</p>
+          <h3 className="mt-2 text-xl font-semibold tracking-tight text-text">Access & Limits</h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-            Enable standalone modules for the organization selected in the sidebar.
+            Campaigns access and WhatsApp connection limits now live in the centralized access control page.
           </p>
         </div>
 
         {!selectedOrganizationId ? (
           <div className="rounded-2xl border border-border bg-background-tint px-4 py-3 text-sm text-text-muted">
-            Select an organization from the sidebar to manage modules.
+            Select an organization from the sidebar to manage access and limits.
           </div>
         ) : (
           <div className="flex flex-col gap-4 rounded-2xl border border-border bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="text-base font-semibold text-text">Campaigns</h4>
-                <span
-                  className={clsx(
-                    "inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]",
-                    campaignsEnabled
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-slate-200 bg-slate-100 text-slate-600"
-                  )}
-                >
-                  {campaignsEnabled ? "Enabled" : "Disabled"}
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background-tint text-primary">
+                  <SlidersHorizontal size={17} />
                 </span>
+                <h4 className="text-base font-semibold text-text">Organization Access & Limits</h4>
               </div>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Enable WhatsApp customer campaign management for this organization.
+                Manage Campaigns and WhatsApp connection limits for {selectedOrganizationName ?? "the selected organization"}.
               </p>
-              {campaignsStatusQuery.isError ? (
-                <p className="mt-2 text-sm font-medium text-coral">Unable to load Campaigns module status.</p>
-              ) : null}
             </div>
 
             <Button
-              variant={campaignsEnabled ? "secondary" : "primary"}
+              variant="primary"
               className="shrink-0"
-              disabled={campaignsStatusQuery.isLoading || updateCampaignsModuleMutation.isPending}
-              onClick={() => updateCampaignsModuleMutation.mutate(!campaignsEnabled)}
+              onClick={() => navigate("/super-admin/access-limits")}
             >
-              {campaignsEnabled ? "Disable Campaigns" : "Enable Campaigns"}
+              Open Access & Limits
             </Button>
           </div>
         )}
@@ -188,7 +142,6 @@ export function SuperAdminMapPage() {
       {activeTab === "workflow" ? <SuperAdminFlowMap /> : null}
       {activeTab === "data" ? <SuperAdminDataStructureMap /> : null}
       {activeTab === "organization" ? <SuperAdminOrganizationStructureMap /> : null}
-      <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} />
     </section>
   );
 }
