@@ -1,6 +1,8 @@
 {
     "markdown.validate.enabled": true,
     "files.associations": {
+        "**/infra/sql/migrations/*.sql": "plaintext",
+        "**/infra/sql/seeds/*.sql": "plaintext",
         "infra/sql/migrations/*.sql": "plaintext",
         "database/*.sql": "plaintext"
     }

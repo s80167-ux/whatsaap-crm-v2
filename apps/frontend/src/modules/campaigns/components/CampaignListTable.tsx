@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { Button } from "../../../components/Button";
 import type { Campaign } from "../types/campaign.types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
@@ -8,7 +9,8 @@ export function CampaignListTable({
   onReview,
   onPause,
   onResume,
-  onCancel
+  onCancel,
+  onDelete
 }: {
   campaigns: Campaign[];
   onAction: (message: string) => void;
@@ -16,6 +18,7 @@ export function CampaignListTable({
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
+  onDelete?: (campaign: Campaign) => void;
 }) {
   if (campaigns.length === 0) {
     return (
@@ -38,6 +41,7 @@ export function CampaignListTable({
             onPause={onPause}
             onResume={onResume}
             onCancel={onCancel}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -76,6 +80,7 @@ export function CampaignListTable({
                     onPause={onPause}
                     onResume={onResume}
                     onCancel={onCancel}
+                    onDelete={onDelete}
                   />
                 </td>
               </tr>
@@ -93,7 +98,8 @@ function CampaignMobileCard({
   onReview,
   onPause,
   onResume,
-  onCancel
+  onCancel,
+  onDelete
 }: {
   campaign: Campaign;
   onAction: (message: string) => void;
@@ -101,6 +107,7 @@ function CampaignMobileCard({
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
+  onDelete?: (campaign: Campaign) => void;
 }) {
   const completed = campaign.sent + campaign.failed + (campaign.skipped ?? 0);
   const progress = campaign.recipients > 0 ? Math.min(100, Math.round((completed / campaign.recipients) * 100)) : 0;
@@ -139,6 +146,7 @@ function CampaignMobileCard({
         onPause={onPause}
         onResume={onResume}
         onCancel={onCancel}
+        onDelete={onDelete}
         mobile
       />
     </article>
@@ -161,6 +169,7 @@ function CampaignActions({
   onPause,
   onResume,
   onCancel,
+  onDelete,
   mobile = false
 }: {
   campaign: Campaign;
@@ -169,6 +178,7 @@ function CampaignActions({
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
+  onDelete?: (campaign: Campaign) => void;
   mobile?: boolean;
 }) {
   return (
@@ -194,6 +204,18 @@ function CampaignActions({
       {["Draft", "Scheduled", "Sending", "Paused", "Failed"].includes(campaign.status) && onCancel ? (
         <Button size="sm" variant="ghost" onClick={() => onCancel(campaign)}>
           Cancel
+        </Button>
+      ) : null}
+      {onDelete ? (
+        <Button
+          size={mobile ? "sm" : "icon"}
+          variant="ghost"
+          className={`border border-border bg-white text-coral hover:text-coral ${mobile ? "col-span-2 w-full" : ""}`}
+          aria-label={`Delete ${campaign.name}`}
+          title={`Delete ${campaign.name}`}
+          onClick={() => onDelete(campaign)}
+        >
+          {mobile ? "Delete" : <Trash2 size={16} />}
         </Button>
       ) : null}
     </div>

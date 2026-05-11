@@ -4,7 +4,7 @@
   min-width: 240px;
   max-width: 380px;
   padding: 0 !important;
-  border-radius: 14px !important;
+  border-radius: 10px !important;
 }
 /* User table column widths */
 .user-table-col-name { width: 20%; min-width: 120px; }
@@ -305,7 +305,7 @@ canvas {
     box-shadow:
       0 28px 80px rgba(2, 6, 23, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    border-radius: 22px 22px 0 0;
+    border-radius: 10px;
   }
 
   .workspace-page-header {
@@ -925,6 +925,6 @@ canvas {
 
 @media (max-width: 640px) {
   .popup-overlay__panel {
-    border-radius: 22px 22px 0 0;
+    border-radius: 10px 10px 0 0;
   }
 }

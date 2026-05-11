@@ -284,7 +284,7 @@ export function CreateCampaignDrawer({
       onClose={onClose}
       title="Create Campaign"
       description="Set sender, audience, message template and sending tempo before launching the campaign."
-      panelClassName="rounded-[28px] max-w-6xl"
+      panelClassName="max-w-6xl"
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-5">

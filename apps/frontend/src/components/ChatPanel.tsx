@@ -184,6 +184,8 @@ export function ChatPanel({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [visibleMessageCount, setVisibleMessageCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageScrollRef = useRef<HTMLDivElement | null>(null);
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const latestOutgoingMessage = [...messages].reverse().find((message) => message.direction === "outgoing");
   const latestOutgoingStatus = latestOutgoingMessage?.ack_status;
@@ -196,6 +198,7 @@ export function ChatPanel({
     [messages, visibleMessageCount]
   );
   const hiddenMessageCount = Math.max(0, messages.length - visibleMessages.length);
+  const latestVisibleMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
   const { toast: copyToast, copyText } = useCopyFeedback();
   const resolvedOrganizationId = organizationId ?? (conversation as (Conversation & { organization_id?: string | null }) | undefined)?.organization_id ?? null;
   const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
@@ -608,6 +611,29 @@ export function ChatPanel({
     setSelectedMessageIds((current) => current.filter((messageId) => messagesById.has(messageId)));
   }, [messages]);
 
+  useEffect(() => {
+    if (!conversation?.id) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      if (isMobile) {
+        messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        return;
+      }
+
+      const messageScrollElement = messageScrollRef.current;
+      if (messageScrollElement) {
+        messageScrollElement.scrollTo({
+          top: messageScrollElement.scrollHeight,
+          behavior: "smooth"
+        });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [conversation?.id, isMobile, latestVisibleMessageId]);
+
   if (!conversation) {
     return (
       <Card className="workspace-block flex min-h-[420px] items-center justify-center p-10" elevated>
@@ -678,7 +704,10 @@ export function ChatPanel({
 ) : null}
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
-      <div className={`space-y-4 bg-background-elevated px-3 py-4 sm:px-4 sm:py-5 xl:px-5 2xl:px-7 ${isMobile ? "overflow-visible pb-6" : "overflow-y-auto"}`}>
+      <div
+        ref={messageScrollRef}
+        className={`min-h-0 space-y-4 bg-background-elevated px-3 py-4 sm:px-4 sm:py-5 xl:px-5 2xl:px-7 ${isMobile ? "overflow-visible pb-6" : "overflow-y-auto"}`}
+      >
         {selectedMessages.length > 0 ? (
           <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(20,32,51,0.08)] backdrop-blur">
             <p className="text-sm font-medium text-text">
@@ -745,6 +774,7 @@ export function ChatPanel({
             No chat history found in {historyRangeLabel.toLowerCase()}.
           </div>
         )}
+        <div ref={messageEndRef} aria-hidden="true" />
       </div>
       <footer className="border-t border-primary/10 bg-slate-50/90 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {replyDraft ? (

@@ -1,10 +1,11 @@
 import { Megaphone, Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { Input } from "../../../components/Input";
+import { PanelPagination, usePanelPagination } from "../../../components/PanelPagination";
 import { Toast } from "../../../components/Toast";
 import { useWhatsAppAccounts } from "../../../hooks/useAdmin";
 import { useRealtimeCampaigns } from "../../../hooks/useRealtimeCampaigns";
@@ -14,7 +15,7 @@ import { CampaignListTable } from "../components/CampaignListTable";
 import { CampaignReviewDrawer } from "../components/CampaignReviewDrawer";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
 import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
-import { cancelCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign } from "../services/campaignService";
+import { cancelCampaign, deleteCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign } from "../services/campaignService";
 import type { Campaign, CampaignStatus } from "../types/campaign.types";
 
 const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all" }> = [
@@ -25,6 +26,7 @@ const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all
   { label: "Failed", value: "Failed" },
   { label: "Completed", value: "Completed" }
 ];
+const campaignListPageSize = 5;
 
 export function CampaignsPage() {
   const outletContext = useOutletContext<DashboardOutletContext>();
@@ -60,11 +62,23 @@ export function CampaignsPage() {
       return matchesStatus && matchesQuery;
     });
   }, [campaignQuery, campaigns, statusFilter]);
+  const {
+    page: campaignPage,
+    pageCount: campaignPageCount,
+    pageSize,
+    totalItems,
+    visibleItems: visibleCampaigns,
+    setPage: setCampaignPage
+  } = usePanelPagination(filteredCampaigns, campaignListPageSize);
   const { data: audienceGroups = [] } = useQuery({
     queryKey: ["audience-groups", organizationId],
     queryFn: () => fetchAudienceGroups(organizationId),
     enabled: shouldFetchOrganizationData
   });
+
+  useEffect(() => {
+    setCampaignPage(1);
+  }, [campaignQuery, setCampaignPage, statusFilter]);
 
   function showPlaceholderNotice(message: string, variant: "success" | "error" = "success") {
     setNotice({ message, variant });
@@ -100,6 +114,25 @@ export function CampaignsPage() {
     },
     onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to cancel campaign.", "error")
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (campaign: Campaign) => deleteCampaign({ campaignId: campaign.id, organizationId }),
+    onSuccess: async (result) => {
+      showPlaceholderNotice(result.message, "success");
+      await refreshCampaigns();
+    },
+    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to delete campaign.", "error")
+  });
+
+  function handleDeleteCampaign(campaign: Campaign) {
+    const confirmed = window.confirm(
+      `Delete "${campaign.name}" from the campaign list? This removes the campaign row and its recipient progress history.`
+    );
+
+    if (confirmed) {
+      deleteMutation.mutate(campaign);
+    }
+  }
 
   return (
     <section className="space-y-5">
@@ -166,12 +199,20 @@ export function CampaignsPage() {
           <p className="shrink-0 text-xs font-semibold text-text-muted">{filteredCampaigns.length} shown</p>
         </div>
         <CampaignListTable
-          campaigns={filteredCampaigns}
+          campaigns={visibleCampaigns}
           onAction={showPlaceholderNotice}
           onReview={setReviewCampaign}
           onPause={(campaign) => pauseMutation.mutate(campaign)}
           onResume={(campaign) => resumeMutation.mutate(campaign)}
           onCancel={(campaign) => cancelMutation.mutate(campaign)}
+          onDelete={handleDeleteCampaign}
+        />
+        <PanelPagination
+          page={campaignPage}
+          pageCount={campaignPageCount}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setCampaignPage}
         />
       </Card>
 

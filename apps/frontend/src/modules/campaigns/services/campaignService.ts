@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from "../../../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
 import { config } from "../../../lib/config";
 import type {
   Campaign,
@@ -238,6 +238,11 @@ export async function cancelCampaign(input: { campaignId: string; organizationId
     input
   );
   return response.data;
+}
+
+export async function deleteCampaign(input: { campaignId: string; organizationId?: string | null }) {
+  const suffix = input.organizationId ? `?organization_id=${encodeURIComponent(input.organizationId)}` : "";
+  return apiDelete<{ ok: true; message: string }>(`/campaigns/${input.campaignId}${suffix}`);
 }
 
 function toSafeFilename(value: string) {

@@ -578,6 +578,43 @@ export async function updateCampaign(request: Request, response: Response) {
   return response.json({ data: result });
 }
 
+export async function deleteCampaign(request: Request, response: Response) {
+  const organizationId = resolveOrganizationId(request);
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const existing = await findCampaign(organizationId, campaignId);
+
+  if (!existing) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        delete from message_dispatch_outbox
+        where organization_id = $1
+          and processing_status in ('pending', 'failed')
+          and payload->>'source' = 'campaign'
+          and payload->'campaign'->>'campaignId' = $2
+      `,
+      [organizationId, campaignId]
+    );
+
+    await client.query(
+      `
+        delete from campaigns
+        where organization_id = $1
+          and id = $2
+      `,
+      [organizationId, campaignId]
+    );
+  });
+
+  return response.json({
+    ok: true,
+    message: `Campaign "${existing.name}" deleted.`
+  });
+}
+
 export async function sendCampaignTestPreview(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = sendTestBodySchema.parse(request.body);

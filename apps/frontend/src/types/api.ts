@@ -41,6 +41,23 @@ export interface Message {
   ack_status?: string;
 }
 
+export interface NotificationItem {
+  id: string;
+  organization_id: string | null;
+  recipient_user_id: string | null;
+  recipient_org_user_id: string | null;
+  type: string;
+  title: string;
+  message: string | null;
+  target_path: string | null;
+  target_entity_type: string | null;
+  target_entity_id: string | null;
+  metadata: unknown;
+  created_at: string;
+  updated_at: string;
+  read_at: string | null;
+}
+
 export interface OutboundAttachmentInput {
   kind: "image" | "video" | "audio" | "document";
   fileName: string;

@@ -33,6 +33,7 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { NavLinkItem } from "../components/NavLinkItem";
+import { NotificationBell } from "../components/NotificationBell";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
@@ -487,7 +488,8 @@ export function DashboardLayout() {
             {selectedOrganizationName ? <span className="topbar-scope hidden truncate text-xs sm:inline">/ {selectedOrganizationName}</span> : null}
           </div>
 
-          <div className="relative shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
+            <NotificationBell />
             <button
               type="button"
               className="topbar-profile-trigger inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-xl border px-2.5 text-xs font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"

@@ -1,4 +1,6 @@
 import { withTransaction } from "../config/database.js";
+import { logger } from "../config/logger.js";
+import { NotificationsService } from "../modules/notifications/notifications.service.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import type { InboundMessageInput } from "../types/domain.js";
@@ -15,7 +17,8 @@ export class MessageIngestionService {
     private readonly conversationRepository = new ConversationRepository(),
     private readonly messageRepository = new MessageRepository(),
     private readonly projectionService = new ProjectionService(),
-    private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
+    private readonly quickReplyOutcomeService = new QuickReplyOutcomeService(),
+    private readonly notificationsService = new NotificationsService()
   ) {}
 
   async ingest(input: InboundMessageInput) {
@@ -73,6 +76,34 @@ export class MessageIngestionService {
           responseMessageId: message.id,
           responseAt: input.sentAt
         });
+
+        try {
+          const contactLabel =
+            contact.display_name || contact.primary_phone_normalized || contact.primary_phone_e164 || input.profileName || "Customer";
+          const messagePreview =
+            input.textBody && input.textBody.trim().length > 0
+              ? input.textBody.trim().slice(0, 160)
+              : `New ${normalizeMessageType(input.messageType)} message`;
+
+          await this.notificationsService.createOrUpdate(client, {
+            organizationId: input.organizationId,
+            recipientOrgUserId: conversation.assigned_user_id ?? null,
+            type: "inbound_message",
+            title: `New chat from ${contactLabel}`,
+            message: messagePreview,
+            targetPath: `/inbox?organization_id=${encodeURIComponent(input.organizationId)}&conversationId=${encodeURIComponent(conversation.id)}`,
+            targetEntityType: "conversation",
+            targetEntityId: conversation.id,
+            uniqueKey: `inbound_message:conversation:${conversation.id}`,
+            metadata: {
+              contactId: contact.id,
+              messageId: message.id,
+              messageCount: 1
+            }
+          });
+        } catch (error) {
+          logger.error({ err: error, conversationId: conversation.id }, "Failed to create inbound message notification");
+        }
       }
 
       return { contact, identity, conversation, message, inserted };

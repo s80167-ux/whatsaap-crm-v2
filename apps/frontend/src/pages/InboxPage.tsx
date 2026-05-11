@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import { ArrowDownAZ, ChevronLeft, Clock3, Info, Search } from "lucide-react";
 import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
@@ -29,7 +29,11 @@ export function InboxPage() {
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
-  const activeOrganizationId = isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
+  const { selectedOrganizationId, setSelectedOrganizationId } = dashboardContext;
+  const [searchParams] = useSearchParams();
+  const requestedConversationId = searchParams.get("conversationId");
+  const requestedOrganizationId = searchParams.get("organization_id");
+  const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
 
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
@@ -135,6 +139,30 @@ export function InboxPage() {
   useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);
 
   const conversationCountLabel = `${visibleConversations.length} conversation${visibleConversations.length === 1 ? "" : "s"}`;
+
+  useEffect(() => {
+    if (isSuperAdmin && requestedOrganizationId && requestedOrganizationId !== selectedOrganizationId) {
+      setSelectedOrganizationId(requestedOrganizationId);
+    }
+  }, [isSuperAdmin, requestedOrganizationId, selectedOrganizationId, setSelectedOrganizationId]);
+
+  useEffect(() => {
+    if (!requestedConversationId || conversations.length === 0) {
+      return;
+    }
+
+    const requestedConversation = conversations.find((conversation) => conversation.id === requestedConversationId);
+
+    if (!requestedConversation || selectedConversation?.id === requestedConversation.id) {
+      return;
+    }
+
+    setSelectedConversation(requestedConversation);
+
+    if (isMobile) {
+      setMobilePane("chat");
+    }
+  }, [conversations, isMobile, requestedConversationId, selectedConversation?.id]);
 
   useEffect(() => {
     if (!isMobile) {
