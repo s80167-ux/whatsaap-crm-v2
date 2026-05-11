@@ -39,8 +39,16 @@ async function bootstrap() {
   logger.info("Database connection established");
 
   if (env.EMBED_RAW_EVENT_WORKER) {
+    if (env.NODE_ENV === "production") {
+      logger.warn(
+        "EMBED_RAW_EVENT_WORKER=true in production. Prefer EMBED_RAW_EVENT_WORKER=false and run the dedicated processRawEvents worker separately."
+      );
+    }
+
     startEmbeddedRawEventWorker();
     logger.info("Embedded raw event worker started");
+  } else if (env.NODE_ENV === "production") {
+    logger.info("Embedded raw event worker disabled. Production should process raw events via the dedicated processRawEvents worker.");
   }
 
   app.listen(env.PORT, () => {

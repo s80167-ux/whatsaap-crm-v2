@@ -109,6 +109,7 @@ export interface SendMessageInput {
   forwardedFromMessageId?: UUID | null;
   text?: string | null;
   attachment?: OutboundMediaAttachmentInput | null;
+  outboxAvailableAt?: string | null;
   campaignContext?: {
     campaignId: UUID;
     campaignRecipientId: UUID;

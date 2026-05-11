@@ -126,6 +126,7 @@ npm run worker:usage-daily -- --days 7
 - `CONNECTOR_BASE_URL`: internal URL for the standalone WhatsApp connector
 - `CONNECTOR_INTERNAL_SECRET`: shared secret between backend and connector
 - `ALLOW_LOCAL_CONNECTOR_SEND`: set to `true` only when a local connector owns a dev WhatsApp session
+- `OUTBOUND_DISPATCH_MODE`: `immediate` for local development or `worker_only` for production-grade durable dispatch. Defaults to `worker_only` in production and `immediate` otherwise.
 - `RAW_EVENT_WORKER_BATCH_SIZE`: number of raw events claimed per poll
 - `RAW_EVENT_WORKER_POLL_INTERVAL_MS`: worker poll interval
 - `RAW_EVENT_WORKER_STALE_AFTER_MS`: when a stuck `processing` event is returned to `pending`

@@ -11,7 +11,7 @@ import { getStoredUser } from "../lib/auth";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookUser, Link2, QrCode, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   backfillWhatsAppAccount,
@@ -29,6 +29,8 @@ const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
 const ACTIVE_SYNC_JOB_STATUSES: WhatsAppSyncJobStatus[] = ["queued", "running", "receiving_events", "processing_events"];
+const STATUS_FALLBACK_POLL_INTERVAL_MS = 3000;
+const STATUS_FALLBACK_POLL_WINDOW_MS = 60_000;
 
 function formatSyncJobStatus(status: WhatsAppSyncJobStatus) {
   switch (status) {
@@ -340,11 +342,43 @@ export function WhatsAppAccountDashboard() {
   const [syncJobRefreshKeys, setSyncJobRefreshKeys] = useState<Record<string, number>>({});
   const [syncJobSnapshots, setSyncJobSnapshots] = useState<Record<string, WhatsAppSyncJobSummary>>({});
   const [accountActivityNotice, setAccountActivityNotice] = useState<Record<string, { title: string; detail: string; tone?: "sky" | "emerald" }>>({});
+  const [statusPollingUntil, setStatusPollingUntil] = useState<number | null>(null);
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
 
   useRealtimeWhatsAppAccounts(activeOrganizationId);
+
+  useEffect(() => {
+    if (!activeOrganizationId || !statusPollingUntil) {
+      return;
+    }
+
+    const remainingWindowMs = statusPollingUntil - Date.now();
+
+    if (remainingWindowMs <= 0) {
+      setStatusPollingUntil(null);
+      return;
+    }
+
+    const clearPollingTimeout = window.setTimeout(() => {
+      setStatusPollingUntil(null);
+    }, remainingWindowMs);
+
+    const fallbackPollingInterval = window.setInterval(() => {
+      void refetchAccounts();
+    }, STATUS_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearTimeout(clearPollingTimeout);
+      window.clearInterval(fallbackPollingInterval);
+    };
+  }, [activeOrganizationId, refetchAccounts, statusPollingUntil]);
+
+  function startTemporaryStatusPolling() {
+    setStatusPollingUntil(Date.now() + STATUS_FALLBACK_POLL_WINDOW_MS);
+    void refetchAccounts();
+  }
 
   function beginEditAccount(account: any) {
     setEditingAccountId(account.id);
@@ -370,6 +404,7 @@ export function WhatsAppAccountDashboard() {
       setAccountName("");
       setAccountPhone("");
       setAccountHistorySyncLookbackDays(7);
+      startTemporaryStatusPolling();
       setNotice("WhatsApp account created and session initialization started.");
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
@@ -427,6 +462,7 @@ export function WhatsAppAccountDashboard() {
     setNotice(null);
     try {
       await reconnectWhatsAppAccount(accountId);
+      startTemporaryStatusPolling();
       setNotice(`Reconnect requested for "${label}".`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
@@ -445,6 +481,7 @@ export function WhatsAppAccountDashboard() {
     setNotice(null);
     try {
       await resetWhatsAppPairing(accountId);
+      startTemporaryStatusPolling();
       setNotice(`Fresh QR requested for "${label}". The QR card will appear when WhatsApp returns it.`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
@@ -466,6 +503,7 @@ export function WhatsAppAccountDashboard() {
 
     try {
       const result = await backfillWhatsAppAccount(accountId, lookbackDays);
+      startTemporaryStatusPolling();
       setSyncJobSnapshots((current) => ({
         ...current,
         [accountId]: result.syncJob
@@ -528,6 +566,7 @@ export function WhatsAppAccountDashboard() {
     setNotice(null);
     try {
       await disconnectWhatsAppAccount(accountId);
+      startTemporaryStatusPolling();
       setNotice(`Disconnect requested for "${label}".`);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {

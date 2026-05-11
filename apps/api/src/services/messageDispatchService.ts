@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { pool, withTransaction } from "../config/database.js";
+import { pool, query, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { MessageDispatchOutboxRepository, type MessageDispatchOutboxRecord } from "../repositories/messageDispatchOutboxRepository.js";
@@ -30,6 +30,9 @@ export class MessageDispatchService {
       whatsappAccountId: string;
       recipientJid: string;
       messageText: string;
+      source: "manual" | "quick_reply" | "campaign" | "system";
+      priority: number;
+      availableAt?: string | null;
       payload?: unknown;
     }
   ) {
@@ -41,6 +44,9 @@ export class MessageDispatchService {
       whatsappAccountId: input.whatsappAccountId,
       recipientJid: input.recipientJid,
       messageText: input.messageText,
+      source: input.source,
+      priority: input.priority,
+      availableAt: input.availableAt ?? null,
       payload: input.payload
     });
   }
@@ -53,6 +59,9 @@ export class MessageDispatchService {
     whatsappAccountId: string;
     recipientJid: string;
     messageText: string;
+    source: "manual" | "quick_reply" | "campaign" | "system";
+    priority: number;
+    availableAt?: string | null;
     payload?: unknown;
   }) {
     return withTransaction((client) =>
@@ -64,6 +73,9 @@ export class MessageDispatchService {
         whatsappAccountId: input.whatsappAccountId,
         recipientJid: input.recipientJid,
         messageText: input.messageText,
+        source: input.source,
+        priority: input.priority,
+        availableAt: input.availableAt ?? null,
         payload: input.payload
       })
     );
@@ -73,9 +85,32 @@ export class MessageDispatchService {
     const staleBefore = new Date(Date.now() - env.MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS);
 
     await withTransaction((client) => this.outboxRepository.resetStaleProcessing(client, staleBefore));
-    const claimed = await withTransaction((client) =>
-      this.outboxRepository.claimPendingBatch(client, limit, env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES)
+    const dueJobs = await withTransaction((client) =>
+      this.outboxRepository.listDueJobs(client, Math.max(limit * 4, limit), env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES)
     );
+
+    const claimed: MessageDispatchOutboxRecord[] = [];
+    const claimedAccounts = new Set<string>();
+
+    for (const job of dueJobs) {
+      if (claimed.length >= limit || claimedAccounts.has(job.whatsapp_account_id)) {
+        continue;
+      }
+
+      const claimedJob = await withTransaction((client) =>
+        this.outboxRepository.claimById(client, {
+          outboxId: job.id,
+          maxRetries: env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES
+        })
+      );
+
+      if (!claimedJob) {
+        continue;
+      }
+
+      claimed.push(claimedJob);
+      claimedAccounts.add(claimedJob.whatsapp_account_id);
+    }
 
     for (const job of claimed) {
       await this.processJob(job);
@@ -144,6 +179,8 @@ export class MessageDispatchService {
           connectorMessageId,
           payload: outbound ?? null
         });
+
+        await this.markCampaignRecipientSent(client, job, sentAt);
       });
 
       return { ok: true };
@@ -171,9 +208,11 @@ export class MessageDispatchService {
         await this.outboxRepository.markFailed(client, {
           outboxId: job.id,
           errorMessage,
-          nextAttemptAt,
+          nextAttemptAt: willRetry ? nextAttemptAt : null,
           payload: { error: errorMessage }
         });
+
+        await this.markCampaignRecipientFailed(client, job, errorMessage, willRetry);
       });
 
       logger.error({ err: error, outboxId: job.id, messageId: job.message_id }, "Failed to dispatch outbound message");
@@ -291,6 +330,137 @@ export class MessageDispatchService {
       mimeType: candidate.mimeType,
       dataBase64: candidate.dataBase64
     };
+  }
+
+  private extractCampaignContext(payload: unknown) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const meta = (payload as { meta?: unknown }).meta;
+
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+      return null;
+    }
+
+    const campaign = (meta as { campaign?: unknown }).campaign;
+
+    if (!campaign || typeof campaign !== "object" || Array.isArray(campaign)) {
+      return null;
+    }
+
+    const candidate = campaign as {
+      campaignId?: unknown;
+      campaignRecipientId?: unknown;
+    };
+
+    return typeof candidate.campaignId === "string" && typeof candidate.campaignRecipientId === "string"
+      ? {
+          campaignId: candidate.campaignId,
+          campaignRecipientId: candidate.campaignRecipientId
+        }
+      : null;
+  }
+
+  private async markCampaignRecipientSent(client: PoolClient, job: MessageDispatchOutboxRecord, sentAt: Date) {
+    const context = this.extractCampaignContext(job.payload);
+
+    if (!context) {
+      return;
+    }
+
+    await client.query(
+      `
+        update campaign_recipients
+        set send_status = 'sent',
+            sent_at = $4,
+            failed_at = null,
+            next_attempt_at = null,
+            error_message = null
+        where organization_id = $1
+          and campaign_id = $2
+          and id = $3
+      `,
+      [job.organization_id, context.campaignId, context.campaignRecipientId, sentAt.toISOString()]
+    );
+
+    await this.refreshCampaignCompletion(job.organization_id, context.campaignId);
+  }
+
+  private async markCampaignRecipientFailed(
+    client: PoolClient,
+    job: MessageDispatchOutboxRecord,
+    errorMessage: string,
+    willRetry: boolean
+  ) {
+    const context = this.extractCampaignContext(job.payload);
+
+    if (!context) {
+      return;
+    }
+
+    if (willRetry) {
+      await client.query(
+        `
+          update campaign_recipients
+          set error_message = $4
+          where organization_id = $1
+            and campaign_id = $2
+            and id = $3
+            and send_status = 'queued'
+        `,
+        [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
+      );
+
+      return;
+    }
+
+    await client.query(
+      `
+        update campaign_recipients
+        set send_status = 'failed',
+            failed_at = timezone('utc', now()),
+            next_attempt_at = null,
+            error_message = $4
+        where organization_id = $1
+          and campaign_id = $2
+          and id = $3
+      `,
+      [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
+    );
+
+    await this.refreshCampaignCompletion(job.organization_id, context.campaignId);
+  }
+
+  private async refreshCampaignCompletion(organizationId: string, campaignId: string) {
+    await query(
+      `
+        with counts as (
+          select
+            count(*) filter (where send_status in ('pending', 'queued')) as open_count,
+            count(*) filter (
+              where send_status = 'failed'
+                and attempt_count < $3
+            ) as retryable_failed_count,
+            count(*) filter (where send_status = 'sent') as sent_count
+          from campaign_recipients
+          where organization_id = $1
+            and campaign_id = $2
+        )
+        update campaigns
+        set status = case
+              when counts.open_count = 0 and counts.retryable_failed_count = 0 and counts.sent_count > 0 then 'completed'
+              when counts.open_count = 0 and counts.retryable_failed_count = 0 and counts.sent_count = 0 then 'failed'
+              else campaigns.status
+            end,
+            updated_at = timezone('utc', now())
+        from counts
+        where campaigns.organization_id = $1
+          and campaigns.id = $2
+          and campaigns.status = 'sending'
+      `,
+      [organizationId, campaignId, env.CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES]
+    );
   }
 }
 

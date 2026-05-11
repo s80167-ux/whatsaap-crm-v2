@@ -9,12 +9,14 @@ import { normalizePhoneNumber } from "../utils/phone.js";
 type CampaignDispatchCandidate = {
   id: string;
   organization_id: string;
-  sender_whatsapp_account_id: string;
+  sender_whatsapp_account_id: string | null;
+  sender_mode: "single" | "round_robin";
   message_template: string;
   delay_per_message_seconds: number;
   batch_size: number;
   batch_pause_seconds: number;
   daily_limit: number;
+  sender_count: string;
   last_queued_at: string | null;
   dispatched_count: string;
   today_count: string;
@@ -33,9 +35,34 @@ type ClaimedCampaignRecipient = {
   product_interest: string | null;
   customer_type: string | null;
   notes: string | null;
+  created_at: string;
   attempt_count: number;
-  sender_whatsapp_account_id: string;
+  assigned_whatsapp_account_id: string | null;
+  sender_assignment_reason: string | null;
+  sender_assignment_index: number | null;
+  sender_assigned_at: string | null;
+  sender_whatsapp_account_id: string | null;
+  sender_mode: "single" | "round_robin";
   message_template: string;
+  delay_per_message_seconds: number;
+  batch_size: number;
+  batch_pause_seconds: number;
+  daily_limit: number;
+};
+
+type CampaignSenderAccount = {
+  whatsapp_account_id: string;
+  sort_order: number;
+  created_at: string;
+  connection_status: string;
+};
+
+type CampaignSenderAssignment = {
+  whatsappAccountId: string;
+  reason: "single" | "round_robin";
+  assignmentIndex: number;
+  assignedAt: string;
+  availableAt: string | null;
 };
 
 export class CampaignDispatchService {
@@ -88,11 +115,21 @@ export class CampaignDispatchService {
           c.id,
           c.organization_id,
           c.sender_whatsapp_account_id,
+          c.sender_mode,
           c.message_template,
           c.delay_per_message_seconds,
           c.batch_size,
           c.batch_pause_seconds,
           c.daily_limit,
+          coalesce(
+            (
+              select count(*)
+              from campaign_sender_accounts csa
+              where csa.campaign_id = c.id
+                and csa.is_enabled = true
+            ),
+            case when c.sender_whatsapp_account_id is not null then 1 else 0 end
+          )::text as sender_count,
           max(cr.queued_at) filter (where cr.send_status in ('queued', 'sent')) as last_queued_at,
           count(*) filter (where cr.send_status in ('queued', 'sent'))::text as dispatched_count,
           count(*) filter (
@@ -117,17 +154,19 @@ export class CampaignDispatchService {
     const now = Date.now();
 
     for (const campaign of candidates.rows) {
+      const senderCount = Math.max(Number(campaign.sender_count) || 0, 1);
       const todayCount = Number(campaign.today_count);
 
-      if (todayCount >= campaign.daily_limit) {
+      if (todayCount >= campaign.daily_limit * senderCount) {
         continue;
       }
 
       const dispatchedCount = Number(campaign.dispatched_count);
+      const effectiveBatchSize = Math.max(campaign.batch_size * senderCount, 1);
       const waitSeconds =
-        dispatchedCount > 0 && dispatchedCount % campaign.batch_size === 0
+        dispatchedCount > 0 && dispatchedCount % effectiveBatchSize === 0
           ? campaign.batch_pause_seconds
-          : campaign.delay_per_message_seconds;
+          : Math.max(1, Math.ceil(campaign.delay_per_message_seconds / senderCount));
 
       if (campaign.last_queued_at) {
         const nextAllowedAt = new Date(campaign.last_queued_at).getTime() + waitSeconds * 1000;
@@ -189,9 +228,19 @@ export class CampaignDispatchService {
             cr.product_interest,
             cr.customer_type,
             cr.notes,
+            cr.created_at,
             cr.attempt_count,
+            cr.assigned_whatsapp_account_id,
+            cr.sender_assignment_reason,
+            cr.sender_assignment_index,
+            cr.sender_assigned_at,
             c.sender_whatsapp_account_id,
-            c.message_template
+            c.sender_mode,
+            c.message_template,
+            c.delay_per_message_seconds,
+            c.batch_size,
+            c.batch_pause_seconds,
+            c.daily_limit
         `,
         [campaignId, env.CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES]
       );
@@ -222,11 +271,13 @@ export class CampaignDispatchService {
         return;
       }
 
+      const senderAssignment = await this.resolveSenderAssignment(recipient);
+
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
         campaignId: recipient.campaign_id,
         campaignRecipientId: recipient.id,
-        senderWhatsAppAccountId: recipient.sender_whatsapp_account_id,
+        senderAssignment,
         phoneNumber: recipient.phone_normalized,
         profileName: recipient.name,
         text: renderCampaignMessage(recipient.message_template, {
@@ -245,9 +296,13 @@ export class CampaignDispatchService {
       await query(
         `
           update campaign_recipients
-          set send_status = 'sent',
+          set send_status = 'queued',
               message_id = $4,
-              sent_at = timezone('utc', now()),
+              assigned_whatsapp_account_id = $5,
+              sender_assignment_reason = $6,
+              sender_assignment_index = $7,
+              sender_assigned_at = $8,
+              sent_at = null,
               failed_at = null,
               next_attempt_at = null,
               error_message = null
@@ -255,7 +310,16 @@ export class CampaignDispatchService {
             and campaign_id = $2
             and id = $3
         `,
-        [recipient.organization_id, recipient.campaign_id, recipient.id, message.id]
+        [
+          recipient.organization_id,
+          recipient.campaign_id,
+          recipient.id,
+          message.id,
+          senderAssignment.whatsappAccountId,
+          senderAssignment.reason,
+          senderAssignment.assignmentIndex,
+          senderAssignment.assignedAt
+        ]
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to send campaign message";
@@ -307,7 +371,7 @@ export class CampaignDispatchService {
     organizationId: string;
     campaignId: string;
     campaignRecipientId: string;
-    senderWhatsAppAccountId: string;
+    senderAssignment: CampaignSenderAssignment;
     phoneNumber: string;
     profileName?: string | null;
     text: string;
@@ -322,7 +386,7 @@ export class CampaignDispatchService {
     const conversation = await withTransaction(async (client) => {
       const { contact } = await this.contactService.findOrCreateCanonicalContact(client, {
         organizationId: input.organizationId,
-        whatsappAccountId: input.senderWhatsAppAccountId,
+        whatsappAccountId: input.senderAssignment.whatsappAccountId,
         whatsappJid: recipientJid,
         phoneRaw: normalizedPhone,
         profileName: input.profileName ?? null,
@@ -332,7 +396,7 @@ export class CampaignDispatchService {
 
       return this.conversationService.findOrCreateConversation(client, {
         organizationId: input.organizationId,
-        whatsappAccountId: input.senderWhatsAppAccountId,
+        whatsappAccountId: input.senderAssignment.whatsappAccountId,
         contactId: contact.id
       });
     });
@@ -340,16 +404,170 @@ export class CampaignDispatchService {
     return this.sendMessageService.send(
       {
         organizationId: input.organizationId,
-        whatsappAccountId: input.senderWhatsAppAccountId,
+        whatsappAccountId: input.senderAssignment.whatsappAccountId,
         conversationId: conversation.id,
         text: input.text,
+        outboxAvailableAt: env.OUTBOUND_DISPATCH_MODE === "worker_only" ? input.senderAssignment.availableAt : null,
         campaignContext: {
           campaignId: input.campaignId,
           campaignRecipientId: input.campaignRecipientId
         }
       },
-      { waitForDispatch: true }
+      { waitForDispatch: false }
     );
+  }
+
+  private async resolveSenderAssignment(recipient: ClaimedCampaignRecipient): Promise<CampaignSenderAssignment> {
+    return withTransaction(async (client) => {
+      const activeSenders = await this.loadActiveSenders(client, recipient.organization_id, recipient.campaign_id);
+      const assignedAt = recipient.sender_assigned_at ?? new Date().toISOString();
+
+      if (recipient.sender_mode === "single") {
+        const senderId = recipient.sender_whatsapp_account_id;
+
+        if (!senderId) {
+          throw new Error("Campaign sender is not configured");
+        }
+
+        if (!activeSenders.some((sender) => sender.whatsapp_account_id === senderId)) {
+          throw new Error("Selected campaign sender is not connected");
+        }
+
+        const assignmentIndex =
+          recipient.sender_assignment_index ?? (await this.getRecipientSequenceIndex(client, recipient.campaign_id, recipient.created_at, recipient.id));
+
+        await this.persistSenderAssignment(client, recipient, {
+          whatsappAccountId: senderId,
+          reason: "single",
+          assignmentIndex,
+          assignedAt,
+          availableAt: this.computeAvailableAt(recipient, assignmentIndex)
+        });
+
+        return {
+          whatsappAccountId: senderId,
+          reason: "single",
+          assignmentIndex,
+          assignedAt,
+          availableAt: this.computeAvailableAt(recipient, assignmentIndex)
+        };
+      }
+
+      if (recipient.assigned_whatsapp_account_id) {
+        const stillActive = activeSenders.some((sender) => sender.whatsapp_account_id === recipient.assigned_whatsapp_account_id);
+
+        if (stillActive && recipient.sender_assignment_index !== null) {
+          return {
+            whatsappAccountId: recipient.assigned_whatsapp_account_id,
+            reason: "round_robin",
+            assignmentIndex: recipient.sender_assignment_index,
+            assignedAt,
+            availableAt: this.computeAvailableAt(recipient, recipient.sender_assignment_index)
+          };
+        }
+      }
+
+      if (activeSenders.length === 0) {
+        throw new Error("No connected sender is available for this campaign");
+      }
+
+      const sequenceIndex = await this.getRecipientSequenceIndex(client, recipient.campaign_id, recipient.created_at, recipient.id);
+      const senderPosition = sequenceIndex % activeSenders.length;
+      const assignmentIndex = Math.floor(sequenceIndex / activeSenders.length);
+      const sender = activeSenders[senderPosition];
+
+      const assignment = {
+        whatsappAccountId: sender.whatsapp_account_id,
+        reason: "round_robin" as const,
+        assignmentIndex,
+        assignedAt,
+        availableAt: this.computeAvailableAt(recipient, assignmentIndex)
+      };
+
+      await this.persistSenderAssignment(client, recipient, assignment);
+      return assignment;
+    });
+  }
+
+  private async loadActiveSenders(client: Parameters<typeof withTransaction>[0] extends (client: infer T) => Promise<unknown> ? T : never, organizationId: string, campaignId: string) {
+    const result = await client.query<CampaignSenderAccount>(
+      `
+        select
+          csa.whatsapp_account_id,
+          csa.sort_order,
+          csa.created_at,
+          lower(coalesce(wa.connection_status, 'disconnected')) as connection_status
+        from campaign_sender_accounts csa
+        join whatsapp_accounts wa on wa.id = csa.whatsapp_account_id
+        where csa.organization_id = $1
+          and csa.campaign_id = $2
+          and csa.is_enabled = true
+        order by csa.sort_order asc, csa.created_at asc, csa.id asc
+      `,
+      [organizationId, campaignId]
+    );
+
+    return result.rows.filter((sender) => ["connected", "open", "ready"].includes(sender.connection_status));
+  }
+
+  private async getRecipientSequenceIndex(
+    client: Parameters<typeof withTransaction>[0] extends (client: infer T) => Promise<unknown> ? T : never,
+    campaignId: string,
+    createdAt: string,
+    recipientId: string
+  ) {
+    const result = await client.query<{ sequence_index: string }>(
+      `
+        select greatest(count(*) - 1, 0)::text as sequence_index
+        from campaign_recipients
+        where campaign_id = $1
+          and (
+            created_at < $2
+            or (created_at = $2 and id <= $3)
+          )
+      `,
+      [campaignId, createdAt, recipientId]
+    );
+
+    return Number(result.rows[0]?.sequence_index ?? 0);
+  }
+
+  private async persistSenderAssignment(
+    client: Parameters<typeof withTransaction>[0] extends (client: infer T) => Promise<unknown> ? T : never,
+    recipient: ClaimedCampaignRecipient,
+    assignment: CampaignSenderAssignment
+  ) {
+    await client.query(
+      `
+        update campaign_recipients
+        set assigned_whatsapp_account_id = $4,
+            sender_assignment_reason = $5,
+            sender_assignment_index = $6,
+            sender_assigned_at = $7
+        where organization_id = $1
+          and campaign_id = $2
+          and id = $3
+      `,
+      [
+        recipient.organization_id,
+        recipient.campaign_id,
+        recipient.id,
+        assignment.whatsappAccountId,
+        assignment.reason,
+        assignment.assignmentIndex,
+        assignment.assignedAt
+      ]
+    );
+  }
+
+  private computeAvailableAt(recipient: ClaimedCampaignRecipient, assignmentIndex: number) {
+    const dailyLimit = Math.max(recipient.daily_limit, 1);
+    const indexWithinDay = assignmentIndex % dailyLimit;
+    const dayOffset = Math.floor(assignmentIndex / dailyLimit);
+    const pauseBlocks = Math.floor(indexWithinDay / Math.max(recipient.batch_size, 1));
+    const secondsOffset = indexWithinDay * recipient.delay_per_message_seconds + pauseBlocks * recipient.batch_pause_seconds;
+    const availableAt = new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000 + secondsOffset * 1000);
+    return availableAt.toISOString();
   }
 
   private async refreshCampaignCompletion(organizationId: string, campaignId: string) {

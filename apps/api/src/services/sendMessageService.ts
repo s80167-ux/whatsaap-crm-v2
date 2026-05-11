@@ -29,6 +29,9 @@ export class SendMessageService {
 
     this.assertConnectorSendIsAllowed();
 
+    const dispatchSource = resolveDispatchSource(input);
+    const dispatchPriority = resolveDispatchPriority(dispatchSource);
+
     const { message, outboxId } = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
         `
@@ -150,15 +153,8 @@ export class SendMessageService {
         }
       });
 
-      const outbox = await this.messageDispatchService.enqueue(client, {
-        organizationId: input.organizationId,
-        messageId: draft.id,
-        conversationId: input.conversationId,
-        contactId: conversationRow.contact_id,
-        whatsappAccountId: input.whatsappAccountId,
-        recipientJid,
-        messageText: normalizedText || input.attachment?.fileName || draft.content_text || "",
-        payload: input.attachment
+      const outboxPayload = {
+        ...(input.attachment
           ? {
               attachment: {
                 kind: input.attachment.kind,
@@ -167,7 +163,33 @@ export class SendMessageService {
                 dataBase64: input.attachment.dataBase64
               }
             }
-          : null
+          : {}),
+        meta: {
+          source: dispatchSource,
+          priority: dispatchPriority,
+          ...(input.campaignContext
+            ? {
+                campaign: {
+                  campaignId: input.campaignContext.campaignId,
+                  campaignRecipientId: input.campaignContext.campaignRecipientId
+                }
+              }
+            : {})
+        }
+      };
+
+      const outbox = await this.messageDispatchService.enqueue(client, {
+        organizationId: input.organizationId,
+        messageId: draft.id,
+        conversationId: input.conversationId,
+        contactId: conversationRow.contact_id,
+        whatsappAccountId: input.whatsappAccountId,
+        recipientJid,
+        messageText: normalizedText || input.attachment?.fileName || draft.content_text || "",
+        source: dispatchSource,
+        priority: dispatchPriority,
+        availableAt: input.outboxAvailableAt ?? null,
+        payload: outboxPayload
       });
 
       await this.conversationRepository.bumpLastMessage(client, {
@@ -197,10 +219,21 @@ export class SendMessageService {
       }
 
       return {
-  message: draft,
-  outboxId: outbox.id
-};
+        message: draft,
+        outboxId: outbox.id
+      };
     });
+
+    if (env.OUTBOUND_DISPATCH_MODE === "worker_only") {
+      if (options.waitForDispatch) {
+        logger.info(
+          { outboxId, messageId: message.id },
+          "Synchronous outbound dispatch is disabled because OUTBOUND_DISPATCH_MODE=worker_only"
+        );
+      }
+
+      return message;
+    }
 
     if (options.waitForDispatch) {
       const dispatchResult = await this.messageDispatchService.drainOne(outboxId);
@@ -213,9 +246,10 @@ export class SendMessageService {
       }
     } else {
       void this.messageDispatchService.drainOne(outboxId).catch((error) => {
-  logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
-});
+        logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
+      });
     }
+
     return message;
   }
 
@@ -229,6 +263,31 @@ export class SendMessageService {
       400,
       "local_connector_send_disabled"
     );
+  }
+}
+
+function resolveDispatchSource(input: SendMessageInput) {
+  if (input.campaignContext) {
+    return "campaign" as const;
+  }
+
+  if (input.quickReplyTemplateId) {
+    return "quick_reply" as const;
+  }
+
+  return "manual" as const;
+}
+
+function resolveDispatchPriority(source: "manual" | "quick_reply" | "campaign") {
+  switch (source) {
+    case "manual":
+      return 10;
+    case "quick_reply":
+      return 8;
+    case "campaign":
+      return 3;
+    default:
+      return 5;
   }
 }
 

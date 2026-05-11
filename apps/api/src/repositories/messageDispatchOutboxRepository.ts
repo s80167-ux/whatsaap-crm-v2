@@ -10,10 +10,13 @@ export interface MessageDispatchOutboxRecord {
   recipient_jid: string;
   message_text: string;
   payload: unknown;
+  source: "manual" | "quick_reply" | "campaign" | "system";
+  priority: number;
   processing_status: "pending" | "processing" | "dispatched" | "failed";
   attempt_count: number;
   last_attempt_at: string | null;
   next_attempt_at: string | null;
+  available_at: string | null;
   claimed_at: string | null;
   dispatched_at: string | null;
   connector_message_id: string | null;
@@ -33,6 +36,9 @@ export class MessageDispatchOutboxRepository {
       whatsappAccountId: string;
       recipientJid: string;
       messageText: string;
+      source: "manual" | "quick_reply" | "campaign" | "system";
+      priority: number;
+      availableAt?: string | null;
       payload?: unknown;
     }
   ): Promise<MessageDispatchOutboxRecord> {
@@ -46,13 +52,20 @@ export class MessageDispatchOutboxRepository {
           whatsapp_account_id,
           recipient_jid,
           message_text,
+          source,
+          priority,
+          available_at,
           payload
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         on conflict (message_id)
         do update set
+          whatsapp_account_id = excluded.whatsapp_account_id,
           recipient_jid = excluded.recipient_jid,
           message_text = excluded.message_text,
+          source = excluded.source,
+          priority = excluded.priority,
+          available_at = excluded.available_at,
           payload = excluded.payload
         returning *
       `,
@@ -64,6 +77,9 @@ export class MessageDispatchOutboxRepository {
         input.whatsappAccountId,
         input.recipientJid,
         input.messageText,
+        input.source,
+        input.priority,
+        input.availableAt ?? null,
         input.payload ?? null
       ]
     );
@@ -94,7 +110,8 @@ export class MessageDispatchOutboxRepository {
           where processing_status in ('pending', 'failed')
             and attempt_count < $2
             and coalesce(next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
-          order by created_at asc
+            and coalesce(available_at, timezone('utc', now())) <= timezone('utc', now())
+          order by priority desc, coalesce(available_at, next_attempt_at, created_at) asc, created_at asc
           for update skip locked
           limit $1
         )
@@ -114,6 +131,24 @@ export class MessageDispatchOutboxRepository {
     return result.rows;
   }
 
+  async listDueJobs(client: PoolClient, limit: number, maxRetries: number): Promise<MessageDispatchOutboxRecord[]> {
+    const result = await client.query<MessageDispatchOutboxRecord>(
+      `
+        select *
+        from message_dispatch_outbox
+        where processing_status in ('pending', 'failed')
+          and attempt_count < $1
+          and coalesce(next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
+          and coalesce(available_at, timezone('utc', now())) <= timezone('utc', now())
+        order by priority desc, coalesce(available_at, next_attempt_at, created_at) asc, created_at asc
+        limit $2
+      `,
+      [maxRetries, limit]
+    );
+
+    return result.rows;
+  }
+
   async claimById(client: PoolClient, input: { outboxId: string; maxRetries: number }): Promise<MessageDispatchOutboxRecord | null> {
     const result = await client.query<MessageDispatchOutboxRecord>(
       `
@@ -127,6 +162,7 @@ export class MessageDispatchOutboxRepository {
           and processing_status in ('pending', 'failed')
           and attempt_count < $2
           and coalesce(next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
+          and coalesce(available_at, timezone('utc', now())) <= timezone('utc', now())
         returning *
       `,
       [input.outboxId, input.maxRetries]
@@ -178,7 +214,7 @@ export class MessageDispatchOutboxRepository {
     input: {
       outboxId: string;
       errorMessage: string;
-      nextAttemptAt: Date;
+      nextAttemptAt: Date | null;
       payload?: unknown;
     }
   ) {
@@ -193,7 +229,7 @@ export class MessageDispatchOutboxRepository {
             updated_at = timezone('utc', now())
         where id = $1
       `,
-      [input.outboxId, input.nextAttemptAt.toISOString(), input.errorMessage, input.payload ?? null]
+      [input.outboxId, input.nextAttemptAt?.toISOString() ?? null, input.errorMessage, input.payload ?? null]
     );
   }
 

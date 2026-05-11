@@ -69,10 +69,15 @@ const tempoSchema = z.object({
   stopOnHighFailure: z.boolean().default(true)
 });
 
+const senderModeSchema = z.enum(["single", "round_robin"]);
+const senderPoolSchema = z.array(z.string().uuid()).min(1).max(32);
+
 const createCampaignBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().trim().min(1).max(160),
-  senderWhatsAppAccountId: z.string().uuid(),
+  senderWhatsAppAccountId: z.string().uuid().optional(),
+  senderWhatsAppAccountIds: senderPoolSchema.optional(),
+  senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1).max(5000),
   tempo: tempoSchema
@@ -82,6 +87,8 @@ const updateCampaignBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().trim().min(1).max(160).optional(),
   senderWhatsAppAccountId: z.string().uuid().optional(),
+  senderWhatsAppAccountIds: senderPoolSchema.optional(),
+  senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
   messageTemplate: z.string().trim().min(1).max(5000).optional(),
   tempo: tempoSchema.optional()
@@ -96,7 +103,9 @@ const sendTestBodySchema = z.object({
 
 const startCampaignBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
-  senderWhatsAppAccountId: z.string().uuid(),
+  senderWhatsAppAccountId: z.string().uuid().optional(),
+  senderWhatsAppAccountIds: senderPoolSchema.optional(),
+  senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1),
   speedPreset: z.enum(["safe", "normal", "custom"]).default("safe")
@@ -138,6 +147,7 @@ type CampaignRecord = {
   name: string;
   status: string;
   audience_group_id: string | null;
+  sender_mode: "single" | "round_robin";
   sender_whatsapp_account_id: string | null;
   message_template: string | null;
   speed_preset: string;
@@ -154,6 +164,7 @@ type CampaignRecord = {
 type CampaignSummaryRecord = CampaignRecord & {
   audience_group_name: string | null;
   audience_valid_count: number | null;
+  sender_whatsapp_account_ids: string[] | null;
   sender_whatsapp_label: string | null;
   sender_phone_number: string | null;
   recipients: string;
@@ -260,47 +271,62 @@ export async function createCampaign(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = createCampaignBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
+  const senderSelection = resolveSenderSelection(input);
 
-  await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
 
-  const result = await query<CampaignRecord>(
-    `
-      insert into campaigns (
-        organization_id,
-        name,
-        status,
-        audience_group_id,
-        sender_whatsapp_account_id,
-        message_template,
-        speed_preset,
-        delay_per_message_seconds,
-        batch_size,
-        batch_pause_seconds,
-        daily_limit,
-        stop_on_high_failure,
-        created_by
-      )
-      values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      returning *
-    `,
-    [
-      organizationId,
-      input.name,
-      input.audienceGroupId,
-      input.senderWhatsAppAccountId,
-      input.messageTemplate,
-      input.tempo.speedPreset,
-      input.tempo.delayPerMessageSeconds,
-      input.tempo.batchSize,
-      input.tempo.batchPauseSeconds,
-      input.tempo.dailyLimit,
-      input.tempo.stopOnHighFailure,
-      auth.organizationUserId
-    ]
-  );
+  const result = await withTransaction(async (client) => {
+    const inserted = await client.query<CampaignRecord>(
+      `
+        insert into campaigns (
+          organization_id,
+          name,
+          status,
+          audience_group_id,
+          sender_mode,
+          sender_whatsapp_account_id,
+          message_template,
+          speed_preset,
+          delay_per_message_seconds,
+          batch_size,
+          batch_pause_seconds,
+          daily_limit,
+          stop_on_high_failure,
+          created_by
+        )
+        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        returning *
+      `,
+      [
+        organizationId,
+        input.name,
+        input.audienceGroupId,
+        senderSelection.senderMode,
+        senderSelection.primarySenderWhatsAppAccountId,
+        input.messageTemplate,
+        input.tempo.speedPreset,
+        input.tempo.delayPerMessageSeconds,
+        input.tempo.batchSize,
+        input.tempo.batchPauseSeconds,
+        input.tempo.dailyLimit,
+        input.tempo.stopOnHighFailure,
+        auth.organizationUserId
+      ]
+    );
 
-  return response.status(201).json({ data: result.rows[0] });
+    const campaign = inserted.rows[0];
+
+    await syncCampaignSenderAccounts(client, {
+      organizationId,
+      campaignId: campaign.id,
+      senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds
+    });
+
+    return campaign;
+  });
+
+  return response.status(201).json({ data: result });
 }
 
 export async function getCampaign(request: Request, response: Response) {
@@ -483,8 +509,17 @@ export async function updateCampaign(request: Request, response: Response) {
     throw new AppError("Campaign not found", 404, "campaign_not_found");
   }
 
-  if (input.senderWhatsAppAccountId) {
-    await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const hasSenderSelectionInput =
+    Boolean(input.senderWhatsAppAccountId) ||
+    Boolean(input.senderWhatsAppAccountIds?.length) ||
+    Boolean(input.senderMode);
+
+  const senderSelection = hasSenderSelectionInput
+    ? resolveSenderSelection(input, existing.sender_whatsapp_account_id)
+    : null;
+
+  if (senderSelection) {
+    await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   }
 
   if (input.audienceGroupId) {
@@ -492,41 +527,55 @@ export async function updateCampaign(request: Request, response: Response) {
   }
 
   const nextTempo = input.tempo;
-  const result = await query<CampaignRecord>(
-    `
-      update campaigns
-      set name = coalesce($3, name),
-          audience_group_id = coalesce($4, audience_group_id),
-          sender_whatsapp_account_id = coalesce($5, sender_whatsapp_account_id),
-          message_template = coalesce($6, message_template),
-          speed_preset = coalesce($7, speed_preset),
-          delay_per_message_seconds = coalesce($8, delay_per_message_seconds),
-          batch_size = coalesce($9, batch_size),
-          batch_pause_seconds = coalesce($10, batch_pause_seconds),
-          daily_limit = coalesce($11, daily_limit),
-          stop_on_high_failure = coalesce($12, stop_on_high_failure),
-          updated_at = timezone('utc', now())
-      where organization_id = $1
-        and id = $2
-      returning *
-    `,
-    [
-      organizationId,
-      campaignId,
-      input.name ?? null,
-      input.audienceGroupId ?? null,
-      input.senderWhatsAppAccountId ?? null,
-      input.messageTemplate ?? null,
-      nextTempo?.speedPreset ?? null,
-      nextTempo?.delayPerMessageSeconds ?? null,
-      nextTempo?.batchSize ?? null,
-      nextTempo?.batchPauseSeconds ?? null,
-      nextTempo?.dailyLimit ?? null,
-      nextTempo?.stopOnHighFailure ?? null
-    ]
-  );
+  const result = await withTransaction(async (client) => {
+    const updated = await client.query<CampaignRecord>(
+      `
+        update campaigns
+        set name = coalesce($3, name),
+            audience_group_id = coalesce($4, audience_group_id),
+            sender_mode = coalesce($5, sender_mode),
+            sender_whatsapp_account_id = coalesce($6, sender_whatsapp_account_id),
+            message_template = coalesce($7, message_template),
+            speed_preset = coalesce($8, speed_preset),
+            delay_per_message_seconds = coalesce($9, delay_per_message_seconds),
+            batch_size = coalesce($10, batch_size),
+            batch_pause_seconds = coalesce($11, batch_pause_seconds),
+            daily_limit = coalesce($12, daily_limit),
+            stop_on_high_failure = coalesce($13, stop_on_high_failure),
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+        returning *
+      `,
+      [
+        organizationId,
+        campaignId,
+        input.name ?? null,
+        input.audienceGroupId ?? null,
+        senderSelection?.senderMode ?? null,
+        senderSelection?.primarySenderWhatsAppAccountId ?? null,
+        input.messageTemplate ?? null,
+        nextTempo?.speedPreset ?? null,
+        nextTempo?.delayPerMessageSeconds ?? null,
+        nextTempo?.batchSize ?? null,
+        nextTempo?.batchPauseSeconds ?? null,
+        nextTempo?.dailyLimit ?? null,
+        nextTempo?.stopOnHighFailure ?? null
+      ]
+    );
 
-  return response.json({ data: result.rows[0] });
+    if (senderSelection) {
+      await syncCampaignSenderAccounts(client, {
+        organizationId,
+        campaignId,
+        senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds
+      });
+    }
+
+    return updated.rows[0];
+  });
+
+  return response.json({ data: result });
 }
 
 export async function sendCampaignTestPreview(request: Request, response: Response) {
@@ -578,12 +627,13 @@ export async function sendCampaignTest(request: Request, response: Response) {
 export async function startCampaignPreview(request: Request, response: Response) {
   const input = startCampaignBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
-  await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const senderSelection = resolveSenderSelection(input);
+  await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
   return response.json({
     data: {
       ok: true,
-      message: `Campaign queued using ${input.senderWhatsAppAccountId} for ${input.audienceGroupId} with ${input.speedPreset} tempo.`
+      message: `Campaign queued using ${senderSelection.senderWhatsAppAccountIds.length} sender${senderSelection.senderWhatsAppAccountIds.length === 1 ? "" : "s"} for ${input.audienceGroupId} with ${input.speedPreset} tempo.`
     }
   });
 }
@@ -598,13 +648,15 @@ export async function startCampaign(request: Request, response: Response) {
     throw new AppError("Campaign not found", 404, "campaign_not_found");
   }
 
+  const senderSelection = resolveSenderSelection(input, campaign.sender_whatsapp_account_id);
+
   if (!["draft", "scheduled", "failed"].includes(campaign.status)) {
     throw new AppError("Only draft, scheduled or failed campaigns can be started", 409, "campaign_not_startable", {
       status: campaign.status
     });
   }
 
-  await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
 
   const snapshot = await snapshotCampaignRecipients({
@@ -617,34 +669,46 @@ export async function startCampaign(request: Request, response: Response) {
     throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
   }
 
-  const result = await query<CampaignRecord>(
-    `
-      update campaigns
-      set status = 'sending',
-          sender_whatsapp_account_id = $3,
-          audience_group_id = $4,
-          message_template = $5,
-          speed_preset = $6,
-          updated_at = timezone('utc', now())
-      where organization_id = $1
-        and id = $2
-      returning *
-    `,
-    [
+  const result = await withTransaction(async (client) => {
+    const updated = await client.query<CampaignRecord>(
+      `
+        update campaigns
+        set status = 'sending',
+            sender_mode = $3,
+            sender_whatsapp_account_id = $4,
+            audience_group_id = $5,
+            message_template = $6,
+            speed_preset = $7,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+        returning *
+      `,
+      [
+        organizationId,
+        campaignId,
+        senderSelection.senderMode,
+        senderSelection.primarySenderWhatsAppAccountId,
+        input.audienceGroupId,
+        input.messageTemplate,
+        input.speedPreset
+      ]
+    );
+
+    await syncCampaignSenderAccounts(client, {
       organizationId,
       campaignId,
-      input.senderWhatsAppAccountId,
-      input.audienceGroupId,
-      input.messageTemplate,
-      input.speedPreset
-    ]
-  );
+      senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds
+    });
+
+    return updated.rows[0];
+  });
 
   return response.json({
     data: {
       ok: true,
       message: `Campaign started. ${snapshot.length} recipient${snapshot.length === 1 ? "" : "s"} scheduled for paced dispatch.`,
-      campaign: result.rows[0],
+      campaign: result,
       scheduled: snapshot.length
     }
   });
@@ -970,6 +1034,18 @@ async function listCampaignSummaries(organizationId: string) {
         c.*,
         ag.name as audience_group_name,
         ag.valid_count as audience_valid_count,
+        coalesce(
+          (
+            select array_agg(csa.whatsapp_account_id order by csa.sort_order asc, csa.created_at asc, csa.id asc)
+            from campaign_sender_accounts csa
+            where csa.campaign_id = c.id
+              and csa.is_enabled = true
+          ),
+          case
+            when c.sender_whatsapp_account_id is not null then array[c.sender_whatsapp_account_id]
+            else array[]::uuid[]
+          end
+        ) as sender_whatsapp_account_ids,
         max(coalesce(to_jsonb(wa)->>'label', to_jsonb(wa)->>'name', to_jsonb(wa)->>'display_name')) as sender_whatsapp_label,
         max(coalesce(
           to_jsonb(wa)->>'account_phone_e164',
@@ -1005,6 +1081,18 @@ async function getCampaignSummary(organizationId: string, campaignId: string) {
         c.*,
         ag.name as audience_group_name,
         ag.valid_count as audience_valid_count,
+        coalesce(
+          (
+            select array_agg(csa.whatsapp_account_id order by csa.sort_order asc, csa.created_at asc, csa.id asc)
+            from campaign_sender_accounts csa
+            where csa.campaign_id = c.id
+              and csa.is_enabled = true
+          ),
+          case
+            when c.sender_whatsapp_account_id is not null then array[c.sender_whatsapp_account_id]
+            else array[]::uuid[]
+          end
+        ) as sender_whatsapp_account_ids,
         max(coalesce(to_jsonb(wa)->>'label', to_jsonb(wa)->>'name', to_jsonb(wa)->>'display_name')) as sender_whatsapp_label,
         max(coalesce(
           to_jsonb(wa)->>'account_phone_e164',
@@ -1077,7 +1165,9 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     audienceGroupId: row.audience_group_id,
     audienceGroupName: row.audience_group_name,
     audienceValidCount: row.audience_valid_count ?? 0,
+    senderMode: row.sender_mode,
     senderWhatsAppAccountId: row.sender_whatsapp_account_id,
+    senderWhatsAppAccountIds: row.sender_whatsapp_account_ids ?? (row.sender_whatsapp_account_id ? [row.sender_whatsapp_account_id] : []),
     senderWhatsAppLabel: row.sender_whatsapp_label,
     senderPhoneNumber: row.sender_phone_number,
     speedPreset: row.speed_preset,
@@ -1194,6 +1284,83 @@ async function assertConnectedSender(organizationId: string, senderWhatsAppAccou
       throw error;
     }
   }
+}
+
+async function assertConnectedSenders(organizationId: string, senderWhatsAppAccountIds: string[]) {
+  for (const senderWhatsAppAccountId of senderWhatsAppAccountIds) {
+    await assertConnectedSender(organizationId, senderWhatsAppAccountId);
+  }
+}
+
+function resolveSenderSelection(
+  input: {
+    senderWhatsAppAccountId?: string;
+    senderWhatsAppAccountIds?: string[];
+    senderMode?: "single" | "round_robin";
+  },
+  fallbackSenderWhatsAppAccountId?: string | null
+) {
+  const senderIds = Array.from(
+    new Set(
+      [
+        ...(input.senderWhatsAppAccountIds ?? []),
+        input.senderWhatsAppAccountId,
+        fallbackSenderWhatsAppAccountId ?? undefined
+      ].filter((value): value is string => Boolean(value))
+    )
+  );
+
+  if (senderIds.length === 0) {
+    throw new AppError("At least one connected WhatsApp sender is required", 400, "sender_not_connected");
+  }
+
+  return {
+    primarySenderWhatsAppAccountId: input.senderWhatsAppAccountId ?? senderIds[0],
+    senderWhatsAppAccountIds: senderIds,
+    senderMode: senderIds.length > 1 ? "round_robin" : (input.senderMode ?? "single")
+  };
+}
+
+async function syncCampaignSenderAccounts(
+  client: Parameters<typeof withTransaction>[0] extends (client: infer T) => Promise<unknown> ? T : never,
+  input: {
+    organizationId: string;
+    campaignId: string;
+    senderWhatsAppAccountIds: string[];
+  }
+) {
+  for (const [index, senderWhatsAppAccountId] of input.senderWhatsAppAccountIds.entries()) {
+    await client.query(
+      `
+        insert into campaign_sender_accounts (
+          organization_id,
+          campaign_id,
+          whatsapp_account_id,
+          is_enabled,
+          sort_order
+        )
+        values ($1, $2, $3, true, $4)
+        on conflict (campaign_id, whatsapp_account_id)
+        do update set
+          is_enabled = true,
+          sort_order = excluded.sort_order,
+          updated_at = timezone('utc', now())
+      `,
+      [input.organizationId, input.campaignId, senderWhatsAppAccountId, index]
+    );
+  }
+
+  await client.query(
+    `
+      update campaign_sender_accounts
+      set is_enabled = false,
+          updated_at = timezone('utc', now())
+      where organization_id = $1
+        and campaign_id = $2
+        and not (whatsapp_account_id = any($3::uuid[]))
+    `,
+    [input.organizationId, input.campaignId, input.senderWhatsAppAccountIds]
+  );
 }
 
 async function assertReadyAudienceGroup(organizationId: string, audienceGroupId: string) {

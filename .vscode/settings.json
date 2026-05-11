@@ -1,3 +1,7 @@
 {
-    "markdown.validate.enabled": true
+    "markdown.validate.enabled": true,
+    "files.associations": {
+        "infra/sql/migrations/*.sql": "plaintext",
+        "database/*.sql": "plaintext"
+    }
 }
