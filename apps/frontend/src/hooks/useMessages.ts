@@ -15,6 +15,6 @@ export function useMessages(
     queryFn: () => fetchMessages(conversationId!, range, organizationId),
     enabled: Boolean(conversationId),
     refetchInterval: conversationId ? options?.refetchIntervalMs : false,
-    refetchIntervalInBackground: Boolean(conversationId && options?.refetchIntervalMs)
+    refetchIntervalInBackground: false
   });
 }

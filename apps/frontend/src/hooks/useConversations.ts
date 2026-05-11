@@ -15,6 +15,6 @@ export function useConversations(
     queryFn: () => fetchConversations(range, organizationId),
     enabled,
     refetchInterval: options?.refetchIntervalMs,
-    refetchIntervalInBackground: Boolean(options?.refetchIntervalMs)
+    refetchIntervalInBackground: false
   });
 }

@@ -203,6 +203,17 @@ export async function getMe(request: Request, response: Response) {
   return response.json({ data: profile, csrfToken });
 }
 
+export async function getRealtimeToken(request: Request, response: Response) {
+  requireAuth(request);
+
+  if (!request.authSession?.accessToken) {
+    throw new AppError("Realtime token is unavailable", 401, "realtime_token_unavailable");
+  }
+
+  setNoStore(response);
+  return response.json({ data: { accessToken: request.authSession.accessToken } });
+}
+
 export async function updateMyPassword(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = updatePasswordSchema.parse(request.body);

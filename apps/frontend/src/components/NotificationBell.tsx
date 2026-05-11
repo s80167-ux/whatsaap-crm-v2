@@ -3,6 +3,7 @@ import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "../hooks/useNotifications";
+import { useRefetchOnPageActive } from "../hooks/useRefetchOnPageActive";
 import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 import type { NotificationItem } from "../types/api";
 
@@ -10,10 +11,13 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const { data, isLoading } = useNotifications();
+  const { data, isLoading, refetch } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   useRealtimeNotifications();
+  useRefetchOnPageActive(() => {
+    void refetch();
+  });
   const notifications = data?.data ?? [];
   const unreadCount = data?.unreadCount ?? 0;
   const unreadLabel = unreadCount > 99 ? "99+" : String(unreadCount);

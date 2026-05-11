@@ -13,6 +13,7 @@ import { PopupOverlay } from "../components/PopupOverlay";
 import { useConversations } from "../hooks/useConversations";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useMessages } from "../hooks/useMessages";
+import { useRefetchOnPageActive } from "../hooks/useRefetchOnPageActive";
 import { useRealtimeInbox } from "../hooks/useRealtimeInbox";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { DEFAULT_CHAT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
@@ -46,7 +47,7 @@ export function InboxPage() {
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
     true,
-    { refetchIntervalMs: 2500 }
+    { refetchIntervalMs: false }
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
@@ -133,7 +134,7 @@ export function InboxPage() {
     stableSelectedConversation?.id,
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
-    { refetchIntervalMs: stableSelectedConversation?.id ? 1000 : false }
+    { refetchIntervalMs: false }
   );
 
   useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);
@@ -175,22 +176,13 @@ export function InboxPage() {
     setIsContactSheetOpen(false);
   }, [isMobile, activeOrganizationId]);
 
-  useEffect(() => {
-    const refetchInbox = () => {
-      void queryClient.refetchQueries({ queryKey: conversationQueryKey, exact: true, type: "active" });
+  useRefetchOnPageActive(() => {
+    void queryClient.refetchQueries({ queryKey: conversationQueryKey, exact: true, type: "active" });
 
-      if (stableSelectedConversation?.id) {
-        void queryClient.refetchQueries({ queryKey: messagesQueryKey, exact: true, type: "active" });
-      }
-    };
-
-    refetchInbox();
-    const intervalId = window.setInterval(refetchInbox, stableSelectedConversation?.id ? 1000 : 2500);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [conversationQueryKey, messagesQueryKey, queryClient, stableSelectedConversation?.id]);
+    if (stableSelectedConversation?.id) {
+      void queryClient.refetchQueries({ queryKey: messagesQueryKey, exact: true, type: "active" });
+    }
+  });
 
   function handleConversationSelect(conversation: Conversation) {
     setSelectedConversation(conversation);

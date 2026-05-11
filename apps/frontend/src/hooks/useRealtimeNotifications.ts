@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { fetchRealtimeAccessToken } from "../api/realtime";
 import { getStoredUser } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 
@@ -15,22 +16,52 @@ export function useRealtimeNotifications() {
       return;
     }
 
-    const changes = {
-      event: "*",
-      schema: "public",
-      table: "notifications",
-      ...(user.role === "super_admin" || !organizationId ? {} : { filter: `organization_id=eq.${organizationId}` })
-    } as const;
+    const currentUser = user;
+    const realtimeClient = supabaseClient;
+    let isSubscribed = true;
+    const channels: Array<ReturnType<typeof realtimeClient.channel>> = [];
 
-    const channel = supabaseClient
-      .channel(`crm-notifications-${user.authUserId ?? user.id ?? "current"}`)
-      .on("postgres_changes", changes, () => {
-        void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      })
-      .subscribe();
+    async function subscribe() {
+      try {
+        const accessToken = await fetchRealtimeAccessToken();
+
+        if (!isSubscribed) {
+          return;
+        }
+
+        realtimeClient.realtime.setAuth(accessToken);
+      } catch {
+        return;
+      }
+
+      if (!isSubscribed) {
+        return;
+      }
+
+      const changes = {
+        event: "*",
+        schema: "public",
+        table: "notifications",
+        ...(currentUser.role === "super_admin" || !organizationId ? {} : { filter: `organization_id=eq.${organizationId}` })
+      } as const;
+
+      const channel = realtimeClient
+        .channel(`crm-notifications-${currentUser.id ?? "current"}`)
+        .on("postgres_changes", changes, () => {
+          void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        })
+        .subscribe();
+
+      channels.push(channel);
+    }
+
+    void subscribe();
 
     return () => {
-      void supabaseClient.removeChannel(channel);
+      isSubscribed = false;
+      channels.forEach((channel) => {
+        void realtimeClient.removeChannel(channel);
+      });
     };
   }, [organizationId, queryClient, user]);
 }

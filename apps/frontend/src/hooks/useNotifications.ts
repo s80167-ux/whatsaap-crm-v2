@@ -4,9 +4,7 @@ import { fetchNotifications, markAllNotificationsRead, markNotificationRead } fr
 export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
-    queryFn: () => fetchNotifications(20),
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true
+    queryFn: () => fetchNotifications(20)
   });
 }
 
