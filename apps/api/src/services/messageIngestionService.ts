@@ -85,7 +85,7 @@ export class MessageIngestionService {
               ? input.textBody.trim().slice(0, 160)
               : `New ${normalizeMessageType(input.messageType)} message`;
 
-          await this.notificationsService.createOrUpdate(client, {
+          const notificationId = await this.notificationsService.createOrUpdate(client, {
             organizationId: input.organizationId,
             recipientOrgUserId: conversation.assigned_user_id ?? null,
             type: "inbound_message",
@@ -101,6 +101,15 @@ export class MessageIngestionService {
               messageCount: 1
             }
           });
+          logger.info(
+            {
+              notificationId,
+              organizationId: input.organizationId,
+              conversationId: conversation.id,
+              recipientOrgUserId: conversation.assigned_user_id ?? null
+            },
+            "Created inbound message notification"
+          );
         } catch (error) {
           logger.error({ err: error, conversationId: conversation.id }, "Failed to create inbound message notification");
         }

@@ -5,7 +5,7 @@ export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
     queryFn: () => fetchNotifications(20),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
     refetchIntervalInBackground: true
   });
 }
