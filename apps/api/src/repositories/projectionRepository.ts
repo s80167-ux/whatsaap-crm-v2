@@ -156,8 +156,6 @@ export class ProjectionRepository {
         select
           ct.id,
           ct.organization_id,
-          ct.status,
-          ct.merged_into_contact_id,
           case
             when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
             else coalesce(
