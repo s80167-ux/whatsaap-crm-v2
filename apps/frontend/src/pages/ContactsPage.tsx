@@ -1005,21 +1005,6 @@ export function ContactsPage() {
                       </td>
                       <td className="px-2.5 py-1.5">
                         <div className="flex items-center gap-1.5">
-                          {getDialablePhoneNumber(contact) ? (
-                            <a
-                              href={`tel:${getDialablePhoneNumber(contact)}`}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary"
-                              title={`Call ${contact.display_name ?? "contact"}`}
-                              aria-label={`Call ${contact.display_name ?? "contact"}`}
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <Phone size={14} aria-hidden="true" />
-                            </a>
-                          ) : (
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background-tint text-text-soft opacity-60">
-                              <Phone size={14} aria-hidden="true" />
-                            </span>
-                          )}
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
@@ -1170,7 +1155,7 @@ export function ContactsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {selectedContactDialableNumber ? (
+              {isMobile && selectedContactDialableNumber ? (
                 <a
                   href={`tel:${selectedContactDialableNumber}`}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
@@ -1352,7 +1337,7 @@ export function ContactsPage() {
               <Select
                 value={composeAccountId}
                 onChange={(event) => setComposeAccountId(event.target.value)}
-                className="mt-1 h-10 w-full"
+                className="mt-1 h-11 w-full px-4 py-2 leading-5"
                 disabled={isSendingContactMessage || composeSources.length <= 1}
               >
                 {composeSources.map((source) => (
