@@ -249,6 +249,7 @@ export function SetupPage() {
       setUserFullName("");
       setUserPassword("");
       setUserRole("agent");
+      setShowUserPopup(false);
       setNotice("User created.");
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error) {
@@ -1031,22 +1032,23 @@ export function SetupPage() {
                         </td>
                       ) : (
                         <>
-                          <td className="px-3 py-2 font-medium text-text truncate">
+                          <td className="px-3 py-2 align-middle font-medium text-text">
                             <div className="flex items-center gap-2 min-w-0">
                               <UserAvatarPreview src={user.avatar_url} label={user.full_name ?? user.email} />
-                              <div className="min-w-0">
-                                <span className="truncate font-medium text-text text-[13px]">{user.full_name ?? user.email}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate font-medium text-text text-[13px]">{user.full_name ?? user.email}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-2 truncate">{user.email}</td>
-                          {isSuperAdmin && <td className="px-3 py-2 truncate">{getOrganizationName(user.organization_id)}</td>}
-                          <td className="px-3 py-2 truncate">{user.role}</td>
-                          <td className="px-3 py-2 uppercase tracking-[0.14em] text-text-soft truncate">{user.status}</td>
-                          <td className="px-3 py-2 truncate">
+                          <td className="px-3 py-2 align-middle truncate">{user.email}</td>
+                          {isSuperAdmin && <td className="px-3 py-2 align-middle truncate">{getOrganizationName(user.organization_id)}</td>}
+                          <td className="px-3 py-2 align-middle truncate">{user.role}</td>
+                          <td className="px-3 py-2 align-middle uppercase tracking-[0.14em] text-text-soft truncate">{user.status}</td>
+                          <td className="px-3 py-2 align-middle">
                             <div className="flex gap-1 flex-row flex-nowrap items-center">
                               <Button
                                 variant="ghost"
+                                size="sm"
                                 className="px-1 py-0.5 text-xs min-w-0"
                                 disabled={isWorking || user.role === "super_admin"}
                                 onClick={() => beginEditUser(user)}
@@ -1085,6 +1087,7 @@ export function SetupPage() {
                                 ) : (
                                   <Button
                                     variant="ghost"
+                                    size="sm"
                                     className="px-1 py-0.5 text-xs min-w-0"
                                     disabled={isWorking}
                                     onClick={() => {
@@ -1098,6 +1101,7 @@ export function SetupPage() {
                               ) : null}
                               <Button
                                 variant="ghost"
+                                size="sm"
                                 className="px-1 py-0.5 text-xs text-coral min-w-0"
                                 disabled={isWorking}
                                 onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
