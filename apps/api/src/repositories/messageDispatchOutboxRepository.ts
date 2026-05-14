@@ -149,6 +149,27 @@ export class MessageDispatchOutboxRepository {
     return result.rows;
   }
 
+  async listExhaustedOpenJobs(client: PoolClient, limit: number, maxRetries: number): Promise<MessageDispatchOutboxRecord[]> {
+    const result = await client.query<MessageDispatchOutboxRecord>(
+      `
+        select *
+        from message_dispatch_outbox
+        where processing_status in ('pending', 'failed')
+          and attempt_count >= $1
+          and (
+            processing_status <> 'failed'
+            or last_error is null
+            or next_attempt_at is not null
+          )
+        order by updated_at asc, created_at asc
+        limit $2
+      `,
+      [maxRetries, limit]
+    );
+
+    return result.rows;
+  }
+
   async claimById(client: PoolClient, input: { outboxId: string; maxRetries: number }): Promise<MessageDispatchOutboxRecord | null> {
     const result = await client.query<MessageDispatchOutboxRecord>(
       `

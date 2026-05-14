@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { pool, query, withTransaction } from "../config/database.js";
+import { pool, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { MessageDispatchOutboxRepository, type MessageDispatchOutboxRecord } from "../repositories/messageDispatchOutboxRepository.js";
@@ -85,6 +85,8 @@ export class MessageDispatchService {
     const staleBefore = new Date(Date.now() - env.MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS);
 
     await withTransaction((client) => this.outboxRepository.resetStaleProcessing(client, staleBefore));
+    await this.finalizeExhaustedOpenJobs(Math.max(limit, 1));
+
     const dueJobs = await withTransaction((client) =>
       this.outboxRepository.listDueJobs(client, Math.max(limit * 4, limit), env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES)
     );
@@ -117,6 +119,39 @@ export class MessageDispatchService {
     }
 
     return claimed.length;
+  }
+
+  private async finalizeExhaustedOpenJobs(limit: number) {
+    const jobs = await withTransaction((client) =>
+      this.outboxRepository.listExhaustedOpenJobs(client, limit, env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES)
+    );
+
+    for (const job of jobs) {
+      await withTransaction(async (client) => {
+        const errorMessage = job.last_error ?? "Message dispatch exhausted all retry attempts";
+
+        await this.messageRepository.appendStatusEvent(client, {
+          messageId: job.message_id,
+          status: "failed",
+          payload: { error: errorMessage }
+        });
+
+        await this.messageRepository.updateAckStatus(client, {
+          messageId: job.message_id,
+          ackStatus: "failed",
+          failedAt: new Date()
+        });
+
+        await this.outboxRepository.markFailed(client, {
+          outboxId: job.id,
+          errorMessage,
+          nextAttemptAt: null,
+          payload: { error: errorMessage }
+        });
+
+        await this.markCampaignRecipientFailed(client, job, errorMessage, false);
+      });
+    }
   }
 
   async processJob(job: MessageDispatchOutboxRecord): Promise<{ ok: true } | { ok: false; errorMessage: string }> {
@@ -384,7 +419,7 @@ export class MessageDispatchService {
       [job.organization_id, context.campaignId, context.campaignRecipientId, sentAt.toISOString()]
     );
 
-    await this.refreshCampaignCompletion(job.organization_id, context.campaignId);
+    await this.refreshCampaignCompletion(client, job.organization_id, context.campaignId);
   }
 
   private async markCampaignRecipientFailed(
@@ -429,11 +464,11 @@ export class MessageDispatchService {
       [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
     );
 
-    await this.refreshCampaignCompletion(job.organization_id, context.campaignId);
+    await this.refreshCampaignCompletion(client, job.organization_id, context.campaignId);
   }
 
-  private async refreshCampaignCompletion(organizationId: string, campaignId: string) {
-    await query(
+  private async refreshCampaignCompletion(client: PoolClient, organizationId: string, campaignId: string) {
+    await client.query(
       `
         with counts as (
           select
