@@ -228,6 +228,12 @@ export function SetupPage() {
 
   async function handleCreateUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSuperAdmin && userRole !== "super_admin" && !activeOrganizationId) {
+      setNotice("Select an organization before creating this user.");
+      return;
+    }
+
     setIsWorking(true);
     setNotice(null);
 
@@ -1147,10 +1153,27 @@ export function SetupPage() {
           <div className="space-y-2 p-2">
             {isSuperAdmin ? (
               <p className="rounded-lg border border-border bg-background-tint px-2 py-2 text-xs leading-5 text-text-muted">
-                {activeOrganizationId
-                  ? "New user will be created in the selected organization."
-                  : "Select an organization above before creating a non-super-admin user."}
+                {userRole === "super_admin"
+                  ? "Super admin users are created without an organization."
+                  : activeOrganizationId
+                    ? "New user will be created in the selected organization."
+                    : "Select an organization before creating a non-super-admin user."}
               </p>
+            ) : null}
+            {isSuperAdmin && userRole !== "super_admin" ? (
+              <Select
+                value={selectedOrganizationId}
+                onChange={(event) => setSelectedOrganizationId(event.target.value)}
+                required
+                className="text-sm px-2 py-1"
+              >
+                <option value="">Select organization</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </Select>
             ) : null}
             <Input
               value={userEmail}
