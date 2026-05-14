@@ -147,8 +147,19 @@ export function SetupPage() {
   }>>({});
   // WhatsApp account edit state moved to WhatsAppAccountDashboard
   const [notice, setNotice] = useState<string | null>(null);
+  const [userCreateError, setUserCreateError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const canCreateScopedRecords = !isSuperAdmin || Boolean(activeOrganizationId) || userRole === "super_admin";
+
+  function openUserPopup() {
+    setUserCreateError(null);
+    setShowUserPopup(true);
+  }
+
+  function closeUserPopup() {
+    setUserCreateError(null);
+    setShowUserPopup(false);
+  }
 
   function getOrganizationName(organizationId: string) {
     return organizations.find((organization) => organization.id === organizationId)?.name ?? organizationId;
@@ -230,12 +241,13 @@ export function SetupPage() {
     event.preventDefault();
 
     if (isSuperAdmin && userRole !== "super_admin" && !activeOrganizationId) {
-      setNotice("Select an organization before creating this user.");
+      setUserCreateError("Select an organization before creating this user.");
       return;
     }
 
     setIsWorking(true);
     setNotice(null);
+    setUserCreateError(null);
 
     try {
       await createUser({
@@ -249,11 +261,11 @@ export function SetupPage() {
       setUserFullName("");
       setUserPassword("");
       setUserRole("agent");
-      setShowUserPopup(false);
+      closeUserPopup();
       setNotice("User created.");
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create user");
+      setUserCreateError(error instanceof Error ? error.message : "Unable to create user");
     } finally {
       setIsWorking(false);
     }
@@ -778,7 +790,7 @@ export function SetupPage() {
         <Card elevated className="workspace-block">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-text">Users</h3>
-            <Button variant="ghost" className="z-10" onClick={() => setShowUserPopup(true)}>
+            <Button variant="ghost" className="z-10" onClick={openUserPopup}>
               Add User
             </Button>
           </div>
@@ -1152,9 +1164,10 @@ export function SetupPage() {
         </form>
       </PopupOverlay>
 
-      <PopupOverlay open={showUserPopup} onClose={() => setShowUserPopup(false)} title="Create user" panelClassName="popup-compact-30">
+      <PopupOverlay open={showUserPopup} onClose={closeUserPopup} title="Create user" panelClassName="popup-compact-30">
         <form onSubmit={handleCreateUser}>
           <div className="space-y-2 p-2">
+            {userCreateError ? <p className="rounded-lg border border-coral/30 bg-coral/10 px-2 py-2 text-xs leading-5 text-coral">{userCreateError}</p> : null}
             {isSuperAdmin ? (
               <p className="rounded-lg border border-border bg-background-tint px-2 py-2 text-xs leading-5 text-text-muted">
                 {userRole === "super_admin"
