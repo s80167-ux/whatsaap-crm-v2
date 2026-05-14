@@ -113,7 +113,7 @@ function CampaignMobileCard({
   const progress = campaign.recipients > 0 ? Math.min(100, Math.round((completed / campaign.recipients) * 100)) : 0;
 
   return (
-    <article className="border border-border bg-white p-3 shadow-soft">
+    <article className="app-card p-3 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-text">{campaign.name}</h3>
@@ -127,9 +127,14 @@ function CampaignMobileCard({
           <span>{completed.toLocaleString()} of {campaign.recipients.toLocaleString()}</span>
           <span>{progress}%</span>
         </div>
-        <div className="mt-2 h-2 overflow-hidden bg-background-tint">
-          <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-        </div>
+        <progress
+          className="campaign-progress mt-2"
+          value={progress}
+          max={100}
+          aria-label={`Campaign progress for ${campaign.name}`}
+        >
+          {progress}%
+        </progress>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -155,7 +160,7 @@ function CampaignMobileCard({
 
 function Metric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className="border border-border bg-background-tint px-2 py-2">
+    <div className="rounded-xl border border-border bg-muted px-2 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-soft">{label}</p>
       <p className={`mt-1 text-sm font-semibold ${danger ? "text-coral" : "text-text"}`}>{value.toLocaleString()}</p>
     </div>
@@ -210,7 +215,7 @@ function CampaignActions({
         <Button
           size={mobile ? "sm" : "icon"}
           variant="ghost"
-          className={`border border-border bg-white text-coral hover:text-coral ${mobile ? "col-span-2 w-full" : ""}`}
+          className={`border border-border bg-card text-coral hover:bg-muted hover:text-coral ${mobile ? "col-span-2 w-full" : ""}`}
           aria-label={`Delete ${campaign.name}`}
           title={`Delete ${campaign.name}`}
           onClick={() => onDelete(campaign)}

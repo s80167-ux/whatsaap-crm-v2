@@ -75,21 +75,21 @@ export function SuperAdminMapPage() {
                 className={clsx(
                   "flex min-h-[132px] flex-col items-start rounded-2xl border px-4 py-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-4",
                   isActive
-                    ? "border-slate-950 bg-slate-950 text-white focus-visible:ring-slate-950/20"
-                    : "border-border bg-white/80 text-text hover:border-slate-300 hover:bg-white focus-visible:ring-slate-400/20"
+                    ? "border-topbar bg-topbar text-topbar-foreground focus-visible:ring-ring/20"
+                    : "border-border bg-card/80 text-text hover:border-primary/20 hover:bg-card focus-visible:ring-ring/20"
                 )}
                 aria-pressed={isActive}
               >
                 <span
                   className={clsx(
                     "flex h-10 w-10 items-center justify-center rounded-xl border",
-                    isActive ? "border-white/20 bg-white/10" : "border-border bg-background-tint"
+                    isActive ? "border-topbar-foreground/20 bg-topbar-foreground/10" : "border-border bg-background-tint"
                   )}
                 >
                   <Icon size={18} />
                 </span>
                 <p className="mt-4 text-sm font-semibold tracking-tight">{tab.label}</p>
-                <p className={clsx("mt-2 text-xs leading-5", isActive ? "text-white/70" : "text-text-muted")}>{tab.description}</p>
+                <p className={clsx("mt-2 text-xs leading-5", isActive ? "text-topbar-foreground/70" : "text-text-muted")}>{tab.description}</p>
               </button>
             );
           })}
@@ -115,7 +115,7 @@ export function SuperAdminMapPage() {
             Select an organization from the sidebar to manage access and limits.
           </div>
         ) : (
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background-tint text-primary">

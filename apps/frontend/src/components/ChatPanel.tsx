@@ -108,18 +108,18 @@ function formatAckStatus(status?: string) {
 function getAckTone(status?: string) {
   switch (status) {
     case "read":
-      return "text-emerald-700 bg-emerald-50 border-emerald-200";
+      return "text-success bg-success/10 border-success/20";
     case "device_delivered":
     case "played":
-      return "text-sky-700 bg-sky-50 border-sky-200";
+      return "text-primary bg-primary/10 border-primary/20";
     case "server_ack":
-      return "text-text-soft bg-background-tint border-border";
+      return "text-muted-foreground bg-muted border-border";
     case "failed":
-      return "text-coral bg-coral/10 border-coral/20";
+      return "text-destructive bg-destructive/10 border-destructive/20";
     case "pending":
     case "queued":
     default:
-      return "text-amber-700 bg-amber-50 border-amber-200";
+      return "text-warning bg-warning/10 border-warning/20";
   }
 }
 
@@ -649,7 +649,7 @@ export function ChatPanel({
 
   return (
     <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[700px] max-h-[calc(100vh-6.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
-      <header className="border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
+      <header className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Live conversation</p>
@@ -657,25 +657,25 @@ export function ChatPanel({
             <p className="mt-1 text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="rounded-full border border-border bg-background-tint px-3 py-1.5 text-xs font-medium text-text-muted">
+            <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
               {conversation.whatsapp_account_label ?? "WhatsApp account"}
             </span>
             {conversation.unread_count > 0 ? (
-              <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
                 {conversation.unread_count} unread
               </span>
             ) : null}
             <span
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                 conversation.assigned_user_id
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-amber-200 bg-amber-50 text-amber-700"
+                  ? "border-success/20 bg-success/10 text-success"
+                  : "border-warning/20 bg-warning/10 text-warning"
               }`}
             >
               {conversation.assigned_user_id ? "Assigned" : "Unassigned"}
             </span>
             {conversation.has_sales || conversation.has_sales_lead_tag ? (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
                 Sales context
               </span>
             ) : null}
@@ -695,7 +695,7 @@ export function ChatPanel({
       <button
         onClick={() => handleRetryLatestOutbound()}
         disabled={isRetryingOutbound}
-        className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+        className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-[11px] font-semibold text-warning hover:bg-warning/20 disabled:opacity-60"
       >
         {isRetryingOutbound ? "Retrying..." : "Retry"}
       </button>
@@ -704,12 +704,12 @@ export function ChatPanel({
 ) : null}
         {sendNotice ? <p className="mt-2 text-xs text-text-soft">{sendNotice}</p> : null}
       </header>
-      <div
-        ref={messageScrollRef}
-        className={`min-h-0 space-y-4 bg-background-elevated px-3 py-4 sm:px-4 sm:py-5 xl:px-5 2xl:px-7 ${isMobile ? "overflow-visible pb-6" : "overflow-y-auto"}`}
-      >
+        <div
+          ref={messageScrollRef}
+          className={`min-h-0 space-y-4 bg-background-elevated px-3 py-4 sm:px-4 sm:py-5 xl:px-5 2xl:px-7 ${isMobile ? "overflow-visible pb-6" : "overflow-y-auto"}`}
+        >
         {selectedMessages.length > 0 ? (
-          <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(20,32,51,0.08)] backdrop-blur">
+          <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-card/95 px-4 py-3 shadow-panel backdrop-blur">
             <p className="text-sm font-medium text-text">
               {selectedMessages.length} bubble{selectedMessages.length === 1 ? "" : "s"} selected
             </p>
@@ -745,7 +745,7 @@ export function ChatPanel({
             <Button
               type="button"
               variant="secondary"
-              className="rounded-full border border-slate-200/80 bg-white/92 px-3.5 py-1 text-[11px] font-medium text-slate-500 shadow-[0_6px_14px_rgba(20,32,51,0.05)] backdrop-blur hover:border-slate-300 hover:bg-white hover:text-primary"
+              className="rounded-full border border-border bg-card/90 px-3.5 py-1 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur hover:border-primary/20 hover:bg-card hover:text-primary"
               onClick={() => setVisibleMessageCount((current) => Math.min(messages.length, current + LOAD_OLDER_MESSAGES_STEP))}
             >
               {Math.min(hiddenMessageCount, LOAD_OLDER_MESSAGES_STEP)} earlier messages
@@ -770,15 +770,15 @@ export function ChatPanel({
             />
           ))
         ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-white/80 px-5 py-8 text-center text-sm leading-6 text-text-muted">
+          <div className="rounded-2xl border border-dashed border-border bg-card/80 px-5 py-8 text-center text-sm leading-6 text-muted-foreground">
             No chat history found in {historyRangeLabel.toLowerCase()}.
           </div>
         )}
         <div ref={messageEndRef} aria-hidden="true" />
       </div>
-      <footer className="border-t border-primary/10 bg-slate-50/90 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
+      <footer className="border-t border-primary/10 bg-muted/80 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {replyDraft ? (
-          <div className="mb-3 rounded-2xl border border-primary/15 bg-primary-soft/30 p-3">
+          <div className="mb-3 rounded-2xl border border-primary/15 bg-primary/10 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Replying to bubble</p>
@@ -788,7 +788,7 @@ export function ChatPanel({
                 type="button"
                 title="Cancel reply"
                 onClick={() => setReplyDraft(null)}
-                className="rounded-full border border-border bg-white p-2 text-text-soft transition hover:text-text"
+                className="rounded-full border border-border bg-card p-2 text-muted-foreground transition hover:text-foreground"
                 aria-label="Cancel reply"
               >
                 <X className="h-4 w-4" />
@@ -799,7 +799,7 @@ export function ChatPanel({
         {attachment ? (
           <AttachmentPreview attachment={attachment} onClear={handleClearAttachment} />
         ) : null}
-        <div className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-3 shadow-[0_14px_32px_rgba(20,32,51,0.08)]">
+        <div className="app-card space-y-3 rounded-[18px] p-3 shadow-panel">
           <input
             ref={fileInputRef}
             type="file"
@@ -880,7 +880,7 @@ export function ChatPanel({
               }}
               placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
               rows={isMobile ? 3 : 4}
-              className="min-h-[96px] w-full resize-y rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-3 text-[15px] leading-6 text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 sm:min-h-[118px]"
+              className="min-h-[96px] w-full resize-y rounded-xl border-2 border-border bg-input px-4 py-3 text-[15px] leading-6 text-foreground shadow-soft outline-none transition focus:border-primary focus:bg-card focus:ring-2 focus:ring-ring/15 sm:min-h-[118px]"
             />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="hidden items-center gap-2 sm:flex">
@@ -966,7 +966,7 @@ export function ChatPanel({
             value={quickReplySearch}
             onChange={(event) => setQuickReplySearch(event.target.value)}
             placeholder="Search quick replies..."
-            className="h-11 w-full border border-border bg-white px-4 text-sm text-text outline-none transition placeholder:text-text-soft focus:border-primary/30"
+            className="h-11 w-full rounded-xl border border-border bg-input px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/30"
           />
           {quickReplyCategories.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -976,7 +976,7 @@ export function ChatPanel({
                 onClick={() => setSelectedQuickReplyCategory(null)}
                 className={`border px-3 py-1.5 text-xs font-medium transition ${
                   selectedQuickReplyCategory
-                    ? "border-border bg-white text-text-muted hover:text-text"
+                    ? "border-border bg-card text-muted-foreground hover:text-foreground"
                     : "border-primary/25 bg-primary/10 text-primary"
                 }`}
               >
@@ -991,7 +991,7 @@ export function ChatPanel({
                   className={`border px-3 py-1.5 text-xs font-medium transition ${
                     selectedQuickReplyCategory === category
                       ? "border-primary/25 bg-primary/10 text-primary"
-                      : "border-border bg-white text-text-muted hover:text-text"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {category}
@@ -1016,7 +1016,7 @@ export function ChatPanel({
                 type="button"
                 title={`Insert quick reply: ${reply.title}`}
                 onClick={() => applyQuickReply(reply)}
-                className="border border-border bg-white px-4 py-3 text-left text-xs leading-5 text-text-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-text"
+                className="border border-border bg-card px-4 py-3 text-left text-xs leading-5 text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
               >
                 <span className="block font-semibold text-text">{reply.title}</span>
                 {reply.category ? <span className="mt-1 block text-[11px] uppercase tracking-[0.16em] text-text-soft">{reply.category}</span> : null}
@@ -1076,7 +1076,7 @@ export function ChatPanel({
                       value={templatePreview.values[definition.key] ?? ""}
                       onChange={(event) => updateTemplatePreviewValue(definition.key, event.target.value)}
                       placeholder={definition.required ? "Required value" : "Optional value"}
-                      className="h-10 w-full border border-border bg-white px-3 text-sm text-text outline-none transition placeholder:text-text-soft focus:border-primary/30"
+                      className="h-10 w-full rounded-xl border border-border bg-input px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/30"
                     />
                   </label>
                 ))}
@@ -1084,11 +1084,11 @@ export function ChatPanel({
             </div>
             <div className="border border-border bg-background-tint p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Resolved message</p>
-              <div className="mt-3 border border-border bg-white px-4 py-3 text-sm leading-6 text-text">
+              <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm leading-6 text-foreground">
                 {resolveTemplateBody(templatePreview.reply.body, templatePreview.values)}
               </div>
               {missingRequiredPreviewVariables.length > 0 ? (
-                <p className="mt-3 text-xs leading-5 text-amber-200">
+                <p className="mt-3 text-xs leading-5 text-warning">
                   Fill the required variables before inserting this template:{" "}
                   {missingRequiredPreviewVariables.map((definition) => formatTemplateVariableLabel(definition.key)).join(", ")}.
                 </p>
@@ -1124,7 +1124,7 @@ export function ChatPanel({
                 type="button"
                 title="Insert contact name"
                 onClick={() => insertVariable(conversation.contact_name ?? "customer")}
-                className="border border-border bg-white px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-primary/30 hover:text-text"
+                className="border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
               >
                 Contact name
               </button>
@@ -1133,7 +1133,7 @@ export function ChatPanel({
                   type="button"
                   title="Insert phone number"
                   onClick={() => insertVariable(conversation.phone_number_normalized ?? "")}
-                  className="border border-border bg-white px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-primary/30 hover:text-text"
+                  className="border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                 >
                   Phone number
                 </button>
@@ -1149,7 +1149,7 @@ export function ChatPanel({
                   type="button"
                   title={`Insert follow-up prompt: ${prompt.title}`}
                   onClick={() => applyFollowUpPrompt(prompt.body)}
-                  className="border border-border bg-white px-3 py-3 text-left text-xs leading-5 text-text-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-text"
+                  className="border border-border bg-card px-3 py-3 text-left text-xs leading-5 text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
                 >
                   <span className="block font-semibold text-text">{prompt.title}</span>
                   <span className="mt-1 block">{prompt.body}</span>
@@ -1174,7 +1174,7 @@ export function ChatPanel({
       >
         <div className="space-y-4">
           {forwardSourceMessage ? (
-            <div className="border border-white/10 bg-white/8 px-4 py-3 text-sm text-white/78">
+            <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
               {getBubblePreviewText(forwardSourceMessage)}
             </div>
           ) : null}
@@ -1187,8 +1187,8 @@ export function ChatPanel({
                   onClick={() => setForwardTargetConversationId(item.id)}
                   className={`border px-4 py-3 text-left transition ${
                     forwardTargetConversationId === item.id
-                      ? "border-primary/30 bg-primary/20 text-white"
-                      : "border-white/10 bg-white/8 text-white/72 hover:text-white"
+                      ? "border-primary/30 bg-primary/15 text-foreground"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="block text-sm font-semibold">{item.contact_name}</span>
@@ -1197,7 +1197,7 @@ export function ChatPanel({
               ))}
             </div>
           ) : (
-            <p className="border border-dashed border-white/14 bg-white/6 px-4 py-5 text-sm text-white/64">
+            <p className="rounded-2xl border border-dashed border-border bg-muted px-4 py-5 text-sm text-muted-foreground">
               No other conversations are available for forwarding yet.
             </p>
           )}
@@ -1278,15 +1278,15 @@ function MessageBubble({
         className={`max-w-[96%] rounded-2xl px-4 py-3.5 text-sm shadow-[0_10px_24px_rgba(20,32,51,0.06)] xl:max-w-[90%] 2xl:max-w-[85%] ${
           message.direction === "outgoing"
             ? isDeleted
-              ? "ml-auto border border-border/70 bg-slate-100/90 text-text-muted"
+              ? "ml-auto border border-border/70 bg-muted text-muted-foreground"
               : "ml-auto border border-secondary/15 bg-secondary-soft/80 text-text"
             : isDeleted
-              ? "border border-border/70 bg-slate-100/90 text-text-muted"
-              : "border border-border/90 bg-white text-text"
+              ? "border border-border/70 bg-muted text-muted-foreground"
+              : "border border-border/90 bg-card text-text"
         }`}
       >
         {replyContext ? (
-          <div className="mb-3 rounded-xl border border-border/80 bg-white/75 px-3 py-2">
+          <div className="mb-3 rounded-xl border border-border/80 bg-card/80 px-3 py-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">
               Replying to {replyContext.direction === "incoming" ? "contact" : "outbound"}
             </p>
@@ -1313,7 +1313,7 @@ function MessageBubble({
                       {presentation.details.map((detail) => (
                         <span
                           key={detail}
-                          className="rounded-full border border-border bg-white px-2.5 py-1 text-[11px] font-medium text-text-soft"
+                          className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-text-soft"
                         >
                           {detail}
                         </span>
@@ -1340,7 +1340,7 @@ function MessageBubble({
             type="button"
             title="Open linked sales order"
             onClick={openLinkedSalesOrder}
-            className="mt-3 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+            className="mt-3 inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success transition hover:border-success/30 hover:bg-success/15"
           >
             💼 Sales Created
           </button>
@@ -1354,12 +1354,12 @@ function MessageBubble({
           ) : null}
         </div>
         {message.direction === "outgoing" && !isDeleted && message.ack_status === "failed" ? (
-          <p className="mt-2 text-xs leading-5 text-coral">
+          <p className="mt-2 text-xs leading-5 text-destructive">
             Delivery failed on the last attempt. The outbox worker may retry automatically based on backend policy.
           </p>
         ) : null}
         {message.direction === "outgoing" && !isDeleted && (message.ack_status === "pending" || !message.ack_status) ? (
-          <p className="mt-2 text-xs leading-5 text-amber-700">
+          <p className="mt-2 text-xs leading-5 text-warning">
             This message is stored safely and waiting for dispatch or acknowledgement.
           </p>
         ) : null}
@@ -1426,8 +1426,8 @@ function BubbleActionButton({
   // Special style for tick icon when active for higher contrast
   const isTick = label === "Tick bubble" || label === "Untick bubble";
   const buttonClass = isTick && active
-    ? "inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-    : `inline-flex h-7 w-7 items-center justify-center rounded-full border bg-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+    ? "inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+    : `inline-flex h-7 w-7 items-center justify-center rounded-full border bg-card transition disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? "border-primary/35 bg-primary/10 text-primary"
           : "border-border text-text-soft hover:border-primary/30 hover:text-primary"
@@ -1464,7 +1464,7 @@ function AttachmentPreview({
               className="h-20 w-20 shrink-0 rounded-xl border border-border object-cover"
             />
           ) : (
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-border bg-white">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-border bg-card">
               <AttachmentPreviewIcon kind={attachment.kind} />
             </div>
           )}
@@ -1485,7 +1485,7 @@ function AttachmentPreview({
           type="button"
           title="Remove attachment"
           onClick={onClear}
-          className="rounded-full border border-border bg-white p-2 text-text-soft transition hover:text-text"
+          className="rounded-full border border-border bg-card p-2 text-text-soft transition hover:text-text"
           aria-label="Remove attachment"
         >
           <X className="h-4 w-4" />
@@ -1558,7 +1558,7 @@ function MediaPreview({
   fileName: string;
 }) {
   if (messageType === "image") {
-    return <img src={previewUrl} alt={fileName} className="max-h-80 w-full rounded-xl border border-border/80 bg-white object-contain" />;
+    return <img src={previewUrl} alt={fileName} className="max-h-80 w-full rounded-xl border border-border/80 bg-card object-contain" />;
   }
 
   if (messageType === "video") {
@@ -1571,7 +1571,7 @@ function MediaPreview({
 
   if (messageType === "audio") {
     return (
-      <div className="rounded-xl border border-border/80 bg-white p-3">
+      <div className="rounded-xl border border-border/80 bg-card p-3">
         <audio controls preload="metadata" className="w-full">
           <source src={previewUrl} type={mimeType ?? undefined} />
         </audio>
@@ -1584,12 +1584,12 @@ function MediaPreview({
   return (
     <div className="space-y-3">
       {isPdf ? (
-        <iframe src={previewUrl} title={fileName} className="h-80 w-full rounded-xl border border-border/80 bg-white" />
+        <iframe src={previewUrl} title={fileName} className="h-80 w-full rounded-xl border border-border/80 bg-card" />
       ) : null}
       <a
         href={previewUrl}
         download={fileName}
-        className="inline-flex rounded-full border border-border bg-white px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
+        className="inline-flex rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
       >
         Download file
       </a>

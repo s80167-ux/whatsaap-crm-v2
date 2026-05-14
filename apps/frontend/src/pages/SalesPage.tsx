@@ -565,8 +565,8 @@ export function SalesPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Total orders" value={String(summary?.total_orders ?? 0)} tone="text-text" />
-        <MetricCard label="Open orders" value={String(summary?.open_orders ?? 0)} tone="text-amber-700" />
-        <MetricCard label="Won orders" value={String(summary?.won_orders ?? 0)} tone="text-emerald-700" />
+        <MetricCard label="Open orders" value={String(summary?.open_orders ?? 0)} tone="text-warning" />
+        <MetricCard label="Won orders" value={String(summary?.won_orders ?? 0)} tone="text-success" />
         <MetricCard label="Won value" value={formatCurrency(summary?.won_value ?? "0")} tone="text-primary" />
       </div>
 
@@ -580,8 +580,8 @@ export function SalesPage() {
       ) : null}
 
       {(salesFilters.orderId && orderDetailError) || (salesFilters.leadId && leadDetailError) ? (
-        <Card elevated className="workspace-subtle border-coral/20 bg-coral/5">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-coral">Shared Link Notice</p>
+        <Card elevated className="workspace-subtle border-destructive/20 bg-destructive/10">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-destructive">Shared Link Notice</p>
           <div className="mt-3 space-y-3 text-sm leading-6 text-text-muted">
             {salesFilters.orderId && orderDetailError ? (
               <p>
@@ -625,7 +625,7 @@ export function SalesPage() {
                 aria-label="Contact"
                 value={selectedContactId}
                 onChange={(event) => setSelectedContactId(event.target.value)}
-                className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                className="input-base h-12"
                 disabled={!canWriteSales || isSubmitting}
               >
                 <option value="">Select contact</option>
@@ -644,7 +644,7 @@ export function SalesPage() {
                 aria-label="Status"
                 value={status}
                 onChange={(event) => setStatus(event.target.value as (typeof SALES_STATUSES)[number]["value"])}
-                className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                className="input-base h-12"
                 disabled={!canWriteSales || isSubmitting}
               >
                 {SALES_STATUSES.map((option) => (
@@ -807,7 +807,7 @@ export function SalesPage() {
                 aria-label="Lead Contact"
                 value={leadContactId}
                 onChange={(event) => setLeadContactId(event.target.value)}
-                className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                className="input-base h-12"
                 disabled={!canWriteSales || isCreatingLead}
               >
                 <option value="">Select contact</option>
@@ -837,7 +837,7 @@ export function SalesPage() {
                   aria-label="Lead Status"
                   value={leadStatus}
                   onChange={(event) => setLeadStatus(event.target.value as (typeof LEAD_STATUSES)[number]["value"])}
-                  className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                  className="input-base h-12"
                   disabled={!canWriteSales || isCreatingLead}
                 >
                   {LEAD_STATUSES.map((option) => (
@@ -855,7 +855,7 @@ export function SalesPage() {
                   aria-label="Lead Temperature"
                   value={leadTemperature}
                   onChange={(event) => setLeadTemperature(event.target.value as (typeof LEAD_TEMPERATURES)[number]["value"])}
-                  className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                  className="input-base h-12"
                   disabled={!canWriteSales || isCreatingLead}
                 >
                   {LEAD_TEMPERATURES.map((option) => (
@@ -989,7 +989,7 @@ export function SalesPage() {
                               [lead.id]: event.target.value
                             }))
                           }
-                          className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                          className="input-base h-12"
                           disabled={!canWriteSales || savingLeadId === lead.id}
                         >
                           <option value="">Unset</option>
@@ -1011,7 +1011,7 @@ export function SalesPage() {
                               [lead.id]: event.target.value
                             }))
                           }
-                          className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                          className="input-base h-12"
                           disabled={!canWriteSales || savingLeadId === lead.id}
                         >
                           {LEAD_STATUSES.map((option) => (
@@ -1032,7 +1032,7 @@ export function SalesPage() {
                               [lead.id]: event.target.value
                             }))
                           }
-                          className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-text shadow-[0_12px_30px_rgba(20,32,51,0.06)] outline-none transition focus:border-primary/30"
+                          className="input-base h-12"
                           disabled={!canWriteSales || !canManageUsers || savingLeadId === lead.id}
                         >
                           <option value="">Unassigned</option>
@@ -1235,7 +1235,7 @@ export function SalesPage() {
                     <p>Owner: {selectedOrderDetail.order.assigned_user_id ?? "Unassigned"}</p>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-white p-4">
+                  <div className="workspace-subtle p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Order Actions</p>
@@ -1525,7 +1525,7 @@ export function SalesPage() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="sales-timeline-panel rounded-2xl border border-border bg-white p-4">
+              <div ref={timelineRef} className="sales-timeline-panel workspace-block p-4">
                 <div className="sales-timeline-header flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Unified Timeline</p>
@@ -1699,11 +1699,11 @@ function formatSalesStatus(status: string) {
 function getSalesStatusTone(status: string) {
   switch (status) {
     case "closed_won":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-success/20 bg-success/10 text-success";
     case "closed_lost":
-      return "border-coral/20 bg-coral/10 text-coral";
+      return "border-destructive/20 bg-destructive/10 text-destructive";
     default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning/20 bg-warning/10 text-warning";
   }
 }
 

@@ -170,7 +170,7 @@ export function SuperAdminFlowMap() {
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-panel">
+    <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-panel">
       <div className="flex flex-col gap-4 border-b border-border bg-background-elevated px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Super Admin Map</p>
@@ -183,24 +183,24 @@ export function SuperAdminFlowMap() {
           <button
             type="button"
             onClick={handleResetPositions}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-text-soft transition duration-200 hover:border-slate-300 hover:text-text focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/20"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-text-soft transition duration-200 hover:border-primary/20 hover:text-text focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/20"
             aria-label="Reset map position"
             title="Reset map position"
           >
             <RotateCcw size={16} />
           </button>
-          <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
+          <div className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">
             Drag cards or scroll to explore
           </div>
         </div>
       </div>
 
-      <div className="overflow-auto bg-[#f2f3f3]">
+      <div className="overflow-auto bg-background-tint/80">
         <div className="super-admin-flow-canvas relative">
           <svg className="pointer-events-none absolute inset-0" width={canvas.width} height={canvas.height} viewBox={`0 0 ${canvas.width} ${canvas.height}`}>
             <defs>
               <marker id="flow-arrow" markerHeight="8" markerWidth="8" orient="auto" refX="6" refY="3">
-                <path d="M0,0 L0,6 L6,3 z" fill="#142033" />
+                <path d="M0,0 L0,6 L6,3 z" fill="rgb(var(--foreground) / 0.88)" />
               </marker>
             </defs>
             {links.map((link) => {
@@ -213,7 +213,7 @@ export function SuperAdminFlowMap() {
                   key={`${link.from}-${link.to}`}
                   d={path}
                   fill="none"
-                  stroke="#142033"
+                  stroke="rgb(var(--foreground) / 0.88)"
                   strokeDasharray={link.mode === "dashed" ? "6 8" : undefined}
                   strokeWidth="1.4"
                   markerEnd="url(#flow-arrow)"
@@ -245,9 +245,9 @@ export function SuperAdminFlowMap() {
 
 function FlowCard({ node }: { node: FlowNode }) {
   return (
-    <article className="min-h-[230px] border border-slate-200 bg-white px-5 py-5 font-mono text-[11px] leading-relaxed text-slate-900 shadow-[0_12px_30px_rgba(20,32,51,0.08)]">
-      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{node.eyebrow}</p>
-      <h4 className="mt-1 text-[17px] font-semibold normal-case tracking-tight text-slate-950">{node.title}</h4>
+    <article className="min-h-[230px] border border-border bg-card px-5 py-5 font-mono text-[11px] leading-relaxed text-card-foreground shadow-panel">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-text-soft">{node.eyebrow}</p>
+      <h4 className="mt-1 text-[17px] font-semibold normal-case tracking-tight text-text">{node.title}</h4>
 
       <div className="mt-4 space-y-3">
         {node.sections.map((section) => (
@@ -255,7 +255,7 @@ function FlowCard({ node }: { node: FlowNode }) {
             <div className={`mb-2 w-32 px-3 py-1 text-center text-[9px] font-bold uppercase tracking-[0.08em] ${getLabelClass(section.tone)}`}>
               {section.title}
             </div>
-            <ul className="ml-3 list-disc space-y-0.5 text-slate-700">
+            <ul className="ml-3 list-disc space-y-0.5 text-text-muted">
               {section.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -270,11 +270,11 @@ function FlowCard({ node }: { node: FlowNode }) {
 function getLabelClass(tone: FlowSection["tone"]) {
   switch (tone) {
     case "state":
-      return "bg-[#ffcf1a] text-slate-950";
+      return "bg-warning/20 text-warning";
     case "data":
-      return "bg-[#222222] text-white";
+      return "bg-topbar text-topbar-foreground";
     case "action":
-      return "bg-[#08a889] text-white";
+      return "bg-success/20 text-success";
   }
 }
 

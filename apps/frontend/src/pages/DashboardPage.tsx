@@ -18,16 +18,6 @@ function getWidthClass(percent: number) {
   return "w-0";
 }
 
-// Helper to map color to a set of Tailwind bg classes (customize as needed)
-function getDotColorClass(color: string) {
-  switch (color) {
-    case "#22c55e": return "bg-emerald-500";
-    case "#f59e42": return "bg-orange-400";
-    case "#ef4444": return "bg-red-500";
-    case "#3b82f6": return "bg-blue-500";
-    default: return "bg-gray-300";
-  }
-}
 import { Card } from "../components/Card";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
@@ -135,7 +125,7 @@ export function DashboardPage() {
             <div className="grid gap-3 md:grid-cols-3">
               {data.sales.stats.map((metric) => (
                 metric.href ? (
-                  <div key={metric.label} className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white">
+                  <div key={metric.label} className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5">
                     <Link to={appendSalesSection(metric.href, "timeline")}>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
                       <p className="mt-3 text-2xl font-semibold text-text">{metric.value}</p>
@@ -175,7 +165,7 @@ export function DashboardPage() {
               {data.sales.pipeline.map((stage) => (
                 <div
                   key={stage.status}
-                  className="workspace-subtle block p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
+                  className="workspace-subtle block p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
                 >
                   <Link to={appendSalesSection(stage.href ?? "/sales", "timeline")}>
                     <div className="flex items-center justify-between gap-3">
@@ -218,7 +208,7 @@ export function DashboardPage() {
             {data.sales.trends.map((point) => (
               <div
                 key={`${point.metric}-${point.range_start}`}
-                className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
+                className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
               >
                 <Link to={appendSalesSection(point.href ?? "/sales", "timeline")}>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">
@@ -366,7 +356,7 @@ function DashboardGraphPanel({
   return (
     <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen={defaultOpen}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
-        <div className="workspace-subtle bg-gradient-to-br from-background-tint to-white p-4">
+        <div className="workspace-subtle bg-gradient-to-br from-background-tint to-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-text">Orders and won revenue</p>
@@ -378,17 +368,17 @@ function DashboardGraphPanel({
             </div>
           </div>
           <svg viewBox="0 0 100 38" role="img" aria-label="Orders and won revenue sparkline" className="mt-3 h-24 w-full overflow-visible">
-            <polyline points={createdPath} fill="none" stroke="rgba(0, 87, 168, 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={wonPath} fill="none" stroke="rgba(16, 185, 129, 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
             {trendDays.map((day, index) => {
               const x = getSparklineX(index, trendDays.length);
 
               return (
                 <g key={day.key}>
-                  <circle cx={x} cy={getSparklineY(day.createdOrders, maxCreated)} r="1.5" fill="#0057A8">
+                  <circle cx={x} cy={getSparklineY(day.createdOrders, maxCreated)} r="1.5" fill="rgb(var(--primary) / 1)">
                     <title>{`${day.label}: ${day.createdOrders} created orders`}</title>
                   </circle>
-                  <circle cx={x} cy={getSparklineY(day.wonRevenue, maxWon)} r="1.5" fill="#10B981">
+                  <circle cx={x} cy={getSparklineY(day.wonRevenue, maxWon)} r="1.5" fill="rgb(var(--success) / 1)">
                     <title>{`${day.label}: ${formatCompactCurrency(day.wonRevenue)} won revenue`}</title>
                   </circle>
                 </g>
@@ -397,7 +387,7 @@ function DashboardGraphPanel({
           </svg>
           <div className="mt-2 flex flex-wrap gap-3 text-xs font-medium text-text-muted">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" />Created</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Won MYR</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" />Won MYR</span>
           </div>
         </div>
 
@@ -405,7 +395,7 @@ function DashboardGraphPanel({
           <div className="grid items-center gap-3 sm:grid-cols-[116px,minmax(0,1fr)]">
             <div className="relative mx-auto h-28 w-28">
               <svg viewBox="0 0 120 120" role="img" aria-label="Pipeline order stage share donut" className="h-full w-full rotate-[-90deg]">
-                <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(224, 232, 242, 0.9)" strokeWidth="18" />
+                <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.9)" strokeWidth="18" />
                 {donutSegments.map((segment) => (
                   <circle
                     key={segment.status}
@@ -434,9 +424,7 @@ function DashboardGraphPanel({
                 return (
                   <div key={stage.status} className="flex items-center justify-between gap-2 rounded-xl bg-background-tint px-3 py-1.5">
                     <span className="inline-flex items-center gap-2 text-xs font-medium text-text">
-                      <span
-                        className={`h-2 w-2 rounded-full ${getDotColorClass(getPipelineGraphColor(stage.status))}`}
-                      />
+                      <span className={`h-2 w-2 rounded-full ${getPipelineDotTone(stage.status)}`} />
                       {formatPipelineStatus(stage.status)}
                     </span>
                     <span className="text-xs font-semibold text-text">{percent}%</span>
@@ -449,7 +437,7 @@ function DashboardGraphPanel({
       </div>
 
       <div className="mt-3 grid gap-3 xl:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-white p-3">
+        <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Conversion funnel</p>
           <div className="mt-3 space-y-2">
             {orderedStages.map((stage) => {
@@ -473,7 +461,7 @@ function DashboardGraphPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-3">
+        <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Pipeline value mix</p>
           <div className="mt-3 space-y-2">
             {sales.pipeline.map((stage) => {
@@ -497,7 +485,7 @@ function DashboardGraphPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-3">
+        <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Team win rate</p>
           {showPerformance && rankedLeaders.length ? (
             <div className="mt-3 space-y-2">
@@ -512,7 +500,7 @@ function DashboardGraphPanel({
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-background-tint">
                       <div
-                        className={`h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                        className={`h-full rounded-full bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
                       />
                     </div>
                   </div>
@@ -546,7 +534,7 @@ function PipelineDonutGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"]
       <div className="grid items-center gap-5 sm:grid-cols-[170px,minmax(0,1fr)]">
         <div className="relative mx-auto h-40 w-40">
           <svg viewBox="0 0 120 120" role="img" aria-label="Pipeline order stage share donut" className="h-full w-full rotate-[-90deg]">
-            <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(224, 232, 242, 0.9)" strokeWidth="18" />
+            <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.9)" strokeWidth="18" />
             {segments.map((segment) => (
               <circle
                 key={segment.status}
@@ -580,9 +568,7 @@ function PipelineDonutGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"]
             return (
               <div key={stage.status} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background-tint px-3 py-2">
                 <span className="inline-flex items-center gap-2 text-sm font-medium text-text">
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${getDotColorClass(getPipelineGraphColor(stage.status))}`}
-                  />
+                  <span className={`h-2.5 w-2.5 rounded-full ${getPipelineDotTone(stage.status)}`} />
                   {formatPipelineStatus(stage.status)}
                 </span>
                 <span className="text-sm font-semibold text-text">{percent}%</span>
@@ -608,7 +594,7 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
           const share = totalCount > 0 ? Math.round((stage.count / totalCount) * 100) : 0;
 
           return (
-            <div key={stage.status} className="rounded-2xl border border-border bg-white p-3 shadow-soft">
+            <div key={stage.status} className="workspace-subtle p-3 shadow-soft">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-text">{formatPipelineStatus(stage.status)}</p>
@@ -618,7 +604,7 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
               </div>
               <div className="mt-3 h-9 overflow-hidden rounded-full bg-background-tint">
                 <div
-                  className={`flex h-full items-center justify-end rounded-full px-3 text-xs font-semibold text-white ${getPipelineBarTone(stage.status)}`}
+                  className={`flex h-full items-center justify-end rounded-full px-3 text-xs font-semibold ${getPipelineBarTone(stage.status)}`}
                   
                 >
                   {stage.count}
@@ -661,9 +647,9 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
                     <p className="text-xs text-text-muted">{leader.won_count}/{leader.order_count} won</p>
                   </div>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-white">
+                <div className="h-3 overflow-hidden rounded-full bg-card">
                   <div
-                    className={`h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                    className={`h-full rounded-full bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
                   />
                 </div>
                 <p className="text-right text-lg font-semibold text-text">{winRate}%</p>
@@ -702,14 +688,14 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
         </div>
         <div className="flex gap-3 text-xs font-medium text-text-muted">
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" />Created</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Won MYR</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" />Won MYR</span>
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-border bg-gradient-to-br from-background-tint to-white p-3">
+      <div className="mt-3 rounded-2xl border border-border bg-gradient-to-br from-background-tint to-card p-3">
         <svg viewBox="0 0 100 44" role="img" aria-label="Orders and won revenue sparkline" className="h-28 w-full overflow-visible">
-          <polyline points={createdPath} fill="none" stroke="rgba(0, 87, 168, 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <polyline points={wonPath} fill="none" stroke="rgba(16, 185, 129, 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
           {trendDays.map((day, index) => {
             const x = getSparklineX(index, trendDays.length);
             const createdY = getSparklineY(day.createdOrders, maxCreated);
@@ -717,10 +703,10 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
 
             return (
               <g key={day.key}>
-                <circle cx={x} cy={createdY} r="1.5" fill="#0057A8">
+                <circle cx={x} cy={createdY} r="1.5" fill="rgb(var(--primary) / 1)">
                   <title>{`${day.label}: ${day.createdOrders} created orders`}</title>
                 </circle>
-                <circle cx={x} cy={wonY} r="1.5" fill="#10B981">
+                <circle cx={x} cy={wonY} r="1.5" fill="rgb(var(--success) / 1)">
                   <title>{`${day.label}: ${formatCompactCurrency(day.wonRevenue)} won revenue`}</title>
                 </circle>
               </g>
@@ -729,7 +715,7 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
         </svg>
         <div className="mt-2 grid gap-2 sm:grid-cols-4">
           {trendDays.slice(-4).map((day) => (
-            <div key={day.key} className="rounded-xl bg-white px-3 py-2 text-xs shadow-soft">
+            <div key={day.key} className="rounded-xl bg-card px-3 py-2 text-xs shadow-soft">
               <p className="font-semibold text-text">{day.label}</p>
               <p className="mt-1 text-text-muted">{day.createdOrders} / {formatCompactCurrency(day.wonRevenue)}</p>
             </div>
@@ -847,17 +833,17 @@ function PerformancePanel({
 
   return (
       <Card elevated className="workspace-block overflow-hidden p-0">
-      <div className={`h-1.5 ${isSuccess ? "bg-gradient-to-r from-amber-400 via-accent to-emerald-500" : "bg-gradient-to-r from-rose-500 via-coral to-amber-400"}`} />
+      <div className={`h-1.5 ${isSuccess ? "bg-gradient-to-r from-warning via-primary to-success" : "bg-gradient-to-r from-destructive via-primary to-warning"}`} />
       <div className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className={isSuccess ? "mt-1 text-amber-500" : "mt-1 text-coral"}>{icon}</span>
+            <span className={isSuccess ? "mt-1 text-warning" : "mt-1 text-destructive"}>{icon}</span>
             <div>
               <h4 className="text-base font-semibold tracking-tight text-text">{title}</h4>
               <p className="mt-1 text-xs text-text-muted">{subtitle}</p>
             </div>
           </div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${isSuccess ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${isSuccess ? "border-success/20 bg-success/10 text-success" : "border-destructive/20 bg-destructive/10 text-destructive"}`}>
             {badge}
           </span>
         </div>
@@ -904,7 +890,7 @@ function PerformanceRow({
 
   return (
     <div className="grid grid-cols-[auto,auto,minmax(0,1fr),auto] items-center gap-3 py-3">
-      <span className={`flex h-8 w-8 items-center justify-center rounded-xl border text-xs font-bold ${isSuccess ? getRankTone(index) : "border-rose-100 bg-rose-50 text-rose-700"}`}>
+      <span className={`flex h-8 w-8 items-center justify-center rounded-xl border text-xs font-bold ${isSuccess ? getRankTone(index) : "border-destructive/20 bg-destructive/10 text-destructive"}`}>
         {isSuccess && index < 3 ? <Medal size={18} /> : isSuccess ? `${index + 1}` : (
           <span className="text-center text-[10px] leading-tight">
             <span className="block">{index + 1}{getOrdinalSuffix(index + 1)}</span>
@@ -912,12 +898,12 @@ function PerformanceRow({
           </span>
         )}
       </span>
-      <span className={`flex h-8 min-w-8 items-center justify-center rounded-xl px-2 text-[11px] font-bold uppercase ${isSuccess ? "bg-background-tint text-primary" : "bg-rose-50 text-rose-700"}`}>
+      <span className={`flex h-8 min-w-8 items-center justify-center rounded-xl px-2 text-[11px] font-bold uppercase ${isSuccess ? "bg-background-tint text-primary" : "bg-destructive/10 text-destructive"}`}>
         {getInitials(leader.name)}
       </span>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-text">{leader.name}</p>
-        <p className={`mt-1 text-xs ${isSuccess ? "text-emerald-600" : "text-rose-600"}`}>
+        <p className={`mt-1 text-xs ${isSuccess ? "text-success" : "text-destructive"}`}>
           {isSuccess ? `UP ${formatDecimal(conversionRate)}% conversion` : `DOWN ${formatSignedDecimal(salesGap)} below avg`}
         </p>
       </div>
@@ -949,7 +935,7 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
             <div key={leader.id} className="rounded-2xl border border-border bg-background-tint p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-bold text-primary shadow-soft">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-sm font-bold text-primary shadow-soft">
                     {rank}
                   </span>
                   <div>
@@ -959,7 +945,7 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
                 </div>
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(wonValue)}</p>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-card">
                 <div
                   className={`h-full rounded-full bg-primary ${getWidthClass(Math.max((wonValue / maxWonValue) * 100, wonValue > 0 ? 8 : 2))}`}
                 />
@@ -1007,33 +993,44 @@ function formatPipelineStatus(status: string) {
 function getPipelineTone(status: string) {
   switch (status) {
     case "closed_won":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-success/20 bg-success/10 text-success";
     case "closed_lost":
-      return "border-coral/20 bg-coral/10 text-coral";
+      return "border-destructive/20 bg-destructive/10 text-destructive";
     default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning/20 bg-warning/10 text-warning";
   }
 }
 
 function getPipelineBarTone(status: string) {
   switch (status) {
     case "closed_won":
-      return "bg-emerald-500";
+      return "bg-success text-success-foreground";
     case "closed_lost":
-      return "bg-coral";
+      return "bg-destructive text-destructive-foreground";
     default:
-      return "bg-amber-500";
+      return "bg-warning text-warning-foreground";
   }
 }
 
 function getPipelineGraphColor(status: string) {
   switch (status) {
     case "closed_won":
-      return "#10B981";
+      return "rgb(var(--success) / 0.95)";
     case "closed_lost":
-      return "#F86F5B";
+      return "rgb(var(--destructive) / 0.95)";
     default:
-      return "#F59E0B";
+      return "rgb(var(--warning) / 0.95)";
+  }
+}
+
+function getPipelineDotTone(status: string) {
+  switch (status) {
+    case "closed_won":
+      return "bg-success";
+    case "closed_lost":
+      return "bg-destructive";
+    default:
+      return "bg-warning";
   }
 }
 
@@ -1171,13 +1168,13 @@ function getOrdinalSuffix(value: number) {
 function getRankTone(index: number) {
   switch (index) {
     case 0:
-      return "border-amber-200 bg-amber-50 text-amber-600";
+      return "border-warning/20 bg-warning/10 text-warning";
     case 1:
-      return "border-slate-200 bg-slate-50 text-slate-500";
+      return "border-border bg-muted text-muted-foreground";
     case 2:
-      return "border-orange-200 bg-orange-50 text-orange-600";
+      return "border-primary/20 bg-primary/10 text-primary";
     default:
-      return "border-emerald-100 bg-emerald-50 text-emerald-700";
+      return "border-success/20 bg-success/10 text-success";
   }
 }
 

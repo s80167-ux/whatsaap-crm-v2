@@ -153,7 +153,7 @@ export function DataExportPage() {
                 className={`min-h-[6.25rem] rounded-lg border px-3 py-3 text-left transition ${
                   dataset === item.value
                     ? "border-primary bg-primary-soft text-primary shadow-soft"
-                    : "border-border bg-white text-text hover:border-primary/30 hover:bg-background-tint"
+                    : "border-border bg-card text-text hover:border-primary/30 hover:bg-background-tint"
                 }`}
               >
                 <span className="block text-sm font-semibold">{item.label}</span>

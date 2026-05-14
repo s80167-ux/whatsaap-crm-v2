@@ -135,26 +135,38 @@ function getSyncJobTone(status: WhatsAppSyncJobStatus) {
   switch (status) {
     case "completed":
       return {
-        panel: "border-emerald-200 bg-emerald-50/70",
-        badge: "bg-emerald-100 text-emerald-700",
-        bar: "bg-emerald-500",
-        text: "text-emerald-800"
+        panel: "border-success/20 bg-success/10",
+        badge: "bg-success/15 text-success",
+        bar: "bg-success",
+        text: "text-success"
       };
     case "failed":
     case "cancelled":
       return {
-        panel: "border-rose-200 bg-rose-50/80",
-        badge: "bg-rose-100 text-rose-700",
-        bar: "bg-rose-500",
-        text: "text-rose-800"
+        panel: "border-destructive/20 bg-destructive/10",
+        badge: "bg-destructive/15 text-destructive",
+        bar: "bg-destructive",
+        text: "text-destructive"
       };
     default:
       return {
-        panel: "border-sky-200 bg-sky-50/70",
-        badge: "bg-sky-100 text-sky-700",
-        bar: "bg-sky-500",
-        text: "text-sky-800"
+        panel: "border-primary/20 bg-primary/10",
+        badge: "bg-primary/15 text-primary",
+        bar: "bg-primary",
+        text: "text-primary"
       };
+  }
+}
+
+function getSyncJobProgressClass(status: WhatsAppSyncJobStatus) {
+  switch (status) {
+    case "completed":
+      return "sync-job-progress sync-job-progress--success";
+    case "failed":
+    case "cancelled":
+      return "sync-job-progress sync-job-progress--destructive";
+    default:
+      return "sync-job-progress sync-job-progress--primary";
   }
 }
 
@@ -208,30 +220,25 @@ function SyncJobStatusCard({
         </p>
       </div>
 
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${tone.bar}`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <progress className={`mt-3 ${getSyncJobProgressClass(job.status)}`} max={100} value={progress} aria-label={`Sync progress: ${progress}%`} />
 
       <div className="mt-3 grid gap-3 text-xs text-text-muted sm:grid-cols-3">
-        <div className="rounded-xl bg-white/75 px-3 py-2">
+        <div className="rounded-xl bg-card/80 px-3 py-2">
           <p className="font-semibold text-text">Raw events</p>
           <p className="mt-1 text-sm font-semibold text-text">{job.raw_events_received}</p>
         </div>
-        <div className="rounded-xl bg-white/75 px-3 py-2">
+        <div className="rounded-xl bg-card/80 px-3 py-2">
           <p className="font-semibold text-text">Messages processed</p>
           <p className="mt-1 text-sm font-semibold text-text">{job.messages_processed}</p>
         </div>
-        <div className="rounded-xl bg-white/75 px-3 py-2">
+        <div className="rounded-xl bg-card/80 px-3 py-2">
           <p className="font-semibold text-text">Conversations updated</p>
           <p className="mt-1 text-sm font-semibold text-text">{job.conversations_updated}</p>
         </div>
       </div>
 
       {job.failed_events > 0 ? (
-        <p className="mt-3 text-xs font-medium text-rose-700">
+        <p className="mt-3 text-xs font-medium text-destructive">
           {job.failed_events} event{job.failed_events === 1 ? "" : "s"} failed during processing.
         </p>
       ) : null}
@@ -250,14 +257,14 @@ function AccountActivityCard({
 }) {
   const tones = tone === "emerald"
     ? {
-        panel: "border-emerald-200 bg-emerald-50/70",
-        badge: "bg-emerald-100 text-emerald-700",
-        text: "text-emerald-800"
+        panel: "border-success/20 bg-success/10",
+        badge: "bg-success/15 text-success",
+        text: "text-success"
       }
     : {
-        panel: "border-sky-200 bg-sky-50/70",
-        badge: "bg-sky-100 text-sky-700",
-        text: "text-sky-800"
+        panel: "border-primary/20 bg-primary/10",
+        badge: "bg-primary/15 text-primary",
+        text: "text-primary"
       };
 
   return (
@@ -287,12 +294,12 @@ function formatConnectionStatus(status: string) {
 function getConnectionTone(status: string) {
   const normalized = status.toLowerCase();
   if (normalized === "connected") {
-    return { dot: "bg-emerald-500", text: "text-emerald-700" };
+    return { dot: "bg-success", text: "text-success" };
   }
   if (["pairing", "reconnecting", "qr_required", "new"].includes(normalized)) {
-    return { dot: "bg-amber-400", text: "text-amber-700" };
+    return { dot: "bg-warning", text: "text-warning" };
   }
-  return { dot: "bg-red-500", text: "text-red-700" };
+  return { dot: "bg-destructive", text: "text-destructive" };
 }
 
 function isConnectedAccount(status: string) {
@@ -599,7 +606,7 @@ export function WhatsAppAccountDashboard() {
             </p>
           </div>
         </div>
-        {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
+        {notice ? <p className="mt-4 text-sm text-destructive">{notice}</p> : null}
       </Card>
 
       <PopupOverlay

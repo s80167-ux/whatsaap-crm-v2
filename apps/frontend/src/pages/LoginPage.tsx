@@ -46,17 +46,17 @@ export function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-hero-grid px-4 py-8">
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="w-full max-w-6xl">
-        <Card className="grid overflow-hidden border-primary/10 bg-white p-0 shadow-lift md:grid-cols-[1.08fr,0.92fr]" elevated>
+        <Card className="grid overflow-hidden border-primary/10 p-0 shadow-lift md:grid-cols-[1.08fr,0.92fr]" elevated>
           <div className="hidden border-r border-border bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_47%,#f2f7fb_100%)] p-10 md:flex md:min-h-[640px] md:flex-col md:justify-between">
             <div className="max-w-md">
-              <p className="brand-badge bg-white text-primary">WhatsApp CRM for PMKS</p>
+              <p className="brand-badge">WhatsApp CRM for PMKS</p>
               <h2 className="mt-5 text-3xl font-semibold leading-tight tracking-tight text-text">
                 Customer conversations, sales visibility, and team control in one workspace.
               </h2>
             </div>
 
             <div className="relative my-8">
-              <div className="relative overflow-hidden rounded-2xl border border-border bg-white shadow-[0_24px_60px_rgba(1,19,39,0.12)]">
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-panel">
                 <img src={brandBanner} alt="Rezeki Dashboard product preview" className="h-auto w-full object-cover" />
               </div>
             </div>
@@ -113,12 +113,12 @@ export function LoginPage() {
                   required
                 />
               </label>
-              {visibleError ? <p className="text-sm text-coral">{visibleError}</p> : null}
+              {visibleError ? <p className="text-sm text-destructive">{visibleError}</p> : null}
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
               <Button type="button" variant="secondary" className="w-full" onClick={startGoogleLogin}>
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-xs font-bold text-text">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-xs font-bold text-text">
                   G
                 </span>
                 Continue with Google

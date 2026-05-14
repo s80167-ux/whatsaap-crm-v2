@@ -68,28 +68,28 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-6">My Profile</h2>
+    <div className="workspace-block mx-auto mt-10 max-w-2xl p-6 shadow-soft">
+      <h2 className="mb-6 text-2xl font-bold text-text">My Profile</h2>
       {toast && <Toast message={toast.message} variant={toast.type} />}
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col gap-8 md:flex-row">
         {/* Personal Information */}
         <div className="flex-1">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="mb-4 flex items-center gap-4">
             {profile.avatarUrl ? (
               <img src={profile.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover" />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-3xl font-bold text-muted-foreground">
                 {profile.fullName.charAt(0)}
               </div>
             )}
             <div>
-              <div className="font-semibold text-lg">{profile.fullName}</div>
-              <div className="text-gray-500">{profile.email}</div>
+              <div className="text-lg font-semibold text-text">{profile.fullName}</div>
+              <div className="text-text-muted">{profile.email}</div>
             </div>
           </div>
-          <div className="bg-gray-50 p-4 rounded mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">Personal Information</span>
+          <div className="workspace-subtle mb-4 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-semibold text-text">Personal Information</span>
               {!editMode && (
                 <Button onClick={() => setEditMode(true)}>
                   Edit Profile
@@ -122,7 +122,7 @@ const ProfilePage: React.FC = () => {
               />
             </div>
             {editMode && (
-              <div className="flex gap-2 mt-4">
+              <div className="mt-4 flex gap-2">
                 <Button onClick={handleProfileSave} disabled={loading}>
                   Save Changes
                 </Button>
@@ -135,8 +135,8 @@ const ProfilePage: React.FC = () => {
         </div>
         {/* Security & Password */}
         <div className="flex-1">
-          <div className="bg-gray-50 p-4 rounded">
-            <div className="font-semibold mb-2">Security & Password</div>
+          <div className="workspace-subtle p-4">
+            <div className="mb-2 font-semibold text-text">Security & Password</div>
             {/* Current password is not required for self password update in this API */}
             <Input
               placeholder="New Password"
@@ -150,7 +150,7 @@ const ProfilePage: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
-            <div className="flex gap-2 mt-4">
+            <div className="mt-4 flex gap-2">
               <Button onClick={handlePasswordUpdate} disabled={passwordLoading}>
                 Update Password
               </Button>

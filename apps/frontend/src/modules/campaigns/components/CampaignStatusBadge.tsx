@@ -2,13 +2,13 @@ import clsx from "clsx";
 import type { CampaignStatus } from "../types/campaign.types";
 
 const statusClasses: Record<CampaignStatus, string> = {
-  Draft: "border-slate-200 bg-slate-100 text-slate-600",
-  Scheduled: "border-amber-200 bg-amber-50 text-amber-700",
-  Sending: "border-blue-200 bg-blue-50 text-blue-700",
-  Paused: "border-violet-200 bg-violet-50 text-violet-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-coral/20 bg-coral/10 text-coral",
-  Cancelled: "border-slate-300 bg-white text-slate-500"
+  Draft: "border-border bg-muted text-text-muted",
+  Scheduled: "border-warning/20 bg-warning/10 text-warning",
+  Sending: "border-primary/20 bg-primary/10 text-primary",
+  Paused: "border-secondary/25 bg-secondary/55 text-secondary-foreground",
+  Completed: "border-success/20 bg-success/10 text-success",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
+  Cancelled: "border-border bg-card text-text-soft"
 };
 
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {

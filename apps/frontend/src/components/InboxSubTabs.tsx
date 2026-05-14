@@ -18,8 +18,8 @@ export function InboxSubTabs({ tabs }: { tabs: InboxSubTab[] }) {
             clsx(
               "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition",
               isActive
-                ? "border-primary bg-primary text-white shadow-soft"
-                : "border-border bg-white text-text-muted hover:border-primary/25 hover:text-primary"
+                ? "border-primary bg-primary text-primary-foreground shadow-soft"
+                : "border-border bg-card text-text-muted hover:border-primary/25 hover:text-primary"
             )
           }
         >

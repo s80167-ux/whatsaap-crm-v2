@@ -19,10 +19,10 @@ const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
 ];
 
 const METRIC_TONES: Record<DailyReportMetric, string> = {
-  sales_count: "text-emerald-700",
-  sales_value: "text-emerald-700",
+  sales_count: "text-success",
+  sales_value: "text-success",
   contacted: "text-primary",
-  leads: "text-amber-700",
+  leads: "text-warning",
   won_count: "text-teal",
   won_value: "text-teal"
 };
@@ -216,14 +216,14 @@ export function ReportsPage() {
         </div>
       </section>
 
-      <div className="reports-tabs grid gap-2 rounded-2xl border border-border/70 bg-white/80 p-1.5 shadow-soft md:grid-cols-5">
+      <div className="reports-tabs workspace-subtle grid gap-2 p-1.5 shadow-soft md:grid-cols-5">
         {REPORT_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold transition ${
-              activeTab === tab.id ? "bg-white text-primary shadow-soft" : "text-text-muted hover:bg-white/70 hover:text-text"
+              activeTab === tab.id ? "bg-card text-primary shadow-soft" : "text-text-muted hover:bg-card hover:text-text"
             }`}
           >
             {tab.id === "daily" ? <Table2 size={16} /> : <LayoutGrid size={16} />}
@@ -441,19 +441,19 @@ function DailyReportDashboard(props: {
       </Card>
 
       <Card className="report-print-area overflow-hidden p-0">
-        <div className="flex items-center justify-between bg-slate-900 px-5 py-4 text-white">
+        <div className="flex items-center justify-between bg-topbar px-5 py-4 text-topbar-foreground">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.08em]">Daily Sales &amp; Contact Report</h2>
-            <p className="mt-1 text-xs font-semibold text-slate-300">
+            <p className="mt-1 text-xs font-semibold text-topbar-foreground/70">
               {MONTHS[Number(props.selectedMonth)]} {props.selectedYear}
             </p>
           </div>
-          <p className="text-sm font-semibold text-slate-200">Working Days: {props.workingDays}</p>
+          <p className="text-sm font-semibold text-topbar-foreground/80">Working Days: {props.workingDays}</p>
         </div>
         <div className="report-table-wrap overflow-x-auto">
           <table className="daily-report-table w-full border-collapse text-left text-[11px]">
             <thead>
-              <tr className="bg-slate-800 text-[11px] uppercase tracking-[0.04em] text-white">
+              <tr className="bg-topbar text-[11px] uppercase tracking-[0.04em] text-topbar-foreground">
                 <th className="w-8 px-2 py-2">No.</th>
                 <th className="w-24 px-2 py-2">Team</th>
                 <th className="w-32 px-2 py-2">Name</th>
@@ -467,16 +467,16 @@ function DailyReportDashboard(props: {
                       key={day.key}
                       className={`px-1.5 py-2 text-center transition-colors ${
                         isHovered
-                          ? "bg-[rgba(96,165,250,0.28)] text-white"
+                          ? "bg-primary/25 text-topbar-foreground"
                           : isWeekend
-                            ? "bg-[rgba(96,165,250,0.18)] text-white"
+                            ? "bg-primary/15 text-topbar-foreground"
                             : ""
                       }`}
                       onMouseEnter={() => setHoveredDayKey(day.key)}
                       onMouseLeave={() => setHoveredDayKey((current) => (current === day.key ? null : current))}
                     >
                       <span className="block text-[11px]">{String(day.day).padStart(2, "0")}</span>
-                      <span className={`block text-[9px] normal-case ${isHovered || isWeekend ? "text-blue-100" : "text-slate-300"}`}>
+                      <span className={`block text-[9px] normal-case ${isHovered || isWeekend ? "text-topbar-foreground/80" : "text-topbar-foreground/60"}`}>
                         {day.weekday}
                       </span>
                     </th>
@@ -488,7 +488,7 @@ function DailyReportDashboard(props: {
             <tbody>
               {props.errorMessage ? (
                 <tr>
-                  <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-coral">
+                  <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-destructive">
                     {props.errorMessage}
                   </td>
                 </tr>
@@ -571,7 +571,7 @@ function ReportSelect({
     <label className="block">
       <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-text-muted">{label}</span>
       <select
-        className="input-base mt-1.5 h-9 !border-0 !bg-slate-50 !px-3 !py-1.5 text-sm !shadow-none ring-1 ring-slate-200 focus:!ring-primary/20"
+        className="input-base mt-1.5 h-9 !px-3 !py-1.5 text-sm !shadow-none"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >

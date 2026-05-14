@@ -40,13 +40,13 @@ export function WhatsAppQrDisplay({ accountId }: { accountId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 text-center">
+    <div className="app-card rounded-2xl p-4 text-center">
       <img
         src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qr)}&size=240x240`}
         alt="WhatsApp QR Code"
         width={240}
         height={240}
-        className="mx-auto aspect-square h-44 w-44 max-w-full rounded-xl border border-border bg-white object-contain sm:h-60 sm:w-60"
+        className="mx-auto aspect-square h-44 w-44 max-w-full rounded-xl border border-border bg-card object-contain sm:h-60 sm:w-60"
       />
       <p className="mt-3 text-xs uppercase tracking-[0.2em] text-text-soft">Scan with WhatsApp</p>
     </div>

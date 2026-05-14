@@ -42,14 +42,20 @@ function getContactStatusInfo(contact: Contact, contactsById: Map<string, Contac
     const target = contact.merged_into_contact_id ? contactsById.get(contact.merged_into_contact_id) : null;
     return {
       label: target ? `Merged → ${getContactLabel(target) || "target"}` : "Merged",
-      type: "merged"
+      type: "merged" as const
     };
   }
 
   return {
     label: "Active",
-    type: "active"
+    type: "active" as const
   };
+}
+
+function getContactStatusTone(type: "merged" | "active") {
+  return type === "merged"
+    ? "border-border bg-muted text-muted-foreground"
+    : "border-success/20 bg-success/10 text-success";
 }
 
 async function updateContactDisplayName(contactId: string, displayName: string | null, organizationId?: string | null) {
@@ -184,7 +190,7 @@ function CompactRepairTools({
   const showCollapsedMobile = isMobile && !expanded;
 
   return (
-    <div className="rounded-2xl border border-primary/10 bg-background-tint/70 p-3 shadow-soft">
+    <div className="workspace-subtle p-3 shadow-soft">
       {showCollapsedMobile ? (
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
@@ -198,7 +204,7 @@ function CompactRepairTools({
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => setExpanded(true)}
             disabled={!canWrite}
           >
@@ -239,7 +245,7 @@ function CompactRepairTools({
               </Button>
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => setExpanded((value) => !value)}
                 disabled={!canWrite}
               >
@@ -277,7 +283,7 @@ function CompactRepairTools({
             </Button>
           </div>
 
-          <div className="rounded-xl border border-border bg-white p-3">
+          <div className="workspace-subtle p-3">
             <button
               type="button"
               className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft"
@@ -703,7 +709,7 @@ export function ContactsPage() {
 
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
-              <div className="grid h-10 grid-cols-2 overflow-hidden rounded-xl border border-border bg-white/70 shadow-soft">
+              <div className="grid h-10 grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/80 shadow-soft">
                 <button
                   type="button"
                   className={`flex items-center justify-center gap-2 px-3 text-xs font-semibold transition hover:bg-background-tint ${
@@ -744,7 +750,7 @@ export function ContactsPage() {
                 Loading contacts...
               </div>
             ) : contactsIsError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600">
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-8 text-sm text-destructive">
                 {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
               </div>
             ) : visibleContacts.length === 0 ? (
@@ -767,7 +773,7 @@ export function ContactsPage() {
                     className={`w-full rounded-2xl border p-4 text-left shadow-soft transition ${
                       selectedContactId === contact.id
                         ? "border-primary/30 bg-primary/5"
-                        : "border-border bg-white"
+                        : "border-border bg-card"
                     }`}
                     onClick={() => {
                       setRedirectMessage(null);
@@ -819,9 +825,7 @@ export function ContactsPage() {
                       )}
                       <span
                         className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                          status.type === "merged"
-                            ? "border-slate-200 bg-slate-100 text-slate-600"
-                            : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                          getContactStatusTone(status.type)
                         }`}
                         title={status.label}
                       >
@@ -833,7 +837,7 @@ export function ContactsPage() {
                       {getDialablePhoneNumber(contact) ? (
                         <a
                           href={`tel:${getDialablePhoneNumber(contact)}`}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition hover:bg-background-tint hover:text-primary"
                           title={`Call ${contact.display_name ?? "contact"}`}
                           aria-label={`Call ${contact.display_name ?? "contact"}`}
                           onClick={(event) => event.stopPropagation()}
@@ -847,7 +851,7 @@ export function ContactsPage() {
                       )}
                       <button
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                         title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                         aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                         disabled={!canSendMessages || getMessageableSources(contact).length === 0}
@@ -872,7 +876,7 @@ export function ContactsPage() {
                               void handleAssignContact(contact.id, event.target.value);
                             }}
                             disabled={assigningContactId === contact.id || organizationUsersLoading || assignableUsers.length === 0}
-                            className="h-10 w-full min-w-0 bg-white px-3 py-2 text-sm"
+                            className="h-10 w-full min-w-0 px-3 py-2 text-sm"
                             aria-label={`Assign ${contact.display_name ?? "contact"} to a team member`}
                           >
                             <option value="" disabled>
@@ -928,7 +932,7 @@ export function ContactsPage() {
                   </tr>
                 ) : contactsIsError ? (
                   <tr>
-                    <td className="text-sm text-red-600" colSpan={canAssignContacts ? 6 : 5}>
+                    <td className="text-sm text-destructive" colSpan={canAssignContacts ? 6 : 5}>
                       {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
                     </td>
                   </tr>
@@ -992,9 +996,7 @@ export function ContactsPage() {
                           return (
                             <span
                               className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                status.type === "merged"
-                                  ? "border-slate-200 bg-slate-100 text-slate-600"
-                                  : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                                getContactStatusTone(status.type)
                               }`}
                               title={status.label}
                             >
@@ -1007,7 +1009,7 @@ export function ContactsPage() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                             title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                             aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                             disabled={!canSendMessages || getMessageableSources(contact).length === 0}
@@ -1031,7 +1033,7 @@ export function ContactsPage() {
                                 void handleAssignContact(contact.id, event.target.value);
                               }}
                               disabled={assigningContactId === contact.id || organizationUsersLoading || assignableUsers.length === 0}
-                              className="h-8 w-full min-w-0 bg-white px-2 py-1 text-[11px]"
+                              className="h-8 w-full min-w-0 px-2 py-1 text-[11px]"
                               aria-label={`Assign ${contact.display_name ?? "contact"} to a team member`}
                             >
                               <option value="" disabled>
@@ -1080,7 +1082,7 @@ export function ContactsPage() {
         <div
           className={
             isCompactDetailLayout
-              ? "fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 px-3 py-6"
+              ? "fixed inset-0 z-[90] flex items-center justify-center bg-background/80 px-3 py-6 backdrop-blur-sm"
               : ""
           }
           onClick={() => {
@@ -1094,8 +1096,8 @@ export function ContactsPage() {
             elevated
             className={
               isCompactDetailLayout
-                ? "workspace-block max-h-[86vh] w-full max-w-2xl overflow-y-auto border-primary/10 bg-white shadow-panel"
-                : "workspace-block border-primary/10 bg-white shadow-panel lg:sticky lg:top-6 lg:self-start"
+                ? "workspace-block max-h-[86vh] w-full max-w-2xl overflow-y-auto border-primary/10 shadow-panel"
+                : "workspace-block border-primary/10 shadow-panel lg:sticky lg:top-6 lg:self-start"
             }
             onClick={(event) => event.stopPropagation()}
           >
@@ -1107,7 +1109,7 @@ export function ContactsPage() {
           {isCompactDetailLayout ? (
             <button
               type="button"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition hover:bg-background-tint"
               onClick={() => {
                 setSelectedContactId(null);
                 setRedirectMessage(null);
@@ -1142,9 +1144,7 @@ export function ContactsPage() {
                   return (
                     <span
                       className={`mt-2 inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                        status.type === "merged"
-                          ? "border-slate-200 bg-slate-100 text-slate-600"
-                          : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                        getContactStatusTone(status.type)
                       }`}
                       title={status.label}
                     >
@@ -1158,7 +1158,7 @@ export function ContactsPage() {
               {isMobile && selectedContactDialableNumber ? (
                 <a
                   href={`tel:${selectedContactDialableNumber}`}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                   aria-label={`Call ${activeContact.display_name ?? "contact"}`}
                 >
                   <Phone size={16} aria-hidden="true" />
@@ -1264,7 +1264,7 @@ export function ContactsPage() {
                   onChange={(event) => setEditNotes(event.target.value)}
                   rows={4}
                   placeholder="Add internal notes for this contact"
-                  className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="input-base mt-1 min-h-[7.5rem] w-full resize-y disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={!canRepairContacts || isSavingContact}
                 />
               </label>
@@ -1277,7 +1277,7 @@ export function ContactsPage() {
                   {sourcePagination.visibleItems.map((source) => (
                     <span
                       key={source.id}
-                      className="inline-flex max-w-full items-center rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted"
+                      className="inline-flex max-w-full items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-text-muted"
                       title={source.id}
                     >
                       <span className="truncate">{source.label ?? source.id}</span>
@@ -1309,8 +1309,8 @@ export function ContactsPage() {
         </div>
       ) : null}
       {composeContact ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-white p-5 shadow-panel">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 py-6 backdrop-blur-sm">
+          <div className="workspace-block w-full max-w-lg p-5 shadow-panel">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Send WhatsApp</p>
@@ -1323,7 +1323,7 @@ export function ContactsPage() {
               </div>
               <button
                 type="button"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-background-tint"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition hover:bg-background-tint"
                 onClick={closeCompose}
                 aria-label="Close WhatsApp composer"
                 disabled={isSendingContactMessage}
@@ -1355,12 +1355,12 @@ export function ContactsPage() {
                 onChange={(event) => setComposeText(event.target.value)}
                 rows={5}
                 placeholder="Type your WhatsApp message..."
-                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="input-base mt-1 min-h-[8.5rem] w-full resize-y disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSendingContactMessage}
               />
             </label>
 
-            {composeNotice ? <p className="mt-3 text-sm text-red-600">{composeNotice}</p> : null}
+            {composeNotice ? <p className="mt-3 text-sm text-destructive">{composeNotice}</p> : null}
 
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <Button variant="ghost" onClick={closeCompose} disabled={isSendingContactMessage}>
@@ -1406,7 +1406,7 @@ export function ContactsPage() {
             </div>
 
             {mergeMessage ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mergeMessage}</div>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{mergeMessage}</div>
             ) : null}
 
             <label className="block">
@@ -1438,7 +1438,7 @@ export function ContactsPage() {
               />
             </label>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+            <div className="rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-sm leading-6 text-warning">
               Conversations, messages, WhatsApp identities, leads, activities, sales orders, dispatch records, and quick reply outcomes will move to the target contact. The selected contact will be marked as merged.
             </div>
 

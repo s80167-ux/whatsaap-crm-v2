@@ -63,7 +63,7 @@ export function PopupOverlay({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         className={clsx(
-          "popup-overlay__panel relative z-[1] mt-auto max-h-[min(88vh,920px)] w-full overflow-hidden border border-border bg-white text-text shadow-[0_28px_80px_rgba(2,6,23,0.55)] backdrop-blur-2xl sm:mt-0",
+          "popup-overlay__panel app-card relative z-[1] mt-auto max-h-[min(88vh,920px)] w-full overflow-hidden text-card-foreground shadow-[0_28px_80px_rgb(2_6_23/0.55)] sm:mt-0",
           panelClassName
         )}
         role="dialog"
@@ -80,7 +80,7 @@ export function PopupOverlay({
               <button
                 type="button"
                 aria-label="Close popup"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-border bg-background-tint text-text-soft transition hover:bg-white hover:text-text"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground transition hover:bg-card hover:text-foreground"
                 onClick={onClose}
               >
                 <X className="h-4 w-4" />

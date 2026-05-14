@@ -36,6 +36,7 @@ import { NavLinkItem } from "../components/NavLinkItem";
 import { NotificationBell } from "../components/NotificationBell";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
+import { ThemeSwitcher } from "../components/theme-switcher";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
 import { useCampaignsModuleStatus, useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
@@ -95,8 +96,8 @@ function SidebarNavGroup({
             ? "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition duration-200"
             : "flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-medium transition duration-200",
           isGroupActive
-            ? "bg-white text-slate-900 shadow-[0_10px_24px_rgba(8,15,32,0.16)]"
-            : "text-white/72 hover:bg-white/10 hover:text-white"
+            ? "bg-sidebar-foreground text-foreground shadow-panel"
+            : "text-sidebar-foreground/72 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
         )}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
@@ -133,7 +134,7 @@ function UserAvatar({ src, name, size = "sm" }: { src?: string | null; name?: st
   const iconSize = size === "md" ? 22 : 16;
 
   return (
-    <span className={`flex ${sizeClass} shrink-0 overflow-hidden rounded-full bg-white/12 text-white`}>
+    <span className={`flex ${sizeClass} shrink-0 overflow-hidden rounded-full bg-sidebar-foreground/10 text-sidebar-foreground`}>
       {src ? (
         <img src={src} alt={name ? `${name} profile` : "User profile"} className="h-full w-full object-cover" />
       ) : (
@@ -187,14 +188,14 @@ function SidebarContent({
     <>
       <div className={mobile ? "space-y-3" : ""}>
         {mobile ? (
-          <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
+          <div className="rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/10">
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
                 <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-white">Rezeki CRM</p>
-                <p className="truncate text-[11px] text-white/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+                <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Rezeki CRM</p>
+                <p className="truncate text-[11px] text-sidebar-foreground/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
               </div>
             </div>
           </div>
@@ -214,20 +215,20 @@ function SidebarContent({
       {isSuperAdmin ? (
         <div className={mobile ? "mt-3" : "mt-5"}>
           <label className="block">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{mobile ? "Current org" : "Viewing org"}</span>
-            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 ${mobile ? "h-8 rounded-lg border border-white/10 bg-white/10 px-2.5 text-[13px]" : "h-9 px-0 py-0 text-sm font-medium"}`} aria-label="Choose organization to view">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{mobile ? "Current org" : "Viewing org"}</span>
+            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 ${mobile ? "h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" : "h-9 px-0 py-0 text-sm font-medium"}`} aria-label="Choose organization to view">
               <option value="">Choose organization</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>{organization.name}</option>
               ))}
             </Select>
           </label>
-          {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-white/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-white/40">Required for organization views</p>}
+          {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
         </div>
       ) : null}
 
       <nav className={`space-y-1.5 ${mobile ? "mt-4" : "mt-8"}`}>
-        {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Primary</p> : null}
+        {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Primary</p> : null}
         <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" onClick={onNavigate} compact={mobile} />
         <SidebarNavGroup
           icon={<MessageSquare size={18} />}
@@ -239,7 +240,7 @@ function SidebarContent({
           onNavigate={onNavigate}
           compact={mobile}
         />
-        {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Workspace</p> : null}
+        {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Workspace</p> : null}
         <SidebarNavGroup
           icon={<Users size={18} />}
           label="CRM"
@@ -267,7 +268,7 @@ function SidebarContent({
         />
         {isSuperAdmin ? (
           <>
-            {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/35">Admin</p> : null}
+            {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Admin</p> : null}
           <SidebarNavGroup
             icon={<Workflow size={18} />}
             label="Super Admin Map"
@@ -471,28 +472,29 @@ export function DashboardLayout() {
 
   return (
     <div className="dashboard-shell min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:px-6 md:pb-4 md:pt-16">
-      <header className="dashboard-topbar fixed inset-x-0 top-0 z-[100] border-b border-slate-200/70 text-white shadow-soft">
+      <header className="dashboard-topbar app-topbar fixed inset-x-0 top-0 z-[100] border-b border-border shadow-soft">
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
           <div className="topbar-chip flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5">
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white transition duration-200 hover:border-white/30 hover:bg-white/15 md:hidden"
+              className="topbar-profile-trigger inline-flex h-8 w-8 items-center justify-center rounded-lg border px-0 md:hidden"
               aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileNavOpen}
               onClick={() => setIsMobileNavOpen((isOpen) => !isOpen)}
             >
               <Menu size={16} />
             </button>
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-success shadow-[0_0_18px_rgb(var(--success)/0.45)]" />
             <span className="topbar-brand truncate text-[11px] font-semibold uppercase tracking-[0.22em]">Rezeki CRM</span>
             {selectedOrganizationName ? <span className="topbar-scope hidden truncate text-xs sm:inline">/ {selectedOrganizationName}</span> : null}
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <ThemeSwitcher />
             <NotificationBell />
             <button
               type="button"
-              className="topbar-profile-trigger inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-xl border px-2.5 text-xs font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"
+              className="topbar-profile-trigger inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-xl border px-2.5 text-xs font-semibold transition duration-200"
               aria-label="Open profile panel"
               aria-expanded={isProfilePanelOpen}
               onClick={() => setIsProfilePanelOpen((isOpen) => !isOpen)}
@@ -508,7 +510,7 @@ export function DashboardLayout() {
         <div className="fixed inset-0 z-40 md:hidden" aria-hidden={!isMobileNavOpen}>
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/26 backdrop-blur-md backdrop-saturate-150"
+            className="absolute inset-0 bg-background/40 backdrop-blur-md backdrop-saturate-150"
             aria-label="Close navigation menu"
             onClick={() => setIsMobileNavOpen(false)}
           />
@@ -546,7 +548,7 @@ export function DashboardLayout() {
               <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
               {user?.phone && <p className="mt-0.5 truncate text-xs text-text-muted">{user.phone}</p>}
               {user?.address && <p className="mt-0.5 truncate text-xs text-text-muted">{user.address}</p>}
-              <p className="mt-2 inline-flex border border-border bg-background-tint px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">
+              <p className="mt-2 inline-flex border border-border bg-muted px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {user?.role ?? "user"}
               </p>
             </div>
@@ -555,7 +557,7 @@ export function DashboardLayout() {
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="ghost"
-              className="col-span-2 border border-border bg-background-tint px-3 py-2 text-text hover:bg-white hover:text-text"
+              className="col-span-2 border border-border bg-muted px-3 py-2 text-foreground hover:bg-card hover:text-foreground"
               aria-label="Edit my profile"
               disabled={isUpdatingProfile}
               onClick={() => {
@@ -569,7 +571,7 @@ export function DashboardLayout() {
             </Button>
             <Button
               variant="ghost"
-              className="border border-border bg-background-tint px-3 py-2 text-text hover:bg-white hover:text-text"
+              className="border border-border bg-muted px-3 py-2 text-foreground hover:bg-card hover:text-foreground"
               aria-label="Reset my password"
               disabled={isUpdatingPassword}
               onClick={() => {
@@ -592,7 +594,7 @@ export function DashboardLayout() {
                 }
               }}
               variant="secondary"
-              className="border-border bg-white px-3 py-2 text-text hover:bg-background-tint"
+              className="border-border bg-card px-3 py-2 text-foreground hover:bg-muted"
               aria-label="Sign out"
             >
               <LogOut size={15} />
@@ -602,19 +604,19 @@ export function DashboardLayout() {
 
           {isProfileFormOpen ? (
             <form className="space-y-3" onSubmit={handleUpdateProfile}>
-              <div className="flex items-center gap-3 border border-border bg-background-tint p-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-3">
                 <UserAvatar src={profileAvatarUrl} name={profileFullName || user?.email || null} size="md" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-soft">Profile picture</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Profile picture</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <label className="inline-flex cursor-pointer items-center justify-center border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text transition hover:bg-background-tint">
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted">
                       Upload
                       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={handleProfilePictureChange} />
                     </label>
                     {profileAvatarUrl ? (
                       <Button
                         variant="ghost"
-                        className="border border-border bg-white px-2.5 py-1.5 text-xs text-text hover:bg-background-tint hover:text-text"
+                        className="border border-border bg-card px-2.5 py-1.5 text-xs text-foreground hover:bg-muted hover:text-foreground"
                         disabled={isUpdatingProfile}
                         onClick={() => setProfileAvatarUrl(null)}
                       >
@@ -624,9 +626,9 @@ export function DashboardLayout() {
                   </div>
                 </div>
               </div>
-              <Input value={profileFullName} onChange={(event) => setProfileFullName(event.target.value)} placeholder="Full name" aria-label="Full name" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
-              <Input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} placeholder="Phone number" aria-label="Phone number" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
-              <Input value={profileAddress} onChange={(event) => setProfileAddress(event.target.value)} placeholder="Address" aria-label="Address" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" />
+              <Input value={profileFullName} onChange={(event) => setProfileFullName(event.target.value)} placeholder="Full name" aria-label="Full name" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
+              <Input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} placeholder="Phone number" aria-label="Phone number" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
+              <Input value={profileAddress} onChange={(event) => setProfileAddress(event.target.value)} placeholder="Address" aria-label="Address" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>Save profile</Button>
                 <Button
@@ -647,12 +649,12 @@ export function DashboardLayout() {
               </div>
             </form>
           ) : null}
-          {profileNotice ? <p className="text-xs text-coral">{profileNotice}</p> : null}
+          {profileNotice ? <p className="text-xs text-destructive">{profileNotice}</p> : null}
 
           {isPasswordFormOpen ? (
             <form className="space-y-2" onSubmit={handleUpdatePassword}>
-              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="New password" aria-label="New password" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" minLength={8} required />
-              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" aria-label="Confirm new password" className="border-border bg-white px-3 py-2 text-text placeholder:text-text-soft" minLength={8} required />
+              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="New password" aria-label="New password" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
+              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" aria-label="Confirm new password" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}><Check size={16} /></Button>
                 <Button
@@ -672,7 +674,7 @@ export function DashboardLayout() {
               </div>
             </form>
           ) : null}
-          {passwordNotice ? <p className="text-xs text-coral">{passwordNotice}</p> : null}
+          {passwordNotice ? <p className="text-xs text-destructive">{passwordNotice}</p> : null}
         </div>
       </PopupOverlay>
 

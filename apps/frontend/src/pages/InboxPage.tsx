@@ -194,18 +194,18 @@ export function InboxPage() {
 
   const conversationListCard = (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Card className="workspace-block grid h-[calc(100dvh-6rem)] min-h-[560px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden bg-white md:min-h-[640px] md:max-h-[calc(100vh-5.5rem)]" elevated>
+      <Card className="workspace-block grid h-[calc(100dvh-6rem)] min-h-[560px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden md:min-h-[640px] md:max-h-[calc(100vh-5.5rem)]" elevated>
         <header className="pb-3">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Queue</p>
           <div className="mt-2 flex items-end justify-between gap-4">
             <div>
               <h2 className="section-title">Work queue</h2>
-              <p className="mt-0.5 text-sm text-text-muted">{conversationCountLabel} visible</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{conversationCountLabel} visible</p>
             </div>
           </div>
           <div className="mt-3 space-y-2">
             <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-soft" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
@@ -227,22 +227,22 @@ export function InboxPage() {
                   type="button"
                   className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                     filterMode === item.key
-                      ? "border-primary/20 bg-primary-soft text-primary"
-                      : "border-border bg-white text-text-muted hover:border-primary/20 hover:text-text"
+                      ? "border-primary/20 bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/20 hover:text-foreground"
                   }`}
                   onClick={() => setFilterMode(item.key as ConversationFilterMode)}
                 >
                   <span>{item.label}</span>
-                  <span className="ml-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] text-inherit">{item.count}</span>
+                  <span className="ml-1 rounded-full bg-background/75 px-1.5 py-0.5 text-[10px] text-inherit">{item.count}</span>
                 </button>
               ))}
             </div>
-            <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
+            <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sort</p>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
-                  conversationSortMode === "alphabetical" ? "text-primary" : "text-text-soft"
+                  conversationSortMode === "alphabetical" ? "text-primary" : "text-muted-foreground"
                 }`}
                 title="Sort alphabetically"
                 aria-label="Sort conversations alphabetically"
@@ -255,7 +255,7 @@ export function InboxPage() {
               <button
                 type="button"
                 className={`inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-semibold transition hover:text-primary ${
-                  conversationSortMode === "latest" ? "text-primary" : "text-text-soft"
+                  conversationSortMode === "latest" ? "text-primary" : "text-muted-foreground"
                 }`}
                 title="Sort by latest message"
                 aria-label="Sort conversations by latest message"
@@ -272,7 +272,7 @@ export function InboxPage() {
           {isLoading ? (
             <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
           ) : conversationsIsError ? (
-            <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-coral">
+            <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-destructive">
               {conversationsError instanceof Error ? conversationsError.message : "Unable to load conversations."}
             </div>
           ) : (
@@ -307,9 +307,9 @@ export function InboxPage() {
                   { label: "Open", value: queueCounts.all },
                   { label: "Unassigned", value: queueCounts.unassigned }
                 ].map((metric) => (
-                  <div key={metric.label} className="rounded-xl border border-border bg-white px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
-                    <p className="mt-1 text-lg font-semibold text-text">{metric.value}</p>
+                  <div key={metric.label} className="app-card rounded-xl px-3 py-2 shadow-none">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{metric.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">{metric.value}</p>
                   </div>
                 ))}
               </div>
@@ -334,7 +334,7 @@ export function InboxPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="px-3 py-2 text-xs text-text hover:text-text"
+                    className="px-3 py-2 text-xs text-foreground hover:text-foreground"
                     onClick={() => setMobilePane("list")}
                   >
                     <ChevronLeft size={16} />
@@ -413,7 +413,7 @@ export function InboxPage() {
           </div>
           <div className="inbox-side-rail inbox-detail-rail">
             <ContactInfoPanel
-              className="workspace-block border-primary/10 bg-white text-xs"
+              className="workspace-block border-primary/10 text-xs"
               conversation={stableSelectedConversation}
               onAssigned={() => {
                 void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });

@@ -34,55 +34,55 @@ const PREVIEW_METRICS: PreviewMetric[] = [
   {
     key: "users",
     label: "Users",
-    tone: "bg-slate-100 text-slate-700",
+    tone: "bg-muted text-muted-foreground",
     icon: <Users size={16} />
   },
   {
     key: "whatsappAccounts",
     label: "WhatsApp Accounts",
-    tone: "bg-sky-100 text-sky-700",
+    tone: "bg-primary/10 text-primary",
     icon: <MessageSquare size={16} />
   },
   {
     key: "contacts",
     label: "Contacts",
-    tone: "bg-indigo-100 text-indigo-700",
+    tone: "bg-primary/10 text-primary",
     icon: <Users size={16} />
   },
   {
     key: "conversations",
     label: "Conversations",
-    tone: "bg-cyan-100 text-cyan-700",
+    tone: "bg-primary/10 text-primary",
     icon: <MessageSquare size={16} />
   },
   {
     key: "messages",
     label: "Messages",
-    tone: "bg-blue-100 text-blue-700",
+    tone: "bg-primary/10 text-primary",
     icon: <MessageSquare size={16} />
   },
   {
     key: "sales",
     label: "Sales Orders",
-    tone: "bg-emerald-100 text-emerald-700",
+    tone: "bg-success/10 text-success",
     icon: <BadgeDollarSign size={16} />
   },
   {
     key: "activities",
     label: "Activities",
-    tone: "bg-amber-100 text-amber-700",
+    tone: "bg-warning/10 text-warning",
     icon: <Database size={16} />
   },
   {
     key: "notifications",
     label: "Notifications",
-    tone: "bg-orange-100 text-orange-700",
+    tone: "bg-warning/10 text-warning",
     icon: <AlertTriangle size={16} />
   },
   {
     key: "repairProposals",
     label: "Repair Proposals",
-    tone: "bg-rose-100 text-rose-700",
+    tone: "bg-destructive/10 text-destructive",
     icon: <ShieldAlert size={16} />
   }
 ];
@@ -332,8 +332,8 @@ export function ClearOrganizationDataPage() {
                   type="button"
                   className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                     scope === option.key
-                      ? "border-primary/30 bg-white text-text shadow-soft"
-                      : "border-border bg-white/70 text-text-muted hover:bg-white"
+                      ? "border-primary/30 bg-card text-text shadow-soft"
+                      : "border-border bg-card/70 text-text-muted hover:bg-card"
                   }`}
                   onClick={() => setScope(option.key)}
                 >
@@ -342,14 +342,14 @@ export function ClearOrganizationDataPage() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 rounded-xl border border-border bg-white/80 p-3 text-sm leading-5 text-text-muted">
+            <div className="mt-3 rounded-xl border border-border bg-card/80 p-3 text-sm leading-5 text-text-muted">
               {selectedScopeMeta?.description}
             </div>
           </div>
         </div>
       </section>
 
-      <Card elevated className="border-border bg-white p-0">
+      <Card elevated className="border-border p-0">
         <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
           <div className="flex gap-3">
             <div className="rounded-xl bg-primary-soft p-2.5 text-primary">
@@ -373,8 +373,8 @@ export function ClearOrganizationDataPage() {
       </Card>
 
       {successMessage ? (
-        <Card elevated className="border-emerald-200 bg-emerald-50/70">
-          <div className="flex items-center gap-3 text-emerald-800">
+        <Card elevated className="border-success/20 bg-success/10">
+          <div className="flex items-center gap-3 text-success">
             <CheckCircle2 size={18} />
             <p className="text-sm font-medium">{successMessage}</p>
           </div>
@@ -382,8 +382,8 @@ export function ClearOrganizationDataPage() {
       ) : null}
 
       {error ? (
-        <Card elevated className="border-rose-200 bg-rose-50/70">
-          <div className="flex items-center gap-3 text-rose-800">
+        <Card elevated className="border-destructive/20 bg-destructive/10">
+          <div className="flex items-center gap-3 text-destructive">
             <AlertTriangle size={18} />
             <p className="text-sm font-medium">{error}</p>
           </div>
@@ -428,17 +428,17 @@ export function ClearOrganizationDataPage() {
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-2 xl:grid-cols-4">
-                  <SalesStat label="Total orders" value={formatCount(salesSummary?.totalOrders ?? 0)} tone="text-slate-900" />
-                  <SalesStat label="Open pipeline" value={formatCount(salesSummary?.openOrders ?? 0)} tone="text-sky-700" />
-                  <SalesStat label="Won orders" value={formatCount(salesSummary?.wonOrders ?? 0)} tone="text-emerald-700" />
-                  <SalesStat label="Lost orders" value={formatCount(salesSummary?.lostOrders ?? 0)} tone="text-rose-700" />
+                  <SalesStat label="Total orders" value={formatCount(salesSummary?.totalOrders ?? 0)} tone="text-text" />
+                  <SalesStat label="Open pipeline" value={formatCount(salesSummary?.openOrders ?? 0)} tone="text-primary" />
+                  <SalesStat label="Won orders" value={formatCount(salesSummary?.wonOrders ?? 0)} tone="text-success" />
+                  <SalesStat label="Lost orders" value={formatCount(salesSummary?.lostOrders ?? 0)} tone="text-destructive" />
                 </div>
 
                 <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)]">
                   <div className="workspace-subtle p-3.5 sm:p-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-text">Revenue snapshot</p>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">
+                      <span className="rounded-full bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">
                         Organization scope
                       </span>
                     </div>
@@ -492,18 +492,18 @@ export function ClearOrganizationDataPage() {
 
                 {selectedUser ? (
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                    <MetricCard label="Role" value={selectedUser.role} tone="bg-slate-100 text-slate-700" icon={<Users size={16} />} />
-                    <MetricCard label="Status" value={selectedUser.status} tone="bg-sky-100 text-sky-700" icon={<ShieldAlert size={16} />} />
+                    <MetricCard label="Role" value={selectedUser.role} tone="bg-muted text-muted-foreground" icon={<Users size={16} />} />
+                    <MetricCard label="Status" value={selectedUser.status} tone="bg-primary/10 text-primary" icon={<ShieldAlert size={16} />} />
                     <MetricCard
                       label="Auth Account"
                       value={selectedUser.auth_user_id ? "Connected" : "Missing"}
-                      tone="bg-indigo-100 text-indigo-700"
+                      tone="bg-primary/10 text-primary"
                       icon={<Database size={16} />}
                     />
                     <MetricCard
                       label="Created"
                       value={formatDate(selectedUser.created_at)}
-                      tone="bg-amber-100 text-amber-700"
+                      tone="bg-warning/10 text-warning"
                       icon={<Building2 size={16} />}
                     />
                   </div>
@@ -527,17 +527,17 @@ export function ClearOrganizationDataPage() {
               </div>
 
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <MetricCard label="Org Admins" value={formatCount(orgAdminUsers.length)} tone="bg-slate-100 text-slate-700" icon={<Users size={16} />} />
+                <MetricCard label="Org Admins" value={formatCount(orgAdminUsers.length)} tone="bg-muted text-muted-foreground" icon={<Users size={16} />} />
                 <MetricCard
                   label="All Org Users"
                   value={formatCount(organizationUsers.length)}
-                  tone="bg-sky-100 text-sky-700"
+                  tone="bg-primary/10 text-primary"
                   icon={<Users size={16} />}
                 />
                 <MetricCard
                   label="Auth Accounts"
                   value={formatCount(orgAdminUsers.filter((user) => user.auth_user_id).length)}
-                  tone="bg-indigo-100 text-indigo-700"
+                  tone="bg-primary/10 text-primary"
                   icon={<Database size={16} />}
                 />
               </div>
@@ -549,7 +549,7 @@ export function ClearOrganizationDataPage() {
                   </Card>
                 ) : (
                   orgAdminUsers.map((user) => (
-                    <div key={user.id} className="rounded-xl border border-border bg-white px-3 py-3 shadow-soft">
+                    <div key={user.id} className="rounded-xl border border-border bg-card px-3 py-3 shadow-soft">
                       <div className="text-sm font-semibold text-text">{getUserLabel(user)}</div>
                       <div className="mt-1 text-sm text-text-muted">
                         Role: {user.role} · Status: {user.status} · Auth: {user.auth_user_id ? "Connected" : "Missing"}
@@ -622,15 +622,15 @@ export function ClearOrganizationDataPage() {
             ) : null}
 
             {confirmStep === 2 ? (
-              <div className="space-y-2.5 rounded-[1rem] border border-rose-200 bg-rose-50/70 p-2.5">
+              <div className="space-y-2.5 rounded-[1rem] border border-destructive/20 bg-destructive/10 p-2.5">
                 <div>
-                  <p className="text-sm font-semibold text-rose-950">Final confirmation</p>
-                  <p className="mt-1 text-sm leading-5 text-rose-900">
+                  <p className="text-sm font-semibold text-destructive">Final confirmation</p>
+                  <p className="mt-1 text-sm leading-5 text-destructive">
                     Type the exact phrase below, then confirm that you understand this action is permanent.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm font-semibold tracking-[0.03em] text-rose-900">
+                <div className="rounded-xl border border-destructive/20 bg-card px-3 py-2.5 text-sm font-semibold tracking-[0.03em] text-destructive">
                   {expectedText || "No target available"}
                 </div>
 
@@ -641,7 +641,7 @@ export function ClearOrganizationDataPage() {
                   placeholder="Enter confirmation text"
                 />
 
-                <label className="flex items-start gap-3 rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-rose-950">
+                <label className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-card/80 px-3 py-2 text-sm text-destructive">
                   <input
                     className="mt-1"
                     type="checkbox"
@@ -684,7 +684,7 @@ export function ClearOrganizationDataPage() {
 
 function HeroStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="clear-org-hero-stat rounded-[0.85rem] border border-border bg-white px-2.5 py-2.5 shadow-soft sm:rounded-[1rem] sm:px-3 sm:py-3">
+    <div className="clear-org-hero-stat rounded-[0.85rem] border border-border bg-card px-2.5 py-2.5 shadow-soft sm:rounded-[1rem] sm:px-3 sm:py-3">
       <div className="flex items-center gap-2 text-text-soft">
         {icon}
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em] sm:text-xs sm:tracking-[0.16em]">{label}</span>
@@ -731,7 +731,7 @@ function SalesStat({ label, value, tone }: { label: string; value: string; tone:
 
 function RevenueTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="clear-org-revenue-tile rounded-[0.85rem] border border-border bg-white px-2.5 py-2.5 shadow-soft sm:rounded-[0.95rem] sm:px-3 sm:py-3">
+    <div className="clear-org-revenue-tile rounded-[0.85rem] border border-border bg-card px-2.5 py-2.5 shadow-soft sm:rounded-[0.95rem] sm:px-3 sm:py-3">
       <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.1em] text-text-soft sm:text-xs sm:tracking-[0.16em]">{label}</p>
       <p className="mt-1.5 break-words text-sm font-semibold text-text sm:mt-2 sm:text-base">{value}</p>
     </div>
@@ -761,7 +761,7 @@ function FlowStep({
         <>
           <span
             className={`mx-auto inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${
-              active ? "bg-white text-primary shadow-soft" : "bg-white text-text-soft"
+              active ? "bg-card text-primary shadow-soft" : "bg-card text-text-soft"
             }`}
           >
             {index}
@@ -772,7 +772,7 @@ function FlowStep({
         <>
           <span
             className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-              active ? "bg-white text-primary shadow-soft" : "bg-white text-text-soft"
+              active ? "bg-card text-primary shadow-soft" : "bg-card text-text-soft"
             }`}
           >
             {index}

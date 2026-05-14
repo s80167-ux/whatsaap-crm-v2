@@ -155,8 +155,8 @@ export function ContactRepairQueueOverlay({
         <div
           className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
             notice.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-700"
+              ? "border-success/20 bg-success/10 text-success"
+              : "border-destructive/20 bg-destructive/10 text-destructive"
           }`}
         >
           <p className="font-semibold">{notice.title}</p>
@@ -186,7 +186,7 @@ export function ContactRepairQueueOverlay({
           ) : loading ? (
             <p className="text-sm text-text-muted">Loading pending proposals...</p>
           ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           ) : items.length === 0 ? (
             <p className="text-sm text-text-muted">No pending issues right now.</p>
           ) : (
@@ -197,8 +197,8 @@ export function ContactRepairQueueOverlay({
                 onClick={() => setSelectedId(item.id)}
                 className={`w-full rounded-2xl border p-3 text-left transition ${
                   selectedId === item.id
-                    ? "border-primary bg-white shadow-soft"
-                    : "border-border bg-white/80 hover:border-primary/30 hover:bg-white"
+                    ? "border-primary bg-card shadow-soft"
+                    : "border-border bg-card/80 hover:border-primary/30 hover:bg-card"
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -218,7 +218,7 @@ export function ContactRepairQueueOverlay({
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+        <div className="workspace-block p-4 shadow-soft">
           {selected ? (
             <div className="space-y-4">
               <div>
@@ -226,7 +226,7 @@ export function ContactRepairQueueOverlay({
                 <h3 className="mt-2 text-lg font-semibold text-text">{getProposalLabel(selected)}</h3>
               </div>
 
-              {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+              {error ? <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div> : null}
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background-tint/50 p-3">
@@ -239,9 +239,9 @@ export function ContactRepairQueueOverlay({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border bg-slate-950 p-3 text-slate-100">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Repair plan</p>
-                <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-100">
+              <div className="rounded-xl border border-border bg-topbar p-3 text-topbar-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-topbar-foreground/70">Repair plan</p>
+                <pre className="mt-3 overflow-x-auto text-xs leading-6 text-topbar-foreground">
                   {JSON.stringify(selected.repair_plan, null, 2)}
                 </pre>
               </div>
@@ -253,7 +253,7 @@ export function ContactRepairQueueOverlay({
                 </Button>
                 <Button
                   variant="secondary"
-                  className="px-4 py-2 text-sm text-coral hover:text-coral"
+                  className="px-4 py-2 text-sm text-destructive hover:text-destructive"
                   onClick={handleReject}
                   disabled={actionLoading}
                 >

@@ -50,21 +50,21 @@ export function NotificationBell() {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className="topbar-profile-trigger relative inline-flex h-8 w-8 items-center justify-center rounded-xl border px-0 text-white transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/15"
+        className="topbar-profile-trigger relative inline-flex h-8 w-8 items-center justify-center rounded-xl border px-0 text-topbar-foreground transition duration-200"
         aria-label="Open notifications"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
       >
         <Bell size={16} />
         {unreadCount > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-4 text-white shadow-[0_0_0_2px_rgba(15,23,42,0.6)]">
+          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-destructive px-1 text-[10px] font-bold leading-4 text-destructive-foreground shadow-[0_0_0_2px_rgb(var(--topbar)/0.6)]">
             {unreadLabel}
           </span>
         ) : null}
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-10 z-[120] w-[min(calc(100vw-1.5rem),24rem)] overflow-hidden border border-border bg-white text-text shadow-[0_20px_60px_rgba(2,6,23,0.28)]">
+        <div className="app-card absolute right-0 top-10 z-[120] w-[min(calc(100vw-1.5rem),24rem)] overflow-hidden text-card-foreground shadow-[0_20px_60px_rgb(2_6_23/0.28)]">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text">Notifications</p>
@@ -72,7 +72,7 @@ export function NotificationBell() {
             </div>
             <button
               type="button"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-background-tint text-text-soft transition hover:bg-white hover:text-text disabled:opacity-50"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground transition hover:bg-card hover:text-foreground disabled:opacity-50"
               aria-label="Mark all notifications as read"
               disabled={unreadCount === 0 || markAllRead.isPending}
               onClick={() => markAllRead.mutate()}
@@ -126,7 +126,7 @@ function NotificationRow({
       type="button"
       className={clsx(
         "flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition last:border-b-0 hover:bg-background-tint disabled:cursor-wait",
-        isUnread ? "bg-primary-soft/50" : "bg-white"
+        isUnread ? "bg-primary/10" : "bg-card"
       )}
       disabled={disabled}
       onClick={onClick}
@@ -134,7 +134,7 @@ function NotificationRow({
       <span
         className={clsx(
           "mt-1 h-2 w-2 shrink-0 rounded-full",
-          isUnread ? "bg-primary shadow-[0_0_0_4px_rgba(20,184,166,0.12)]" : "bg-slate-200"
+          isUnread ? "bg-primary shadow-[0_0_0_4px_rgb(var(--primary)/0.14)]" : "bg-border"
         )}
       />
       <span className="min-w-0 flex-1">

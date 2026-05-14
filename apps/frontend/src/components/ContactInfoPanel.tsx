@@ -112,16 +112,16 @@ export function ContactInfoPanel({
 
   return (
     <Card
-      className={`${showMobileSheet ? "border-0 bg-transparent p-0 shadow-none" : "bg-white"} ${className ?? ""}`}
+      className={`${showMobileSheet ? "border-0 bg-transparent p-0 shadow-none" : "bg-card"} ${className ?? ""}`}
       elevated={false}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{showMobileSheet ? "Contact workspace" : "Contact"}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{showMobileSheet ? "Contact workspace" : "Contact"}</p>
       {conversation ? (
         <div className={`mt-2 ${showMobileSheet ? "space-y-3" : "space-y-2"}`}>
           <div
             className={
               showMobileSheet
-                ? "rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_44px_rgba(20,32,51,0.08)]"
+                ? "app-card rounded-[1.5rem] px-4 py-4 shadow-panel"
                 : "workspace-subtle p-4"
             }
           >
@@ -146,7 +146,7 @@ export function ContactInfoPanel({
                 <p className={`truncate font-semibold text-text ${showMobileSheet ? "text-lg" : "text-base"}`}>{displayName ?? "Unknown"}</p>
                 <p className="truncate text-sm text-text-muted">{normalizedNumber ?? "No normalized number yet"}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                  <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                     {getConversationSourceLabel(conversation)}
                   </span>
                   {e164Number ? (
@@ -163,14 +163,14 @@ export function ContactInfoPanel({
                 {dialablePhoneNumber ? (
                   <a
                     href={`tel:${dialablePhoneNumber}`}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                     aria-label={`Call ${displayName ?? "contact"}`}
                   >
                     <Phone size={16} />
                     <span>Call</span>
                   </a>
                 ) : (
-                  <span className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 text-sm font-medium text-slate-400">
+                  <span className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-muted px-4 text-sm font-medium text-muted-foreground">
                     <Phone size={16} />
                     <span>No valid number</span>
                   </span>
@@ -178,7 +178,7 @@ export function ContactInfoPanel({
                 <Button
                   type="button"
                   variant="secondary"
-                  className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm text-text hover:bg-slate-50"
+                  className="h-11 rounded-xl border border-border bg-card px-4 text-sm text-foreground hover:bg-muted"
                   onClick={() => {
                     if (!normalizedNumber) {
                       return;
@@ -217,26 +217,26 @@ export function ContactInfoPanel({
             )}
           </div>
 
-          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3" : "workspace-subtle mt-1 p-3"}`}>
+          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-border bg-muted/90 p-3" : "workspace-subtle mt-1 p-3"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Customer status</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+              <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Owner</p>
                 <p className="mt-1 truncate text-xs font-medium text-text">{ownerLabel}</p>
               </div>
-              <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+              <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Queue</p>
-                <p className={`mt-1 text-xs font-medium ${conversation.assigned_user_id ? "text-emerald-700" : "text-amber-700"}`}>
+                <p className={`mt-1 text-xs font-medium ${conversation.assigned_user_id ? "text-success" : "text-warning"}`}>
                   {conversation.assigned_user_id ? "Assigned" : "Needs owner"}
                 </p>
               </div>
-              <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+              <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Phone</p>
                 <p className="mt-1 truncate text-xs text-text-muted">{e164Number ?? normalizedNumber ?? "--"}</p>
               </div>
-              <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+              <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Sales</p>
-                <p className={`mt-1 text-xs font-medium ${conversation.has_sales || conversation.has_sales_lead_tag ? "text-emerald-700" : "text-text-muted"}`}>
+                <p className={`mt-1 text-xs font-medium ${conversation.has_sales || conversation.has_sales_lead_tag ? "text-success" : "text-text-muted"}`}>
                   {conversation.has_sales ? "Order linked" : conversation.has_sales_lead_tag ? "Lead tagged" : "No sales yet"}
                 </p>
               </div>
@@ -244,14 +244,14 @@ export function ContactInfoPanel({
             {contactLoading ? (
               <p className="mt-3 text-sm leading-6 text-text-muted">Loading canonical contact details...</p>
             ) : mergedRedirect ? (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
+              <div className="mt-3 rounded-xl border border-warning/25 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
                 <p>This contact was merged into another canonical profile.</p>
                 <p>Target ID: {mergedRedirect.redirect_to_contact_id}</p>
               </div>
             ) : null}
           </div>
           {canAssign ? (
-            <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(20,32,51,0.06)]" : "workspace-subtle mt-1 p-3"}`}>
+            <div className={`${showMobileSheet ? "app-card rounded-[1.25rem] p-3 shadow-soft" : "workspace-subtle mt-1 p-3"}`}>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Assignment</p>
               {organizationUsersLoading ? (
                 <p className="mt-2 text-xs text-text-muted">Loading users...</p>
@@ -260,7 +260,7 @@ export function ContactInfoPanel({
                   value={conversation.assigned_user_id ?? ""}
                   onChange={(e) => handleAssign(e.target.value)}
                   disabled={isAssigning}
-                  className={`mt-2 w-full ${showMobileSheet ? "!rounded-xl !border-slate-200 !bg-slate-50 !px-3 !py-2 !text-sm" : "!py-1 !text-xs"}`}
+                  className={`mt-2 w-full ${showMobileSheet ? "!rounded-xl !border-border !bg-input !px-3 !py-2 !text-sm" : "!py-1 !text-xs"}`}
                   aria-label="Assign conversation to user"
                 >
                   <option value="" disabled>
@@ -277,7 +277,7 @@ export function ContactInfoPanel({
               )}
             </div>
           ) : null}
-          <div className={`${showMobileSheet ? "rounded-[1.25rem] border border-slate-200 bg-white p-3" : "workspace-subtle mt-1 p-3"}`}>
+          <div className={`${showMobileSheet ? "app-card rounded-[1.25rem] p-3" : "workspace-subtle mt-1 p-3"}`}>
             <button
               type="button"
               onClick={() => setShowTechnicalDetails((current) => !current)}
@@ -289,15 +289,15 @@ export function ContactInfoPanel({
             </button>
             {showTechnicalDetails ? (
               <div className="mt-3 grid grid-cols-1 gap-2">
-                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                <div className="rounded-xl border border-border bg-card px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Canonical ID</p>
                   <p className="mt-1 break-all text-xs text-text-muted">{conversation.contact_id}</p>
                 </div>
-                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                <div className="rounded-xl border border-border bg-card px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Normalized</p>
                   <p className="mt-1 break-all text-xs text-text-muted">{normalizedNumber ?? "--"}</p>
                 </div>
-                <div className="rounded-xl border border-white/70 bg-white px-3 py-2">
+                <div className="rounded-xl border border-border bg-card px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">Source</p>
                   <p className="mt-1 break-all text-xs text-text-muted">{getConversationSourceLabel(conversation)}</p>
                 </div>

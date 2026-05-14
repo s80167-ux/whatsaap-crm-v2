@@ -11,7 +11,7 @@ type AudienceGroupListTableProps = {
 
 export function AudienceGroupListTable({ groups, loading = false, onView, onDelete }: AudienceGroupListTableProps) {
   if (loading) {
-    return <div className="border border-border bg-white p-5 text-sm text-text-muted">Loading Audience Groups...</div>;
+    return <div className="app-card p-5 text-sm text-text-muted">Loading Audience Groups...</div>;
   }
 
   if (groups.length === 0) {
@@ -63,10 +63,10 @@ export function AudienceGroupListTable({ groups, loading = false, onView, onDele
               <Td>{formatDate(group.created_at)}</Td>
               <Td>
                 <div className="flex gap-2">
-                  <Button size="icon" variant="ghost" className="border border-border bg-white text-text hover:text-primary" aria-label="View Audience Group" onClick={() => onView(group)}>
+                  <Button size="icon" variant="ghost" className="border border-border bg-card text-text hover:bg-muted hover:text-primary" aria-label="View Audience Group" onClick={() => onView(group)}>
                     <Eye size={16} />
                   </Button>
-                  <Button size="icon" variant="ghost" className="border border-border bg-white text-coral hover:text-coral" aria-label="Delete Audience Group" onClick={() => onDelete(group)}>
+                  <Button size="icon" variant="ghost" className="border border-border bg-card text-coral hover:bg-muted hover:text-coral" aria-label="Delete Audience Group" onClick={() => onDelete(group)}>
                     <Trash2 size={16} />
                   </Button>
                 </div>
@@ -84,7 +84,7 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="border-b border-border bg-white px-3 py-3 align-top text-text-muted">{children}</td>;
+  return <td className="border-b border-border bg-card px-3 py-3 align-top text-text-muted">{children}</td>;
 }
 
 function formatDate(value: string) {

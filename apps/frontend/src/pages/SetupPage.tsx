@@ -59,14 +59,14 @@ function getConnectionTone(status: string) {
   const normalized = status.toLowerCase();
 
   if (normalized === "connected") {
-    return { dot: "bg-emerald-500", text: "text-emerald-700" };
+    return { dot: "bg-success", text: "text-success" };
   }
 
   if (normalized === "pairing" || normalized === "reconnecting" || normalized === "qr_required" || normalized === "new") {
-    return { dot: "bg-amber-400", text: "text-amber-700" };
+    return { dot: "bg-warning", text: "text-warning" };
   }
 
-  return { dot: "bg-red-500", text: "text-red-700" };
+  return { dot: "bg-destructive", text: "text-destructive" };
 }
 
 function isConnectedAccount(status: string) {
@@ -90,7 +90,7 @@ function readProfilePicture(file: File) {
 
 function UserAvatarPreview({ src, label }: { src?: string | null; label?: string | null }) {
   return (
-    <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-white text-text-soft">
+    <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-card text-text-soft">
       {src ? (
         <img src={src} alt={label ? `${label} profile` : "User profile"} className="h-full w-full object-cover" />
       ) : (
@@ -500,7 +500,7 @@ export function SetupPage() {
             </p>
           </div>
         </div>
-        {notice ? <p className="mt-4 text-sm text-coral">{notice}</p> : null}
+        {notice ? <p className="mt-4 text-sm text-destructive">{notice}</p> : null}
       </Card>
 
       {isSuperAdmin ? (
@@ -525,7 +525,7 @@ export function SetupPage() {
                 const draft = getSignupApprovalDraft(request);
 
                 return (
-                  <div key={request.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                  <div key={request.id} className="workspace-subtle p-4 shadow-soft">
                     <div className="grid gap-4 lg:grid-cols-[1.1fr,1.4fr] lg:items-center">
                       <div className="flex min-w-0 items-start gap-3">
                         <UserAvatarPreview src={request.avatar_url} label={request.full_name ?? request.email} />
@@ -590,7 +590,7 @@ export function SetupPage() {
                           </Button>
                           <Button
                             variant="secondary"
-                            className="w-full px-3 py-2 text-xs text-coral"
+                            className="w-full px-3 py-2 text-xs text-destructive"
                             disabled={isWorking}
                             onClick={() => handleRejectGoogleSignup(request)}
                           >
@@ -628,7 +628,7 @@ export function SetupPage() {
                       No organizations yet. Add the first organization to start assigning users and channels.
                     </div>
                   ) : organizationPagination.visibleItems.map((organization) => (
-                    <div key={organization.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                    <div key={organization.id} className="workspace-subtle p-4 shadow-soft">
                       {editingOrganizationId === organization.id ? (
                         <form className="space-y-3" onSubmit={(event) => handleUpdateOrganization(event, organization.id)}>
                           <Input
@@ -673,7 +673,7 @@ export function SetupPage() {
                           <p className="mt-3 text-xs text-text-soft">Created {new Date(organization.created_at).toLocaleDateString()}</p>
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <Button variant="secondary" className="w-full" disabled={isWorking} onClick={() => beginEditOrganization(organization)}>Edit</Button>
-                            <Button variant="secondary" className="w-full text-coral" disabled={isWorking} onClick={() => handleDeleteOrganization(organization.id, organization.name)}>Delete</Button>
+                            <Button variant="secondary" className="w-full text-destructive" disabled={isWorking} onClick={() => handleDeleteOrganization(organization.id, organization.name)}>Delete</Button>
                           </div>
                         </>
                       )}
@@ -760,7 +760,7 @@ export function SetupPage() {
                                   </Button>
                                   <Button
                                     variant="secondary"
-                                    className="text-coral"
+                                    className="text-destructive"
                                     disabled={isWorking}
                                     onClick={() => handleDeleteOrganization(organization.id, organization.name)}
                                   >
@@ -801,7 +801,7 @@ export function SetupPage() {
                   No users yet. Add the first user to start assigning work and access.
                 </div>
               ) : userPagination.visibleItems.map((user) => (
-                <div key={user.id} className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+                <div key={user.id} className="workspace-subtle p-4 shadow-soft">
                   {editingUserId === user.id ? (
                     <form className="space-y-3" onSubmit={(event) => handleUpdateUser(event, user.id)}>
                       <div className="flex items-center gap-3">
@@ -936,7 +936,7 @@ export function SetupPage() {
                         )}
                         <Button
                           variant="ghost"
-                          className="w-full px-2 py-2 text-xs text-coral"
+                          className="w-full px-2 py-2 text-xs text-destructive"
                           disabled={isWorking}
                           onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
                         >
@@ -1114,7 +1114,7 @@ export function SetupPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="px-1 py-0.5 text-xs text-coral min-w-0"
+                                className="px-1 py-0.5 text-xs text-destructive min-w-0"
                                 disabled={isWorking}
                                 onClick={() => handleDeleteUser(user.id, user.full_name ?? user.email ?? user.id)}
                               >
@@ -1167,7 +1167,7 @@ export function SetupPage() {
       <PopupOverlay open={showUserPopup} onClose={closeUserPopup} title="Create user" panelClassName="popup-compact-30">
         <form onSubmit={handleCreateUser}>
           <div className="space-y-2 p-2">
-            {userCreateError ? <p className="rounded-lg border border-coral/30 bg-coral/10 px-2 py-2 text-xs leading-5 text-coral">{userCreateError}</p> : null}
+            {userCreateError ? <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-2 py-2 text-xs leading-5 text-destructive">{userCreateError}</p> : null}
             {isSuperAdmin ? (
               <p className="rounded-lg border border-border bg-background-tint px-2 py-2 text-xs leading-5 text-text-muted">
                 {userRole === "super_admin"

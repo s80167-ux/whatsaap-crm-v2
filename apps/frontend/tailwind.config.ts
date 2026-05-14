@@ -1,50 +1,65 @@
 import type { Config } from "tailwindcss";
 
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: "#0057A8",
-          foreground: "#FFFFFF",
-          soft: "#EAF3FF",
-          deep: "#003F7F"
-        },
-        secondary: {
-          DEFAULT: "#001F3B",
-          soft: "#E7EEF6",
-          deep: "#001427"
-        },
-        accent: {
-          DEFAULT: "#2DBE60",
-          soft: "#E7F9EE",
-          deep: "#23954B"
-        },
         background: {
-          DEFAULT: "#F5F7FA",
-          elevated: "#FFFFFF",
-          tint: "#F1F5F9"
+          DEFAULT: "rgb(var(--background) / <alpha-value>)",
+          elevated: "rgb(var(--card) / <alpha-value>)",
+          tint: "rgb(var(--muted) / <alpha-value>)"
+        },
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        text: {
+          DEFAULT: "rgb(var(--foreground) / <alpha-value>)",
+          muted: "rgb(var(--muted-foreground) / <alpha-value>)",
+          soft: "rgb(var(--muted-foreground) / 0.78)"
         },
         card: {
-          DEFAULT: "#FFFFFF",
-          strong: "#FFFFFF",
-          muted: "#FAFBFC"
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)"
         },
-        border: {
-          DEFAULT: "#E8EDF3",
-          strong: "#CBD5E1"
+        border: "rgb(var(--border) / <alpha-value>)",
+        muted: {
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)"
         },
-        text: {
-          DEFAULT: "#07111F",
-          muted: "#5D6B82",
-          soft: "#91A0B5"
+        primary: {
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
+          soft: "rgb(var(--primary) / 0.12)",
+          deep: "rgb(var(--primary) / 0.9)"
         },
-        ink: "#001F3B",
-        mist: "#F1F5F9",
-        sand: "#FFF5E6",
-        teal: "#2DBE60",
-        coral: "#FF4D4F"
+        secondary: {
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
+          soft: "rgb(var(--secondary) / 0.7)"
+        },
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          foreground: "rgb(var(--success-foreground) / <alpha-value>)"
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning) / <alpha-value>)",
+          foreground: "rgb(var(--warning-foreground) / <alpha-value>)"
+        },
+        destructive: {
+          DEFAULT: "rgb(var(--destructive) / <alpha-value>)",
+          foreground: "rgb(var(--destructive-foreground) / <alpha-value>)"
+        },
+        sidebar: {
+          DEFAULT: "rgb(var(--sidebar) / <alpha-value>)",
+          foreground: "rgb(var(--sidebar-foreground) / <alpha-value>)"
+        },
+        topbar: {
+          DEFAULT: "rgb(var(--topbar) / <alpha-value>)",
+          foreground: "rgb(var(--topbar-foreground) / <alpha-value>)"
+        },
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        coral: "rgb(var(--destructive) / <alpha-value>)"
       },
       borderRadius: {
         xl: "0.75rem",
@@ -52,9 +67,9 @@ export default {
         "3xl": "1.25rem"
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(1, 19, 39, 0.04)",
-        panel: "0 10px 28px rgba(1, 19, 39, 0.06)",
-        lift: "0 18px 42px rgba(1, 19, 39, 0.10)"
+        soft: "var(--shadow-soft)",
+        panel: "var(--shadow-panel)",
+        lift: "var(--shadow-lift)"
       },
       spacing: {
         4.5: "1.125rem",
@@ -62,8 +77,8 @@ export default {
         18: "4.5rem"
       },
       backgroundImage: {
-        "hero-grid":
-          "linear-gradient(180deg, #FFFFFF 0%, #F5F7FA 42%, #F1F5F9 100%)"
+        "hero-grid": "var(--app-background)",
+        "app-orb": "var(--app-orb)"
       }
     }
   },

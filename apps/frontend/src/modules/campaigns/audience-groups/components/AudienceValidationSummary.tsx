@@ -8,7 +8,7 @@ type AudienceValidationSummaryProps = {
 export function AudienceValidationSummary({ result }: AudienceValidationSummaryProps) {
   if (!result) {
     return (
-      <div className="border border-dashed border-border bg-background-tint p-4 text-sm text-text-muted">
+      <div className="rounded-2xl border border-dashed border-border bg-muted p-4 text-sm text-text-muted">
         Upload and map a CSV file to see validation results.
       </div>
     );
@@ -28,7 +28,7 @@ export function AudienceValidationSummary({ result }: AudienceValidationSummaryP
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {metrics.map((metric) => (
-          <div key={metric.label} className="border border-border bg-white p-3">
+          <div key={metric.label} className="app-card p-3 shadow-none">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-semibold text-text-muted">{metric.label}</p>
               <span className="text-primary">{metric.icon}</span>
@@ -39,9 +39,9 @@ export function AudienceValidationSummary({ result }: AudienceValidationSummaryP
       </div>
 
       {result.warnings.length > 0 ? (
-        <div className="border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Warnings</p>
-          <ul className="mt-2 space-y-1 text-sm text-amber-800">
+        <div className="rounded-2xl border border-warning/20 bg-warning/10 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warning">Warnings</p>
+          <ul className="mt-2 space-y-1 text-sm text-warning">
             {result.warnings.map((warning) => (
               <li key={warning}>{warning}</li>
             ))}

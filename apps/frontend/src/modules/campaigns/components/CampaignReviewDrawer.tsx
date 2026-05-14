@@ -126,7 +126,7 @@ export function CampaignReviewDrawer({
                     "inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition",
                     status === option.value
                       ? "border-primary bg-primary/5 text-primary"
-                      : "border-border bg-white text-text-muted hover:bg-background-tint hover:text-text"
+                      : "border-border bg-card text-text-muted hover:bg-muted hover:text-text"
                   )}
                   onClick={() => setStatus(option.value)}
                 >
@@ -207,7 +207,7 @@ export function CampaignReviewDrawer({
 
 function Metric({ label, value, tone = "default" }: { label: string; value: number | string; tone?: "default" | "danger" }) {
   return (
-    <div className="border border-border bg-background-tint px-3 py-3">
+    <div className="rounded-2xl border border-border bg-muted px-3 py-3">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted sm:text-xs sm:tracking-[0.14em]">{label}</p>
       <p className={clsx("mt-2 text-lg font-semibold sm:text-xl", tone === "danger" ? "text-coral" : "text-text")}>
         {typeof value === "number" ? value.toLocaleString() : value}
@@ -218,7 +218,7 @@ function Metric({ label, value, tone = "default" }: { label: string; value: numb
 
 function RecipientCard({ recipient }: { recipient: CampaignRecipient }) {
   return (
-    <article className="border border-border bg-white p-3 shadow-soft">
+    <article className="app-card p-3 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-text">{recipient.name || "Unnamed contact"}</h3>
@@ -235,9 +235,9 @@ function RecipientCard({ recipient }: { recipient: CampaignRecipient }) {
       </div>
 
       {recipient.errorMessage ? (
-        <div className="mt-3 border border-coral/20 bg-coral/10 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-coral">Error</p>
-          <p className="mt-1 line-clamp-3 text-xs leading-5 text-coral">{recipient.errorMessage}</p>
+        <div className="mt-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-destructive">Error</p>
+          <p className="mt-1 line-clamp-3 text-xs leading-5 text-destructive">{recipient.errorMessage}</p>
         </div>
       ) : null}
     </article>
@@ -246,7 +246,7 @@ function RecipientCard({ recipient }: { recipient: CampaignRecipient }) {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-border bg-background-tint px-2 py-2">
+    <div className="rounded-xl border border-border bg-muted px-2 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-soft">{label}</p>
       <p className="mt-1 truncate text-xs font-medium text-text">{value}</p>
     </div>
@@ -273,11 +273,11 @@ function RecipientRow({ recipient }: { recipient: CampaignRecipient }) {
 
 function StatusPill({ status }: { status: CampaignRecipientSendStatus }) {
   const classes: Record<CampaignRecipientSendStatus, string> = {
-    pending: "border-border bg-background-tint text-text-muted",
-    queued: "border-amber-200 bg-amber-50 text-amber-700",
-    sent: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    failed: "border-coral/30 bg-coral/10 text-coral",
-    skipped: "border-slate-200 bg-slate-50 text-slate-600"
+    pending: "border-border bg-muted text-text-muted",
+    queued: "border-warning/20 bg-warning/10 text-warning",
+    sent: "border-success/20 bg-success/10 text-success",
+    failed: "border-destructive/30 bg-destructive/10 text-destructive",
+    skipped: "border-border bg-card text-text-soft"
   };
 
   return (

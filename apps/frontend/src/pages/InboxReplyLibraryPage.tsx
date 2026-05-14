@@ -272,7 +272,7 @@ export function InboxReplyLibraryPage() {
                     placeholder="Write the message agents can insert..."
                     required
                     rows={5}
-                    className="w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-text outline-none transition focus:border-primary/30"
+                    className="input-base min-h-[8rem] w-full resize-none"
                   />
                   {detectedVariableKeys.length > 0 ? (
                     <div className="rounded-2xl border border-border bg-background-tint p-3">
@@ -296,7 +296,7 @@ export function InboxReplyLibraryPage() {
                           };
 
                           return (
-                            <div key={key} className="rounded-xl border border-border bg-white p-3">
+                            <div key={key} className="workspace-subtle p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                   <p className="text-sm font-semibold text-text">{formatVariableLabel(key)}</p>
@@ -403,12 +403,12 @@ export function InboxReplyLibraryPage() {
                   </div>
                   <div className="mt-4 space-y-3">
                     {(quickReplyAnalytics?.templates.length ?? 0) === 0 ? (
-                      <p className="rounded-xl border border-dashed border-border bg-white px-4 py-4 text-sm leading-6 text-text-muted">
+                      <p className="rounded-xl border border-dashed border-border bg-card px-4 py-4 text-sm leading-6 text-text-muted">
                         Template outcome metrics will appear here after teams send quick replies and conversations progress.
                       </p>
                     ) : (
                       quickReplyAnalytics?.templates.slice(0, 6).map((template) => (
-                        <div key={template.template_id} className="rounded-xl border border-border bg-white p-4">
+                        <div key={template.template_id} className="workspace-subtle p-4">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <p className="font-semibold text-text">{template.title}</p>
@@ -463,15 +463,15 @@ export function InboxReplyLibraryPage() {
                       <span
                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                           reply.is_active
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-border bg-white text-text-soft"
+                            ? "border-success/20 bg-success/10 text-success"
+                            : "border-border bg-card text-text-soft"
                         }`}
                       >
                         {reply.is_active ? "Active" : "Hidden"}
                       </span>
                     </div>
                     <p className="mt-3 whitespace-pre-wrap leading-6">{reply.body}</p>
-                    <div className="mt-3 grid gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs text-text-soft sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-text-soft sm:grid-cols-2">
                       <p>Uses: {reply.usage_count ?? 0}</p>
                       <p>Last used: {reply.last_used_at ? formatTimestamp(reply.last_used_at) : "Never"}</p>
                       <p>Variables: {reply.variable_definitions?.length ?? 0}</p>
@@ -491,7 +491,7 @@ export function InboxReplyLibraryPage() {
                         </Button>
                         <Button
                           variant="secondary"
-                          className="px-3 py-2 text-xs text-coral"
+                          className="px-3 py-2 text-xs text-destructive"
                           disabled={isWorking}
                           onClick={() => handleDeleteQuickReply(reply.id, reply.title)}
                         >

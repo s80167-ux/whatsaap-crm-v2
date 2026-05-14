@@ -13,8 +13,8 @@ export function Toast({ message, onClose, variant = "success" }: ToastProps) {
 
   const tone =
     variant === "error"
-      ? "border-coral/20 bg-coral/10 text-coral"
-      : "border-emerald-200 bg-white text-text";
+      ? "border-destructive/20 bg-destructive/10 text-destructive"
+      : "border-success/20 bg-card text-text";
 
   return (
     <div

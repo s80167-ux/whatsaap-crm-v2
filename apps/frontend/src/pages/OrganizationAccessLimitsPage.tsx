@@ -111,7 +111,7 @@ export function OrganizationAccessLimitsPage() {
           </Button>
         </div>
         {accessLimitsQuery.isError ? (
-          <div className="border border-coral/20 bg-coral/10 px-4 py-3 text-sm font-medium text-coral">
+          <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
             Unable to load access and limits for this organization.
           </div>
         ) : null}
@@ -137,14 +137,14 @@ export function OrganizationAccessLimitsPage() {
 
         <Card elevated>
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-success/20 bg-success/10 text-success">
               <MessageSquare size={18} />
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Core Features</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <h3 className="text-xl font-semibold text-text">WhatsApp CRM</h3>
-                <span className="inline-flex border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                <span className="inline-flex border border-success/20 bg-success/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-success">
                   Available by default
                 </span>
               </div>
@@ -165,7 +165,7 @@ export function OrganizationAccessLimitsPage() {
           <label className="block">
             <span className="text-sm font-semibold text-text">Max WhatsApp connections</span>
             <Input
-              className="mt-2 border-border bg-white"
+              className="mt-2 border-border bg-card"
               min={0}
               max={20}
               type="number"
@@ -173,7 +173,7 @@ export function OrganizationAccessLimitsPage() {
               onChange={(event) => setMaxWhatsappAccounts(event.target.value)}
             />
             <span className="mt-2 block text-xs leading-5 text-text-muted">Set 0 to prevent new WhatsApp account linking.</span>
-            <span className={clsx("mt-2 block text-xs font-semibold", currentUsage >= maxWhatsappValue ? "text-coral" : "text-text-soft")}>
+            <span className={clsx("mt-2 block text-xs font-semibold", currentUsage >= maxWhatsappValue ? "text-destructive" : "text-text-soft")}>
               Current usage: {currentUsage} / {maxWhatsappValue}
             </span>
           </label>
@@ -181,7 +181,7 @@ export function OrganizationAccessLimitsPage() {
           <label className="block">
             <span className="text-sm font-semibold text-text">Historical sync days</span>
             <Select
-              className="mt-2 border-border bg-white"
+              className="mt-2 border-border bg-card"
               value={historySyncDays}
               onChange={(event) => setHistorySyncDays(event.target.value)}
             >
@@ -195,7 +195,7 @@ export function OrganizationAccessLimitsPage() {
           <label className="block">
             <span className="text-sm font-semibold text-text">Max users</span>
             <Input
-              className="mt-2 border-border bg-white"
+              className="mt-2 border-border bg-card"
               min={1}
               max={500}
               placeholder="No explicit limit"
@@ -223,8 +223,8 @@ export function OrganizationAccessLimitsPage() {
                 className={clsx(
                   "inline-flex border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]",
                   localCampaignsEnabled
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 bg-slate-100 text-slate-600"
+                    ? "border-success/20 bg-success/10 text-success"
+                    : "border-border bg-muted text-muted-foreground"
                 )}
               >
                 {localCampaignsEnabled ? "Enabled" : "Disabled"}

@@ -31,8 +31,8 @@ export function NavLinkItem({ to, icon, label, badge, variant = "default", onCli
               ? "px-3 py-2.5 text-[13px]"
               : "px-4 py-3.5",
           isActive
-            ? "rounded-xl bg-white text-slate-900 shadow-[0_10px_24px_rgba(8,15,32,0.16)]"
-            : "rounded-xl text-white/72 hover:bg-white/10 hover:text-white"
+            ? "rounded-xl bg-sidebar-foreground text-foreground shadow-panel"
+            : "rounded-xl text-sidebar-foreground/72 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
         )
       }
     >

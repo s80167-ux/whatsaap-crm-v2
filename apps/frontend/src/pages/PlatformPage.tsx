@@ -96,7 +96,7 @@ export function PlatformPage() {
         </Card>
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Failed outbound</p>
-          <p className="mt-4 text-4xl font-semibold text-coral">{outboundDispatch?.totals.failed ?? (outboundDispatchLoading ? "..." : "0")}</p>
+          <p className="mt-4 text-4xl font-semibold text-destructive">{outboundDispatch?.totals.failed ?? (outboundDispatchLoading ? "..." : "0")}</p>
         </Card>
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Dispatched today</p>
@@ -119,7 +119,7 @@ export function PlatformPage() {
         </Card>
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Read</p>
-          <p className="mt-4 text-3xl font-semibold text-emerald-700">{outboundDispatch?.receipts_totals.read ?? (outboundDispatchLoading ? "..." : "0")}</p>
+          <p className="mt-4 text-3xl font-semibold text-success">{outboundDispatch?.receipts_totals.read ?? (outboundDispatchLoading ? "..." : "0")}</p>
         </Card>
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Played</p>
@@ -127,7 +127,7 @@ export function PlatformPage() {
         </Card>
         <Card elevated>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Receipt failed</p>
-          <p className="mt-4 text-3xl font-semibold text-coral">{outboundDispatch?.receipts_totals.failed ?? (outboundDispatchLoading ? "..." : "0")}</p>
+          <p className="mt-4 text-3xl font-semibold text-destructive">{outboundDispatch?.receipts_totals.failed ?? (outboundDispatchLoading ? "..." : "0")}</p>
         </Card>
       </div>
 
@@ -231,7 +231,7 @@ export function PlatformPage() {
               <p className="text-sm text-text-muted">Loading connector events...</p>
             ) : (
               connectorEventPagination.visibleItems.map((event, index) => (
-                <div key={`${event.whatsapp_account_id}-${event.created_at}-${index}`} className="rounded-2xl border border-border bg-white/80 px-4 py-3">
+                <div key={`${event.whatsapp_account_id}-${event.created_at}-${index}`} className="rounded-2xl border border-border bg-card/80 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-text">{event.event_type}</p>
                     <p className="text-xs uppercase tracking-[0.16em] text-text-soft">{event.severity ?? "info"}</p>

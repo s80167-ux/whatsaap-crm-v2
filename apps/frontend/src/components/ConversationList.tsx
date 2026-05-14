@@ -59,12 +59,12 @@ export function ConversationList({
                 <p className="truncate text-sm font-semibold text-text">{conversation.contact_name}</p>
                 {conversation.has_sales && (
                   <span className="shrink-0" title="Has sales activity">
-                    <Briefcase size={14} className="text-[#8B4513]" aria-hidden="true" />
+                    <Briefcase size={14} className="text-warning" aria-hidden="true" />
                   </span>
                 )}
                 {conversation.has_sales_lead_tag && (
                   <span className="shrink-0 ml-1" title="Sales Lead">
-                    <Briefcase size={14} className="text-[#a0522d]" aria-hidden="true" />
+                    <Briefcase size={14} className="text-primary" aria-hidden="true" />
                   </span>
                 )}
               </div>
@@ -78,7 +78,7 @@ export function ConversationList({
                 {formatConversationTimestamp(conversation.last_message_at)}
               </span>
               {conversation.unread_count > 0 ? (
-                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
                   {conversation.unread_count}
                 </span>
               ) : null}
