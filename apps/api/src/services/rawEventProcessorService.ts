@@ -191,6 +191,11 @@ export class RawEventProcessorService {
           ? detectMessageType(payload.rawPayload)
           : payload.messageType;
 
+        if (payload.direction === "outgoing" && messageType === "system" && !textBody) {
+          await this.rawEventRepository.markIgnored(client, event.id, "WhatsApp outgoing protocol event without chat content");
+          return "ignored" as const;
+        }
+
         logger.debug(
           {
             organizationId: payload.organizationId,

@@ -48,6 +48,12 @@ const CampaignsPage = lazy(() =>
 const AudienceGroupsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.AudienceGroupsPage }))
 );
+const MessageTemplatesPage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.MessageTemplatesPage }))
+);
+const CreateTemplatePage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.CreateTemplatePage }))
+);
 const CampaignsRouteGuard = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsRouteGuard }))
 );
@@ -99,6 +105,22 @@ export const router = createBrowserRouter([
             element: withRouteFallback(
               <CampaignsRouteGuard>
                 <AudienceGroupsPage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/templates",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <MessageTemplatesPage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/templates/create",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <CreateTemplatePage />
               </CampaignsRouteGuard>
             )
           },

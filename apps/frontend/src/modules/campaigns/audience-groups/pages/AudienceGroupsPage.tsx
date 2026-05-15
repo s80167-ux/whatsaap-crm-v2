@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useOutletContext } from "react-router-dom";
-import { ListPlus, Megaphone } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
+import { ListPlus } from "lucide-react";
 import { Button } from "../../../../components/Button";
 import { Card } from "../../../../components/Card";
 import { Toast } from "../../../../components/Toast";
@@ -14,6 +14,7 @@ import {
 import { AudienceGroupListTable } from "../components/AudienceGroupListTable";
 import { AudienceImportSuccessModal } from "../components/AudienceImportSuccessModal";
 import { CreateAudienceGroupDrawer } from "../components/CreateAudienceGroupDrawer";
+import { CampaignModuleTabs } from "../../components/CampaignModuleTabs";
 
 export function AudienceGroupsPage() {
   const outletContext = useOutletContext<DashboardOutletContext>();
@@ -75,15 +76,7 @@ export function AudienceGroupsPage() {
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        <Link className="inline-flex min-h-[2.25rem] items-center gap-2 border border-border bg-white px-3 py-2 text-xs font-semibold text-text transition hover:bg-background-tint" to="/campaigns">
-          <Megaphone size={14} />
-          Campaigns
-        </Link>
-        <span className="inline-flex min-h-[2.25rem] items-center border border-primary bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
-          Audience Groups
-        </span>
-      </div>
+      <CampaignModuleTabs />
 
       {outletContext.isSuperAdmin && !organizationId ? (
         <Card elevated className="p-5 text-sm text-text-muted">

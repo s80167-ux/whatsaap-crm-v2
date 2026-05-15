@@ -3,6 +3,8 @@ import {
   Building2,
   ChevronDown,
   Check,
+  ChevronsLeft,
+  ChevronsRight,
   FileBarChart,
   Download,
   KeyRound,
@@ -60,6 +62,14 @@ type SidebarSubItem = {
   icon: ReactNode;
   label: string;
   badge?: ReactNode;
+  end?: boolean;
+};
+
+type SidebarSection = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  items: SidebarSubItem[];
 };
 
 function SidebarNavGroup({
@@ -339,6 +349,99 @@ export function DashboardLayout() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("crm_desktop_nav_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const navSections: SidebarSection[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: <BarChart3 size={18} />,
+      items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: "Overview" }]
+    },
+    {
+      id: "inbox",
+      label: "Inbox",
+      icon: <MessageSquare size={18} />,
+      items: [
+        { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
+        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template library" }
+      ]
+    },
+    {
+      id: "crm",
+      label: "CRM",
+      icon: <Users size={18} />,
+      items: [
+        { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
+        { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
+        { to: "/reports", icon: <FileBarChart size={16} />, label: "Reports" },
+        ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
+      ]
+    },
+    ...(showCampaigns
+      ? [
+          {
+            id: "campaigns",
+            label: "Campaigns",
+            icon: <Megaphone size={18} />,
+            items: [
+              { to: "/campaigns", icon: <Megaphone size={16} />, label: "Campaign list" },
+              { to: "/campaigns/audience-groups", icon: <Users size={16} />, label: "Audience groups" },
+              { to: "/campaigns/templates", icon: <FileBarChart size={16} />, label: "Message templates", end: false }
+            ]
+          }
+        ]
+      : []),
+    {
+      id: "setup",
+      label: "Setup",
+      icon: <Settings2 size={18} />,
+      items: [
+        { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
+        { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
+      ]
+    },
+    ...(isSuperAdmin
+      ? [
+          {
+            id: "admin-map",
+            label: "Admin Map",
+            icon: <Workflow size={18} />,
+            items: [
+              { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
+              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
+              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
+            ]
+          },
+          {
+            id: "platform",
+            label: "Platform",
+            icon: <Building2 size={18} />,
+            items: [{ to: "/platform", icon: <Building2 size={16} />, label: "Organizations" }]
+          },
+          {
+            id: "system",
+            label: "System",
+            icon: <ShieldAlert size={18} />,
+            items: [
+              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
+              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
+              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
+            ]
+          }
+        ]
+      : [])
+  ];
+
+  const activeNavSection = navSections.find((section) =>
+    section.items.some((item) => (item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to)))
+  ) ?? navSections[0];
 
   useEffect(() => {
     function handleStoredUserUpdate() {
@@ -393,6 +496,14 @@ export function DashboardLayout() {
       setIsMobileNavOpen(false);
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("crm_desktop_nav_collapsed", String(isDesktopNavCollapsed));
+    } catch {
+      // noop
+    }
+  }, [isDesktopNavCollapsed]);
 
   async function handleUpdatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -471,7 +582,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="dashboard-shell min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:px-6 md:pb-4 md:pt-16">
+    <div className="dashboard-shell min-h-screen overflow-x-clip bg-hero-grid px-0 pb-0 pt-12 md:pt-12">
       <header className="dashboard-topbar app-topbar fixed inset-x-0 top-0 z-[100] border-b border-border shadow-soft">
         <div className="mx-auto flex h-12 max-w-[1880px] items-center justify-between gap-3 px-3 md:px-6">
           <div className="topbar-chip flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5">
@@ -678,22 +789,119 @@ export function DashboardLayout() {
         </div>
       </PopupOverlay>
 
-      <div className="dashboard-content mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-[1880px] items-start gap-0 md:min-h-[calc(100vh-5rem)] md:grid-cols-[minmax(264px,288px),minmax(0,1fr)] md:gap-4">
-        <motion.aside className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
-          <Card className="app-shell dashboard-sidebar flex flex-col p-5" elevated>
-            <SidebarContent
-              isSuperAdmin={isSuperAdmin}
-              organizations={organizations}
-              selectedOrganizationId={selectedOrganizationId}
-              selectedOrganizationName={selectedOrganizationName}
-              setSelectedOrganizationId={setSelectedOrganizationId}
-              whatsappAccounts={whatsappAccounts}
-              showCampaigns={showCampaigns}
-              showDataExport={showDataExport}
-            />
+      <div
+        className={clsx(
+          "dashboard-content dashboard-content--with-sidebar grid min-h-[calc(100vh-3rem)] min-w-0 max-w-none items-start gap-0 md:min-h-[calc(100vh-3rem)] md:gap-0",
+          isDesktopNavCollapsed ? "dashboard-content--sidebar-collapsed" : "dashboard-content--sidebar-expanded"
+        )}
+      >
+        <motion.aside className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block md:h-[calc(100dvh-3rem)]" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
+          <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex flex-row overflow-hidden p-0" elevated>
+            <nav className="sidebar-icon-rail flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label="Primary navigation">
+              <div className="mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
+                <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
+              </div>
+              {navSections.map((section) => {
+                const isActive = section.id === activeNavSection.id;
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    className={clsx(
+                      "sidebar-rail-button group relative flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/62 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground",
+                      isActive && "bg-sidebar-foreground/12 text-sidebar-foreground hover:bg-sidebar-foreground/12"
+                    )}
+                    aria-label={section.label}
+                    aria-current={isActive ? "page" : undefined}
+                    title={section.label}
+                    onClick={() => {
+                      if (isDesktopNavCollapsed) {
+                        setIsDesktopNavCollapsed(false);
+                      }
+                      const firstItem = section.items[0];
+                      if (firstItem && !location.pathname.startsWith(firstItem.to)) {
+                        navigate(firstItem.to);
+                      }
+                    }}
+                  >
+                    {section.icon}
+                    {isActive ? <span className="absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" /> : null}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className="mt-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                aria-label={isDesktopNavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isDesktopNavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setIsDesktopNavCollapsed((current) => !current)}
+              >
+                {isDesktopNavCollapsed ? <ChevronsRight size={17} /> : <ChevronsLeft size={17} />}
+              </button>
+            </nav>
+
+              <div
+                className={clsx(
+                  "sidebar-context-panel min-w-0 flex-1 overflow-hidden px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
+                  isDesktopNavCollapsed
+                    ? "w-0 -translate-x-2 px-0 opacity-0"
+                    : "w-[16rem] translate-x-0 opacity-100 xl:w-[17rem]"
+                )}
+                aria-hidden={isDesktopNavCollapsed}
+              >
+                <div className="border-b border-sidebar-foreground/10 pb-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</p>
+                </div>
+
+                {isSuperAdmin ? (
+                  <div className="mt-4">
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">Viewing org</span>
+                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label="Choose organization to view">
+                        <option value="">Choose organization</option>
+                        {organizations.map((organization) => (
+                          <option key={organization.id} value={organization.id}>{organization.name}</option>
+                        ))}
+                      </Select>
+                    </label>
+                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
+                  </div>
+                ) : null}
+
+                <div className="mt-6">
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Module</p>
+                      <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{activeNavSection.label}</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/58 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                      aria-label="Collapse sidebar"
+                      onClick={() => setIsDesktopNavCollapsed(true)}
+                    >
+                      <ChevronsLeft size={16} />
+                    </button>
+                  </div>
+                  <nav className="mt-3 space-y-1.5" aria-label={`${activeNavSection.label} navigation`}>
+                    {activeNavSection.items.map((item) => (
+                      <NavLinkItem
+                        key={item.to}
+                        to={item.to}
+                        icon={item.icon}
+                        label={item.label}
+                        badge={item.badge}
+                        variant="sub"
+                        end={item.end}
+                      />
+                    ))}
+                  </nav>
+                </div>
+              </div>
           </Card>
         </motion.aside>
-        <main className="min-w-0 bg-transparent px-3 pb-4 pt-12 md:pl-0 md:pr-2 md:pt-4 xl:pr-3">
+        <main className="min-w-0 bg-transparent px-3 pb-4 pt-12 md:px-4 md:pt-4 xl:px-5">
           <RouteTransition className="route-transition-stage">
             <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
           </RouteTransition>

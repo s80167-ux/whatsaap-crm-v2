@@ -1,7 +1,7 @@
 import { Megaphone, Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { Input } from "../../../components/Input";
@@ -12,6 +12,7 @@ import { useRealtimeCampaigns } from "../../../hooks/useRealtimeCampaigns";
 import type { DashboardOutletContext } from "../../../layouts/DashboardLayout";
 import { fetchAudienceGroups } from "../audience-groups/services/audienceGroupService";
 import { CampaignListTable } from "../components/CampaignListTable";
+import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignReviewDrawer } from "../components/CampaignReviewDrawer";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
 import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
@@ -155,14 +156,7 @@ export function CampaignsPage() {
       <CampaignStatsCards stats={stats} />
 
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex min-h-[2.25rem] items-center border border-primary bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
-            Campaigns
-          </span>
-          <Link className="inline-flex min-h-[2.25rem] items-center border border-border bg-white px-3 py-2 text-xs font-semibold text-text transition hover:bg-background-tint" to="/campaigns/audience-groups">
-            Audience Groups
-          </Link>
-        </div>
+        <CampaignModuleTabs />
         <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {campaignStatusFilters.map((filter) => (
             <button

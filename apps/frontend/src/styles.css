@@ -565,13 +565,53 @@ canvas {
 
   .dashboard-sidebar-sticky {
     position: sticky;
-    top: 4.5rem;
+    top: 3rem;
     align-self: start;
+  }
+
+  .dashboard-content--with-sidebar {
+    transition: grid-template-columns 300ms var(--motion-ease);
   }
 
   .dashboard-sidebar {
     max-height: calc(100vh - 5.5rem);
     overflow-y: scroll;
+  }
+
+  .dashboard-sidebar.dashboard-sidebar--two-tier {
+    height: calc(100dvh - 3rem);
+    max-height: calc(100dvh - 3rem);
+    overflow: hidden;
+    border-left: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    transform: none !important;
+  }
+
+  .sidebar-icon-rail {
+    background: rgb(var(--sidebar) / 0.32);
+  }
+
+  .sidebar-context-panel {
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+  }
+
+  @media (min-width: 768px) {
+    .dashboard-content--sidebar-expanded {
+      grid-template-columns: 20rem minmax(0, 1fr);
+    }
+
+    .dashboard-content--sidebar-collapsed {
+      grid-template-columns: 4rem minmax(0, 1fr);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .dashboard-content--sidebar-expanded {
+      grid-template-columns: 21rem minmax(0, 1fr);
+    }
   }
 
   .metric-card {
