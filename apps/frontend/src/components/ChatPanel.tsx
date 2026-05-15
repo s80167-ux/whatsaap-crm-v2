@@ -35,15 +35,19 @@ import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
 import {
   InsertMessageModal,
+  matchesInsertMessageTemplateSearch,
+  matchesInsertMessageVariableSearch,
   type InsertMessageAiAction,
   type InsertMessageTemplate,
   type InsertMessageVariable
 } from "./composer/InsertMessageModal";
+import { SlashSuggestionMenu, type SlashSuggestionItem } from "./composer/SlashSuggestionMenu";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
 const INITIAL_VISIBLE_MESSAGES = 12;
 const LOAD_OLDER_MESSAGES_STEP = 12;
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
+const MAX_SLASH_SUGGESTIONS = 8;
 const AI_ACTIONS: InsertMessageAiAction[] = [
   {
     id: "rewrite_professional",
@@ -93,6 +97,8 @@ type ReplyDraftState = {
   messageId: string;
   previewText: string;
 };
+
+const COMPOSER_SLASH_QUERY_PATTERN = /(^|\s)\/([a-zA-Z0-9-_]*)$/;
 
 function formatAckStatus(status?: string) {
   switch (status) {
@@ -180,6 +186,10 @@ export function ChatPanel({
   const [isRetryingOutbound, setIsRetryingOutbound] = useState(false);
   const [sendNotice, setSendNotice] = useState<string | null>(null);
   const [isInsertMessageOpen, setIsInsertMessageOpen] = useState(false);
+  const [insertMessageInitialSearch, setInsertMessageInitialSearch] = useState("");
+  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<TemplatePreviewState | null>(null);
   const [selectedQuickReplyTemplateId, setSelectedQuickReplyTemplateId] = useState<string | null>(null);
@@ -196,6 +206,7 @@ export function ChatPanel({
   const messageScrollRef = useRef<HTMLDivElement | null>(null);
   const messageEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const slashInsertionBaseRef = useRef<string | null>(null);
   const latestOutgoingMessage = [...messages].reverse().find((message) => message.direction === "outgoing");
   const latestOutgoingStatus = latestOutgoingMessage?.ack_status;
   const latestOutgoingStatusLabel = formatAckStatus(latestOutgoingStatus);
@@ -284,6 +295,41 @@ export function ChatPanel({
       keywords: [reply.category ?? "template", "approved", "organization"]
     }));
   }, [quickReplies]);
+  const slashTemplateMatches = useMemo(() => {
+    const normalizedSlashQuery = slashQuery.trim().toLowerCase();
+    return insertTemplates.filter((item) => matchesInsertMessageTemplateSearch(item, normalizedSlashQuery));
+  }, [insertTemplates, slashQuery]);
+  const slashVariableMatches = useMemo(() => {
+    const normalizedSlashQuery = slashQuery.trim().toLowerCase();
+    return insertVariables.filter((item) => matchesInsertMessageVariableSearch(item, normalizedSlashQuery));
+  }, [insertVariables, slashQuery]);
+  const slashSuggestions = useMemo<SlashSuggestionItem[]>(() => {
+    if (!isSlashMenuOpen) {
+      return [];
+    }
+
+    const templateSuggestions: SlashSuggestionItem[] = slashTemplateMatches
+      .map((template) => ({
+        id: `template:${template.id}`,
+        kind: "template",
+        title: template.title,
+        subtitle: template.category,
+        preview: template.preview ?? template.content,
+        template
+      }));
+    const variableSuggestions: SlashSuggestionItem[] = slashVariableMatches
+      .map((variable) => ({
+        id: `variable:${variable.id}`,
+        kind: "variable",
+        title: variable.label,
+        subtitle: "Variable",
+        preview: variable.value,
+        variable
+      }));
+
+    return [...templateSuggestions, ...variableSuggestions].slice(0, MAX_SLASH_SUGGESTIONS);
+  }, [isSlashMenuOpen, slashTemplateMatches, slashVariableMatches]);
+  const hasMoreSlashMatches = slashTemplateMatches.length + slashVariableMatches.length > slashSuggestions.length;
 
   async function handleSend() {
     if (!conversation || (!text.trim() && !attachment)) {
@@ -404,24 +450,143 @@ export function ChatPanel({
     }
   }
 
+  function buildComposerText(base: string, value: string) {
+    const needsSpace = base.length > 0 && !base.endsWith(" ") && !value.startsWith(" ");
+    return `${base}${needsSpace ? " " : ""}${value}`;
+  }
+
+  function stripTrailingSlashQuery(value: string) {
+    return value.replace(COMPOSER_SLASH_QUERY_PATTERN, (_, prefix: string) => prefix);
+  }
+
+  function closeSlashMenu() {
+    setIsSlashMenuOpen(false);
+    setSlashQuery("");
+    setSelectedSlashIndex(0);
+  }
+
   function insertComposerText(value: string) {
     setSelectedQuickReplyTemplateId(null);
     setText((current) => {
-      const needsSpace = current.length > 0 && !current.endsWith(" ") && !value.startsWith(" ");
-      return `${current}${needsSpace ? " " : ""}${value}`;
+      return buildComposerText(current, value);
     });
     textareaRef.current?.focus();
   }
 
+  function handleComposerChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = event.target.value;
+
+    setText(value);
+
+    const slashMatch = value.match(COMPOSER_SLASH_QUERY_PATTERN);
+
+    if (slashMatch) {
+      setSlashQuery(slashMatch[2] ?? "");
+      setSelectedSlashIndex(0);
+      setIsSlashMenuOpen(true);
+      return;
+    }
+
+    closeSlashMenu();
+  }
+
+  function closeInsertMessageModal() {
+    setIsInsertMessageOpen(false);
+    setInsertMessageInitialSearch("");
+  }
+
+  function openInsertMessageModal(search = "") {
+    setInsertMessageInitialSearch(search);
+    setIsInsertMessageOpen(true);
+  }
+
+  function handleSlashKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      void handleSend();
+      return;
+    }
+
+    if (!isSlashMenuOpen) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      if (slashSuggestions.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      setSelectedSlashIndex((current) => (current + 1) % slashSuggestions.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (slashSuggestions.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      setSelectedSlashIndex((current) => (current - 1 + slashSuggestions.length) % slashSuggestions.length);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSlashMenu();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      const item = slashSuggestions[selectedSlashIndex];
+
+      if (!item) {
+        return;
+      }
+
+      event.preventDefault();
+      handleSelectSlashSuggestion(item);
+    }
+  }
+
   function insertVariable(variable: InsertMessageVariable) {
     insertComposerText(resolveComposerVariableValue(variable.id, conversation) ?? variable.value);
-    setIsInsertMessageOpen(false);
+    closeInsertMessageModal();
   }
 
   function closeComposerPopups() {
-    setIsInsertMessageOpen(false);
+    closeInsertMessageModal();
+    closeSlashMenu();
     setIsEmojiOpen(false);
     setTemplatePreview(null);
+    slashInsertionBaseRef.current = null;
+  }
+
+  function commitSlashVariable(variable: InsertMessageVariable) {
+    setSelectedQuickReplyTemplateId(null);
+    setText((current) => {
+      const base = stripTrailingSlashQuery(current);
+      const resolvedValue = resolveComposerVariableValue(variable.id, conversation) ?? variable.value;
+      return buildComposerText(base, resolvedValue);
+    });
+    closeSlashMenu();
+    textareaRef.current?.focus();
+  }
+
+  function handleSelectSlashSuggestion(item: SlashSuggestionItem) {
+    if (item.kind === "variable") {
+      commitSlashVariable(item.variable);
+      return;
+    }
+
+    slashInsertionBaseRef.current = stripTrailingSlashQuery(text);
+    closeSlashMenu();
+    handleSelectInsertTemplate(item.template);
+  }
+
+  function handleBrowseAllSlashMatches() {
+    closeSlashMenu();
+    openInsertMessageModal(slashQuery);
   }
 
   function handleReplyToMessage(message: Message) {
@@ -556,9 +721,12 @@ export function ChatPanel({
   }
 
   function commitQuickReply(reply: QuickReplyItem, body: string) {
-    setText(body);
+    const slashInsertionBase = slashInsertionBaseRef.current;
+
+    setText(slashInsertionBase === null ? body : buildComposerText(slashInsertionBase, body));
     setSelectedQuickReplyTemplateId(reply.isOrganizationTemplate ? reply.id : null);
-    setIsInsertMessageOpen(false);
+    slashInsertionBaseRef.current = null;
+    closeInsertMessageModal();
     setTemplatePreview(null);
     textareaRef.current?.focus();
 
@@ -589,7 +757,7 @@ export function ChatPanel({
         ])
       )
     });
-    setIsInsertMessageOpen(false);
+    closeInsertMessageModal();
   }
 
   function handleSelectInsertTemplate(template: InsertMessageTemplate) {
@@ -652,7 +820,17 @@ export function ChatPanel({
     setForwardSourceMessage(null);
     setForwardTargetConversationId("");
     setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
+    closeSlashMenu();
+    slashInsertionBaseRef.current = null;
   }, [conversation?.id]);
+
+  useEffect(() => {
+    if (!isSlashMenuOpen) {
+      return;
+    }
+
+    setSelectedSlashIndex((current) => Math.min(current, Math.max(slashSuggestions.length - 1, 0)));
+  }, [isSlashMenuOpen, slashSuggestions.length]);
 
   useEffect(() => {
     setSelectedMessageIds((current) => current.filter((messageId) => messagesById.has(messageId)));
@@ -888,7 +1066,12 @@ export function ChatPanel({
               onClick={() => {
                 const shouldOpen = !isInsertMessageOpen;
                 closeComposerPopups();
-                setIsInsertMessageOpen(shouldOpen);
+                if (shouldOpen) {
+                  openInsertMessageModal();
+                  return;
+                }
+
+                closeInsertMessageModal();
               }}
               className="h-10 px-2 text-primary hover:bg-primary-soft/50"
             >
@@ -896,25 +1079,32 @@ export function ChatPanel({
             </Button>
           </div>
           <div className="flex flex-col gap-3">
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              onFocus={() => {
-                if (!text.trim()) {
-                  setSelectedQuickReplyTemplateId(null);
-                }
-              }}
-              onKeyDown={(event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                  event.preventDefault();
-                  void handleSend();
-                }
-              }}
-              placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
-              rows={isMobile ? 3 : 4}
-              className="min-h-[96px] w-full resize-y rounded-xl border-2 border-border bg-input px-4 py-3 text-[15px] leading-6 text-foreground shadow-soft outline-none transition focus:border-primary focus:bg-card focus:ring-2 focus:ring-ring/15 sm:min-h-[118px]"
-            />
+            <div className="relative">
+              <SlashSuggestionMenu
+                open={isSlashMenuOpen}
+                items={slashSuggestions}
+                selectedIndex={selectedSlashIndex}
+                onSelect={handleSelectSlashSuggestion}
+                onSelectIndex={setSelectedSlashIndex}
+                footerActionLabel={hasMoreSlashMatches ? "Browse all matches" : undefined}
+                onFooterAction={hasMoreSlashMatches ? handleBrowseAllSlashMatches : undefined}
+              />
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={handleComposerChange}
+                onBlur={() => closeSlashMenu()}
+                onFocus={() => {
+                  if (!text.trim()) {
+                    setSelectedQuickReplyTemplateId(null);
+                  }
+                }}
+                onKeyDown={handleSlashKeyDown}
+                placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
+                rows={isMobile ? 2 : 3}
+                className="min-h-[72px] w-full resize-y rounded-xl border-2 border-border bg-input px-4 py-3 text-[15px] leading-6 text-foreground shadow-soft outline-none transition focus:border-primary focus:bg-card focus:ring-2 focus:ring-ring/15 sm:min-h-[92px]"
+              />
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="hidden items-center gap-2 sm:flex">
               <Button
@@ -949,7 +1139,12 @@ export function ChatPanel({
                 onClick={() => {
                   const shouldOpen = !isInsertMessageOpen;
                   closeComposerPopups();
-                  setIsInsertMessageOpen(shouldOpen);
+                  if (shouldOpen) {
+                    openInsertMessageModal();
+                    return;
+                  }
+
+                  closeInsertMessageModal();
                 }}
                 className="h-10 gap-2 px-3 text-primary hover:bg-primary-soft/50"
               >
@@ -971,7 +1166,8 @@ export function ChatPanel({
       </footer>
       <InsertMessageModal
         open={isInsertMessageOpen}
-        onClose={() => setIsInsertMessageOpen(false)}
+        initialSearch={insertMessageInitialSearch}
+        onClose={closeInsertMessageModal}
         variables={insertVariables}
         templates={insertTemplates}
         aiActions={AI_ACTIONS}
@@ -987,7 +1183,7 @@ export function ChatPanel({
         onTemplateEmptyAction={
           canManageTemplates && resolvedOrganizationId
             ? () => {
-                setIsInsertMessageOpen(false);
+                closeInsertMessageModal();
                 navigate("/inbox/replies");
               }
             : undefined
@@ -1019,7 +1215,10 @@ export function ChatPanel({
       </PopupOverlay>
       <PopupOverlay
         open={Boolean(templatePreview)}
-        onClose={() => setTemplatePreview(null)}
+        onClose={() => {
+          setTemplatePreview(null);
+          slashInsertionBaseRef.current = null;
+        }}
         title="Template preview"
         description="Review variables before inserting this template into the composer."
         panelClassName="max-w-4xl"

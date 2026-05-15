@@ -32,10 +32,29 @@ export type InsertMessageAiAction = {
   keywords?: string[];
 };
 
+export function matchesInsertMessageVariableSearch(item: InsertMessageVariable, normalizedSearch: string) {
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  const haystack = [item.label, item.value, ...(item.keywords ?? [])].join(" ").toLowerCase();
+  return haystack.includes(normalizedSearch);
+}
+
+export function matchesInsertMessageTemplateSearch(item: InsertMessageTemplate, normalizedSearch: string) {
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  const haystack = [item.title, item.category, item.content, ...(item.keywords ?? [])].join(" ").toLowerCase();
+  return haystack.includes(normalizedSearch);
+}
+
 type InsertMessageTab = "all" | "templates" | "variables" | "ai";
 
 type InsertMessageModalProps = {
   open: boolean;
+  initialSearch?: string;
   onClose: () => void;
   variables: InsertMessageVariable[];
   templates: InsertMessageTemplate[];
@@ -63,6 +82,7 @@ const TABS: Array<{ id: InsertMessageTab; label: string }> = [
 
 export function InsertMessageModal({
   open,
+  initialSearch = "",
   onClose,
   variables,
   templates,
@@ -83,28 +103,12 @@ export function InsertMessageModal({
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredVariables = useMemo(
-    () =>
-      variables.filter((item) => {
-        if (!normalizedSearch) {
-          return true;
-        }
-
-        const haystack = [item.label, item.value, ...(item.keywords ?? [])].join(" ").toLowerCase();
-        return haystack.includes(normalizedSearch);
-      }),
+    () => variables.filter((item) => matchesInsertMessageVariableSearch(item, normalizedSearch)),
     [normalizedSearch, variables]
   );
 
   const filteredTemplates = useMemo(
-    () =>
-      templates.filter((item) => {
-        if (!normalizedSearch) {
-          return true;
-        }
-
-        const haystack = [item.title, item.category, item.content, ...(item.keywords ?? [])].join(" ").toLowerCase();
-        return haystack.includes(normalizedSearch);
-      }),
+    () => templates.filter((item) => matchesInsertMessageTemplateSearch(item, normalizedSearch)),
     [normalizedSearch, templates]
   );
 
@@ -148,13 +152,15 @@ export function InsertMessageModal({
       return;
     }
 
+    setSearch(initialSearch);
+
     if (highlightItems.length === 0) {
       setHighlightedIndex(0);
       return;
     }
 
     setHighlightedIndex((current) => Math.min(current, highlightItems.length - 1));
-  }, [highlightItems.length, open]);
+  }, [highlightItems.length, initialSearch, open]);
 
   useEffect(() => {
     if (!open) {
