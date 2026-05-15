@@ -120,7 +120,7 @@ export function InboxReplyLibraryPage() {
     event.preventDefault();
 
     if (!activeOrganizationId) {
-      setNotice("Select an organization before creating quick replies.");
+      setNotice("Select an organization before creating templates.");
       return;
     }
 
@@ -143,11 +143,11 @@ export function InboxReplyLibraryPage() {
       setQuickReplyBody("");
       setQuickReplyCategory("");
       setVariableDefinitions({});
-      setNotice("Quick reply created. Users and agents can select it in their chat composer.");
+      setNotice("Template created. Users and agents can select it in the message composer.");
       await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
       await queryClient.invalidateQueries({ queryKey: ["quick-reply-analytics"] });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create quick reply");
+      setNotice(error instanceof Error ? error.message : "Unable to create template");
     } finally {
       setIsWorking(false);
     }
@@ -163,18 +163,18 @@ export function InboxReplyLibraryPage() {
         organizationId: activeOrganizationId,
         isActive: nextActive
       });
-      setNotice(nextActive ? "Quick reply activated." : "Quick reply hidden from chat composers.");
+      setNotice(nextActive ? "Template activated." : "Template hidden from message composers.");
       await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
       await queryClient.invalidateQueries({ queryKey: ["quick-reply-analytics"] });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to update quick reply");
+      setNotice(error instanceof Error ? error.message : "Unable to update template");
     } finally {
       setIsWorking(false);
     }
   }
 
   async function handleDeleteQuickReply(templateId: string, title: string) {
-    if (!window.confirm(`Delete quick reply "${title}"?`)) {
+    if (!window.confirm(`Delete template "${title}"?`)) {
       return;
     }
 
@@ -186,11 +186,11 @@ export function InboxReplyLibraryPage() {
         templateId,
         organizationId: activeOrganizationId
       });
-      setNotice("Quick reply deleted.");
+      setNotice("Template deleted.");
       await queryClient.invalidateQueries({ queryKey: ["quick-replies"] });
       await queryClient.invalidateQueries({ queryKey: ["quick-reply-analytics"] });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to delete quick reply");
+      setNotice(error instanceof Error ? error.message : "Unable to delete template");
     } finally {
       setIsWorking(false);
     }
@@ -218,15 +218,15 @@ export function InboxReplyLibraryPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <h1 className="mt-3 section-title">Organization reply library</h1>
+              <h1 className="mt-3 section-title">Organization template library</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-                Keep approved quick replies close to the Inbox so teams can manage and reuse them from the same workspace.
+                Keep approved templates close to the Inbox so teams can manage and reuse them from the same workspace.
               </p>
             </div>
             <InboxSubTabs
               tabs={[
                 { to: "/inbox", label: "Conversations" },
-                { to: "/inbox/replies", label: "Reply library" }
+                { to: "/inbox/replies", label: "Template library" }
               ]}
             />
           </div>
@@ -237,7 +237,7 @@ export function InboxReplyLibraryPage() {
       {!canLoadLibrary ? (
         <Card elevated>
           <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-text-muted">
-            Choose an organization from the sidebar to open the reply library.
+            Choose an organization from the sidebar to open the template library.
           </div>
         </Card>
       ) : (
@@ -250,9 +250,9 @@ export function InboxReplyLibraryPage() {
               transition={{ duration: 0.2 }}
             >
               <Card elevated>
-                <h2 className="text-lg font-semibold text-text">Create quick reply</h2>
+                <h2 className="text-lg font-semibold text-text">Create template</h2>
                 <p className="mt-2 text-sm leading-6 text-text-muted">
-                  Org admins can publish approved responses here for agents and users to insert from chat.
+                  Org admins can publish approved message templates here for agents and users to insert from chat.
                 </p>
                 <div className="mt-4 space-y-3">
                   <Input
@@ -329,7 +329,7 @@ export function InboxReplyLibraryPage() {
                     </p>
                   )}
                   <Button type="submit" disabled={isWorking || !activeOrganizationId}>
-                    Create quick reply
+                    Create template
                   </Button>
                 </div>
               </Card>
@@ -341,7 +341,7 @@ export function InboxReplyLibraryPage() {
               <div>
                 <h2 className="text-lg font-semibold text-text">Library dashboard</h2>
                 <p className="mt-1 text-sm text-text-muted">
-                  Active replies stay visible to everyone. Hidden replies are shown here only to managers.
+                  Active templates stay visible to everyone. Hidden templates are shown here only to managers.
                 </p>
               </div>
             </div>
@@ -394,7 +394,7 @@ export function InboxReplyLibraryPage() {
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Performance dashboard</p>
                       <p className="mt-1 text-sm leading-6 text-text-muted">
-                        Outcome tracking shows what happened after agents sent each approved quick reply.
+                        Outcome tracking shows what happened after agents sent each approved template.
                       </p>
                     </div>
                     <p className="text-sm font-medium text-text">
@@ -404,7 +404,7 @@ export function InboxReplyLibraryPage() {
                   <div className="mt-4 space-y-3">
                     {(quickReplyAnalytics?.templates.length ?? 0) === 0 ? (
                       <p className="rounded-xl border border-dashed border-border bg-card px-4 py-4 text-sm leading-6 text-text-muted">
-                        Template outcome metrics will appear here after teams send quick replies and conversations progress.
+                        Template outcome metrics will appear here after teams send templates and conversations progress.
                       </p>
                     ) : (
                       quickReplyAnalytics?.templates.slice(0, 6).map((template) => (
@@ -448,7 +448,7 @@ export function InboxReplyLibraryPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {quickReplies.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border bg-background-tint px-4 py-6 text-sm leading-6 text-text-muted">
-                  No quick replies yet for this organization.
+                  No templates yet for this organization.
                 </p>
               ) : (
                 quickReplyPagination.visibleItems.map((reply) => (

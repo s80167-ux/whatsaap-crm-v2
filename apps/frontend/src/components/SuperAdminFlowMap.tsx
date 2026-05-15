@@ -102,7 +102,7 @@ const nodes: FlowNode[] = [
     sections: [
       { title: "Page States", tone: "state", items: ["Assigned", "Unassigned", "Realtime updates"] },
       { title: "Data Content", tone: "data", items: ["Conversations", "Messages", "Contact identity", "Ownership"] },
-      { title: "Actions", tone: "action", items: ["Open conversation", "Assign contact", "Send reply", "Use quick reply"] }
+      { title: "Actions", tone: "action", items: ["Open conversation", "Assign contact", "Send reply", "Use template"] }
     ]
   },
   {
@@ -126,7 +126,7 @@ const nodes: FlowNode[] = [
     y: 760,
     sections: [
       { title: "Page States", tone: "state", items: ["Manual today", "Campaign-ready", "Template-ready"] },
-      { title: "Data Content", tone: "data", items: ["Quick replies", "Outbound jobs", "Receipts", "Failed dispatches"] },
+      { title: "Data Content", tone: "data", items: ["Templates", "Outbound jobs", "Receipts", "Failed dispatches"] },
       { title: "Actions", tone: "action", items: ["Retry failed jobs", "Prepare templates", "Plan broadcasts"] }
     ]
   }

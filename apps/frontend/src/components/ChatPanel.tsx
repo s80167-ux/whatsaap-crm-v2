@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   AudioLines,
   Check,
@@ -9,7 +10,6 @@ import {
   Paperclip,
   Smile,
   Sparkles,
-  Wand2,
   X,
   FileText,
   Image as ImageIcon,
@@ -28,40 +28,50 @@ import { getMessagePresentation } from "../lib/messageContent";
 import { useQuickReplies } from "../hooks/useQuickReplies";
 import { useSalesOrders } from "../hooks/useSales";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
+import { getStoredUser } from "../lib/auth";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { PanelPagination, usePanelPagination } from "./PanelPagination";
 import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
+import {
+  InsertMessageModal,
+  type InsertMessageAiAction,
+  type InsertMessageTemplate,
+  type InsertMessageVariable
+} from "./composer/InsertMessageModal";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
 const INITIAL_VISIBLE_MESSAGES = 12;
 const LOAD_OLDER_MESSAGES_STEP = 12;
-const QUICK_REPLIES = [
-  "Hi, thanks for reaching out. How can I help you today?",
-  "Noted, let me check and get back to you shortly.",
-  "Can you share a little more detail so I can assist better?",
-  "Thank you. We have received your message and will update you soon.",
-  "Would you like me to arrange the next step for you?"
-];
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
-
-const FOLLOW_UP_PROMPTS = [
+const AI_ACTIONS: InsertMessageAiAction[] = [
   {
-    title: "Confirm next step",
-    body: "Just to confirm, would you like me to proceed with the next step?"
+    id: "rewrite_professional",
+    title: "Rewrite professionally",
+    description: "Refine the current draft into a more polished customer-facing response.",
+    disabled: true,
+    keywords: ["rewrite", "professional", "tone"]
   },
   {
-    title: "Ask for details",
-    body: "Could you share your preferred date, location, and any special requirements?"
+    id: "shorten_message",
+    title: "Shorten message",
+    description: "Trim the current draft while keeping the meaning intact.",
+    disabled: true,
+    keywords: ["shorten", "concise", "brief"]
   },
   {
-    title: "Payment reminder",
-    body: "A gentle reminder that payment is still pending. Let me know once it has been completed."
+    id: "translate_message",
+    title: "Translate message",
+    description: "Translate the draft into the preferred customer language.",
+    disabled: true,
+    keywords: ["translate", "language"]
   },
   {
-    title: "Follow-up check",
-    body: "Hi, just checking in. Do you still need help with this?"
+    id: "generate_follow_up",
+    title: "Generate follow-up",
+    description: "Generate the next best follow-up based on the conversation context.",
+    disabled: true,
+    keywords: ["follow-up", "generate", "next step"]
   }
 ];
 
@@ -161,18 +171,17 @@ export function ChatPanel({
   onMessageSent: () => void;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const currentUser = getStoredUser();
   const isMobile = useIsMobileViewport();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isRetryingOutbound, setIsRetryingOutbound] = useState(false);
   const [sendNotice, setSendNotice] = useState<string | null>(null);
-  const [isQuickReplyOpen, setIsQuickReplyOpen] = useState(false);
+  const [isInsertMessageOpen, setIsInsertMessageOpen] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
-  const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<TemplatePreviewState | null>(null);
-  const [quickReplySearch, setQuickReplySearch] = useState("");
-  const [selectedQuickReplyCategory, setSelectedQuickReplyCategory] = useState<string | null>(null);
   const [selectedQuickReplyTemplateId, setSelectedQuickReplyTemplateId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState<ReplyDraftState | null>(null);
   const [forwardSourceMessage, setForwardSourceMessage] = useState<Message | null>(null);
@@ -209,6 +218,9 @@ export function ChatPanel({
     organizationId: resolvedOrganizationId,
     enabled: Boolean(conversation && resolvedOrganizationId)
   });
+  const canManageTemplates = Boolean(
+    currentUser?.role === "super_admin" || currentUser?.permissionKeys.includes("org.manage_settings")
+  );
 
   const salesByMessageId = useMemo(
     () =>
@@ -228,31 +240,59 @@ export function ChatPanel({
         variableDefinitions: template.variable_definitions ?? [],
         isOrganizationTemplate: true
       }))
-    : QUICK_REPLIES.map((reply) => ({
-        id: reply,
-        title: reply,
-        body: reply,
-        category: "Starter",
-        isOrganizationTemplate: false
-      }));
-  const quickReplyCategories = Array.from(
-    new Set(quickReplies.map((reply) => reply.category).filter((category): category is string => Boolean(category)))
-  ).sort((left, right) => left.localeCompare(right));
-  const normalizedQuickReplySearch = quickReplySearch.trim().toLowerCase();
-  const filteredQuickReplies = quickReplies.filter((reply) => {
-    const matchesCategory = !selectedQuickReplyCategory || reply.category === selectedQuickReplyCategory;
-    const matchesSearch =
-      !normalizedQuickReplySearch ||
-      reply.title.toLowerCase().includes(normalizedQuickReplySearch) ||
-      reply.body.toLowerCase().includes(normalizedQuickReplySearch) ||
-      (reply.category ?? "").toLowerCase().includes(normalizedQuickReplySearch);
+    : [];
+  const insertVariables = useMemo<InsertMessageVariable[]>(() => {
+    const items: InsertMessageVariable[] = [
+      {
+        id: "contact_name",
+        label: "Contact Name",
+        value: "{{contact_name}}",
+        keywords: ["customer", "name"]
+      },
+      {
+        id: "company_name",
+        label: "Company Name",
+        value: "{{company_name}}",
+        keywords: ["business", "organization", "company"]
+      },
+      {
+        id: "today",
+        label: "Today",
+        value: "{{today}}",
+        keywords: ["date", "current date"]
+      }
+    ];
 
-    return matchesCategory && matchesSearch;
-  });
-  const quickReplyPagination = usePanelPagination(filteredQuickReplies);
+    if (conversation?.phone_number_normalized) {
+      items.splice(1, 0, {
+        id: "phone_number",
+        label: "Phone Number",
+        value: "{{phone_number}}",
+        keywords: ["contact", "phone", "mobile"]
+      });
+    }
+
+    return items;
+  }, [conversation?.phone_number_normalized]);
+  const insertTemplates = useMemo<InsertMessageTemplate[]>(() => {
+    return quickReplies.map((reply) => ({
+      id: reply.id,
+      title: reply.title,
+      category: reply.category ?? "Uncategorized",
+      content: reply.body,
+      preview: reply.body,
+      keywords: [reply.category ?? "template", "approved", "organization"]
+    }));
+  }, [quickReplies]);
 
   async function handleSend() {
     if (!conversation || (!text.trim() && !attachment)) {
+      return;
+    }
+
+    const resolvedText = resolveComposerBody(text, conversation).trim();
+
+    if (!resolvedText && !attachment) {
       return;
     }
 
@@ -271,7 +311,7 @@ export function ChatPanel({
         organizationId: resolvedOrganizationId,
         quickReplyTemplateId: selectedQuickReplyTemplateId,
         replyToMessageId: replyDraft?.messageId ?? null,
-        text: text.trim() || undefined,
+        text: resolvedText || undefined,
         attachment
       });
 
@@ -373,23 +413,15 @@ export function ChatPanel({
     textareaRef.current?.focus();
   }
 
-  function insertVariable(value: string) {
-    insertComposerText(value);
-    setIsActionsOpen(false);
+  function insertVariable(variable: InsertMessageVariable) {
+    insertComposerText(resolveComposerVariableValue(variable.id, conversation) ?? variable.value);
+    setIsInsertMessageOpen(false);
   }
 
   function closeComposerPopups() {
-    setIsQuickReplyOpen(false);
+    setIsInsertMessageOpen(false);
     setIsEmojiOpen(false);
-    setIsActionsOpen(false);
     setTemplatePreview(null);
-  }
-
-  function applyFollowUpPrompt(value: string) {
-    setSelectedQuickReplyTemplateId(null);
-    setText((current) => current.trim() ? `${current.trim()}\n\n${value}` : value);
-    setIsActionsOpen(false);
-    textareaRef.current?.focus();
   }
 
   function handleReplyToMessage(message: Message) {
@@ -526,9 +558,7 @@ export function ChatPanel({
   function commitQuickReply(reply: QuickReplyItem, body: string) {
     setText(body);
     setSelectedQuickReplyTemplateId(reply.isOrganizationTemplate ? reply.id : null);
-    setIsQuickReplyOpen(false);
-    setQuickReplySearch("");
-    setSelectedQuickReplyCategory(null);
+    setIsInsertMessageOpen(false);
     setTemplatePreview(null);
     textareaRef.current?.focus();
 
@@ -559,7 +589,24 @@ export function ChatPanel({
         ])
       )
     });
-    setIsQuickReplyOpen(false);
+    setIsInsertMessageOpen(false);
+  }
+
+  function handleSelectInsertTemplate(template: InsertMessageTemplate) {
+    const quickReply = quickReplies.find((item) => item.id === template.id);
+
+    if (quickReply) {
+      applyQuickReply(quickReply);
+      return;
+    }
+
+    applyQuickReply({
+      id: template.id,
+      title: template.title,
+      body: template.content,
+      category: template.category,
+      isOrganizationTemplate: false
+    });
   }
 
   function updateTemplatePreviewValue(key: string, value: string) {
@@ -648,7 +695,7 @@ export function ChatPanel({
   }
 
   return (
-    <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[700px] max-h-[calc(100vh-6.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
+    <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[780px] max-h-[calc(100vh-4.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -836,30 +883,16 @@ export function ChatPanel({
             <Button
               type="button"
               variant="ghost"
-              title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-              aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+              title={isInsertMessageOpen ? "Close insert into message" : "Open insert into message"}
+              aria-label={isInsertMessageOpen ? "Close insert into message" : "Open insert into message"}
               onClick={() => {
-                const shouldOpen = !isQuickReplyOpen;
+                const shouldOpen = !isInsertMessageOpen;
                 closeComposerPopups();
-                setIsQuickReplyOpen(shouldOpen);
+                setIsInsertMessageOpen(shouldOpen);
               }}
               className="h-10 px-2 text-primary hover:bg-primary-soft/50"
             >
               <Sparkles className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-              aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-              onClick={() => {
-                const shouldOpen = !isActionsOpen;
-                closeComposerPopups();
-                setIsActionsOpen(shouldOpen);
-              }}
-              className="h-10 px-2 text-primary hover:bg-primary-soft/50"
-            >
-              <Wand2 className="h-4 w-4" />
             </Button>
           </div>
           <div className="flex flex-col gap-3">
@@ -911,31 +944,17 @@ export function ChatPanel({
               <Button
                 type="button"
                 variant="ghost"
-                title={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
-                aria-label={isQuickReplyOpen ? "Close quick replies" : "Open quick replies"}
+                title={isInsertMessageOpen ? "Close insert into message" : "Open insert into message"}
+                aria-label={isInsertMessageOpen ? "Close insert into message" : "Open insert into message"}
                 onClick={() => {
-                  const shouldOpen = !isQuickReplyOpen;
+                  const shouldOpen = !isInsertMessageOpen;
                   closeComposerPopups();
-                  setIsQuickReplyOpen(shouldOpen);
+                  setIsInsertMessageOpen(shouldOpen);
                 }}
                 className="h-10 gap-2 px-3 text-primary hover:bg-primary-soft/50"
               >
                 <Sparkles className="h-4 w-4" />
-                <span className="hidden text-xs font-semibold lg:inline">Replies</span>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                title={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-                aria-label={isActionsOpen ? "Close composer actions" : "Open composer actions"}
-                onClick={() => {
-                  const shouldOpen = !isActionsOpen;
-                  closeComposerPopups();
-                  setIsActionsOpen(shouldOpen);
-                }}
-                className="h-10 px-3 text-primary hover:bg-primary-soft/50"
-              >
-                <Wand2 className="h-4 w-4" />
+                <span className="hidden text-xs font-semibold lg:inline">Insert</span>
               </Button>
             </div>
               <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
@@ -950,88 +969,32 @@ export function ChatPanel({
             : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
         </p>
       </footer>
-      <PopupOverlay
-        open={isQuickReplyOpen}
-        onClose={() => setIsQuickReplyOpen(false)}
-        title="Quick replies"
-        description={
-          organizationQuickReplies.length > 0
-            ? "Approved organization replies ready to insert into the composer."
-            : "Starter replies until your admin creates organization templates."
+      <InsertMessageModal
+        open={isInsertMessageOpen}
+        onClose={() => setIsInsertMessageOpen(false)}
+        variables={insertVariables}
+        templates={insertTemplates}
+        aiActions={AI_ACTIONS}
+        loadingTemplates={quickRepliesLoading}
+        templateEmptyMessage={
+          resolvedOrganizationId
+            ? canManageTemplates
+              ? "No organization templates yet. Create and activate them in the template library to show them here."
+              : "No organization templates are available yet. Ask a manager to create and activate them in the template library."
+            : "No organization selected for this conversation, so templates are unavailable."
         }
-        panelClassName="max-w-5xl"
-      >
-        <div className="space-y-4">
-          <input
-            value={quickReplySearch}
-            onChange={(event) => setQuickReplySearch(event.target.value)}
-            placeholder="Search quick replies..."
-            className="h-11 w-full rounded-xl border border-border bg-input px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/30"
-          />
-          {quickReplyCategories.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                title="Show all quick replies"
-                onClick={() => setSelectedQuickReplyCategory(null)}
-                className={`border px-3 py-1.5 text-xs font-medium transition ${
-                  selectedQuickReplyCategory
-                    ? "border-border bg-card text-muted-foreground hover:text-foreground"
-                    : "border-primary/25 bg-primary/10 text-primary"
-                }`}
-              >
-                All
-              </button>
-              {quickReplyCategories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  title={`Filter quick replies by ${category}`}
-                  onClick={() => setSelectedQuickReplyCategory(category)}
-                  className={`border px-3 py-1.5 text-xs font-medium transition ${
-                    selectedQuickReplyCategory === category
-                      ? "border-primary/25 bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div className="grid gap-3 md:grid-cols-2">
-            {quickRepliesLoading ? (
-              <p className="border border-border bg-background-tint px-4 py-3 text-xs text-text-muted">
-                Loading organization replies...
-              </p>
-            ) : null}
-            {!quickRepliesLoading && filteredQuickReplies.length === 0 ? (
-              <p className="border border-dashed border-border bg-background-tint px-4 py-5 text-xs leading-5 text-text-muted">
-                No quick replies match your search or selected category.
-              </p>
-            ) : null}
-            {quickReplyPagination.visibleItems.map((reply) => (
-              <button
-                key={reply.id}
-                type="button"
-                title={`Insert quick reply: ${reply.title}`}
-                onClick={() => applyQuickReply(reply)}
-                className="border border-border bg-card px-4 py-3 text-left text-xs leading-5 text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
-              >
-                <span className="block font-semibold text-text">{reply.title}</span>
-                {reply.category ? <span className="mt-1 block text-[11px] uppercase tracking-[0.16em] text-text-soft">{reply.category}</span> : null}
-                <span className="mt-1 block">{reply.body}</span>
-              </button>
-            ))}
-          </div>
-          <PanelPagination
-            page={quickReplyPagination.page}
-            pageCount={quickReplyPagination.pageCount}
-            totalItems={quickReplyPagination.totalItems}
-            onPageChange={quickReplyPagination.setPage}
-          />
-        </div>
-      </PopupOverlay>
+        templateEmptyActionLabel={canManageTemplates && resolvedOrganizationId ? "Open template library" : undefined}
+        onTemplateEmptyAction={
+          canManageTemplates && resolvedOrganizationId
+            ? () => {
+                setIsInsertMessageOpen(false);
+                navigate("/inbox/replies");
+              }
+            : undefined
+        }
+        onSelectVariable={insertVariable}
+        onSelectTemplate={handleSelectInsertTemplate}
+      />
       <PopupOverlay
         open={isEmojiOpen}
         onClose={() => setIsEmojiOpen(false)}
@@ -1058,7 +1021,7 @@ export function ChatPanel({
         open={Boolean(templatePreview)}
         onClose={() => setTemplatePreview(null)}
         title="Template preview"
-        description="Review variables before inserting this quick reply into the composer."
+        description="Review variables before inserting this template into the composer."
         panelClassName="max-w-4xl"
       >
         {templatePreview ? (
@@ -1108,56 +1071,6 @@ export function ChatPanel({
             </div>
           </div>
         ) : null}
-      </PopupOverlay>
-      <PopupOverlay
-        open={isActionsOpen}
-        onClose={() => setIsActionsOpen(false)}
-        title="Composer actions"
-        description="Insert customer variables or add a guided follow-up prompt."
-        panelClassName="max-w-4xl"
-      >
-        <div className="grid gap-4 lg:grid-cols-[300px,minmax(0,1fr)]">
-          <div className="border border-border bg-background-tint p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Variables</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                title="Insert contact name"
-                onClick={() => insertVariable(conversation.contact_name ?? "customer")}
-                className="border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
-              >
-                Contact name
-              </button>
-              {conversation.phone_number_normalized ? (
-                <button
-                  type="button"
-                  title="Insert phone number"
-                  onClick={() => insertVariable(conversation.phone_number_normalized ?? "")}
-                  className="border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
-                >
-                  Phone number
-                </button>
-              ) : null}
-            </div>
-          </div>
-          <div className="border border-border bg-background-tint p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Follow-up prompts</p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {FOLLOW_UP_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt.title}
-                  type="button"
-                  title={`Insert follow-up prompt: ${prompt.title}`}
-                  onClick={() => applyFollowUpPrompt(prompt.body)}
-                  className="border border-border bg-card px-3 py-3 text-left text-xs leading-5 text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
-                >
-                  <span className="block font-semibold text-text">{prompt.title}</span>
-                  <span className="mt-1 block">{prompt.body}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </PopupOverlay>
       <PopupOverlay
         open={Boolean(forwardSourceMessage)}
@@ -1629,6 +1542,19 @@ function resolveTemplateBody(body: string, values: Record<string, string>) {
     const key = rawKey.trim().toLowerCase();
     return values[key] ?? "";
   });
+}
+
+function resolveComposerBody(body: string, conversation?: Conversation) {
+  return body.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (match, rawKey: string) => {
+    const key = rawKey.trim().toLowerCase();
+    return resolveComposerVariableValue(key, conversation) ?? match;
+  });
+}
+
+function resolveComposerVariableValue(key: string, conversation?: Conversation) {
+  const normalizedKey = key.trim().toLowerCase();
+  const value = getTemplateVariableDefault(normalizedKey, conversation).trim();
+  return value ? value : null;
 }
 
 function getTemplateVariableDefault(key: string, conversation?: Conversation) {

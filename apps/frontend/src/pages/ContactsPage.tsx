@@ -1439,7 +1439,7 @@ export function ContactsPage() {
             </label>
 
             <div className="rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-sm leading-6 text-warning">
-              Conversations, messages, WhatsApp identities, leads, activities, sales orders, dispatch records, and quick reply outcomes will move to the target contact. The selected contact will be marked as merged.
+              Conversations, messages, WhatsApp identities, leads, activities, sales orders, dispatch records, and template outcomes will move to the target contact. The selected contact will be marked as merged.
             </div>
 
             <div className="flex flex-wrap justify-end gap-2">

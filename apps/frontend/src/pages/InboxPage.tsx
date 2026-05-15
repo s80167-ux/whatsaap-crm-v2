@@ -316,7 +316,7 @@ export function InboxPage() {
               <InboxSubTabs
                 tabs={[
                   { to: "/inbox", label: "Conversations" },
-                  { to: "/inbox/replies", label: "Reply library" }
+                  { to: "/inbox/replies", label: "Template library" }
                 ]}
               />
             </div>

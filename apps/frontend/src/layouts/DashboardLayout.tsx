@@ -235,7 +235,7 @@ function SidebarContent({
           label="Inbox"
           items={[
             { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
-            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Reply library" }
+            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template library" }
           ]}
           onNavigate={onNavigate}
           compact={mobile}
