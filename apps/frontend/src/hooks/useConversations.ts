@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchConversations } from "../api/crm";
+import { inboxQueryKeys } from "../lib/inboxCache";
 import type { HistoryRange } from "../lib/historyRange";
 
 export function useConversations(
@@ -11,7 +12,7 @@ export function useConversations(
   }
 ) {
   return useQuery({
-    queryKey: ["conversations", range?.unit, range?.value, organizationId ?? "current"],
+    queryKey: inboxQueryKeys.conversations(range, organizationId),
     queryFn: () => fetchConversations(range, organizationId),
     enabled,
     refetchInterval: options?.refetchIntervalMs,

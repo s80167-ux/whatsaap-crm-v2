@@ -57,7 +57,7 @@ export function ContactInfoPanel({
 }: {
   className?: string;
   conversation?: Conversation;
-  onAssigned?: () => void;
+  onAssigned?: (assignedUserId: string) => void;
   mobileSheet?: boolean;
 }) {
   const [isAssigning, setIsAssigning] = useState(false);
@@ -99,7 +99,7 @@ export function ContactInfoPanel({
         conversationId: conversation.id,
         organizationUserId: userId
       });
-      onAssigned?.();
+      onAssigned?.(userId);
     } finally {
       setIsAssigning(false);
     }

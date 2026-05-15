@@ -450,8 +450,8 @@ function DailyReportDashboard(props: {
           </div>
           <p className="text-sm font-semibold text-topbar-foreground/80">Working Days: {props.workingDays}</p>
         </div>
-        <div className="report-table-wrap overflow-x-auto">
-          <table className="daily-report-table w-full border-collapse text-left text-[11px]">
+        <div className="workspace-table-wrap report-table-wrap">
+          <table className="workspace-table workspace-table-compact daily-report-table text-[11px]">
             <thead>
               <tr className="bg-topbar text-[11px] uppercase tracking-[0.04em] text-topbar-foreground">
                 <th className="w-8 px-2 py-2">No.</th>

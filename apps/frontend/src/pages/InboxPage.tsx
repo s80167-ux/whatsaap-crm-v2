@@ -16,6 +16,7 @@ import { useMessages } from "../hooks/useMessages";
 import { useRefetchOnPageActive } from "../hooks/useRefetchOnPageActive";
 import { useRealtimeInbox } from "../hooks/useRealtimeInbox";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
+import { inboxQueryKeys, patchConversationInCache } from "../lib/inboxCache";
 import { DEFAULT_CHAT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
 import { getStoredUser } from "../lib/auth";
 import type { Conversation } from "../types/api";
@@ -117,18 +118,12 @@ export function InboxPage() {
   const stableSelectedConversation =
     visibleConversations.find((conversation) => conversation.id === selectedConversation?.id) ?? visibleConversations[0];
   const conversationQueryKey = useMemo(
-    () => ["conversations", chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin ? activeOrganizationId ?? "current" : "current"] as const,
-    [activeOrganizationId, chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin]
+    () => inboxQueryKeys.conversations(chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined),
+    [activeOrganizationId, chatHistoryRange, isSuperAdmin]
   );
   const messagesQueryKey = useMemo(
-    () => [
-      "messages",
-      stableSelectedConversation?.id,
-      chatHistoryRange.unit,
-      chatHistoryRange.value,
-      isSuperAdmin ? activeOrganizationId ?? "current" : "current"
-    ] as const,
-    [activeOrganizationId, chatHistoryRange.unit, chatHistoryRange.value, isSuperAdmin, stableSelectedConversation?.id]
+    () => inboxQueryKeys.messages(stableSelectedConversation?.id, chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined),
+    [activeOrganizationId, chatHistoryRange, isSuperAdmin, stableSelectedConversation?.id]
   );
   const { data: messages = [] } = useMessages(
     stableSelectedConversation?.id,
@@ -362,12 +357,6 @@ export function InboxPage() {
                 messages={messages}
                 historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
                 organizationId={activeOrganizationId}
-                onMessageSent={() => {
-                  void queryClient.invalidateQueries({
-                    queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-                  });
-                  void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-                }}
               />
             </div>
           )}
@@ -382,11 +371,14 @@ export function InboxPage() {
               className="text-xs"
               conversation={stableSelectedConversation}
               mobileSheet
-              onAssigned={() => {
-                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-                void queryClient.invalidateQueries({
-                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-                });
+              onAssigned={(assignedUserId) => {
+                if (!stableSelectedConversation?.id) {
+                  return;
+                }
+                patchConversationInCache(queryClient, stableSelectedConversation.id, (conversation) => ({
+                  ...conversation,
+                  assigned_user_id: assignedUserId
+                }));
               }}
             />
           </PopupOverlay>
@@ -403,23 +395,20 @@ export function InboxPage() {
               messages={messages}
               historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
               organizationId={activeOrganizationId}
-              onMessageSent={() => {
-                void queryClient.invalidateQueries({
-                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-                });
-                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-              }}
             />
           </div>
           <div className="inbox-side-rail inbox-detail-rail">
             <ContactInfoPanel
               className="workspace-block border-primary/10 text-xs"
               conversation={stableSelectedConversation}
-              onAssigned={() => {
-                void queryClient.invalidateQueries({ queryKey: ["conversations", chatHistoryRange.unit, chatHistoryRange.value] });
-                void queryClient.invalidateQueries({
-                  queryKey: ["messages", stableSelectedConversation?.id, chatHistoryRange.unit, chatHistoryRange.value]
-                });
+              onAssigned={(assignedUserId) => {
+                if (!stableSelectedConversation?.id) {
+                  return;
+                }
+                patchConversationInCache(queryClient, stableSelectedConversation.id, (conversation) => ({
+                  ...conversation,
+                  assigned_user_id: assignedUserId
+                }));
               }}
             />
           </div>

@@ -25,6 +25,13 @@ import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariable
 import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { getMessagePresentation } from "../lib/messageContent";
+import {
+  markMessagesDeletedInCache,
+  patchConversationFromMessageInCache,
+  replaceOptimisticMessageInCache,
+  updateMessageAckInCache,
+  upsertMessageInCache
+} from "../lib/inboxCache";
 import { useQuickReplies } from "../hooks/useQuickReplies";
 import { useSalesOrders } from "../hooks/useSales";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
@@ -166,15 +173,13 @@ export function ChatPanel({
   conversations,
   messages,
   historyRangeLabel,
-  organizationId,
-  onMessageSent
+  organizationId
 }: {
   conversation?: Conversation;
   conversations: Conversation[];
   messages: Message[];
   historyRangeLabel: string;
   organizationId?: string | null;
-  onMessageSent: () => void;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -349,9 +354,38 @@ export function ChatPanel({
 
     setIsSending(true);
     setSendNotice(null);
+    setText("");
+    setAttachment(null);
+    setSelectedQuickReplyTemplateId(null);
+    setReplyDraft(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    const optimisticId = `optimistic-${conversation.id}-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      organization_id: resolvedOrganizationId,
+      conversation_id: conversation.id,
+      contact_id: conversation.contact_id,
+      whatsapp_account_id: conversation.whatsapp_account_id,
+      external_message_id: optimisticId,
+      external_chat_id: conversation.external_thread_key ?? null,
+      reply_to_message_id: replyDraft?.messageId ?? null,
+      direction: "outgoing",
+      message_type: attachment?.kind ?? "text",
+      content_text: resolvedText || attachment?.fileName || null,
+      content_json: null,
+      sent_at: new Date().toISOString(),
+      ack_status: "pending"
+    };
+
+    upsertMessageInCache(queryClient, optimisticMessage);
+    patchConversationFromMessageInCache(queryClient, optimisticMessage);
 
     try {
-      await sendMessage({
+      const response = await sendMessage({
         whatsappAccountId: conversation.whatsapp_account_id,
         conversationId: conversation.id,
         organizationId: resolvedOrganizationId,
@@ -361,18 +395,14 @@ export function ChatPanel({
         attachment
       });
 
-      setText("");
-      setAttachment(null);
-      setSelectedQuickReplyTemplateId(null);
-      setReplyDraft(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (response.data) {
+        replaceOptimisticMessageInCache(queryClient, optimisticMessage.id, response.data);
+        patchConversationFromMessageInCache(queryClient, response.data);
       }
 
       setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
-      onMessageSent();
     } catch (error) {
+      updateMessageAckInCache(queryClient, conversation.id, optimisticMessage.id, "failed");
       setSendNotice(error instanceof Error ? error.message : "Unable to send message");
     } finally {
       setIsSending(false);
@@ -395,9 +425,8 @@ export function ChatPanel({
         organizationId: resolvedOrganizationId
       });
 
+    updateMessageAckInCache(queryClient, latestOutgoingMessage.conversation_id, latestOutgoingMessage.id, "queued");
     setSendNotice("Retry requested. Message will update shortly.");
-    onMessageSent();
-    await queryClient.invalidateQueries();
   } catch (error) {
     setSendNotice(error instanceof Error ? error.message : "Retry failed");
   } finally {
@@ -608,11 +637,12 @@ export function ChatPanel({
     setSendNotice(null);
     try {
       await deleteMessage({ messageId: message.id, organizationId: resolvedOrganizationId });
+      markMessagesDeletedInCache(queryClient, message.conversation_id, [message.id]);
+      patchConversationFromMessageInCache(queryClient, { ...message, is_deleted: true }, { deleted: true });
       if (replyDraft?.messageId === message.id) {
         setReplyDraft(null);
       }
       setSendNotice("Chat bubble deleted from this conversation.");
-      onMessageSent();
     } catch (error) {
       setSendNotice(error instanceof Error ? error.message : "Unable to delete message");
     } finally {
@@ -674,6 +704,17 @@ export function ChatPanel({
           deleteMessage({ messageId: message.id, organizationId: resolvedOrganizationId })
         )
       );
+      const bulkConversationId = deletableMessages[0]?.conversation_id;
+      if (bulkConversationId) {
+        markMessagesDeletedInCache(
+          queryClient,
+          bulkConversationId,
+          deletableMessages.map((message) => message.id)
+        );
+      }
+      deletableMessages.forEach((message) => {
+        patchConversationFromMessageInCache(queryClient, { ...message, is_deleted: true }, { deleted: true });
+      });
       if (replyDraft && deletableMessages.some((message) => message.id === replyDraft.messageId)) {
         setReplyDraft(null);
       }
@@ -683,7 +724,6 @@ export function ChatPanel({
           ? "Selected chat bubble deleted from this conversation."
           : `${deletableMessages.length} chat bubbles deleted from this conversation.`
       );
-      onMessageSent();
     } catch (error) {
       setSendNotice(error instanceof Error ? error.message : "Unable to delete selected messages");
     } finally {
@@ -704,15 +744,18 @@ export function ChatPanel({
     setIsForwarding(true);
     setSendNotice(null);
     try {
-      await forwardMessage({
+      const response = await forwardMessage({
         messageId: forwardSourceMessage.id,
         targetConversationId: forwardTargetConversationId,
         organizationId: resolvedOrganizationId
       });
+      if (response.data) {
+        upsertMessageInCache(queryClient, response.data);
+        patchConversationFromMessageInCache(queryClient, response.data);
+      }
       setForwardSourceMessage(null);
       setForwardTargetConversationId("");
       setSendNotice("Chat bubble forwarded to the selected contact.");
-      onMessageSent();
     } catch (error) {
       setSendNotice(error instanceof Error ? error.message : "Unable to forward message");
     } finally {

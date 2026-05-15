@@ -250,13 +250,13 @@ function SidebarContent({
           onNavigate={onNavigate}
           compact={mobile}
         />
+        <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label="Sales" onClick={onNavigate} compact={mobile} />
         {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Workspace</p> : null}
         <SidebarNavGroup
           icon={<Users size={18} />}
           label="CRM"
           items={[
             { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-            { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
             { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" },
             ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
           ]}
@@ -374,12 +374,17 @@ export function DashboardLayout() {
       ]
     },
     {
+      id: "sales",
+      label: "Sales",
+      icon: <TrendingUp size={18} />,
+      items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: "Sales pipeline" }]
+    },
+    {
       id: "crm",
       label: "CRM",
       icon: <Users size={18} />,
       items: [
         { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-        { to: "/sales", icon: <TrendingUp size={16} />, label: "Sales" },
         { to: "/reports", icon: <FileBarChart size={16} />, label: "Reports" },
         ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
       ]
@@ -845,7 +850,7 @@ export function DashboardLayout() {
                   "sidebar-context-panel min-w-0 flex-1 overflow-hidden px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
                   isDesktopNavCollapsed
                     ? "w-0 -translate-x-2 px-0 opacity-0"
-                    : "w-[16rem] translate-x-0 opacity-100 xl:w-[17rem]"
+                    : "w-[13rem] translate-x-0 opacity-100 xl:w-[14rem]"
                 )}
                 aria-hidden={isDesktopNavCollapsed}
               >

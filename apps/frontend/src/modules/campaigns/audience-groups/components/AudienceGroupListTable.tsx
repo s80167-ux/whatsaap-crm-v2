@@ -24,10 +24,10 @@ export function AudienceGroupListTable({ groups, loading = false, onView, onDele
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-sm">
+    <div className="workspace-table-wrap">
+      <table className="workspace-table workspace-table-compact min-w-[980px]">
         <thead>
-          <tr className="text-xs uppercase tracking-[0.14em] text-text-soft">
+          <tr>
             <Th>Group Name</Th>
             <Th>Status</Th>
             <Th>Total Rows</Th>
@@ -80,11 +80,11 @@ export function AudienceGroupListTable({ groups, loading = false, onView, onDele
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="border-b border-border bg-background-tint px-3 py-3 font-semibold">{children}</th>;
+  return <th>{children}</th>;
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="border-b border-border bg-card px-3 py-3 align-top text-text-muted">{children}</td>;
+  return <td>{children}</td>;
 }
 
 function formatDate(value: string) {

@@ -2,9 +2,9 @@ import { Link, useLocation } from "react-router-dom";
 import { FileText, ListPlus, Megaphone } from "lucide-react";
 
 const campaignModuleTabs = [
-  { label: "Campaigns", to: "/campaigns", icon: Megaphone },
-  { label: "Audience Groups", to: "/campaigns/audience-groups", icon: ListPlus },
-  { label: "Message Templates", to: "/campaigns/templates", icon: FileText }
+  { label: "Campaigns", to: "/campaigns", icon: Megaphone, end: true },
+  { label: "Audience Groups", to: "/campaigns/audience-groups", icon: ListPlus, end: true },
+  { label: "Message Templates", to: "/campaigns/templates", icon: FileText, end: false }
 ];
 
 export function CampaignModuleTabs() {
@@ -13,7 +13,7 @@ export function CampaignModuleTabs() {
   return (
     <nav className="flex flex-wrap gap-2" aria-label="Campaign module navigation">
       {campaignModuleTabs.map((tab) => {
-        const isActive = location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
+        const isActive = tab.end ? location.pathname === tab.to : location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
         const Icon = tab.icon;
 
         if (isActive) {

@@ -549,17 +549,17 @@ export function SalesPage() {
               Sales orders are now role-scoped and live. Assigned-scope users see their own records, while admins and managers can monitor the wider revenue queue.
             </p>
           </div>
-          <div className="flex w-full max-w-sm flex-col gap-4 sm:items-end">
-            <div className="workspace-subtle w-full">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
-              <p className="mt-2 text-sm leading-6 text-text-muted">
-                Keep order creation, active pipeline, and conversion follow-up visible without leaving the page.
-              </p>
-            </div>
-            <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
-              + Create Sales
-            </Button>
+          <div className="workspace-subtle max-w-xs p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Keep order creation, active pipeline, and conversion follow-up visible without leaving the page.
+            </p>
           </div>
+        </div>
+        <div className="mt-5 flex justify-start sm:justify-end">
+          <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
+            + Create Sales
+          </Button>
         </div>
       </Card>
 
