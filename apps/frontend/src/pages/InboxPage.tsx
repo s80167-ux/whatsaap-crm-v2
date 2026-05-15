@@ -19,11 +19,14 @@ import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { inboxQueryKeys, patchConversationInCache } from "../lib/inboxCache";
 import { DEFAULT_CHAT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
 import { getStoredUser } from "../lib/auth";
-import type { Conversation } from "../types/api";
+import type { Conversation, Message } from "../types/api";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
 type ConversationFilterMode = "mine" | "unread" | "unassigned" | "sales" | "all";
+
+const OUTGOING_STATUS_POLL_INTERVAL_MS = 1000;
+const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
 
 export function InboxPage() {
   const queryClient = useQueryClient();
@@ -125,11 +128,28 @@ export function InboxPage() {
     () => inboxQueryKeys.messages(stableSelectedConversation?.id, chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined),
     [activeOrganizationId, chatHistoryRange, isSuperAdmin, stableSelectedConversation?.id]
   );
+  const unresolvedOutgoingCutoff = Date.now() - OUTGOING_STATUS_POLL_WINDOW_MS;
+  const cachedMessages = queryClient.getQueryData<Message[]>(messagesQueryKey) ?? [];
   const { data: messages = [] } = useMessages(
     stableSelectedConversation?.id,
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
-    { refetchIntervalMs: false }
+    {
+      refetchIntervalMs: cachedMessages.some((message) => {
+        if (message.direction !== "outgoing") {
+          return false;
+        }
+
+        if (message.ack_status && message.ack_status !== "pending" && message.ack_status !== "queued") {
+          return false;
+        }
+
+        const sentAt = new Date(message.sent_at).getTime();
+        return Number.isFinite(sentAt) && sentAt >= unresolvedOutgoingCutoff;
+      })
+        ? OUTGOING_STATUS_POLL_INTERVAL_MS
+        : false
+    }
   );
 
   useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);

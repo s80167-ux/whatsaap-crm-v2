@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Search, TrendingUp } from "lucide-react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import {
   convertLeadToOrder,
   createLead,
-  createSalesOrder,
   createSalesOrderItem,
   recordSalesShareLinkAudit,
   updateLead,
@@ -12,7 +12,7 @@ import {
 } from "../api/crm";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
-import CreateSalesModal from "../components/CreateSalesModal";
+import { CreateSalesDrawer } from "../components/CreateSalesModal";
 import { Input } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
@@ -34,6 +34,22 @@ const SALES_STATUSES = [
   { value: "closed_won", label: "Closed won" },
   { value: "closed_lost", label: "Closed lost" }
 ] as const;
+
+const SALES_STATUS_FILTERS: Array<{ value: "all" | SalesOrder["status"]; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "closed_won", label: "Closed Won" },
+  { value: "closed_lost", label: "Closed Lost" }
+];
+
+type SalesRepPerformance = {
+  ownerId: string | null;
+  ownerName: string;
+  wonCount: number;
+  wonValue: number;
+  openCount: number;
+  lostCount: number;
+};
 
 const LEAD_STATUSES = [
   { value: "new_lead", label: "New lead" },
@@ -87,6 +103,7 @@ export function SalesPage() {
   const canLoadOrganizationScopedInputs = !isSuperAdmin || Boolean(activeOrganizationId);
   const canManageUsers = Boolean(currentUser?.permissionKeys.includes("org.manage_users"));
   const [isCreateSalesModalOpen, setIsCreateSalesModalOpen] = useState(false);
+  const [salesQuery, setSalesQuery] = useState("");
 
   const salesFilters = useMemo(
     () => ({
@@ -147,12 +164,7 @@ export function SalesPage() {
     canLoadSales
   );
 
-  const [selectedContactId, setSelectedContactId] = useState("");
-  const [status, setStatus] = useState<(typeof SALES_STATUSES)[number]["value"]>("open");
-  const [totalAmount, setTotalAmount] = useState("");
-  const [currency, setCurrency] = useState("MYR");
   const [notice, setNotice] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [itemProductType, setItemProductType] = useState("");
   const [itemPackageName, setItemPackageName] = useState("");
@@ -203,6 +215,118 @@ export function SalesPage() {
     [contacts]
   );
 
+  const ownerNameById = useMemo(() => {
+    const names = new Map<string, string>();
+
+    for (const user of organizationUsers) {
+      names.set(user.id, user.full_name ?? user.email ?? user.id);
+    }
+
+    if (currentUser?.organizationUserId) {
+      names.set(currentUser.organizationUserId, currentUser.fullName ?? currentUser.email ?? "Assigned to you");
+    }
+
+    return names;
+  }, [currentUser?.email, currentUser?.fullName, currentUser?.organizationUserId, organizationUsers]);
+
+  const getOwnerName = useMemo(
+    () => (ownerId?: string | null) => {
+      if (!ownerId) {
+        return "Unassigned";
+      }
+
+      return ownerNameById.get(ownerId) ?? ownerId;
+    },
+    [ownerNameById]
+  );
+
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = salesQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return orders;
+    }
+
+    return orders.filter((order) => {
+      const ownerName = getOwnerName(order.assigned_user_id).toLowerCase();
+
+      return (
+        (order.contact_name?.toLowerCase().includes(normalizedQuery) ?? false) ||
+        (order.primary_phone_normalized?.toLowerCase().includes(normalizedQuery) ?? false) ||
+        ownerName.includes(normalizedQuery)
+      );
+    });
+  }, [getOwnerName, orders, salesQuery]);
+
+  const currentMonthRange = useMemo(() => {
+    const now = new Date();
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1).getTime(),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime()
+    };
+  }, []);
+
+  const isOrderActivityThisMonth = useMemo(
+    () => (order: SalesOrder) => {
+      const timestamp = new Date(order.closed_at ?? order.updated_at).getTime();
+      return Number.isFinite(timestamp) && timestamp >= currentMonthRange.start && timestamp < currentMonthRange.end;
+    },
+    [currentMonthRange.end, currentMonthRange.start]
+  );
+
+  const wonOrdersThisMonth = useMemo(
+    () => orders.filter((order) => order.status === "closed_won" && isOrderActivityThisMonth(order)),
+    [isOrderActivityThisMonth, orders]
+  );
+
+  const wonValueThisMonth = useMemo(
+    () => wonOrdersThisMonth.reduce((total, order) => total + (Number(order.total_amount) || 0), 0),
+    [wonOrdersThisMonth]
+  );
+
+  const salesRepPerformance = useMemo(() => {
+    const byOwner = new Map<string, SalesRepPerformance>();
+
+    for (const order of orders) {
+      const ownerId = order.assigned_user_id ?? null;
+      const key = ownerId ?? "unassigned";
+      const current =
+        byOwner.get(key) ??
+        ({
+          ownerId,
+          ownerName: getOwnerName(ownerId),
+          wonCount: 0,
+          wonValue: 0,
+          openCount: 0,
+          lostCount: 0
+        } satisfies SalesRepPerformance);
+
+      if (order.status === "closed_won") {
+        if (isOrderActivityThisMonth(order)) {
+          current.wonCount += 1;
+          current.wonValue += Number(order.total_amount) || 0;
+        }
+      } else if (order.status === "closed_lost") {
+        if (isOrderActivityThisMonth(order)) {
+          current.lostCount += 1;
+        }
+      } else {
+        current.openCount += 1;
+      }
+
+      byOwner.set(key, current);
+    }
+
+    return [...byOwner.values()]
+      .sort((left, right) => right.wonCount - left.wonCount || right.wonValue - left.wonValue || right.openCount - left.openCount)
+      .slice(0, 5);
+  }, [getOwnerName, isOrderActivityThisMonth, orders]);
+
+  const teamMomentumLeaders = useMemo(
+    () => salesRepPerformance.filter((rep) => rep.wonCount > 0 || rep.wonValue > 0).slice(0, 3),
+    [salesRepPerformance]
+  );
+
   const timelineEntries = useMemo<TimelineEntry[]>(() => {
     const leadEntries = selectedLeadHistory.map((entry) => ({
       ...entry,
@@ -221,7 +345,7 @@ export function SalesPage() {
     );
   }, [activeLeadId, selectedLeadHistory, selectedOrderHistory, selectedOrderId]);
 
-  const orderPagination = usePanelPagination(orders);
+  const orderPagination = usePanelPagination(filteredOrders);
   const leadPagination = usePanelPagination(leads);
   const timelinePagination = usePanelPagination(timelineEntries);
 
@@ -438,6 +562,10 @@ export function SalesPage() {
   }, [salesFilters.leadId, leads.length]);
 
   useEffect(() => {
+    orderPagination.setPage(1);
+  }, [salesFilters.status, salesQuery]);
+
+  useEffect(() => {
     setLeadSourceById((current) => {
       const next = { ...current };
 
@@ -479,39 +607,6 @@ export function SalesPage() {
     });
   }, [leads]);
 
-  async function handleCreateOrder() {
-    const parsedAmount = Number(totalAmount);
-
-    if (!selectedContactId || !Number.isFinite(parsedAmount) || parsedAmount < 0) {
-      setNotice("Choose a contact and enter a valid amount before creating a sales order.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setNotice(null);
-
-    try {
-      await createSalesOrder({
-        contactId: selectedContactId,
-        status,
-        totalAmount: parsedAmount,
-        currency,
-        assignedUserId: currentUser?.organizationUserId ?? null
-      });
-
-      setSelectedContactId("");
-      setStatus("open");
-      setTotalAmount("");
-      setCurrency("MYR");
-      setNotice("Sales order created. The table and summary have been refreshed.");
-      await refreshSalesQueries();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create sales order");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   function clearDeepLink(kind: "order" | "lead") {
     if (kind === "order") {
       setSelectedOrderId(null);
@@ -529,45 +624,117 @@ export function SalesPage() {
     });
   }
 
+  function setSalesStatusFilter(nextStatus: "all" | SalesOrder["status"]) {
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (nextStatus === "all") {
+      nextParams.delete("status");
+    } else {
+      nextParams.set("status", nextStatus);
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }
+
   return (
-    <section className="sales-page space-y-6">
-      <CreateSalesModal
+    <section className="sales-page space-y-5">
+      <CreateSalesDrawer
         isOpen={isCreateSalesModalOpen}
         onClose={() => setIsCreateSalesModalOpen(false)}
         onCreated={() => {
           setNotice("Sales order created from the unified Create Sales form.");
           void refreshSalesQueries();
         }}
+        contacts={sortedContacts}
       />
 
-      <Card elevated className="workspace-block">
-        <div className="workspace-page-header">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Sales</p>
-            <h2 className="mt-3 section-title">Pipeline workspace</h2>
-            <p className="mt-2 max-w-3xl section-copy">
-              Sales orders are now role-scoped and live. Assigned-scope users see their own records, while admins and managers can monitor the wider revenue queue.
+      <Card elevated className="workspace-page-header p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-3 lg:items-end">
+          <div className="min-w-0">
+            <p className="hidden h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary sm:inline-flex">
+              <TrendingUp size={18} />
             </p>
+            <h2 className="section-title sm:mt-3">Sales</h2>
+            <p className="mt-2 hidden max-w-2xl section-copy sm:block">Track active deals, team momentum and monthly wins.</p>
           </div>
-          <div className="workspace-subtle max-w-xs p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
-            <p className="mt-2 text-sm leading-6 text-text-muted">
-              Keep order creation, active pipeline, and conversion follow-up visible without leaving the page.
-            </p>
-          </div>
-        </div>
-        <div className="mt-5 flex justify-start sm:justify-end">
-          <Button onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
-            + Create Sales
+          <Button className="shrink-0 px-3 sm:px-5" onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
+            Create Sales
           </Button>
         </div>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total orders" value={String(summary?.total_orders ?? 0)} tone="text-text" />
-        <MetricCard label="Open orders" value={String(summary?.open_orders ?? 0)} tone="text-warning" />
-        <MetricCard label="Won orders" value={String(summary?.won_orders ?? 0)} tone="text-success" />
-        <MetricCard label="Won value" value={formatCurrency(summary?.won_value ?? "0")} tone="text-primary" />
+        <MetricCard label="Open Deals" value={String(summary?.open_orders ?? 0)} tone="text-warning" />
+        <MetricCard label="Won This Month" value={String(wonOrdersThisMonth.length)} tone="text-success" />
+        <MetricCard label="Won Value" value={formatCurrency(String(wonValueThisMonth))} tone="text-primary" />
+        <MetricCard label="Total Deals" value={String(summary?.total_orders ?? 0)} tone="text-text" />
+      </div>
+
+      <Card elevated className="space-y-4 p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Sales Rep Performance</p>
+            <p className="mt-2 text-sm text-text-muted">This month’s team activity and won sales.</p>
+          </div>
+          <p className="shrink-0 text-xs font-semibold text-text-muted">Top {Math.min(salesRepPerformance.length, 5)}</p>
+        </div>
+        {salesRepPerformance.length === 0 ? (
+          <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No sales owner activity yet.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {salesRepPerformance.map((rep, index) => (
+              <div
+                key={rep.ownerId ?? "unassigned"}
+                className={`rounded-2xl border p-4 ${
+                  index === 0 ? "border-primary/30 bg-primary/5 shadow-soft" : "border-border bg-background-tint/60"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm font-semibold text-text">{rep.ownerName}</p>
+                  {index === 0 ? (
+                    <span className="shrink-0 rounded-full border border-primary/20 bg-card px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                      Top
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-text-muted">
+                  <PerformanceStat label="Won" value={String(rep.wonCount)} />
+                  <PerformanceStat label="Value" value={formatCurrency(String(rep.wonValue))} />
+                  <PerformanceStat label="Open" value={String(rep.openCount)} />
+                  <PerformanceStat label="Lost" value={String(rep.lostCount)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <div className="space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          {SALES_STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              className={`inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition ${
+                (salesFilters.status ?? "all") === filter.value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-white text-text-muted hover:bg-background-tint hover:text-text"
+              }`}
+              onClick={() => setSalesStatusFilter(filter.value)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+        <label className="relative block sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <Input
+            value={salesQuery}
+            onChange={(event) => setSalesQuery(event.target.value)}
+            placeholder="Search customer, phone or owner"
+            className="pl-9"
+          />
+        </label>
       </div>
 
       {salesFilters.status || salesFilters.createdFrom || salesFilters.closedFrom ? (
@@ -609,110 +776,26 @@ export function SalesPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
-        <Card elevated className="workspace-block">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Quick Create</p>
-              <p className="mt-2 text-sm text-text-muted">Create a sales order with only the essentials, then refine details in the order panel.</p>
-            </div>
-          </div>
-          <div className="workspace-form-panel mt-5 space-y-4 p-4">
-            <label className="block">
-              <span className="workspace-label">Contact</span>
-              <select
-                id="contact-select"
-                aria-label="Contact"
-                value={selectedContactId}
-                onChange={(event) => setSelectedContactId(event.target.value)}
-                className="input-base h-12"
-                disabled={!canWriteSales || isSubmitting}
-              >
-                <option value="">Select contact</option>
-                {sortedContacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.display_name ?? contact.primary_phone_normalized ?? contact.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="workspace-label">Status</span>
-              <select
-                id="status-select"
-                aria-label="Status"
-                value={status}
-                onChange={(event) => setStatus(event.target.value as (typeof SALES_STATUSES)[number]["value"])}
-                className="input-base h-12"
-                disabled={!canWriteSales || isSubmitting}
-              >
-                {SALES_STATUSES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr),110px]">
-              <label className="block">
-                <span className="workspace-label">Amount</span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={totalAmount}
-                  onChange={(event) => setTotalAmount(event.target.value)}
-                  placeholder="0.00"
-                  disabled={!canWriteSales || isSubmitting}
-                />
-              </label>
-              <label className="block">
-                <span className="workspace-label">Currency</span>
-                <Input
-                  value={currency}
-                  onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-                  placeholder="MYR"
-                  maxLength={8}
-                  disabled={!canWriteSales || isSubmitting}
-                />
-              </label>
-            </div>
-
-            {notice ? <p className="text-sm leading-6 text-text-muted">{notice}</p> : null}
-
-            <Button onClick={handleCreateOrder} disabled={!canWriteSales || isSubmitting} className="w-full">
-              {isSubmitting ? "Creating..." : "Create sales order"}
-            </Button>
-
-            {!canWriteSales ? (
-              <p className="workspace-empty-state px-4 py-3 text-sm leading-6 text-text-muted">
-                Your role can view assigned sales but cannot create or update them.
-              </p>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card elevated className="workspace-block">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr),360px]">
+        <Card elevated className="space-y-4 p-4 sm:p-5">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Orders</p>
-              <h3 className="mt-2 text-lg font-semibold text-text">Live sales orders</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Live Sales Orders</p>
+              <p className="mt-2 text-sm text-text-muted">Monitor active opportunities and closing status.</p>
             </div>
-            <p className="text-sm text-text-muted">{orders.length} records</p>
+            <p className="shrink-0 text-xs font-semibold text-text-muted">{filteredOrders.length} shown</p>
           </div>
 
-          <div ref={ordersTableContainerRef} className="workspace-table-wrap sales-table-wrap mt-6 max-h-[520px]">
+          <div ref={ordersTableContainerRef} className="workspace-table-wrap sales-table-wrap max-h-[520px]">
             <table className="workspace-table sales-orders-table">
               <thead>
                 <tr>
-                  <th className="px-5 py-4">Contact</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Amount</th>
+                  <th className="px-5 py-4">Customer</th>
+                  <th className="px-5 py-4">Stage</th>
+                  <th className="px-5 py-4">Value</th>
                   <th className="px-5 py-4">Owner</th>
                   <th className="px-5 py-4">Updated</th>
-                  <th className="px-5 py-4">Actions</th>
+                  <th className="px-5 py-4">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -722,10 +805,10 @@ export function SalesPage() {
                       Loading sales orders...
                     </td>
                   </tr>
-                ) : orders.length === 0 ? (
+                ) : filteredOrders.length === 0 ? (
                   <tr>
                     <td className="px-4 py-8 text-sm text-text-muted" colSpan={6}>
-                      No sales orders yet. Create the first order from the panel on the left to start the pipeline.
+                      No sales orders match this view.
                     </td>
                   </tr>
                 ) : (
@@ -752,11 +835,7 @@ export function SalesPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4 font-medium text-text">{formatCurrency(order.total_amount, order.currency)}</td>
-                      <td className="px-5 py-4">
-                        {order.assigned_user_id === currentUser?.organizationUserId
-                          ? "Assigned to you"
-                          : order.assigned_user_id ?? "Unassigned"}
-                      </td>
+                      <td className="px-5 py-4">{getOwnerName(order.assigned_user_id)}</td>
                       <td className="px-5 py-4">{new Date(order.updated_at).toLocaleString()}</td>
                       <td className="px-5 py-4">
                         <Button
@@ -764,17 +843,10 @@ export function SalesPage() {
                           className="px-3 py-2 text-xs"
                           onClick={(event) => {
                             event.stopPropagation();
-                            void copyShareLink({
-                              orderId: order.id,
-                              leadId: order.lead_id ?? null,
-                              section: "order-detail",
-                              entityType: "sales_order",
-                              entityId: order.id,
-                              source: "sales_order_row"
-                            });
+                            focusOrder(order.id, order.lead_id ?? null, "order-detail");
                           }}
                         >
-                          Copy link
+                          Open
                         </Button>
                       </td>
                     </tr>
@@ -790,6 +862,31 @@ export function SalesPage() {
             totalItems={orderPagination.totalItems}
             onPageChange={orderPagination.setPage}
           />
+        </Card>
+
+        <Card elevated className="space-y-4 p-4 sm:p-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Team Momentum</p>
+            <p className="mt-2 text-sm text-text-muted">Simple top 3 leaderboard ranked by won count, then won value.</p>
+          </div>
+          {teamMomentumLeaders.length === 0 ? (
+            <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No won sales yet this month.</p>
+          ) : (
+            <div className="space-y-3">
+              {teamMomentumLeaders.map((rep, index) => (
+                <div key={rep.ownerId ?? "unassigned"} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">#{index + 1}</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-text">{rep.ownerName}</p>
+                    </div>
+                    <p className="shrink-0 text-right text-sm font-semibold text-text">{rep.wonCount} won</p>
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-text-muted">{formatCurrency(String(rep.wonValue))}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -1661,7 +1758,7 @@ export function SalesPage() {
         </Card>
       </section>
 
-      <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
+      <Toast message={notice ?? copyToast?.message ?? null} variant={copyToast?.variant ?? "success"} onClose={() => setNotice(null)} />
     </section>
   );
 }
@@ -1672,6 +1769,15 @@ function MetricCard({ label, value, tone }: { label: string; value: string; tone
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
       <p className={`mt-3 text-3xl font-semibold ${tone}`}>{value}</p>
     </Card>
+  );
+}
+
+function PerformanceStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-text">{value}</p>
+    </div>
   );
 }
 

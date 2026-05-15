@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { createSalesOrder, createSalesOrderItem } from "../api/crm";
+import { PopupOverlay } from "./PopupOverlay";
+import type { Contact } from "../types/api";
 
 type SalesStatus = "open" | "closed_won" | "closed_lost";
 
@@ -12,6 +13,7 @@ type CreateSalesModalProps = {
   conversationId?: string | null;
   messageId?: string | null;
   defaultCustomerName?: string | null;
+  contacts?: Contact[];
 };
 
 function emptyToNull(value: string) {
@@ -26,7 +28,8 @@ export function CreateSalesModal({
   contactId,
   conversationId,
   messageId,
-  defaultCustomerName
+  defaultCustomerName,
+  contacts = []
 }: CreateSalesModalProps) {
   const [manualContactId, setManualContactId] = useState(contactId ?? "");
   const [status, setStatus] = useState<SalesStatus>("open");
@@ -46,7 +49,7 @@ export function CreateSalesModal({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const hasContactChoices = !contactId && contacts.length > 0;
 
   const resolvedContactId = contactId ?? manualContactId.trim();
   const priceNumber = Number(unitPrice || 0);
@@ -59,36 +62,10 @@ export function CreateSalesModal({
   }, [priceNumber, quantityNumber]);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     setManualContactId(contactId ?? "");
   }, [contactId]);
 
-  useEffect(() => {
-    if (!isOpen || typeof document === "undefined") {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose, saving]);
-
-  if (!isOpen || !mounted || typeof document === "undefined") {
+  if (!isOpen) {
     return null;
   }
 
@@ -147,37 +124,39 @@ export function CreateSalesModal({
     }
   }
 
-  const modal = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-sales-modal-title"
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/45 px-4 py-6 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) {
-          onClose();
-        }
-      }}
+  return (
+    <PopupOverlay
+      open={isOpen}
+      onClose={onClose}
+      title="Create Sales"
+      description="Create the sales order and first item line without changing the sales schema."
+      panelClassName="max-w-3xl"
     >
-      <div className="app-card relative max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 shadow-lift">
-        <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-soft">Create Sales</p>
-            <h2 id="create-sales-modal-title" className="mt-1 text-2xl font-semibold text-text">New sales order</h2>
-            {defaultCustomerName ? <p className="mt-1 text-sm text-text-muted">Customer: {defaultCustomerName}</p> : null}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-text-muted transition hover:bg-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Close
-          </button>
+      <div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-soft">Sales order</p>
+          <h2 className="mt-1 text-2xl font-semibold text-text">New sales order</h2>
+          {defaultCustomerName ? <p className="mt-1 text-sm text-text-muted">Customer: {defaultCustomerName}</p> : null}
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {!contactId ? (
+          {hasContactChoices ? (
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Contact</span>
+              <select
+                value={manualContactId}
+                onChange={(event) => setManualContactId(event.target.value)}
+                className="input-base mt-1 w-full rounded-2xl px-4 py-3 text-sm"
+              >
+                <option value="">Select contact</option>
+                {contacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.display_name ?? contact.primary_phone_normalized ?? contact.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : !contactId ? (
             <label className="block sm:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Contact ID</span>
               <input
@@ -340,10 +319,9 @@ export function CreateSalesModal({
           </button>
         </div>
       </div>
-    </div>
+    </PopupOverlay>
   );
-
-  return createPortal(modal, document.body);
 }
 
+export const CreateSalesDrawer = CreateSalesModal;
 export default CreateSalesModal;
