@@ -1,7 +1,19 @@
 import { ThemeProvider } from "next-themes";
 import type { PropsWithChildren } from "react";
 
-export const APP_THEMES = ["light", "dark", "midnight", "ocean", "glass", "system"] as const;
+export const APP_THEMES = [
+  "light",
+  "dark",
+  "midnight",
+  "ocean",
+  "glass",
+  "cloud",
+  "blue",
+  "rainbow",
+  "pink",
+  "jungle",
+  "system"
+] as const;
 
 export type AppTheme = (typeof APP_THEMES)[number];
 
@@ -12,7 +24,7 @@ export function AppThemeProvider({ children }: PropsWithChildren) {
       defaultTheme="system"
       enableSystem
       storageKey="whatsapp-crm-theme"
-      themes={["light", "dark", "midnight", "ocean", "glass"]}
+      themes={["light", "dark", "midnight", "ocean", "glass", "cloud", "blue", "rainbow", "pink", "jungle"]}
     >
       {children}
     </ThemeProvider>

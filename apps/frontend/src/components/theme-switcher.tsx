@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
+  Cloud,
+  Droplets,
+  Heart,
   Laptop,
+  Leaf,
   Moon,
   Palette,
+  Rainbow,
   Sparkles,
   Sun,
   Waves
@@ -27,6 +32,11 @@ const THEME_OPTIONS: ThemeOption[] = [
   { value: "midnight", label: "Midnight", description: "Deep navy enterprise contrast.", icon: Sparkles },
   { value: "ocean", label: "Ocean", description: "Professional blue-tinted workspace.", icon: Waves },
   { value: "glass", label: "Glass", description: "Translucent surfaces with blur.", icon: Palette },
+  { value: "cloud", label: "Cloud", description: "Airy pale surfaces with soft sky accents.", icon: Cloud },
+  { value: "blue", label: "Blue", description: "Layered blue workspace with crisp contrast.", icon: Droplets },
+  { value: "rainbow", label: "Rainbow", description: "Balanced color accents over clean surfaces.", icon: Rainbow },
+  { value: "pink", label: "Pink", description: "Warm rose surfaces with polished contrast.", icon: Heart },
+  { value: "jungle", label: "Jungle Green", description: "Deep green workspace with natural accents.", icon: Leaf },
   { value: "system", label: "System", description: "Follow the operating system theme.", icon: Laptop }
 ];
 
@@ -68,7 +78,10 @@ export function ThemeSwitcher({ className }: { className?: string }) {
 
   const selectedTheme = mounted ? theme ?? "system" : "system";
   const activeTheme = mounted ? resolvedTheme ?? "light" : "light";
-  const selectedOption = THEME_OPTIONS.find((option) => option.value === selectedTheme) ?? THEME_OPTIONS[5];
+  const selectedOption =
+    THEME_OPTIONS.find((option) => option.value === selectedTheme) ??
+    THEME_OPTIONS.find((option) => option.value === "system") ??
+    THEME_OPTIONS[0];
 
   return (
     <div ref={containerRef} className={clsx("relative", className)}>

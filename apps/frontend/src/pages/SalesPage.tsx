@@ -15,6 +15,7 @@ import { Card } from "../components/Card";
 import { CreateSalesDrawer } from "../components/CreateSalesModal";
 import { Input } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
+import { PopupOverlay } from "../components/PopupOverlay";
 import { Toast } from "../components/Toast";
 import { useOrganizationUsers } from "../hooks/useAdmin";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
@@ -40,6 +41,13 @@ const SALES_STATUS_FILTERS: Array<{ value: "all" | SalesOrder["status"]; label: 
   { value: "open", label: "Open" },
   { value: "closed_won", label: "Closed Won" },
   { value: "closed_lost", label: "Closed Lost" }
+];
+
+const PERFORMANCE_CARD_TONES = [
+  "border-primary/35 bg-primary/10",
+  "border-success/25 bg-success/10",
+  "border-warning/25 bg-warning/10",
+  "border-border bg-background-tint/80"
 ];
 
 type SalesRepPerformance = {
@@ -103,6 +111,7 @@ export function SalesPage() {
   const canLoadOrganizationScopedInputs = !isSuperAdmin || Boolean(activeOrganizationId);
   const canManageUsers = Boolean(currentUser?.permissionKeys.includes("org.manage_users"));
   const [isCreateSalesModalOpen, setIsCreateSalesModalOpen] = useState(false);
+  const [isCreateLeadPopupOpen, setIsCreateLeadPopupOpen] = useState(false);
   const [salesQuery, setSalesQuery] = useState("");
 
   const salesFilters = useMemo(
@@ -636,6 +645,38 @@ export function SalesPage() {
     setSearchParams(nextParams, { replace: true });
   }
 
+  async function handleCreateLead() {
+    if (!leadContactId) {
+      setLeadNotice("Choose a contact before creating a lead.");
+      return;
+    }
+
+    setIsCreatingLead(true);
+    setLeadNotice(null);
+
+    try {
+      await createLead({
+        contactId: leadContactId,
+        source: leadSource || null,
+        status: leadStatus,
+        temperature: leadTemperature,
+        assignedUserId: currentUser?.organizationUserId ?? null
+      });
+
+      setLeadContactId("");
+      setLeadSource("");
+      setLeadStatus("new_lead");
+      setLeadTemperature("warm");
+      setIsCreateLeadPopupOpen(false);
+      setNotice("Lead created and added to the conversion queue.");
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (error) {
+      setLeadNotice(error instanceof Error ? error.message : "Unable to create lead");
+    } finally {
+      setIsCreatingLead(false);
+    }
+  }
+
   return (
     <section className="sales-page space-y-5">
       <CreateSalesDrawer
@@ -647,15 +688,101 @@ export function SalesPage() {
         }}
         contacts={sortedContacts}
       />
+      <PopupOverlay
+        open={isCreateLeadPopupOpen}
+        onClose={() => {
+          if (!isCreatingLead) {
+            setIsCreateLeadPopupOpen(false);
+          }
+        }}
+        title="Lead Intake"
+        description="Capture new opportunities quickly, then manage progress from the conversion queue."
+        panelClassName="max-w-xl"
+      >
+        <div className="workspace-form-panel space-y-4 p-4">
+          <label className="block">
+            <span className="workspace-label">Contact</span>
+            <select
+              id="lead-contact-select"
+              aria-label="Lead Contact"
+              value={leadContactId}
+              onChange={(event) => setLeadContactId(event.target.value)}
+              className="input-base h-12"
+              disabled={!canWriteSales || isCreatingLead}
+            >
+              <option value="">Select contact</option>
+              {sortedContacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.display_name ?? contact.primary_phone_normalized ?? contact.id}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <Card elevated className="workspace-page-header p-4 sm:p-6">
+          <label className="block">
+            <span className="workspace-label">Source</span>
+            <Input
+              value={leadSource}
+              onChange={(event) => setLeadSource(event.target.value)}
+              placeholder="WhatsApp inbound, referral, campaign..."
+              disabled={!canWriteSales || isCreatingLead}
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="workspace-label">Lead status</span>
+              <select
+                id="lead-status-select"
+                aria-label="Lead Status"
+                value={leadStatus}
+                onChange={(event) => setLeadStatus(event.target.value as (typeof LEAD_STATUSES)[number]["value"])}
+                className="input-base h-12"
+                disabled={!canWriteSales || isCreatingLead}
+              >
+                {LEAD_STATUSES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="workspace-label">Temperature</span>
+              <select
+                id="lead-temperature-select"
+                aria-label="Lead Temperature"
+                value={leadTemperature}
+                onChange={(event) => setLeadTemperature(event.target.value as (typeof LEAD_TEMPERATURES)[number]["value"])}
+                className="input-base h-12"
+                disabled={!canWriteSales || isCreatingLead}
+              >
+                {LEAD_TEMPERATURES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {leadNotice ? <p className="rounded-2xl border border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">{leadNotice}</p> : null}
+
+          <Button onClick={() => void handleCreateLead()} disabled={!canWriteSales || isCreatingLead} className="w-full">
+            {isCreatingLead ? "Creating..." : "Create lead"}
+          </Button>
+        </div>
+      </PopupOverlay>
+
+      <Card elevated className="workspace-page-header border-primary/15 bg-gradient-to-br from-primary/10 via-card to-success/10 p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3 lg:items-end">
           <div className="min-w-0">
             <p className="hidden h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary sm:inline-flex">
               <TrendingUp size={18} />
             </p>
             <h2 className="section-title sm:mt-3">Sales</h2>
-            <p className="mt-2 hidden max-w-2xl section-copy sm:block">Track active deals, team momentum and monthly wins.</p>
+            <p className="mt-2 max-w-2xl section-copy">Track active deals, team momentum and monthly wins.</p>
           </div>
           <Button className="shrink-0 px-3 sm:px-5" onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
             Create Sales
@@ -670,55 +797,64 @@ export function SalesPage() {
         <MetricCard label="Total Deals" value={String(summary?.total_orders ?? 0)} tone="text-text" />
       </div>
 
-      <Card elevated className="space-y-4 p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Sales Rep Performance</p>
-            <p className="mt-2 text-sm text-text-muted">This month’s team activity and won sales.</p>
+      <Card elevated className="space-y-4 overflow-hidden border-primary/15 p-0">
+        <div className="border-b border-border bg-gradient-to-r from-primary/10 via-card to-warning/10 px-4 py-4 sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Sales Rep Performance</p>
+              <p className="mt-2 text-sm text-text-muted">This month's team activity and won sales.</p>
+            </div>
+            <p className="shrink-0 rounded-full border border-primary/20 bg-card px-3 py-1 text-xs font-semibold text-primary">
+              Top {Math.min(salesRepPerformance.length, 4)}
+            </p>
           </div>
-          <p className="shrink-0 text-xs font-semibold text-text-muted">Top {Math.min(salesRepPerformance.length, 5)}</p>
         </div>
-        {salesRepPerformance.length === 0 ? (
-          <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No sales owner activity yet.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {salesRepPerformance.map((rep, index) => (
-              <div
-                key={rep.ownerId ?? "unassigned"}
-                className={`rounded-2xl border p-4 ${
-                  index === 0 ? "border-primary/30 bg-primary/5 shadow-soft" : "border-border bg-background-tint/60"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 truncate text-sm font-semibold text-text">{rep.ownerName}</p>
-                  {index === 0 ? (
-                    <span className="shrink-0 rounded-full border border-primary/20 bg-card px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                      Top
-                    </span>
-                  ) : null}
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          {salesRepPerformance.length === 0 ? (
+            <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No sales owner activity yet.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {salesRepPerformance.slice(0, 4).map((rep, index) => (
+                <div
+                  key={rep.ownerId ?? "unassigned"}
+                  className={`rounded-2xl border p-4 shadow-soft ${PERFORMANCE_CARD_TONES[index] ?? PERFORMANCE_CARD_TONES[3]}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text">{rep.ownerName}</p>
+                      <p className="mt-1 text-xs font-medium text-text-muted">
+                        {rep.wonCount} won / {rep.openCount} open
+                      </p>
+                    </div>
+                    {index === 0 ? (
+                      <span className="shrink-0 rounded-full border border-primary/20 bg-card px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                        Top
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-text-muted">
+                    <PerformanceStat label="Won" value={String(rep.wonCount)} />
+                    <PerformanceStat label="Won value" value={formatCurrency(String(rep.wonValue))} />
+                    <PerformanceStat label="Open" value={String(rep.openCount)} />
+                    <PerformanceStat label="Lost" value={String(rep.lostCount)} />
+                  </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-text-muted">
-                  <PerformanceStat label="Won" value={String(rep.wonCount)} />
-                  <PerformanceStat label="Value" value={formatCurrency(String(rep.wonValue))} />
-                  <PerformanceStat label="Open" value={String(rep.openCount)} />
-                  <PerformanceStat label="Lost" value={String(rep.lostCount)} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </Card>
 
       <div className="space-y-3">
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+        <div className="flex gap-2 overflow-x-auto rounded-2xl border border-border bg-card/80 p-1 shadow-soft sm:flex-wrap sm:overflow-visible">
           {SALES_STATUS_FILTERS.map((filter) => (
             <button
               key={filter.value}
               type="button"
-              className={`inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition ${
+              className={`inline-flex min-h-[2.25rem] shrink-0 items-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                 (salesFilters.status ?? "all") === filter.value
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-white text-text-muted hover:bg-background-tint hover:text-text"
+                  ? "border-primary bg-primary text-primary-foreground shadow-soft"
+                  : "border-transparent bg-transparent text-text-muted hover:bg-background-tint hover:text-text"
               }`}
               onClick={() => setSalesStatusFilter(filter.value)}
             >
@@ -776,8 +912,8 @@ export function SalesPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr),360px]">
-        <Card elevated className="space-y-4 p-4 sm:p-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(780px,1fr),300px] 2xl:grid-cols-[minmax(840px,1fr),320px]">
+        <Card elevated className="min-w-0 space-y-4 p-4 sm:p-5">
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Live Sales Orders</p>
@@ -790,12 +926,12 @@ export function SalesPage() {
             <table className="workspace-table sales-orders-table">
               <thead>
                 <tr>
-                  <th className="px-5 py-4">Customer</th>
-                  <th className="px-5 py-4">Stage</th>
-                  <th className="px-5 py-4">Value</th>
-                  <th className="px-5 py-4">Owner</th>
-                  <th className="px-5 py-4">Updated</th>
-                  <th className="px-5 py-4">Action</th>
+                  <th className="w-[23%] px-4 py-4">Customer</th>
+                  <th className="w-[12%] px-4 py-4">Stage</th>
+                  <th className="w-[14%] px-4 py-4">Value</th>
+                  <th className="w-[16%] px-4 py-4">Owner</th>
+                  <th className="w-[17%] px-4 py-4">Updated</th>
+                  <th className="w-[18%] px-4 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -823,21 +959,19 @@ export function SalesPage() {
                       }`}
                       onClick={() => focusOrder(order.id, order.lead_id ?? null, "order-detail")}
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-4">
                         <p className="font-medium text-text">{order.contact_name ?? "Unknown"}</p>
                         <p className="mt-1 text-xs text-text-soft">{order.primary_phone_normalized ?? "--"}</p>
                       </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(order.status)}`}
-                        >
+                      <td className="px-4 py-4">
+                        <span className={`text-xs font-semibold ${getSalesStatusTextTone(order.status)}`}>
                           {formatSalesStatus(order.status)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 font-medium text-text">{formatCurrency(order.total_amount, order.currency)}</td>
-                      <td className="px-5 py-4">{getOwnerName(order.assigned_user_id)}</td>
-                      <td className="px-5 py-4">{new Date(order.updated_at).toLocaleString()}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-4 font-medium text-text">{formatCurrency(order.total_amount, order.currency)}</td>
+                      <td className="px-4 py-4">{getOwnerName(order.assigned_user_id)}</td>
+                      <td className="px-4 py-4">{new Date(order.updated_at).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right">
                         <Button
                           variant="secondary"
                           className="px-3 py-2 text-xs"
@@ -864,17 +998,18 @@ export function SalesPage() {
           />
         </Card>
 
-        <Card elevated className="space-y-4 p-4 sm:p-5">
-          <div>
+        <Card elevated className="min-w-0 space-y-4 overflow-hidden border-success/20 p-0">
+          <div className="border-b border-border bg-success/10 px-4 py-4 sm:px-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Team Momentum</p>
             <p className="mt-2 text-sm text-text-muted">Simple top 3 leaderboard ranked by won count, then won value.</p>
           </div>
-          {teamMomentumLeaders.length === 0 ? (
-            <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No won sales yet this month.</p>
-          ) : (
-            <div className="space-y-3">
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            {teamMomentumLeaders.length === 0 ? (
+              <p className="workspace-empty-state px-4 py-4 text-sm text-text-muted">No won sales yet this month.</p>
+            ) : (
+              <div className="space-y-3">
               {teamMomentumLeaders.map((rep, index) => (
-                <div key={rep.ownerId ?? "unassigned"} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+                <div key={rep.ownerId ?? "unassigned"} className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 shadow-soft">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">#{index + 1}</p>
@@ -885,147 +1020,46 @@ export function SalesPage() {
                   <p className="mt-2 text-xs font-medium text-text-muted">{formatCurrency(String(rep.wonValue))}</p>
                 </div>
               ))}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </Card>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[420px,minmax(0,1fr)]">
-        <Card elevated className="workspace-block">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Intake</p>
-            <p className="mt-2 text-sm text-text-muted">Capture new opportunities quickly, then manage progress from the conversion queue.</p>
-          </div>
-          <div className="workspace-form-panel mt-5 space-y-4 p-4">
-            <label className="block">
-              <span className="workspace-label">Contact</span>
-              <select
-                id="lead-contact-select"
-                aria-label="Lead Contact"
-                value={leadContactId}
-                onChange={(event) => setLeadContactId(event.target.value)}
-                className="input-base h-12"
-                disabled={!canWriteSales || isCreatingLead}
-              >
-                <option value="">Select contact</option>
-                {sortedContacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.display_name ?? contact.primary_phone_normalized ?? contact.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="workspace-label">Source</span>
-              <Input
-                value={leadSource}
-                onChange={(event) => setLeadSource(event.target.value)}
-                placeholder="WhatsApp inbound, referral, campaign..."
-                disabled={!canWriteSales || isCreatingLead}
-              />
-            </label>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="workspace-label">Lead status</span>
-                <select
-                  id="lead-status-select"
-                  aria-label="Lead Status"
-                  value={leadStatus}
-                  onChange={(event) => setLeadStatus(event.target.value as (typeof LEAD_STATUSES)[number]["value"])}
-                  className="input-base h-12"
-                  disabled={!canWriteSales || isCreatingLead}
-                >
-                  {LEAD_STATUSES.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="workspace-label">Temperature</span>
-                <select
-                  id="lead-temperature-select"
-                  aria-label="Lead Temperature"
-                  value={leadTemperature}
-                  onChange={(event) => setLeadTemperature(event.target.value as (typeof LEAD_TEMPERATURES)[number]["value"])}
-                  className="input-base h-12"
-                  disabled={!canWriteSales || isCreatingLead}
-                >
-                  {LEAD_TEMPERATURES.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {leadNotice ? <p className="text-sm leading-6 text-text-muted">{leadNotice}</p> : null}
-
-            <Button
-              onClick={async () => {
-                if (!leadContactId) {
-                  setLeadNotice("Choose a contact before creating a lead.");
-                  return;
-                }
-
-                setIsCreatingLead(true);
-                setLeadNotice(null);
-
-                try {
-                  await createLead({
-                    contactId: leadContactId,
-                    source: leadSource || null,
-                    status: leadStatus,
-                    temperature: leadTemperature,
-                    assignedUserId: currentUser?.organizationUserId ?? null
-                  });
-
-                  setLeadContactId("");
-                  setLeadSource("");
-                  setLeadStatus("new_lead");
-                  setLeadTemperature("warm");
-                  setLeadNotice("Lead created and added to the conversion queue.");
-                  await queryClient.invalidateQueries({ queryKey: ["leads"] });
-                } catch (error) {
-                  setLeadNotice(error instanceof Error ? error.message : "Unable to create lead");
-                } finally {
-                  setIsCreatingLead(false);
-                }
-              }}
-              disabled={!canWriteSales || isCreatingLead}
-              className="w-full"
-            >
-              {isCreatingLead ? "Creating..." : "Create lead"}
-            </Button>
-          </div>
-        </Card>
-
-        <Card elevated className="workspace-block">
-          <div className="flex items-end justify-between gap-4">
+      <Card elevated className="workspace-block">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Leads</p>
               <h3 className="mt-2 text-lg font-semibold text-text">Conversion queue</h3>
+              <p className="mt-2 text-sm text-text-muted">Create leads from the header, then convert qualified opportunities into orders.</p>
             </div>
-            <p className="text-sm text-text-muted">{leads.length} leads</p>
+            <div className="flex shrink-0 items-center gap-3">
+              <p className="text-sm text-text-muted">{leads.length} leads</p>
+              <Button
+                className="px-3 py-2 text-xs sm:px-4"
+                onClick={() => {
+                  setLeadNotice(null);
+                  setIsCreateLeadPopupOpen(true);
+                }}
+                disabled={!canWriteSales}
+              >
+                Create Lead
+              </Button>
+            </div>
           </div>
 
           <div ref={leadsTableContainerRef} className="workspace-table-wrap sales-table-wrap mt-6 max-h-[520px]">
             <table className="workspace-table sales-leads-table">
               <thead>
                 <tr>
-                  <th className="px-5 py-4">Contact</th>
-                  <th className="px-5 py-4">Lead</th>
-                  <th className="px-5 py-4">Source</th>
-                  <th className="px-5 py-4">Temperature</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Assignee</th>
-                  <th className="px-5 py-4">Amount</th>
-                  <th className="px-5 py-4">Actions</th>
+                  <th className="w-[15%] px-5 py-4">Contact</th>
+                  <th className="w-[12%] px-5 py-4">Lead</th>
+                  <th className="w-[14%] px-5 py-4">Source</th>
+                  <th className="w-[12%] px-5 py-4">Temperature</th>
+                  <th className="w-[12%] px-5 py-4">Status</th>
+                  <th className="w-[12%] px-5 py-4">Assignee</th>
+                  <th className="w-[10%] px-5 py-4">Amount</th>
+                  <th className="w-[13%] px-5 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1038,7 +1072,7 @@ export function SalesPage() {
                 ) : leads.length === 0 ? (
                   <tr>
                     <td className="px-4 py-8 text-sm text-text-muted" colSpan={8}>
-                      No leads yet. Add the first lead from the intake panel to populate the queue.
+                      No leads yet. Use Create Lead from this header to populate the queue.
                     </td>
                   </tr>
                 ) : (
@@ -1279,7 +1313,6 @@ export function SalesPage() {
             onPageChange={leadPagination.setPage}
           />
         </Card>
-      </div>
 
       <section ref={orderDetailRef}>
         <Card elevated className="workspace-block">
@@ -1764,8 +1797,17 @@ export function SalesPage() {
 }
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+  const accent =
+    tone === "text-success"
+      ? "border-success/25 bg-success/10"
+      : tone === "text-warning"
+        ? "border-warning/25 bg-warning/10"
+        : tone === "text-primary"
+          ? "border-primary/25 bg-primary/10"
+          : "border-border bg-card";
+
   return (
-    <Card elevated className="workspace-block">
+    <Card elevated className={`workspace-block min-h-[112px] ${accent}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
       <p className={`mt-3 text-3xl font-semibold ${tone}`}>{value}</p>
     </Card>
@@ -1776,7 +1818,7 @@ function PerformanceStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-text">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-text">{value}</p>
     </div>
   );
 }
@@ -1810,6 +1852,17 @@ function getSalesStatusTone(status: string) {
       return "border-destructive/20 bg-destructive/10 text-destructive";
     default:
       return "border-warning/20 bg-warning/10 text-warning";
+  }
+}
+
+function getSalesStatusTextTone(status: string) {
+  switch (status) {
+    case "closed_won":
+      return "text-success";
+    case "closed_lost":
+      return "text-destructive";
+    default:
+      return "text-warning";
   }
 }
 
