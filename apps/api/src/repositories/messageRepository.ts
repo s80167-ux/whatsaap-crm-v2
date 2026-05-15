@@ -306,6 +306,74 @@ export class MessageRepository {
     );
   }
 
+  async findRecentQueuedOutboundDraft(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      conversationId: string;
+      contactId: string;
+      whatsappAccountId: string;
+      externalChatId: string;
+      contentText: string | null;
+      sentAt: Date;
+      windowMinutes?: number;
+    }
+  ): Promise<MessageRecord | null> {
+    const windowMinutes = input.windowMinutes ?? 10;
+    const result = await client.query<MessageRecord>(
+      `
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          external_message_id,
+          external_chat_id,
+          reply_to_message_id,
+          is_deleted,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+        from messages
+        where organization_id = $1
+          and conversation_id = $2
+          and contact_id = $3
+          and whatsapp_account_id = $4
+          and external_chat_id = $5
+          and direction = 'outgoing'
+          and is_deleted = false
+          and external_message_id like 'queued:%'
+          and sent_at between $7::timestamptz - ($8::int * interval '1 minute')
+                          and $7::timestamptz + ($8::int * interval '1 minute')
+          and (
+            nullif($6::text, '') is null
+            or content_text = $6
+            or content_text is null
+          )
+        order by abs(extract(epoch from (sent_at - $7::timestamptz))) asc, sent_at desc
+        limit 1
+      `,
+      [
+        input.organizationId,
+        input.conversationId,
+        input.contactId,
+        input.whatsappAccountId,
+        input.externalChatId,
+        input.contentText ?? null,
+        input.sentAt.toISOString(),
+        windowMinutes
+      ]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async listByConversation(
     client: PoolClient,
     organizationId: string | null,

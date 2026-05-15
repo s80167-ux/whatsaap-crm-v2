@@ -3,7 +3,11 @@ import type { PoolClient } from "pg";
 import { pool, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
-import { MessageDispatchOutboxRepository, type MessageDispatchOutboxRecord } from "../repositories/messageDispatchOutboxRepository.js";
+import {
+  MessageDispatchOutboxRepository,
+  type MessageDispatchOutboxRecord,
+  type PendingOutboundDraftRecord
+} from "../repositories/messageDispatchOutboxRepository.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
@@ -85,6 +89,7 @@ export class MessageDispatchService {
     const staleBefore = new Date(Date.now() - env.MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS);
 
     await withTransaction((client) => this.outboxRepository.resetStaleProcessing(client, staleBefore));
+    await this.repairOrphanedPendingDrafts(Math.max(limit, 1));
     await this.finalizeExhaustedOpenJobs(Math.max(limit, 1));
 
     const dueJobs = await withTransaction((client) =>
@@ -297,9 +302,31 @@ export class MessageDispatchService {
       });
 
       if (!job) {
+        const repairedJob = await this.repairPendingDraftByMessageId(client, {
+          messageId: input.messageId,
+          organizationId: input.organizationId
+        });
+
+        if (!repairedJob) {
+          return {
+            ok: false,
+            reason: "Pending outbound job not found"
+          };
+        }
+
+        const dispatchResult = await this.drainOne(repairedJob.id);
+
+        if (!dispatchResult.ok) {
+          return {
+            ok: false,
+            reason: dispatchResult.errorMessage,
+            outboxId: repairedJob.id
+          };
+        }
+
         return {
-          ok: false,
-          reason: "Pending outbound job not found"
+          ok: true,
+          outboxId: repairedJob.id
         };
       }
 
@@ -335,6 +362,143 @@ export class MessageDispatchService {
 
     const id = (key as { id?: unknown }).id;
     return typeof id === "string" && id.length > 0 ? id : null;
+  }
+
+  private async repairOrphanedPendingDrafts(limit: number) {
+    const drafts = await withTransaction((client) =>
+      this.outboxRepository.listRepairablePendingDrafts(client, limit)
+    );
+
+    for (const draft of drafts) {
+      await withTransaction((client) => this.enqueuePendingDraftRepair(client, draft));
+    }
+  }
+
+  private async repairPendingDraftByMessageId(
+    client: PoolClient,
+    input: { messageId: string; organizationId: string | null }
+  ) {
+    const draft = await this.outboxRepository.findRepairablePendingDraftByMessageId(client, input);
+
+    if (!draft) {
+      return null;
+    }
+
+    return this.enqueuePendingDraftRepair(client, draft);
+  }
+
+  private async enqueuePendingDraftRepair(client: PoolClient, draft: PendingOutboundDraftRecord) {
+    const recipientJid = draft.external_chat_id;
+
+    if (!recipientJid) {
+      await this.messageRepository.appendStatusEvent(client, {
+        messageId: draft.id,
+        status: "failed",
+        payload: { error: "Pending outbound message is missing recipient identity" }
+      });
+
+      await this.messageRepository.updateAckStatus(client, {
+        messageId: draft.id,
+        ackStatus: "failed",
+        failedAt: new Date()
+      });
+
+      return null;
+    }
+
+    const source = this.extractDispatchSource(draft.content_json);
+    const priority = this.resolveRepairPriority(source);
+    const payload = this.buildRepairPayload(draft.content_json, source, priority);
+
+    const repaired = await this.enqueue(client, {
+      organizationId: draft.organization_id,
+      messageId: draft.id,
+      conversationId: draft.conversation_id,
+      contactId: draft.contact_id,
+      whatsappAccountId: draft.whatsapp_account_id,
+      recipientJid,
+      messageText: draft.content_text ?? "",
+      source,
+      priority,
+      payload
+    });
+
+    await this.messageRepository.appendStatusEvent(client, {
+      messageId: draft.id,
+      status: "queued",
+      payload: {
+        repaired: true,
+        recipient_jid: recipientJid,
+        reason: "missing_dispatch_outbox"
+      }
+    });
+
+    return repaired;
+  }
+
+  private extractDispatchSource(contentJson: unknown): "manual" | "quick_reply" | "campaign" | "system" {
+    if (!contentJson || typeof contentJson !== "object" || Array.isArray(contentJson)) {
+      return "manual";
+    }
+
+    return (contentJson as { source?: unknown }).source === "campaign" ? "campaign" : "manual";
+  }
+
+  private resolveRepairPriority(source: "manual" | "quick_reply" | "campaign" | "system") {
+    switch (source) {
+      case "manual":
+        return 10;
+      case "quick_reply":
+        return 8;
+      case "campaign":
+        return 3;
+      default:
+        return 5;
+    }
+  }
+
+  private buildRepairPayload(
+    contentJson: unknown,
+    source: "manual" | "quick_reply" | "campaign" | "system",
+    priority: number
+  ) {
+    const content = contentJson && typeof contentJson === "object" && !Array.isArray(contentJson)
+      ? (contentJson as Record<string, unknown>)
+      : {};
+    const payload: Record<string, unknown> = {
+      meta: { source, priority, repaired: true }
+    };
+
+    const outboundMedia = content.outboundMedia;
+    if (outboundMedia && typeof outboundMedia === "object" && !Array.isArray(outboundMedia)) {
+      const attachment = outboundMedia as {
+        kind?: unknown;
+        fileName?: unknown;
+        mimeType?: unknown;
+        dataBase64?: unknown;
+      };
+
+      if (
+        typeof attachment.kind === "string" &&
+        typeof attachment.fileName === "string" &&
+        typeof attachment.mimeType === "string" &&
+        typeof attachment.dataBase64 === "string"
+      ) {
+        payload.attachment = {
+          kind: attachment.kind,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          dataBase64: attachment.dataBase64
+        };
+      }
+    }
+
+    const campaign = content.campaign;
+    if (source === "campaign" && campaign && typeof campaign === "object" && !Array.isArray(campaign)) {
+      (payload.meta as Record<string, unknown>).campaign = campaign;
+    }
+
+    return payload;
   }
 
   private extractAttachmentPayload(payload: unknown) {

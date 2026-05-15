@@ -25,6 +25,19 @@ export interface MessageDispatchOutboxRecord {
   updated_at: string;
 }
 
+export interface PendingOutboundDraftRecord {
+  id: string;
+  organization_id: string;
+  conversation_id: string;
+  contact_id: string;
+  whatsapp_account_id: string;
+  external_chat_id: string | null;
+  external_message_id: string;
+  message_type: string;
+  content_text: string | null;
+  content_json: unknown;
+}
+
 export class MessageDispatchOutboxRepository {
   async create(
     client: PoolClient,
@@ -326,5 +339,73 @@ export class MessageDispatchOutboxRepository {
       [messageId]
     );
     return result.rows[0] ?? null;
+  }
+
+  async findRepairablePendingDraftByMessageId(
+    client: PoolClient,
+    input: {
+      messageId: string;
+      organizationId: string | null;
+    }
+  ): Promise<PendingOutboundDraftRecord | null> {
+    const { messageId, organizationId } = input;
+    const result = await client.query<PendingOutboundDraftRecord>(
+      `
+        select
+          m.id,
+          m.organization_id,
+          m.conversation_id,
+          m.contact_id,
+          m.whatsapp_account_id,
+          m.external_chat_id,
+          m.external_message_id,
+          m.message_type,
+          m.content_text,
+          m.content_json
+        from messages m
+        left join message_dispatch_outbox o on o.message_id = m.id
+        where m.id = $1
+          and ($2::uuid is null or m.organization_id = $2)
+          and m.direction = 'outgoing'
+          and m.ack_status = 'pending'
+          and m.is_deleted = false
+          and m.external_message_id like 'queued:%'
+          and o.id is null
+        limit 1
+      `,
+      [messageId, organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listRepairablePendingDrafts(client: PoolClient, limit: number): Promise<PendingOutboundDraftRecord[]> {
+    const result = await client.query<PendingOutboundDraftRecord>(
+      `
+        select
+          m.id,
+          m.organization_id,
+          m.conversation_id,
+          m.contact_id,
+          m.whatsapp_account_id,
+          m.external_chat_id,
+          m.external_message_id,
+          m.message_type,
+          m.content_text,
+          m.content_json
+        from messages m
+        left join message_dispatch_outbox o on o.message_id = m.id
+        where m.direction = 'outgoing'
+          and m.ack_status = 'pending'
+          and m.is_deleted = false
+          and m.external_message_id like 'queued:%'
+          and o.id is null
+        order by m.sent_at asc, m.id asc
+        limit $1
+      `,
+      [limit]
+    );
+
+    return result.rows;
   }
 }

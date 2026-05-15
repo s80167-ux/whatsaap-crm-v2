@@ -39,6 +39,58 @@ export class MessageIngestionService {
         contactId: contact.id
       });
 
+      if (input.direction === "outgoing") {
+        const existingOutbound = await this.messageRepository.findByExternalMessageId(client, {
+          organizationId: input.organizationId,
+          whatsappAccountId: input.whatsappAccountId,
+          externalMessageId: input.externalMessageId
+        });
+        const queuedDraft = existingOutbound
+          ? null
+          : await this.messageRepository.findRecentQueuedOutboundDraft(client, {
+              organizationId: input.organizationId,
+              conversationId: conversation.id,
+              contactId: contact.id,
+              whatsappAccountId: input.whatsappAccountId,
+              externalChatId: input.remoteJid,
+              contentText: input.textBody,
+              sentAt: input.sentAt
+            });
+
+        if (queuedDraft) {
+          await this.messageRepository.updateOutboundDispatch(client, {
+            messageId: queuedDraft.id,
+            externalMessageId: input.externalMessageId,
+            externalChatId: input.remoteJid,
+            rawPayload: input.rawPayload,
+            sentAt: input.sentAt
+          });
+
+          await this.messageRepository.appendStatusEvent(client, {
+            messageId: queuedDraft.id,
+            status: "server_ack",
+            payload: {
+              linked_from_message_upsert: true,
+              external_message_id: input.externalMessageId
+            }
+          });
+
+          await this.messageRepository.updateAckStatus(client, {
+            messageId: queuedDraft.id,
+            ackStatus: "server_ack"
+          });
+
+          await this.projectionService.refreshForMessage(client, {
+            organizationId: input.organizationId,
+            conversationId: conversation.id,
+            contactId: contact.id,
+            sentAt: input.sentAt
+          });
+
+          return { contact, identity, conversation, message: queuedDraft, inserted: false };
+        }
+      }
+
       const { message, inserted } = await this.messageRepository.insertIfAbsent(client, {
         organizationId: input.organizationId,
         conversationId: conversation.id,
@@ -50,7 +102,8 @@ export class MessageIngestionService {
         messageType: normalizeMessageType(input.messageType),
         contentText: input.textBody,
         rawPayload: input.rawPayload,
-        sentAt: input.sentAt
+        sentAt: input.sentAt,
+        ackStatus: input.direction === "outgoing" ? "server_ack" : undefined
       });
 
       if (inserted) {
