@@ -209,7 +209,7 @@ export function InboxPage() {
 
   const conversationListCard = (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Card className="workspace-block grid h-[calc(100dvh-6rem)] min-h-[560px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden md:min-h-[640px] md:max-h-[calc(100vh-5.5rem)]" elevated>
+      <Card className="workspace-block grid h-[calc(100dvh-4.5rem)] min-h-[780px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden max-h-[calc(100vh-4.5rem)]" elevated>
         <header className="pb-3">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Queue</p>
           <div className="mt-2 flex items-end justify-between gap-4">

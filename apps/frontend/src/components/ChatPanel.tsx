@@ -1,5 +1,6 @@
+import { getMessagePresentation, normalizeMessageType, resolveMessageType } from "../lib/messageContent";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +25,6 @@ import {
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
 import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
-import { getMessagePresentation, normalizeMessageType } from "../lib/messageContent";
 import {
   markMessagesDeletedInCache,
   patchConversationFromMessageInCache,
@@ -1459,7 +1459,7 @@ function MessageBubble({
   onCreateSales: (message: Message) => void;
 }) {
   const presentation = getMessagePresentation(message);
-  const normalizedMessageType = normalizeMessageType(message.message_type);
+  const normalizedMessageType = resolveMessageType(message);
   const Icon = getMessageTypeIcon(normalizedMessageType);
   const replyContext = getReplyContext(message, repliedMessage);
   const isDeleted = Boolean(message.is_deleted);
@@ -1502,50 +1502,45 @@ function MessageBubble({
         {isDeleted ? (
           <p className="italic text-text-muted">This message was deleted</p>
         ) : presentation.isMedia ? (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border/80 bg-background-tint px-3 py-3">
-              <div className="flex items-start gap-3">
-                {Icon ? <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-soft" /> : null}
-                <div className="min-w-0">
-                  {presentation.label ? (
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{presentation.label}</p>
-                  ) : null}
-                  <p className="mt-1 break-words font-medium text-text">{presentation.title}</p>
-                  {presentation.caption && presentation.caption !== presentation.title ? (
-                    <p className="mt-2 break-words text-sm leading-6 text-text-muted">{presentation.caption}</p>
-                  ) : null}
-                  {presentation.details.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {presentation.details.map((detail) => (
-                        <span
-                          key={detail}
-                          className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-text-soft"
-                        >
-                          {detail}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  {normalizedMessageType === "document" && presentation.previewUrl ? (
-                    <a
-                      href={presentation.previewUrl}
-                      download={presentation.fileName ?? presentation.title}
-                      className="mt-3 inline-flex rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
-                    >
-                      Download document
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-            {presentation.previewUrl ? (
-              <MediaPreview
+          <div className="rounded-xl border border-border/80 bg-background-tint px-3 py-3">
+            <div className="flex items-start gap-3">
+              <MessageAttachmentThumbnail
+                icon={Icon}
                 messageType={normalizedMessageType}
                 previewUrl={presentation.previewUrl}
-                mimeType={presentation.mimeType}
-                fileName={presentation.fileName ?? presentation.title}
+                title={presentation.title}
               />
-            ) : null}
+              <div className="min-w-0">
+                {presentation.label ? (
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{presentation.label}</p>
+                ) : null}
+                <p className="mt-1 break-words font-medium text-text">{presentation.title}</p>
+                {presentation.caption && presentation.caption !== presentation.title ? (
+                  <p className="mt-2 break-words text-sm leading-6 text-text-muted">{presentation.caption}</p>
+                ) : null}
+                {presentation.details.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {presentation.details.map((detail) => (
+                      <span
+                        key={detail}
+                        className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-text-soft"
+                      >
+                        {detail}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {normalizedMessageType === "document" && presentation.downloadUrl ? (
+                  <a
+                    href={presentation.downloadUrl}
+                    download={presentation.fileName ?? presentation.title}
+                    className="mt-3 inline-flex rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
+                  >
+                    {getDocumentDownloadLabel(presentation.fileName, presentation.mimeType)}
+                  </a>
+                ) : null}
+              </div>
+            </div>
           </div>
         ) : (
           <p className="break-words">{presentation.title}</p>
@@ -1790,53 +1785,24 @@ function getReplyContext(message: Message, repliedMessage?: Message) {
   };
 }
 
-function MediaPreview({
+function MessageAttachmentThumbnail({
+  icon: Icon,
   messageType,
   previewUrl,
-  mimeType,
-  fileName
+  title
 }: {
+  icon: ComponentType<{ className?: string }> | null;
   messageType: string;
-  previewUrl: string;
-  mimeType: string | null;
-  fileName: string;
+  previewUrl: string | null;
+  title: string;
 }) {
-  if (messageType === "image") {
-    return <img src={previewUrl} alt={fileName} className="max-h-80 w-full rounded-xl border border-border/80 bg-card object-contain" />;
+  if (messageType === "image" && previewUrl) {
+    return <img src={previewUrl} alt={title} className="h-16 w-16 shrink-0 rounded-xl border border-border/80 bg-card object-cover" />;
   }
-
-  if (messageType === "video") {
-    return (
-      <video controls preload="metadata" className="max-h-80 w-full rounded-xl border border-border/80 bg-black/90">
-        <source src={previewUrl} type={mimeType ?? undefined} />
-      </video>
-    );
-  }
-
-  if (messageType === "audio") {
-    return (
-      <div className="rounded-xl border border-border/80 bg-card p-3">
-        <audio controls preload="metadata" className="w-full">
-          <source src={previewUrl} type={mimeType ?? undefined} />
-        </audio>
-      </div>
-    );
-  }
-
-  const isPdf = mimeType === "application/pdf";
 
   return (
-    <div className="space-y-3">
-      {isPdf ? (
-        <iframe src={previewUrl} title={fileName} className="h-80 w-full rounded-xl border border-border/80 bg-card" />
-      ) : null}
-      <a
-        href={previewUrl}
-        download={fileName}
-        className="inline-flex rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
-      >
-        Download file
-      </a>
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card">
+      {Icon ? <Icon className="h-5 w-5 text-text-soft" /> : <Paperclip className="h-5 w-5 text-text-soft" />}
     </div>
   );
 }
@@ -1877,7 +1843,7 @@ function resolveTemplateBody(body: string, values: Record<string, string>) {
 
 function resolveComposerBody(body: string, conversation?: Conversation) {
   return body.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (match, rawKey: string) => {
-                      {getDocumentDownloadLabel(presentation.fileName, presentation.mimeType)}
+    const key = rawKey.trim().toLowerCase();
     return resolveComposerVariableValue(key, conversation) ?? match;
   });
 }

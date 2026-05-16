@@ -9,6 +9,7 @@ export interface MessagePresentation {
   details: string[];
   isMedia: boolean;
   previewUrl: string | null;
+  downloadUrl: string | null;
   mimeType: string | null;
   fileName: string | null;
 }
@@ -166,8 +167,78 @@ function getNodeByKey(node: RawMessageNode | null, key: string) {
   return node ? asRecord(node[key]) : null;
 }
 
-function buildFallbackPresentation(message: Message): MessagePresentation {
+function inferMessageTypeFromContent(contentJson: unknown) {
+  const outboundMedia = getOutboundMediaNode(contentJson);
+  const outboundKind = asString(outboundMedia?.kind);
+  if (outboundKind) {
+    return normalizeMessageType(outboundKind);
+  }
+
+  const rawMessage = unwrapRawMessageNode(getRawMessageNode(contentJson));
+  if (!rawMessage) {
+    return null;
+  }
+
+  if (getNodeByKey(rawMessage, "imageMessage")) {
+    return "image";
+  }
+
+  if (getNodeByKey(rawMessage, "videoMessage")) {
+    return "video";
+  }
+
+  if (getNodeByKey(rawMessage, "audioMessage") || getNodeByKey(rawMessage, "pttMessage")) {
+    return "audio";
+  }
+
+  if (getNodeByKey(rawMessage, "documentMessage")) {
+    return "document";
+  }
+
+  if (getNodeByKey(rawMessage, "stickerMessage")) {
+    return "sticker";
+  }
+
+  if (getNodeByKey(rawMessage, "locationMessage")) {
+    return "location";
+  }
+
+  if (getNodeByKey(rawMessage, "contactMessage") || getNodeByKey(rawMessage, "contactsArrayMessage")) {
+    return "contact";
+  }
+
+  if (getNodeByKey(rawMessage, "reactionMessage")) {
+    return "reaction";
+  }
+
+  return null;
+}
+
+export function resolveMessageType(message: Message) {
   const normalizedMessageType = normalizeMessageType(message.message_type);
+
+  if (normalizedMessageType !== "system") {
+    return normalizedMessageType;
+  }
+
+  return inferMessageTypeFromContent(message.content_json) ?? normalizedMessageType;
+}
+
+function getDocumentDownloadUrl(
+  outboundMedia: Record<string, unknown> | null,
+  node: Record<string, unknown> | null,
+  mimeType: string | null
+) {
+  const dataUrl = toDataUrl(mimeType, asString(outboundMedia?.dataBase64));
+  if (dataUrl) {
+    return dataUrl;
+  }
+
+  return asString(node?.url);
+}
+
+function buildFallbackPresentation(message: Message): MessagePresentation {
+  const normalizedMessageType = resolveMessageType(message);
   const label = normalizedMessageType !== "text" ? normalizedMessageType.toUpperCase() : null;
   const contentText = message.content_text ?? getRawMessageText(message.content_json);
   return {
@@ -177,13 +248,14 @@ function buildFallbackPresentation(message: Message): MessagePresentation {
     details: [],
     isMedia: normalizedMessageType !== "text",
     previewUrl: null,
+    downloadUrl: null,
     mimeType: null,
     fileName: null
   };
 }
 
 export function getMessagePresentation(message: Message): MessagePresentation {
-  const normalizedMessageType = normalizeMessageType(message.message_type);
+  const normalizedMessageType = resolveMessageType(message);
   const rawMessage = unwrapRawMessageNode(getRawMessageNode(message.content_json));
   const outboundMedia = getOutboundMediaNode(message.content_json);
   const contentText = message.content_text ?? getRawMessageText(message.content_json);
@@ -197,6 +269,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         details: [],
         isMedia: false,
         previewUrl: null,
+        downloadUrl: null,
         mimeType: null,
         fileName: null
       };
@@ -213,6 +286,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         ].filter(Boolean) as string[],
         isMedia: true,
         previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        downloadUrl: null,
         mimeType,
         fileName: asString(outboundMedia?.fileName)
       };
@@ -232,6 +306,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         ].filter(Boolean) as string[],
         isMedia: true,
         previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        downloadUrl: null,
         mimeType,
         fileName: asString(outboundMedia?.fileName)
       };
@@ -251,6 +326,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         ].filter(Boolean) as string[],
         isMedia: true,
         previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        downloadUrl: null,
         mimeType,
         fileName: asString(outboundMedia?.fileName)
       };
@@ -259,6 +335,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
       const node = getNodeByKey(rawMessage, "documentMessage");
       const mimeType = asString(node?.mimetype) ?? asString(outboundMedia?.mimeType);
       const fileName = asString(node?.fileName) ?? asString(outboundMedia?.fileName);
+      const previewUrl = toDataUrl(mimeType, asString(outboundMedia?.dataBase64));
       return {
         label: "Document",
         title: fileName ?? "Document received",
@@ -268,7 +345,8 @@ export function getMessagePresentation(message: Message): MessagePresentation {
           formatFileSize(asNumber(node?.fileLength) ?? asNumber(outboundMedia?.fileSizeBytes))
         ].filter(Boolean) as string[],
         isMedia: true,
-        previewUrl: toDataUrl(mimeType, asString(outboundMedia?.dataBase64)),
+        previewUrl,
+        downloadUrl: getDocumentDownloadUrl(outboundMedia, node, mimeType),
         mimeType,
         fileName
       };
@@ -281,6 +359,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         details: [],
         isMedia: true,
         previewUrl: null,
+        downloadUrl: null,
         mimeType: null,
         fileName: null
       };
@@ -297,6 +376,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         ].filter(Boolean) as string[],
         isMedia: true,
         previewUrl: null,
+        downloadUrl: null,
         mimeType: null,
         fileName: null
       };
@@ -312,6 +392,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         details: [asString(node?.vcard), asString(firstContact?.vcard)].filter(Boolean).slice(0, 1) as string[],
         isMedia: true,
         previewUrl: null,
+        downloadUrl: null,
         mimeType: null,
         fileName: null
       };
@@ -325,6 +406,7 @@ export function getMessagePresentation(message: Message): MessagePresentation {
         details: [],
         isMedia: true,
         previewUrl: null,
+        downloadUrl: null,
         mimeType: null,
         fileName: null
       };

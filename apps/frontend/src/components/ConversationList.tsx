@@ -38,7 +38,7 @@ export function ConversationList({
   const conversationsPagination = usePanelPagination(conversations);
 
   return (
-    <div className="flex min-h-0 flex-col gap-2 pr-1">
+    <div className="flex min-h-0 flex-col gap-1.5 pr-1">
       {conversationsPagination.visibleItems.map((conversation) => (
         <motion.button
           key={conversation.id}
@@ -68,23 +68,23 @@ export function ConversationList({
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-text-soft">{conversation.phone_number_normalized ?? "No phone"}</p>
-              <p className="mt-1.5 inline-flex max-w-full items-center rounded-full border border-border bg-background-tint px-2 py-0.5 text-[10px] font-medium leading-none text-text-muted">
+              <p className="mt-0.5 text-[11px] leading-4 text-text-soft">{conversation.phone_number_normalized ?? "No phone"}</p>
+              <p className="mt-1 inline-flex max-w-full items-center rounded-full border border-border bg-background-tint px-1.5 py-0.5 text-[10px] font-medium leading-none text-text-muted">
                 <span className="truncate">{getConversationSourceLabel(conversation)}</span>
               </p>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="text-xs text-text-soft">
                 {formatConversationTimestamp(conversation.last_message_at)}
               </span>
               {conversation.unread_count > 0 ? (
-                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
                   {conversation.unread_count}
                 </span>
               ) : null}
             </div>
           </div>
-          <p className="mt-2 line-clamp-2 overflow-hidden text-sm leading-5 text-text-muted">
+          <p className="mt-1.5 line-clamp-1 overflow-hidden text-xs leading-4 text-text-muted">
             {getConversationPreview(conversation.last_message_preview, conversation.last_message_type)}
           </p>
         </motion.button>

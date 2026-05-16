@@ -125,6 +125,11 @@ export function useRealtimeInbox(organizationIdOverride?: string | null, activeC
               incrementUnread: payload.eventType === "INSERT"
             });
 
+            // The conversation list is fetched from a projection-backed endpoint,
+            // while realtime events come from base tables. Refetch the active
+            // conversation queries so latest ordering and preview stay aligned.
+            refetchActiveInboxFallback(queryClient, inboxQueryKeys.conversationsRoot);
+
             if (!patchedMessages && activeConversationId === message.conversation_id) {
               refetchActiveInboxFallback(queryClient, inboxQueryKeys.conversationMessagesRoot(message.conversation_id));
             }

@@ -1,7 +1,7 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { HistoryRange } from "./historyRange";
 import type { Conversation, Message } from "../types/api";
-import { getConversationPreview, normalizeMessageType } from "./messageContent";
+import { getConversationPreview, resolveMessageType } from "./messageContent";
 
 const CURRENT_ORGANIZATION_SCOPE = "current";
 
@@ -217,7 +217,7 @@ export function patchConversationFromMessageInCache(
     }
 
     const existing = current[existingIndex];
-    const normalizedMessageType = normalizeMessageType(message.message_type);
+    const normalizedMessageType = resolveMessageType(message);
     const preview = options?.deleted
       ? "This message was deleted"
       : message.content_text || getConversationPreview(null, normalizedMessageType);

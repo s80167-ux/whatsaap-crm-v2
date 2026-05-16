@@ -693,7 +693,7 @@ canvas {
 
   /* List/Conversation item */
   .conversation-item {
-    @apply border border-border bg-card px-4 py-3 text-left text-card-foreground shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-muted;
+    @apply border border-border bg-card px-3 py-2 text-left text-card-foreground shadow-soft transition duration-200 ease-out hover:border-primary/20 hover:bg-muted;
     background: rgb(var(--card) / var(--surface-alpha));
     border-radius: var(--surface-radius-md);
   }
