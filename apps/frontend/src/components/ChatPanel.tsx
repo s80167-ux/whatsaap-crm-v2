@@ -1719,6 +1719,35 @@ function getBubblePreviewText(message: Message) {
   return presentation.title || message.content_text || "Message";
 }
 
+function getDocumentDownloadLabel(fileName: string | null, mimeType: string | null) {
+  const normalizedMimeType = mimeType?.trim().toLowerCase() ?? "";
+
+  const mimeLabelMap: Record<string, string> = {
+    "application/pdf": "PDF",
+    "application/msword": "DOC",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
+    "application/vnd.ms-excel": "XLS",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+    "application/vnd.ms-powerpoint": "PPT",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PPTX",
+    "text/plain": "TXT",
+    "text/csv": "CSV",
+    "application/zip": "ZIP",
+    "application/x-rar-compressed": "RAR"
+  };
+
+  if (mimeLabelMap[normalizedMimeType]) {
+    return `Download ${mimeLabelMap[normalizedMimeType]}`;
+  }
+
+  const extension = fileName?.split(".").pop()?.trim().toUpperCase();
+  if (extension && extension.length > 0 && extension.length <= 5) {
+    return `Download ${extension}`;
+  }
+
+  return "Download document";
+}
+
 function formatMessagesForCopy(messages: Message[]) {
   return messages
     .map((message) => {
@@ -1848,7 +1877,7 @@ function resolveTemplateBody(body: string, values: Record<string, string>) {
 
 function resolveComposerBody(body: string, conversation?: Conversation) {
   return body.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (match, rawKey: string) => {
-    const key = rawKey.trim().toLowerCase();
+                      {getDocumentDownloadLabel(presentation.fileName, presentation.mimeType)}
     return resolveComposerVariableValue(key, conversation) ?? match;
   });
 }
