@@ -4,12 +4,14 @@ import { createSupabaseAdminClient, createSupabasePublicClient } from "../config
 import { AppError } from "../lib/errors.js";
 import { AuthzRepository } from "../repositories/authzRepository.js";
 import { GoogleSignupRequestRepository } from "../repositories/googleSignupRequestRepository.js";
+import { OrganizationRepository } from "../repositories/organizationRepository.js";
 import { OrganizationUserRepository } from "../repositories/organizationUserRepository.js";
 import type { AuthUser, UserRole } from "../types/auth.js";
 
 export class AuthService {
   constructor(
     private readonly authzRepository = new AuthzRepository(),
+    private readonly organizationRepository = new OrganizationRepository(),
     private readonly organizationUserRepository = new OrganizationUserRepository(),
     private readonly googleSignupRequestRepository = new GoogleSignupRequestRepository()
   ) {}
@@ -126,6 +128,7 @@ export class AuthService {
       id: authUser.authUserId,
       organizationUserId: authUser.organizationUserId,
       organizationId: authUser.organizationId,
+      organizationName: authUser.organizationName,
       email: authUser.email,
       fullName: authUser.fullName,
       avatarUrl: authUser.avatarUrl,
@@ -296,6 +299,7 @@ export class AuthService {
           authUserId: input.authUserId,
           organizationUserId: null,
           organizationId: null,
+          organizationName: null,
           role: "super_admin",
           email: input.email,
           fullName: input.fullName,
@@ -337,11 +341,13 @@ export class AuthService {
         role: organizationUser.role,
         organizationUserId: organizationUser.id
       });
+      const organization = await this.organizationRepository.findById(client, organizationUser.organization_id);
 
       return {
         authUserId: input.authUserId,
         organizationUserId: organizationUser.id,
         organizationId: organizationUser.organization_id,
+        organizationName: organization?.name ?? null,
         role: organizationUser.role,
         email: organizationUser.email ?? input.email,
         fullName: organizationUser.full_name ?? input.fullName,
@@ -361,6 +367,7 @@ export class AuthService {
         id: resolvedUser.authUserId,
         organizationUserId: resolvedUser.organizationUserId,
         organizationId: resolvedUser.organizationId,
+        organizationName: resolvedUser.organizationName,
         email: resolvedUser.email,
         fullName: resolvedUser.fullName,
         avatarUrl: resolvedUser.avatarUrl,

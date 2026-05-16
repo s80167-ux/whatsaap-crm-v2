@@ -2,6 +2,7 @@ export interface AuthProfile {
   id: string;
   organizationUserId: string | null;
   organizationId: string | null;
+  organizationName?: string | null;
   email: string;
   fullName: string | null;
   avatarUrl: string | null;

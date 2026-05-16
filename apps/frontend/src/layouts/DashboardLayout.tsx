@@ -31,7 +31,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
 import brandLogoMobile from "../../asset/rezeki_dashboard_logo_mobile_transparent.png";
-import { logout, updateMyPassword, updateMyProfile } from "../api/auth";
+import { fetchMe, logout, updateMyPassword, updateMyProfile } from "../api/auth";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
@@ -369,7 +369,9 @@ export function DashboardLayout() {
   });
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : user?.organizationId ?? null;
   const { data: organizations = [] } = useOrganizations();
-  const selectedOrganizationName = organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null;
+  const selectedOrganizationName = isSuperAdmin
+    ? organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null
+    : user?.organizationName ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId);
   const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
   const { data: campaignWhatsAppModuleStatus } = useCampaignWhatsAppModuleStatus(null, user?.role === "org_admin");
@@ -506,6 +508,16 @@ export function DashboardLayout() {
     window.addEventListener("crm_auth_user_updated", handleStoredUserUpdate);
     return () => window.removeEventListener("crm_auth_user_updated", handleStoredUserUpdate);
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    fetchMe().catch(() => {
+      // Keep the existing stored session if profile refresh fails.
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isProfileFormOpen) {
@@ -877,6 +889,12 @@ export function DashboardLayout() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
               <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
+              {user?.organizationName ? (
+                <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
+                  <Building2 size={13} className="shrink-0 text-muted-foreground" />
+                  <span className="truncate">{user.organizationName}</span>
+                </p>
+              ) : null}
               {user?.phone && <p className="mt-0.5 truncate text-xs text-text-muted">{user.phone}</p>}
               {user?.address && <p className="mt-0.5 truncate text-xs text-text-muted">{user.address}</p>}
               <p className="mt-2 inline-flex border border-border bg-muted px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
