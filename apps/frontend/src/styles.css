@@ -764,6 +764,10 @@ canvas {
   .dashboard-sidebar .sidebar-org-select {
     @apply border border-sidebar-foreground/10 bg-sidebar-foreground/10 text-sidebar-foreground shadow-none outline-none focus:border-sidebar-foreground/35 focus:ring-0;
     border-radius: 12px;
+    color: rgb(var(--sidebar-foreground) / 0.96);
+    -webkit-text-fill-color: rgb(var(--sidebar-foreground) / 0.96);
+    opacity: 1;
+    padding-right: 2rem;
   }
 
   .dashboard-sidebar .sidebar-org-select option {
@@ -864,10 +868,11 @@ canvas {
 
   .popup-overlay__backdrop {
     background:
-      linear-gradient(180deg, rgb(7 14 26 / 0.48), rgb(7 14 26 / 0.68)),
-      rgb(15 23 42 / 0.4);
-    -webkit-backdrop-filter: blur(14px) saturate(120%);
-    backdrop-filter: blur(14px) saturate(120%);
+      radial-gradient(circle at top, rgb(255 255 255 / 0.28), transparent 52%),
+      linear-gradient(180deg, rgb(var(--card) / 0.14), rgb(var(--muted) / 0.22)),
+      rgb(255 255 255 / 0.08);
+    -webkit-backdrop-filter: blur(20px) saturate(145%);
+    backdrop-filter: blur(20px) saturate(145%);
   }
 
   .popup-overlay__panel {

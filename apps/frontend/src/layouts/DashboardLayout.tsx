@@ -26,7 +26,7 @@ import {
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { FormEvent, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
@@ -348,6 +348,8 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobileViewport();
+  const mobileNavTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const wasMobileNavOpenRef = useRef(false);
   const [user, setUser] = useState(() => getStoredUser());
   const isSuperAdmin = user?.role === "super_admin";
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(() => {
@@ -396,6 +398,8 @@ export function DashboardLayout() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [mobileNavSectionId, setMobileNavSectionId] = useState<string | null>(null);
+  const [isMobileSecondTierVisible, setIsMobileSecondTierVisible] = useState(false);
   const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(() => {
     try {
       return localStorage.getItem("crm_desktop_nav_collapsed") === "true";
@@ -493,6 +497,7 @@ export function DashboardLayout() {
   const activeNavSection = navSections.find((section) =>
     section.items.some((item) => (item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to)))
   ) ?? navSections[0];
+  const mobileNavSection = navSections.find((section) => section.id === mobileNavSectionId) ?? activeNavSection;
 
   useEffect(() => {
     function handleStoredUserUpdate() {
@@ -547,6 +552,51 @@ export function DashboardLayout() {
       setIsMobileNavOpen(false);
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) {
+      return;
+    }
+
+    setMobileNavSectionId(activeNavSection.id);
+    setIsMobileSecondTierVisible(false);
+  }, [activeNavSection.id, isMobileNavOpen]);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMobileNavOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
+    if (wasMobileNavOpenRef.current && !isMobileNavOpen) {
+      mobileNavTriggerRef.current?.focus();
+    }
+
+    wasMobileNavOpenRef.current = isMobileNavOpen;
+  }, [isMobileNavOpen]);
 
   useEffect(() => {
     try {
@@ -639,6 +689,7 @@ export function DashboardLayout() {
           <div className="topbar-chip flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5">
             <button
               type="button"
+              ref={mobileNavTriggerRef}
               className="topbar-profile-trigger inline-flex h-8 w-8 items-center justify-center rounded-lg border px-0 md:hidden"
               aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileNavOpen}
@@ -676,24 +727,130 @@ export function DashboardLayout() {
             aria-label="Close navigation menu"
             onClick={() => setIsMobileNavOpen(false)}
           />
-          <aside className="absolute inset-y-12 left-0 w-[min(76vw,18.5rem)] overflow-y-auto">
-            <Card className="app-shell dashboard-sidebar flex min-h-full flex-col rounded-none p-3 pb-6" elevated>
-              <SidebarContent
-                isSuperAdmin={isSuperAdmin}
-                organizations={organizations}
-                selectedOrganizationId={selectedOrganizationId}
-                selectedOrganizationName={selectedOrganizationName}
-                setSelectedOrganizationId={setSelectedOrganizationId}
-                whatsappAccounts={whatsappAccounts}
-                showCampaigns={showCampaigns}
-                whatsappCampaignBadge={whatsappCampaignBadge}
-                emailCampaignBadge={emailCampaignBadge}
-                showDataExport={showDataExport}
-                onNavigate={() => setIsMobileNavOpen(false)}
-                mobile
-              />
+          <motion.aside
+            className="absolute inset-y-12 left-0 overflow-hidden pr-3"
+            initial={false}
+            animate={{
+              width: isMobileSecondTierVisible ? "min(calc(100vw - 0.875rem), 28rem)" : "5.75rem"
+            }}
+            transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
+          >
+            <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex h-full flex-row overflow-hidden rounded-r-[1.75rem] border-y-0 border-l-0 p-0 shadow-[0_18px_45px_rgb(8_15_27_/_0.28)]" elevated>
+              <nav className="sidebar-icon-rail flex w-[4.25rem] shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label="Mobile primary navigation">
+                <div className="mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
+                  <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
+                </div>
+                {navSections.map((section) => {
+                  const isActive = section.id === activeNavSection.id;
+                  const isSelected = section.id === mobileNavSection.id;
+
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      className={clsx(
+                        "sidebar-rail-button group relative flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/62 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground",
+                        isSelected || isActive ? "bg-sidebar-foreground/12 text-sidebar-foreground hover:bg-sidebar-foreground/12" : null
+                      )}
+                      aria-label={section.label}
+                      aria-current={isActive ? "page" : undefined}
+                      title={section.label}
+                      onClick={() => {
+                        const isSameSection = mobileNavSection.id === section.id;
+
+                        if (isSameSection) {
+                          setIsMobileSecondTierVisible((current) => !current);
+                          return;
+                        }
+
+                        setMobileNavSectionId(section.id);
+                        setIsMobileSecondTierVisible(true);
+                      }}
+                    >
+                      {section.icon}
+                      {isSelected || isActive ? <span className="absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" /> : null}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="mt-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                  aria-label="Close navigation menu"
+                  onClick={() => setIsMobileNavOpen(false)}
+                >
+                  <X size={16} />
+                </button>
+              </nav>
+
+              <motion.div
+                className="sidebar-context-panel min-w-0 flex-1 overflow-y-auto px-4 py-4"
+                initial={false}
+                animate={{
+                  x: isMobileSecondTierVisible ? 0 : 28,
+                  opacity: isMobileSecondTierVisible ? 1 : 0,
+                  scale: isMobileSecondTierVisible ? 1 : 0.985
+                }}
+                transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.85 }}
+                style={{ pointerEvents: isMobileSecondTierVisible ? "auto" : "none" }}
+                aria-hidden={!isMobileSecondTierVisible}
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-sidebar-foreground/10 pb-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{mobileNavSection.label}</p>
+                    <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</h2>
+                    <p className="mt-1 truncate text-[11px] text-sidebar-foreground/45">{mobileNavSection.items.length === 1 ? mobileNavSection.items[0]?.label : `${mobileNavSection.items.length} destinations`}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sidebar-foreground/10 bg-sidebar-foreground/5 text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                    aria-label="Hide navigation details"
+                    onClick={() => setIsMobileSecondTierVisible(false)}
+                  >
+                    <ChevronsLeft size={15} />
+                  </button>
+                </div>
+
+                {!isSuperAdmin ? (
+                  <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">Workspace</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+                    <p className="mt-1 text-[11px] text-sidebar-foreground/48">Switch modules from the rail and choose a destination here.</p>
+                  </div>
+                ) : null}
+
+                {isSuperAdmin ? (
+                  <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">Current org</span>
+                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" aria-label="Choose organization to view">
+                        <option value="">Choose organization</option>
+                        {organizations.map((organization) => (
+                          <option key={organization.id} value={organization.id}>{organization.name}</option>
+                        ))}
+                      </Select>
+                    </label>
+                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
+                  </div>
+                ) : null}
+
+                <nav className="mt-4 space-y-1.5" aria-label={`${mobileNavSection.label} navigation`}>
+                  {mobileNavSection.items.map((item) => (
+                    <NavLinkItem
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      badge={item.badge}
+                      variant="sub"
+                      end={item.end}
+                      onClick={() => setIsMobileNavOpen(false)}
+                      compact
+                    />
+                  ))}
+                </nav>
+              </motion.div>
             </Card>
-          </aside>
+          </motion.aside>
         </div>
       ) : null}
 
