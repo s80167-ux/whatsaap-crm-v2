@@ -1526,6 +1526,15 @@ function MessageBubble({
                       ))}
                     </div>
                   ) : null}
+                  {normalizedMessageType === "document" && presentation.previewUrl ? (
+                    <a
+                      href={presentation.previewUrl}
+                      download={presentation.fileName ?? presentation.title}
+                      className="mt-3 inline-flex rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-text-soft transition hover:text-text"
+                    >
+                      Download document
+                    </a>
+                  ) : null}
                 </div>
               </div>
             </div>
