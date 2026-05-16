@@ -9,6 +9,7 @@ import {
   Download,
   KeyRound,
   LogOut,
+  Mail,
   Megaphone,
   Menu,
   MessageSquare,
@@ -40,7 +41,13 @@ import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
 import { ThemeSwitcher } from "../components/theme-switcher";
 import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
-import { useCampaignsModuleStatus, useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
+import {
+  useCampaignEmailModuleStatus,
+  useCampaignsModuleStatus,
+  useCampaignWhatsAppModuleStatus,
+  useOrganizations,
+  useWhatsAppAccounts
+} from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
 import { canAccessCampaigns } from "../lib/moduleAccess";
@@ -49,6 +56,21 @@ import type { OrganizationSummary, WhatsAppAccountSummary } from "../types/admin
 const SUPER_ADMIN_ORGANIZATION_KEY = "crm_super_admin_organization_id";
 const MAX_PROFILE_PICTURE_BYTES = 512 * 1024;
 const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function ModuleBadge({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "primary" }) {
+  return (
+    <span
+      className={clsx(
+        "inline-flex min-h-[1.25rem] items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]",
+        tone === "primary"
+          ? "border-primary/20 bg-primary/10 text-primary"
+          : "border-sidebar-foreground/15 bg-sidebar-foreground/10 text-sidebar-foreground/70"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
 
 export type DashboardOutletContext = {
   isSuperAdmin: boolean;
@@ -179,6 +201,8 @@ function SidebarContent({
   setSelectedOrganizationId,
   whatsappAccounts,
   showCampaigns,
+  whatsappCampaignBadge,
+  emailCampaignBadge,
   showDataExport,
   onNavigate,
   mobile = false
@@ -190,6 +214,8 @@ function SidebarContent({
   setSelectedOrganizationId: (organizationId: string) => void;
   whatsappAccounts: WhatsAppAccountSummary[];
   showCampaigns: boolean;
+  whatsappCampaignBadge?: ReactNode;
+  emailCampaignBadge?: ReactNode;
   showDataExport: boolean;
   onNavigate?: () => void;
   mobile?: boolean;
@@ -264,7 +290,16 @@ function SidebarContent({
           compact={mobile}
         />
         {showCampaigns ? (
-          <NavLinkItem to="/campaigns" icon={<Megaphone size={18} />} label="Campaigns" onClick={onNavigate} compact={mobile} />
+          <SidebarNavGroup
+            icon={<Megaphone size={18} />}
+            label="Campaign"
+            items={[
+              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
+              { to: "/campaigns/email", icon: <Mail size={16} />, label: "Email", badge: emailCampaignBadge, end: false }
+            ]}
+            onNavigate={onNavigate}
+            compact={mobile}
+          />
         ) : null}
         <SidebarNavGroup
           icon={<Settings2 size={18} />}
@@ -330,10 +365,22 @@ export function DashboardLayout() {
   const selectedOrganizationName = organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null;
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId);
   const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
+  const { data: campaignWhatsAppModuleStatus } = useCampaignWhatsAppModuleStatus(null, user?.role === "org_admin");
+  const { data: campaignEmailModuleStatus } = useCampaignEmailModuleStatus(null, user?.role === "org_admin");
   const showCampaigns = canAccessCampaigns({
     role: user?.role,
-    moduleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
+    parentModuleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
   });
+  const whatsappCampaignBadge = !showCampaigns
+    ? null
+    : isSuperAdmin || campaignWhatsAppModuleStatus?.isEnabled === true
+      ? null
+      : <ModuleBadge>Off</ModuleBadge>;
+  const emailCampaignBadge = !showCampaigns
+    ? null
+    : campaignEmailModuleStatus?.isEnabled === true
+      ? <ModuleBadge tone="primary">Soon</ModuleBadge>
+      : <ModuleBadge>Off</ModuleBadge>;
   const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -393,12 +440,11 @@ export function DashboardLayout() {
       ? [
           {
             id: "campaigns",
-            label: "Campaigns",
+            label: "Campaign",
             icon: <Megaphone size={18} />,
             items: [
-              { to: "/campaigns", icon: <Megaphone size={16} />, label: "Campaign list" },
-              { to: "/campaigns/audience-groups", icon: <Users size={16} />, label: "Audience groups" },
-              { to: "/campaigns/templates", icon: <FileBarChart size={16} />, label: "Message templates", end: false }
+              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
+              { to: "/campaigns/email", icon: <Mail size={16} />, label: "Email", badge: emailCampaignBadge, end: false }
             ]
           }
         ]
@@ -640,6 +686,8 @@ export function DashboardLayout() {
                 setSelectedOrganizationId={setSelectedOrganizationId}
                 whatsappAccounts={whatsappAccounts}
                 showCampaigns={showCampaigns}
+                whatsappCampaignBadge={whatsappCampaignBadge}
+                emailCampaignBadge={emailCampaignBadge}
                 showDataExport={showDataExport}
                 onNavigate={() => setIsMobileNavOpen(false)}
                 mobile

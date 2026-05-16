@@ -40,10 +40,13 @@ const SuperAdminAuditLogsPage = lazy(() =>
   import("./pages/SuperAdminAuditLogsPage").then((module) => ({ default: module.SuperAdminAuditLogsPage }))
 );
 const OrganizationAccessLimitsPage = lazy(() =>
-  import("./pages/OrganizationAccessLimitsPage").then((module) => ({ default: module.OrganizationAccessLimitsPage }))
+  import("./pages/OrganizationCampaignAccessLimitsPage").then((module) => ({ default: module.OrganizationCampaignAccessLimitsPage }))
 );
 const CampaignsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsPage }))
+);
+const EmailCampaignPage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.EmailCampaignPage }))
 );
 const AudienceGroupsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.AudienceGroupsPage }))
@@ -94,33 +97,96 @@ export const router = createBrowserRouter([
           { path: "exports", element: withRouteFallback(<DataExportPage />) },
           {
             path: "campaigns",
+            element: <Navigate to="/campaigns/whatsapp" replace />
+          },
+          {
+            path: "campaigns/whatsapp",
             element: withRouteFallback(
-              <CampaignsRouteGuard>
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
                 <CampaignsPage />
               </CampaignsRouteGuard>
             )
           },
           {
-            path: "campaigns/audience-groups",
+            path: "campaigns/whatsapp/create",
             element: withRouteFallback(
-              <CampaignsRouteGuard>
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
+                <CampaignsPage activeTab="create" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/whatsapp/history",
+            element: withRouteFallback(
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
+                <CampaignsPage activeTab="history" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/whatsapp/audience",
+            element: withRouteFallback(
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
                 <AudienceGroupsPage />
               </CampaignsRouteGuard>
             )
           },
           {
-            path: "campaigns/templates",
+            path: "campaigns/whatsapp/templates",
             element: withRouteFallback(
-              <CampaignsRouteGuard>
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
                 <MessageTemplatesPage />
               </CampaignsRouteGuard>
             )
           },
           {
-            path: "campaigns/templates/create",
+            path: "campaigns/whatsapp/templates/create",
+            element: withRouteFallback(
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
+                <CreateTemplatePage />
+              </CampaignsRouteGuard>
+            )
+          },
+          { path: "campaigns/audience-groups", element: <Navigate to="/campaigns/whatsapp/audience" replace /> },
+          { path: "campaigns/templates", element: <Navigate to="/campaigns/whatsapp/templates" replace /> },
+          { path: "campaigns/templates/create", element: <Navigate to="/campaigns/whatsapp/templates/create" replace /> },
+          {
+            path: "campaigns/email",
             element: withRouteFallback(
               <CampaignsRouteGuard>
-                <CreateTemplatePage />
+                <EmailCampaignPage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/create",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="create" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/templates",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="templates" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/audience",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="audience" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/history",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="history" />
               </CampaignsRouteGuard>
             )
           },

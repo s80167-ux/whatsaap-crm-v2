@@ -112,7 +112,7 @@ export function MessageTemplatesPage() {
             <h2 className="section-title sm:mt-3">Message Templates</h2>
             <p className="mt-2 hidden max-w-2xl section-copy sm:block">Create and manage reusable WhatsApp blast messages.</p>
           </div>
-          <Button className="shrink-0 px-3 sm:px-5" onClick={() => navigate("/campaigns/templates/create")}>
+          <Button className="shrink-0 px-3 sm:px-5" onClick={() => navigate("/campaigns/whatsapp/templates/create")}>
             Create
             <span className="hidden sm:inline"> Template</span>
           </Button>
@@ -122,7 +122,7 @@ export function MessageTemplatesPage() {
       <TemplateStatsCards stats={stats} />
 
       <div className="space-y-3">
-        <CampaignModuleTabs />
+        <CampaignModuleTabs channel="whatsapp" />
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px]">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -152,7 +152,7 @@ export function MessageTemplatesPage() {
           </div>
           <TemplateListTable
             templates={visibleItems}
-            onEdit={(template) => navigate(`/campaigns/templates/create?edit=${encodeURIComponent(template.id)}`)}
+            onEdit={(template) => navigate(`/campaigns/whatsapp/templates/create?edit=${encodeURIComponent(template.id)}`)}
             onDuplicate={(template) => duplicateMutation.mutate(template)}
             onArchive={(template) => archiveMutation.mutate(template)}
             onDelete={handleDelete}

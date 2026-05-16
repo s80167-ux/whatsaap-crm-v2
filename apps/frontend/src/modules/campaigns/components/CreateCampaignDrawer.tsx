@@ -344,7 +344,7 @@ export function CreateCampaignDrawer({
               <div className="mt-4 rounded-2xl border border-dashed border-border bg-background-tint px-4 py-4">
                 <p className="text-sm font-semibold text-text">No Audience Groups yet.</p>
                 <p className="mt-1 text-sm text-text-muted">Create an Audience Group before starting a campaign.</p>
-                <Link className="mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-dark" to="/campaigns/audience-groups">
+                <Link className="mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-dark" to="/campaigns/whatsapp/audience">
                   Create Audience Group
                 </Link>
               </div>

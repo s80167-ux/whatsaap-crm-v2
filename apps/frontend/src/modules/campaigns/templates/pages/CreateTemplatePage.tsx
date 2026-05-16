@@ -74,7 +74,7 @@ export function CreateTemplatePage() {
     ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getMessageTemplatesQueryKey(organizationId) });
-      navigate("/campaigns/templates");
+      navigate("/campaigns/whatsapp/templates");
     },
     onError: (error) => showNotice(error instanceof Error ? error.message : "Unable to save template.", "error")
   });
@@ -143,14 +143,14 @@ export function CreateTemplatePage() {
             <h2 className="mt-3 section-title">{editTemplateId ? "Edit Message Template" : "Create Message Template"}</h2>
             <p className="mt-2 max-w-2xl section-copy">Build reusable message content for future WhatsApp campaigns.</p>
           </div>
-          <Button variant="secondary" onClick={() => navigate("/campaigns/templates")}>
+          <Button variant="secondary" onClick={() => navigate("/campaigns/whatsapp/templates")}>
             <ArrowLeft size={16} />
             Back to Templates
           </Button>
         </div>
       </Card>
 
-      <CampaignModuleTabs />
+      <CampaignModuleTabs channel="whatsapp" />
 
       {outletContext.isSuperAdmin && !organizationId ? (
         <Card elevated className="p-5 text-sm text-text-muted">

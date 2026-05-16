@@ -108,10 +108,11 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
 
     const parsed = JSON.parse(content) as DeepSeekJson;
     const deepSeekSuggestion = input.action === "check" ? null : sanitizeSuggestion(parsed.suggestedMessage);
-    const suggestedMessage =
+    const rawSuggestedMessage =
       deepSeekSuggestion && !areMessagesEquivalent(deepSeekSuggestion, input.message)
         ? deepSeekSuggestion
         : buildFallbackSuggestion(input);
+    const suggestedMessage = rawSuggestedMessage ? decorateSuggestionForAction(rawSuggestedMessage, input.action) : null;
 
     return {
       success: true,
@@ -233,11 +234,11 @@ function buildFallbackSuggestion(input: AiMessageAssistInput) {
   const cta = input.source === "campaign" ? getCampaignCta(normalized) : "";
 
   if (input.action === "generate") {
-    return generateTemplateDraft(normalized, greeting);
+    return generateTemplateDraft(normalized, greeting, input.action);
   }
 
   if (input.action === "shorten") {
-    return shortenMessage(normalized, input.source);
+    return decorateCasualSuggestion(shortenMessage(normalized, input.source), input.action);
   }
 
   if (input.action === "friendly") {
@@ -248,7 +249,7 @@ function buildFallbackSuggestion(input: AiMessageAssistInput) {
     return makeProfessionalMessage(normalized, greeting.replace("Hi", "Salam"), input.source);
   }
 
-  return improveMessage(normalized, greeting, input.source, cta);
+  return decorateCasualSuggestion(improveMessage(normalized, greeting, input.source, cta), input.action);
 }
 
 function normalizeMessageText(message: string) {
@@ -277,7 +278,7 @@ function ensureGreeting(message: string, greeting: string) {
   return `${greeting} ${lowercaseFirstLetter(message)}`;
 }
 
-function generateTemplateDraft(message: string, greeting: string) {
+function generateTemplateDraft(message: string, greeting: string, action: AiMessageAction) {
   const points = message
     .split(/\n|,|;|-/)
     .map((point) => point.trim())
@@ -289,10 +290,10 @@ function generateTemplateDraft(message: string, greeting: string) {
     .replace(/\bdetails\b/gi, "maklumat lanjut")
     .replace(/\bminat\b/gi, "berminat");
 
-  return joinMessageParts([
+  return decorateCasualSuggestion(joinMessageParts([
     `${greeting} ${lowercaseFirstLetter(normalizedBody)}`,
     "Jika masih berminat, boleh balas mesej ini dan kami akan bantu kongsikan maklumat lanjut."
-  ]);
+  ]), action);
 }
 
 function improveMessage(message: string, greeting: string, source: AiMessageSource, cta: string) {
@@ -314,7 +315,7 @@ function makeFriendlyMessage(message: string, greeting: string, source: AiMessag
     .replace(/\bminat\b/gi, "berminat");
 
   const suffix = source === "campaign" ? "Boleh balas mesej ini ya jika berminat." : "";
-  return joinMessageParts([friendly, suffix]);
+  return decorateCasualSuggestion(joinMessageParts([friendly, suffix]), "friendly");
 }
 
 function makeProfessionalMessage(message: string, greeting: string, source: AiMessageSource) {
@@ -360,6 +361,30 @@ function shortenMessage(message: string, source: AiMessageSource) {
   return source === "campaign" ? joinMessageParts([shortened, getCampaignCta(shortened)]) : shortened;
 }
 
+function decorateCasualSuggestion(message: string, action: AiMessageAction) {
+  if (action === "professional" || action === "check") {
+    return message;
+  }
+
+  const withEmoji = /\p{Extended_Pictographic}/u.test(message) ? message : `${message} 😊`;
+  const withHashtag = /#[A-Za-z0-9_]+/.test(withEmoji) ? withEmoji : `${withEmoji}\n\n#WhatsApp #Info`;
+
+  return withHashtag;
+}
+
+function decorateSuggestionForAction(message: string, action: AiMessageAction) {
+  return action === "professional" ? stripEmojiAndHashtags(message) : decorateCasualSuggestion(message, action);
+}
+
+function stripEmojiAndHashtags(message: string) {
+  return message
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/(?:^|\s)#[A-Za-z0-9_]+/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function joinMessageParts(parts: string[]) {
   return parts.map((part) => part.trim()).filter(Boolean).join("\n\n");
 }
@@ -371,11 +396,11 @@ function buildMessages(input: AiMessageAssistInput) {
       : "Source is template. Optimize for reusable template wording. Keep wording neutral and suitable for repeated use. Avoid time-sensitive phrases unless they exist in the original message. Avoid campaign-style hard selling unless the original template is clearly promotional. Protect variables/placeholders carefully.";
 
   const actionRules: Record<AiMessageAction, string> = {
-    generate: "Convert the user's rough key points into a clean reusable WhatsApp message template. Treat the input as notes, not final copy. The suggestedMessage must be a complete ready-to-use template.",
-    improve: "Polish the message without changing meaning. The suggestedMessage must be visibly improved and must not be identical to the original.",
-    shorten: "Make it shorter and suitable for WhatsApp. The suggestedMessage must be shorter than the original unless the original is already under 80 characters.",
-    friendly: "Make it warmer and more friendly. The suggestedMessage must sound noticeably friendlier than the original.",
-    professional: "Make it more professional but still natural. The suggestedMessage must sound noticeably more professional than the original.",
+    generate: "Convert the user's rough key points into a clean reusable WhatsApp message template. Treat the input as notes, not final copy. The suggestedMessage must be a complete ready-to-use template. Include one or two suitable smiley emoji and one or two relevant hashtags.",
+    improve: "Polish the message without changing meaning. The suggestedMessage must be visibly improved and must not be identical to the original. Include one or two suitable smiley emoji and one or two relevant hashtags.",
+    shorten: "Make it shorter and suitable for WhatsApp. The suggestedMessage must be shorter than the original unless the original is already under 80 characters. Include one suitable smiley emoji and one relevant hashtag if space allows.",
+    friendly: "Make it warmer and more friendly. The suggestedMessage must sound noticeably friendlier than the original. Include one or two suitable smiley emoji and one or two relevant hashtags.",
+    professional: "Make it more professional but still natural. The suggestedMessage must sound noticeably more professional than the original. Do not add emoji. Do not add hashtags.",
     check: "Do not rewrite. suggestedMessage must be null. Only return review."
   };
 
@@ -392,6 +417,9 @@ function buildMessages(input: AiMessageAssistInput) {
         "Do not remove or corrupt placeholders.",
         "Keep the original intent.",
         "Avoid spammy words, excessive emoji, excessive uppercase, and too many exclamation marks.",
+        "Use clean WhatsApp spacing with short paragraphs separated by blank lines.",
+        "For generate, improve, shorten, and friendly, include suitable smiley emoji and relevant hashtags naturally.",
+        "For professional, do not include emoji or hashtags.",
         "For generate, if the user provided rough notes or bullet points, write a complete template from those points.",
         "For generate, use neutral reusable wording and include {{first_name}} if no personalization placeholder is present.",
         "Return json only with suggestedMessage and review.",

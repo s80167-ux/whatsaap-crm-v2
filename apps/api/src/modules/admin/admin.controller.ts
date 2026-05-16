@@ -62,17 +62,37 @@ const campaignsModuleStatusQuerySchema = z.object({
 });
 
 const moduleStatusParamsSchema = z.object({
-  moduleKey: z.enum(["campaigns", "ai_message_assist"])
+  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist"])
 });
 
 const updateOrganizationAccessLimitsSchema = z.object({
   campaignsEnabled: z.boolean().optional(),
+  campaignEnabled: z.boolean().optional(),
+  campaignWhatsAppEnabled: z.boolean().optional(),
+  campaignEmailEnabled: z.boolean().optional(),
   aiMessageAssistEnabled: z.boolean().optional(),
   maxWhatsappAccounts: z.coerce.number().int().min(0).max(20).optional(),
   historySyncDays: z.coerce.number().int().min(0).max(365).optional(),
   maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional(),
   aiDailyCredits: z.coerce.number().int().min(0).max(100000).optional(),
-  aiMonthlyCredits: z.coerce.number().int().min(0).max(1000000).optional()
+  aiMonthlyCredits: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignMonthlyCount: z.coerce.number().int().min(0).max(100000).optional(),
+  campaignRecipientsPerCampaign: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignTemplatesCount: z.coerce.number().int().min(0).max(10000).optional(),
+  campaignAudienceSegments: z.coerce.number().int().min(0).max(10000).optional(),
+  campaignScheduledCount: z.coerce.number().int().min(0).max(10000).optional(),
+  campaignWhatsAppMessagesPerDay: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignWhatsAppMessagesPerMonth: z.coerce.number().int().min(0).max(10000000).optional(),
+  campaignWhatsAppRecipientsPerBroadcast: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignWhatsAppDelaySecondsMin: z.coerce.number().int().min(0).max(3600).optional(),
+  campaignWhatsAppDelaySecondsMax: z.coerce.number().int().min(0).max(3600).optional(),
+  campaignWhatsAppMaxConnectors: z.coerce.number().int().min(0).max(100).optional(),
+  campaignWhatsAppRequireApproval: z.boolean().optional(),
+  campaignEmailEmailsPerDay: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignEmailEmailsPerMonth: z.coerce.number().int().min(0).max(10000000).optional(),
+  campaignEmailRecipientsPerBlast: z.coerce.number().int().min(0).max(1000000).optional(),
+  campaignEmailVerifiedDomains: z.coerce.number().int().min(0).max(1000).optional(),
+  campaignEmailRequireUnsubscribe: z.boolean().optional()
 });
 
 const listGoogleSignupRequestsQuerySchema = z.object({
@@ -168,7 +188,7 @@ export async function getCampaignsModuleStatus(request: Request, response: Respo
   const auth = requireAuth(request);
   const { organization_id: organizationId } = campaignsModuleStatusQuerySchema.parse(request.query);
   const params = moduleStatusParamsSchema.safeParse(request.params);
-  const moduleKey = params.success ? params.data.moduleKey : "campaigns";
+  const moduleKey = params.success ? params.data.moduleKey : "campaign";
   const status = await adminService.getOrganizationModuleStatus(auth, moduleKey, organizationId ?? null);
 
   return response.json({

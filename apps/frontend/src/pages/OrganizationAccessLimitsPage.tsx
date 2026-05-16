@@ -430,7 +430,6 @@ function StatusBadge({ children, tone }: { children: ReactNode; tone: "success" 
   );
 }
 
-function UsageStat({ label, value }: { label: string; value: string }) {
 function UsageStat({ label, tone = "normal", value }: { label: string; tone?: UsageAlertTone; value: string }) {
   return (
     <div

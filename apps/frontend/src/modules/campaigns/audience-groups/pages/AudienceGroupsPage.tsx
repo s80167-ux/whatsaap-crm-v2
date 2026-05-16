@@ -76,7 +76,7 @@ export function AudienceGroupsPage() {
         </div>
       </Card>
 
-      <CampaignModuleTabs />
+      <CampaignModuleTabs channel="whatsapp" />
 
       {outletContext.isSuperAdmin && !organizationId ? (
         <Card elevated className="p-5 text-sm text-text-muted">

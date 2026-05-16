@@ -697,7 +697,7 @@ export function SalesPage() {
         }}
         title="Lead Intake"
         description="Capture new opportunities quickly, then manage progress from the conversion queue."
-        panelClassName="max-w-xl"
+        panelClassName="max-w-lg"
       >
         <div className="workspace-form-panel space-y-4 p-4">
           <label className="block">

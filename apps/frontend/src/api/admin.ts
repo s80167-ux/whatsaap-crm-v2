@@ -201,12 +201,32 @@ export async function updateOrganizationAccessLimits(
   organizationId: string,
   payload: {
     campaignsEnabled?: boolean;
+    campaignEnabled?: boolean;
+    campaignWhatsAppEnabled?: boolean;
+    campaignEmailEnabled?: boolean;
     aiMessageAssistEnabled?: boolean;
     maxWhatsappAccounts?: number;
     historySyncDays?: number;
     maxUsers?: number | null;
     aiDailyCredits?: number;
     aiMonthlyCredits?: number;
+    campaignMonthlyCount?: number;
+    campaignRecipientsPerCampaign?: number;
+    campaignTemplatesCount?: number;
+    campaignAudienceSegments?: number;
+    campaignScheduledCount?: number;
+    campaignWhatsAppMessagesPerDay?: number;
+    campaignWhatsAppMessagesPerMonth?: number;
+    campaignWhatsAppRecipientsPerBroadcast?: number;
+    campaignWhatsAppDelaySecondsMin?: number;
+    campaignWhatsAppDelaySecondsMax?: number;
+    campaignWhatsAppMaxConnectors?: number;
+    campaignWhatsAppRequireApproval?: boolean;
+    campaignEmailEmailsPerDay?: number;
+    campaignEmailEmailsPerMonth?: number;
+    campaignEmailRecipientsPerBlast?: number;
+    campaignEmailVerifiedDomains?: number;
+    campaignEmailRequireUnsubscribe?: boolean;
   }
 ) {
   const response = await apiPatch<{ data: OrganizationAccessLimits }>(

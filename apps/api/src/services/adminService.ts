@@ -12,34 +12,114 @@ import type { AuthUser, UserRole } from "../types/auth.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
 
-const CAMPAIGNS_MODULE_KEY = "campaigns";
+const LEGACY_CAMPAIGNS_MODULE_KEY = "campaigns";
+const CAMPAIGN_MODULE_KEY = "campaign";
+const CAMPAIGN_WHATSAPP_MODULE_KEY = "campaign.whatsapp";
+const CAMPAIGN_EMAIL_MODULE_KEY = "campaign.email";
 const AI_MESSAGE_ASSIST_MODULE_KEY = "ai_message_assist";
-const SUPPORTED_MODULE_KEYS = [CAMPAIGNS_MODULE_KEY, AI_MESSAGE_ASSIST_MODULE_KEY] as const;
+const SUPPORTED_MODULE_KEYS = [
+  LEGACY_CAMPAIGNS_MODULE_KEY,
+  CAMPAIGN_MODULE_KEY,
+  CAMPAIGN_WHATSAPP_MODULE_KEY,
+  CAMPAIGN_EMAIL_MODULE_KEY,
+  AI_MESSAGE_ASSIST_MODULE_KEY
+] as const;
 const MAX_WHATSAPP_ACCOUNTS_KEY = "max_whatsapp_accounts";
 const HISTORY_SYNC_DAYS_KEY = "history_sync_days";
 const MAX_USERS_KEY = "max_users";
 const AI_DAILY_CREDITS_KEY = "ai_daily_credits";
 const AI_MONTHLY_CREDITS_KEY = "ai_monthly_credits";
+const CAMPAIGN_MONTHLY_COUNT_KEY = "campaign.monthly_count";
+const CAMPAIGN_RECIPIENTS_PER_CAMPAIGN_KEY = "campaign.recipients_per_campaign";
+const CAMPAIGN_TEMPLATES_COUNT_KEY = "campaign.templates_count";
+const CAMPAIGN_AUDIENCE_SEGMENTS_KEY = "campaign.audience_segments";
+const CAMPAIGN_SCHEDULED_COUNT_KEY = "campaign.scheduled_count";
+const CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY_KEY = "campaign.whatsapp.messages_per_day";
+const CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH_KEY = "campaign.whatsapp.messages_per_month";
+const CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST_KEY = "campaign.whatsapp.recipients_per_broadcast";
+const CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN_KEY = "campaign.whatsapp.delay_seconds_min";
+const CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX_KEY = "campaign.whatsapp.delay_seconds_max";
+const CAMPAIGN_WHATSAPP_MAX_CONNECTORS_KEY = "campaign.whatsapp.max_connectors";
+const CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL_KEY = "campaign.whatsapp.require_approval";
+const CAMPAIGN_EMAIL_EMAILS_PER_DAY_KEY = "campaign.email.emails_per_day";
+const CAMPAIGN_EMAIL_EMAILS_PER_MONTH_KEY = "campaign.email.emails_per_month";
+const CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST_KEY = "campaign.email.recipients_per_blast";
+const CAMPAIGN_EMAIL_VERIFIED_DOMAINS_KEY = "campaign.email.verified_domains";
+const CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE_KEY = "campaign.email.require_unsubscribe";
 const DEFAULT_MAX_WHATSAPP_ACCOUNTS = 1;
 const DEFAULT_HISTORY_SYNC_DAYS = 7;
 const DEFAULT_AI_DAILY_CREDITS = 100;
 const DEFAULT_AI_MONTHLY_CREDITS = 1000;
+const DEFAULT_CAMPAIGN_MONTHLY_COUNT = 20;
+const DEFAULT_CAMPAIGN_RECIPIENTS_PER_CAMPAIGN = 1000;
+const DEFAULT_CAMPAIGN_TEMPLATES_COUNT = 25;
+const DEFAULT_CAMPAIGN_AUDIENCE_SEGMENTS = 10;
+const DEFAULT_CAMPAIGN_SCHEDULED_COUNT = 10;
+const DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY = 500;
+const DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH = 10000;
+const DEFAULT_CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST = 1000;
+const DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN = 3;
+const DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX = 15;
+const DEFAULT_CAMPAIGN_WHATSAPP_MAX_CONNECTORS = 3;
+const DEFAULT_CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL = 0;
+const DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_DAY = 0;
+const DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_MONTH = 0;
+const DEFAULT_CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST = 0;
+const DEFAULT_CAMPAIGN_EMAIL_VERIFIED_DOMAINS = 0;
+const DEFAULT_CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE = 1;
 
 type OrganizationLimitKey =
   | typeof MAX_WHATSAPP_ACCOUNTS_KEY
   | typeof HISTORY_SYNC_DAYS_KEY
   | typeof MAX_USERS_KEY
   | typeof AI_DAILY_CREDITS_KEY
-  | typeof AI_MONTHLY_CREDITS_KEY;
+  | typeof AI_MONTHLY_CREDITS_KEY
+  | typeof CAMPAIGN_MONTHLY_COUNT_KEY
+  | typeof CAMPAIGN_RECIPIENTS_PER_CAMPAIGN_KEY
+  | typeof CAMPAIGN_TEMPLATES_COUNT_KEY
+  | typeof CAMPAIGN_AUDIENCE_SEGMENTS_KEY
+  | typeof CAMPAIGN_SCHEDULED_COUNT_KEY
+  | typeof CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY_KEY
+  | typeof CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH_KEY
+  | typeof CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST_KEY
+  | typeof CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN_KEY
+  | typeof CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX_KEY
+  | typeof CAMPAIGN_WHATSAPP_MAX_CONNECTORS_KEY
+  | typeof CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL_KEY
+  | typeof CAMPAIGN_EMAIL_EMAILS_PER_DAY_KEY
+  | typeof CAMPAIGN_EMAIL_EMAILS_PER_MONTH_KEY
+  | typeof CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST_KEY
+  | typeof CAMPAIGN_EMAIL_VERIFIED_DOMAINS_KEY
+  | typeof CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE_KEY;
 
 type OrganizationAccessLimitsUpdateInput = {
   campaignsEnabled?: boolean;
+  campaignEnabled?: boolean;
+  campaignWhatsAppEnabled?: boolean;
+  campaignEmailEnabled?: boolean;
   aiMessageAssistEnabled?: boolean;
   maxWhatsappAccounts?: number;
   historySyncDays?: number;
   maxUsers?: number | null;
   aiDailyCredits?: number;
   aiMonthlyCredits?: number;
+  campaignMonthlyCount?: number;
+  campaignRecipientsPerCampaign?: number;
+  campaignTemplatesCount?: number;
+  campaignAudienceSegments?: number;
+  campaignScheduledCount?: number;
+  campaignWhatsAppMessagesPerDay?: number;
+  campaignWhatsAppMessagesPerMonth?: number;
+  campaignWhatsAppRecipientsPerBroadcast?: number;
+  campaignWhatsAppDelaySecondsMin?: number;
+  campaignWhatsAppDelaySecondsMax?: number;
+  campaignWhatsAppMaxConnectors?: number;
+  campaignWhatsAppRequireApproval?: boolean;
+  campaignEmailEmailsPerDay?: number;
+  campaignEmailEmailsPerMonth?: number;
+  campaignEmailRecipientsPerBlast?: number;
+  campaignEmailVerifiedDomains?: number;
+  campaignEmailRequireUnsubscribe?: boolean;
 };
 
 type AiUsageWindow = {
@@ -63,6 +143,16 @@ const EMPTY_AI_USAGE_WINDOW: AiUsageWindow = {
 };
 
 export type OrganizationModuleKey = (typeof SUPPORTED_MODULE_KEYS)[number];
+
+function getModuleLookupKeys(moduleKey: OrganizationModuleKey) {
+  switch (moduleKey) {
+    case CAMPAIGN_MODULE_KEY:
+    case CAMPAIGN_WHATSAPP_MODULE_KEY:
+      return [moduleKey, LEGACY_CAMPAIGNS_MODULE_KEY] as const;
+    default:
+      return [moduleKey] as const;
+  }
+}
 
 function slugifyOrganizationName(name: string) {
   return name
@@ -173,15 +263,17 @@ export class AdminService {
 
     const client = await pool.connect();
     try {
+      const lookupKeys = getModuleLookupKeys(moduleKey);
       const result = await client.query<{ is_enabled: boolean }>(
         `
           select is_enabled
           from organization_modules
           where organization_id = $1
-            and module_key = $2
+            and module_key = any($2::text[])
+          order by case when module_key = $3 then 0 else 1 end
           limit 1
         `,
-        [resolvedOrganizationId, moduleKey]
+        [resolvedOrganizationId, lookupKeys, moduleKey]
       );
 
       return {
@@ -195,7 +287,19 @@ export class AdminService {
   }
 
   async getCampaignsModuleStatus(authUser: AuthUser, organizationId?: string | null) {
-    return this.getOrganizationModuleStatus(authUser, CAMPAIGNS_MODULE_KEY, organizationId);
+    return this.getOrganizationModuleStatus(authUser, LEGACY_CAMPAIGNS_MODULE_KEY, organizationId);
+  }
+
+  async getCampaignModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, CAMPAIGN_MODULE_KEY, organizationId);
+  }
+
+  async getCampaignWhatsAppModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, CAMPAIGN_WHATSAPP_MODULE_KEY, organizationId);
+  }
+
+  async getCampaignEmailModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, CAMPAIGN_EMAIL_MODULE_KEY, organizationId);
   }
 
   async getAiMessageAssistModuleStatus(authUser: AuthUser, organizationId?: string | null) {
@@ -240,8 +344,12 @@ export class AdminService {
 
   async updateCampaignsModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
     return withTransaction((client) =>
-      this.updateOrganizationModuleWithClient(client, authUser, organizationId, CAMPAIGNS_MODULE_KEY, isEnabled)
+      this.updateOrganizationModuleWithClient(client, authUser, organizationId, LEGACY_CAMPAIGNS_MODULE_KEY, isEnabled)
     );
+  }
+
+  async updateOrganizationModule(authUser: AuthUser, organizationId: string, moduleKey: OrganizationModuleKey, isEnabled: boolean) {
+    return withTransaction((client) => this.updateOrganizationModuleWithClient(client, authUser, organizationId, moduleKey, isEnabled));
   }
 
   async updateAiMessageAssistModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
@@ -550,7 +658,9 @@ export class AdminService {
 
     const client = await pool.connect();
     try {
-      const campaignsStatus = await this.getCampaignsModuleStatus(authUser, organizationId);
+      const campaignStatus = await this.getCampaignModuleStatus(authUser, organizationId);
+      const campaignWhatsAppStatus = await this.getCampaignWhatsAppModuleStatus(authUser, organizationId);
+      const campaignEmailStatus = await this.getCampaignEmailModuleStatus(authUser, organizationId);
       const aiMessageAssistStatus = await this.getAiMessageAssistModuleStatus(authUser, organizationId);
       const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
         client,
@@ -577,16 +687,127 @@ export class AdminService {
         AI_MONTHLY_CREDITS_KEY,
         DEFAULT_AI_MONTHLY_CREDITS
       );
+      const campaignMonthlyCount = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_MONTHLY_COUNT_KEY,
+        DEFAULT_CAMPAIGN_MONTHLY_COUNT
+      );
+      const campaignRecipientsPerCampaign = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_RECIPIENTS_PER_CAMPAIGN_KEY,
+        DEFAULT_CAMPAIGN_RECIPIENTS_PER_CAMPAIGN
+      );
+      const campaignTemplatesCount = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_TEMPLATES_COUNT_KEY,
+        DEFAULT_CAMPAIGN_TEMPLATES_COUNT
+      );
+      const campaignAudienceSegments = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_AUDIENCE_SEGMENTS_KEY,
+        DEFAULT_CAMPAIGN_AUDIENCE_SEGMENTS
+      );
+      const campaignScheduledCount = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_SCHEDULED_COUNT_KEY,
+        DEFAULT_CAMPAIGN_SCHEDULED_COUNT
+      );
+      const campaignWhatsAppMessagesPerDay = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY
+      );
+      const campaignWhatsAppMessagesPerMonth = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH
+      );
+      const campaignWhatsAppRecipientsPerBroadcast = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST
+      );
+      const campaignWhatsAppDelaySecondsMin = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN
+      );
+      const campaignWhatsAppDelaySecondsMax = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX
+      );
+      const campaignWhatsAppMaxConnectors = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_MAX_CONNECTORS_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_MAX_CONNECTORS
+      );
+      const campaignWhatsAppRequireApproval = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL_KEY,
+        DEFAULT_CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL
+      );
+      const campaignEmailEmailsPerDay = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_EMAIL_EMAILS_PER_DAY_KEY,
+        DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_DAY
+      );
+      const campaignEmailEmailsPerMonth = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_EMAIL_EMAILS_PER_MONTH_KEY,
+        DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_MONTH
+      );
+      const campaignEmailRecipientsPerBlast = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST_KEY,
+        DEFAULT_CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST
+      );
+      const campaignEmailVerifiedDomains = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_EMAIL_VERIFIED_DOMAINS_KEY,
+        DEFAULT_CAMPAIGN_EMAIL_VERIFIED_DOMAINS
+      );
+      const campaignEmailRequireUnsubscribe = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE_KEY,
+        DEFAULT_CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE
+      );
       const whatsappAccounts = await this.whatsappRepository.countByOrganization(client, organizationId);
       const aiDailyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "day");
       const aiMonthlyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "month");
+      const campaignUsage = await this.getCampaignUsageWithClient(client, organizationId);
 
       return {
         organizationId,
         modules: [
           {
-            moduleKey: CAMPAIGNS_MODULE_KEY,
-            isEnabled: campaignsStatus.isEnabled
+            moduleKey: CAMPAIGN_MODULE_KEY,
+            isEnabled: campaignStatus.isEnabled
+          },
+          {
+            moduleKey: CAMPAIGN_WHATSAPP_MODULE_KEY,
+            isEnabled: campaignWhatsAppStatus.isEnabled
+          },
+          {
+            moduleKey: CAMPAIGN_EMAIL_MODULE_KEY,
+            isEnabled: campaignEmailStatus.isEnabled
           },
           {
             moduleKey: AI_MESSAGE_ASSIST_MODULE_KEY,
@@ -598,10 +819,36 @@ export class AdminService {
           historySyncDays: historySyncDays ?? DEFAULT_HISTORY_SYNC_DAYS,
           maxUsers,
           aiDailyCredits: aiDailyCredits ?? DEFAULT_AI_DAILY_CREDITS,
-          aiMonthlyCredits: aiMonthlyCredits ?? DEFAULT_AI_MONTHLY_CREDITS
+          aiMonthlyCredits: aiMonthlyCredits ?? DEFAULT_AI_MONTHLY_CREDITS,
+          campaignMonthlyCount: campaignMonthlyCount ?? DEFAULT_CAMPAIGN_MONTHLY_COUNT,
+          campaignRecipientsPerCampaign:
+            campaignRecipientsPerCampaign ?? DEFAULT_CAMPAIGN_RECIPIENTS_PER_CAMPAIGN,
+          campaignTemplatesCount: campaignTemplatesCount ?? DEFAULT_CAMPAIGN_TEMPLATES_COUNT,
+          campaignAudienceSegments: campaignAudienceSegments ?? DEFAULT_CAMPAIGN_AUDIENCE_SEGMENTS,
+          campaignScheduledCount: campaignScheduledCount ?? DEFAULT_CAMPAIGN_SCHEDULED_COUNT,
+          campaignWhatsAppMessagesPerDay:
+            campaignWhatsAppMessagesPerDay ?? DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY,
+          campaignWhatsAppMessagesPerMonth:
+            campaignWhatsAppMessagesPerMonth ?? DEFAULT_CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH,
+          campaignWhatsAppRecipientsPerBroadcast:
+            campaignWhatsAppRecipientsPerBroadcast ?? DEFAULT_CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST,
+          campaignWhatsAppDelaySecondsMin:
+            campaignWhatsAppDelaySecondsMin ?? DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN,
+          campaignWhatsAppDelaySecondsMax:
+            campaignWhatsAppDelaySecondsMax ?? DEFAULT_CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX,
+          campaignWhatsAppMaxConnectors:
+            campaignWhatsAppMaxConnectors ?? DEFAULT_CAMPAIGN_WHATSAPP_MAX_CONNECTORS,
+          campaignWhatsAppRequireApproval: (campaignWhatsAppRequireApproval ?? DEFAULT_CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL) > 0,
+          campaignEmailEmailsPerDay: campaignEmailEmailsPerDay ?? DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_DAY,
+          campaignEmailEmailsPerMonth: campaignEmailEmailsPerMonth ?? DEFAULT_CAMPAIGN_EMAIL_EMAILS_PER_MONTH,
+          campaignEmailRecipientsPerBlast:
+            campaignEmailRecipientsPerBlast ?? DEFAULT_CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST,
+          campaignEmailVerifiedDomains: campaignEmailVerifiedDomains ?? DEFAULT_CAMPAIGN_EMAIL_VERIFIED_DOMAINS,
+          campaignEmailRequireUnsubscribe: (campaignEmailRequireUnsubscribe ?? DEFAULT_CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE) > 0
         },
         usage: {
           whatsappAccounts,
+          campaign: campaignUsage,
           ai: {
             today: aiDailyUsage,
             month: aiMonthlyUsage
@@ -633,9 +880,34 @@ export class AdminService {
           client,
           authUser,
           organizationId,
-          CAMPAIGNS_MODULE_KEY,
+          LEGACY_CAMPAIGNS_MODULE_KEY,
           input.campaignsEnabled
         );
+      }
+
+      if (input.campaignEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(client, authUser, organizationId, CAMPAIGN_MODULE_KEY, input.campaignEnabled);
+      }
+
+      if (input.campaignWhatsAppEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(
+          client,
+          authUser,
+          organizationId,
+          CAMPAIGN_WHATSAPP_MODULE_KEY,
+          input.campaignWhatsAppEnabled
+        );
+        await this.updateOrganizationModuleWithClient(
+          client,
+          authUser,
+          organizationId,
+          LEGACY_CAMPAIGNS_MODULE_KEY,
+          input.campaignWhatsAppEnabled
+        );
+      }
+
+      if (input.campaignEmailEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(client, authUser, organizationId, CAMPAIGN_EMAIL_MODULE_KEY, input.campaignEmailEnabled);
       }
 
       if (input.aiMessageAssistEnabled !== undefined) {
@@ -672,9 +944,169 @@ export class AdminService {
       if (input.aiMonthlyCredits !== undefined) {
         await this.updateOrganizationLimitWithClient(client, organizationId, AI_MONTHLY_CREDITS_KEY, input.aiMonthlyCredits);
       }
+
+      if (input.campaignMonthlyCount !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_MONTHLY_COUNT_KEY, input.campaignMonthlyCount);
+      }
+
+      if (input.campaignRecipientsPerCampaign !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_RECIPIENTS_PER_CAMPAIGN_KEY,
+          input.campaignRecipientsPerCampaign
+        );
+      }
+
+      if (input.campaignTemplatesCount !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_TEMPLATES_COUNT_KEY, input.campaignTemplatesCount);
+      }
+
+      if (input.campaignAudienceSegments !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_AUDIENCE_SEGMENTS_KEY, input.campaignAudienceSegments);
+      }
+
+      if (input.campaignScheduledCount !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_SCHEDULED_COUNT_KEY, input.campaignScheduledCount);
+      }
+
+      if (input.campaignWhatsAppMessagesPerDay !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_MESSAGES_PER_DAY_KEY,
+          input.campaignWhatsAppMessagesPerDay
+        );
+      }
+
+      if (input.campaignWhatsAppMessagesPerMonth !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_MESSAGES_PER_MONTH_KEY,
+          input.campaignWhatsAppMessagesPerMonth
+        );
+      }
+
+      if (input.campaignWhatsAppRecipientsPerBroadcast !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_RECIPIENTS_PER_BROADCAST_KEY,
+          input.campaignWhatsAppRecipientsPerBroadcast
+        );
+      }
+
+      if (input.campaignWhatsAppDelaySecondsMin !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_DELAY_SECONDS_MIN_KEY,
+          input.campaignWhatsAppDelaySecondsMin
+        );
+      }
+
+      if (input.campaignWhatsAppDelaySecondsMax !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_DELAY_SECONDS_MAX_KEY,
+          input.campaignWhatsAppDelaySecondsMax
+        );
+      }
+
+      if (input.campaignWhatsAppMaxConnectors !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_MAX_CONNECTORS_KEY,
+          input.campaignWhatsAppMaxConnectors
+        );
+      }
+
+      if (input.campaignWhatsAppRequireApproval !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_WHATSAPP_REQUIRE_APPROVAL_KEY,
+          input.campaignWhatsAppRequireApproval ? 1 : 0
+        );
+      }
+
+      if (input.campaignEmailEmailsPerDay !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_EMAIL_EMAILS_PER_DAY_KEY, input.campaignEmailEmailsPerDay);
+      }
+
+      if (input.campaignEmailEmailsPerMonth !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_EMAIL_EMAILS_PER_MONTH_KEY, input.campaignEmailEmailsPerMonth);
+      }
+
+      if (input.campaignEmailRecipientsPerBlast !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_EMAIL_RECIPIENTS_PER_BLAST_KEY,
+          input.campaignEmailRecipientsPerBlast
+        );
+      }
+
+      if (input.campaignEmailVerifiedDomains !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, CAMPAIGN_EMAIL_VERIFIED_DOMAINS_KEY, input.campaignEmailVerifiedDomains);
+      }
+
+      if (input.campaignEmailRequireUnsubscribe !== undefined) {
+        await this.updateOrganizationLimitWithClient(
+          client,
+          organizationId,
+          CAMPAIGN_EMAIL_REQUIRE_UNSUBSCRIBE_KEY,
+          input.campaignEmailRequireUnsubscribe ? 1 : 0
+        );
+      }
     });
 
     return this.getOrganizationAccessLimits(authUser, organizationId);
+  }
+
+  private async getCampaignUsageWithClient(client: PoolClient, organizationId: string) {
+    const [todayResult, monthResult, failedResult] = await Promise.all([
+      client.query<{ count: number }>(
+        `
+          select count(*)::int as count
+          from campaign_recipients
+          where organization_id = $1
+            and send_status = 'sent'
+            and sent_at >= date_trunc('day', now())
+        `,
+        [organizationId]
+      ),
+      client.query<{ count: number }>(
+        `
+          select count(*)::int as count
+          from campaign_recipients
+          where organization_id = $1
+            and send_status = 'sent'
+            and sent_at >= date_trunc('month', now())
+        `,
+        [organizationId]
+      ),
+      client.query<{ count: number }>(
+        `
+          select count(*)::int as count
+          from campaign_recipients
+          where organization_id = $1
+            and send_status = 'failed'
+            and failed_at >= date_trunc('month', now())
+        `,
+        [organizationId]
+      )
+    ]);
+
+    return {
+      whatsappSentToday: todayResult.rows[0]?.count ?? 0,
+      whatsappSentThisMonth: monthResult.rows[0]?.count ?? 0,
+      whatsappFailedThisMonth: failedResult.rows[0]?.count ?? 0,
+      emailSentThisMonth: null
+    };
   }
 
   async listUsers(authUser: AuthUser, organizationId?: string) {

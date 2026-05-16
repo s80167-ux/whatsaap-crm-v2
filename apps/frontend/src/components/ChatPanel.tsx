@@ -40,6 +40,7 @@ import { Button } from "./Button";
 import { Card } from "./Card";
 import { PopupOverlay } from "./PopupOverlay";
 import { Toast } from "./Toast";
+import { CreateSalesModal } from "./CreateSalesModal";
 import {
   InsertMessageModal,
   matchesInsertMessageTemplateSearch,
@@ -1378,6 +1379,22 @@ export function ChatPanel({
           </div>
         </div>
       </PopupOverlay>
+      <CreateSalesModal
+        isOpen={Boolean(createSalesMessage)}
+        onClose={() => setCreateSalesMessage(null)}
+        onCreated={() => {
+          void Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
+            queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
+          ]);
+          setCreateSalesMessage(null);
+          setSendNotice("Sales order created from this chat bubble.");
+        }}
+        contactId={createSalesMessage?.contact_id ?? conversation?.contact_id ?? null}
+        conversationId={createSalesMessage?.conversation_id ?? conversation?.id ?? null}
+        messageId={createSalesMessage?.id ?? null}
+        defaultCustomerName={conversation?.contact_name ?? null}
+      />
       <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </Card>
   );

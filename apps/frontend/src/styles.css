@@ -4,7 +4,7 @@
   min-width: 240px;
   max-width: 380px;
   padding: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 0 !important;
 }
 /* User table column widths */
 .user-table-col-name { width: 20%; min-width: 120px; }
@@ -874,7 +874,7 @@ canvas {
     box-shadow:
       0 28px 80px rgba(2, 6, 23, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    border-radius: 0;
   }
 
   .workspace-page-header {
@@ -903,6 +903,71 @@ canvas {
     -webkit-backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
     backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
     border-radius: var(--surface-radius-md);
+  }
+
+  .platform-page .workspace-page-header {
+    border-radius: var(--surface-radius-lg);
+  }
+
+  .platform-state-pill {
+    @apply inline-flex min-h-[2.25rem] items-center justify-center gap-2 border border-border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text shadow-soft;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .platform-attention-card,
+  .platform-metric-tile,
+  .platform-event-row {
+    @apply border border-border bg-card shadow-soft;
+    border-radius: var(--surface-radius-md);
+  }
+
+  .platform-attention-card {
+    @apply px-4 py-3;
+  }
+
+  .platform-attention-icon {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-muted text-primary;
+    border-radius: var(--surface-radius-sm);
+  }
+
+  .platform-attention-card--critical {
+    border-color: rgb(var(--destructive) / 0.34);
+    background: linear-gradient(180deg, rgb(var(--card) / 0.98), rgb(var(--destructive) / 0.06));
+  }
+
+  .platform-attention-card--critical .platform-attention-icon {
+    color: rgb(var(--destructive));
+    background: rgb(var(--destructive) / 0.1);
+  }
+
+  .platform-attention-card--warning {
+    border-color: rgb(var(--warning) / 0.34);
+    background: linear-gradient(180deg, rgb(var(--card) / 0.98), rgb(var(--warning) / 0.08));
+  }
+
+  .platform-attention-card--warning .platform-attention-icon {
+    color: rgb(var(--warning));
+    background: rgb(var(--warning) / 0.12);
+  }
+
+  .platform-metric-tile {
+    @apply flex min-h-[4.75rem] items-center gap-3 px-4 py-3;
+  }
+
+  .platform-tabs {
+    @apply rounded-xl border border-border bg-muted/70 p-1;
+  }
+
+  .platform-tab {
+    @apply min-h-[2.35rem] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-text-muted transition hover:bg-card hover:text-text;
+  }
+
+  .platform-tab--active {
+    @apply bg-card text-primary shadow-soft;
+  }
+
+  .platform-event-row {
+    @apply px-4 py-3;
   }
 
   .workspace-empty-state {
@@ -1172,7 +1237,7 @@ canvas {
   }
 
   .sales-table-wrap .workspace-table .input-base {
-    min-height: auto;
+     min-height: 0;
     width: 100%;
     border-color: transparent !important;
     background: transparent !important;
@@ -1186,7 +1251,7 @@ canvas {
 
   .sales-table-wrap .workspace-table .btn-secondary,
   .sales-table-wrap .workspace-table .btn-ghost {
-    min-height: auto;
+     min-height: 0;
     border-color: transparent !important;
     background: transparent !important;
     padding: 0 !important;
@@ -1672,6 +1737,6 @@ canvas {
 
 @media (max-width: 640px) {
   .popup-overlay__panel {
-    border-radius: 10px 10px 0 0;
+    border-radius: 0;
   }
 }

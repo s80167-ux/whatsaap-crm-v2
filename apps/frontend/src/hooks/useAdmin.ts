@@ -9,6 +9,7 @@ import {
   fetchWhatsAppAccounts
 } from "../api/admin";
 import { getStoredUser } from "../lib/auth";
+import type { ModuleKey } from "../types/modules";
 
 export function useOrganizations() {
   const role = getStoredUser()?.role;
@@ -37,20 +38,28 @@ export function useWhatsAppAccounts(organizationId?: string | null, enabled = tr
   });
 }
 
-export function useCampaignsModuleStatus(organizationId?: string | null, enabled = true) {
+export function useOrganizationModuleStatus(moduleKey: ModuleKey, organizationId?: string | null, enabled = true) {
   return useQuery({
-    queryKey: ["organization-module-status", "campaigns", organizationId ?? "current"],
-    queryFn: () => fetchOrganizationModuleStatus("campaigns", organizationId),
+    queryKey: ["organization-module-status", moduleKey, organizationId ?? "current"],
+    queryFn: () => fetchOrganizationModuleStatus(moduleKey, organizationId),
     enabled
   });
 }
 
+export function useCampaignsModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("campaign", organizationId, enabled);
+}
+
+export function useCampaignWhatsAppModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("campaign.whatsapp", organizationId, enabled);
+}
+
+export function useCampaignEmailModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("campaign.email", organizationId, enabled);
+}
+
 export function useAiMessageAssistModuleStatus(organizationId?: string | null, enabled = true) {
-  return useQuery({
-    queryKey: ["organization-module-status", "ai_message_assist", organizationId ?? "current"],
-    queryFn: () => fetchOrganizationModuleStatus("ai_message_assist", organizationId),
-    enabled
-  });
+  return useOrganizationModuleStatus("ai_message_assist", organizationId, enabled);
 }
 
 export function useOrganizationModules(organizationId?: string | null, enabled = true) {

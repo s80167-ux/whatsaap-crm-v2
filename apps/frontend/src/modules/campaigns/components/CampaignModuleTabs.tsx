@@ -1,18 +1,30 @@
 import { Link, useLocation } from "react-router-dom";
-import { FileText, ListPlus, Megaphone } from "lucide-react";
+import { FileText, History, ListPlus, Mail, Megaphone, PlusCircle } from "lucide-react";
 
-const campaignModuleTabs = [
-  { label: "Campaigns", to: "/campaigns", icon: Megaphone, end: true },
-  { label: "Audience Groups", to: "/campaigns/audience-groups", icon: ListPlus, end: true },
-  { label: "Message Templates", to: "/campaigns/templates", icon: FileText, end: false }
-];
+const campaignModuleTabs = {
+  whatsapp: [
+    { label: "Overview", to: "/campaigns/whatsapp", icon: Megaphone, end: true },
+    { label: "Create Broadcast", to: "/campaigns/whatsapp/create", icon: PlusCircle, end: true },
+    { label: "Templates", to: "/campaigns/whatsapp/templates", icon: FileText, end: false },
+    { label: "Audience", to: "/campaigns/whatsapp/audience", icon: ListPlus, end: false },
+    { label: "History", to: "/campaigns/whatsapp/history", icon: History, end: true }
+  ],
+  email: [
+    { label: "Overview", to: "/campaigns/email", icon: Mail, end: true },
+    { label: "Create Email", to: "/campaigns/email/create", icon: PlusCircle, end: true },
+    { label: "Templates", to: "/campaigns/email/templates", icon: FileText, end: true },
+    { label: "Audience", to: "/campaigns/email/audience", icon: ListPlus, end: true },
+    { label: "History", to: "/campaigns/email/history", icon: History, end: true }
+  ]
+} as const;
 
-export function CampaignModuleTabs() {
+export function CampaignModuleTabs({ channel }: { channel: "whatsapp" | "email" }) {
   const location = useLocation();
+  const tabs = campaignModuleTabs[channel];
 
   return (
     <nav className="flex flex-wrap gap-2" aria-label="Campaign module navigation">
-      {campaignModuleTabs.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.end ? location.pathname === tab.to : location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
         const Icon = tab.icon;
 

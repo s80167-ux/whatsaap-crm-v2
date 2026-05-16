@@ -23,7 +23,7 @@ const updateCampaignsModuleSchema = z.object({
 
 const organizationModuleParamsSchema = z.object({
   organizationId: z.string().uuid(),
-  moduleKey: z.enum(["campaigns", "ai_message_assist"])
+  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist"])
 });
 
 export async function listOrganizations(_request: Request, response: Response) {
@@ -106,7 +106,7 @@ export async function updateCampaignsModule(request: Request, response: Response
   const module =
     moduleKey === "ai_message_assist"
       ? await adminService.updateAiMessageAssistModule(request.auth, organizationId, input.isEnabled)
-      : await adminService.updateCampaignsModule(request.auth, organizationId, input.isEnabled);
+      : await adminService.updateOrganizationModule(request.auth, organizationId, moduleKey, input.isEnabled);
 
   await auditLogService.record(request.auth, {
     organizationId,
