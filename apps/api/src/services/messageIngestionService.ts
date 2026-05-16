@@ -21,6 +21,27 @@ function buildStoredMessageContent(rawPayload: unknown, mediaAttachment: Inbound
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function hasStoredMediaAttachment(contentJson: unknown) {
+  const root = asRecord(contentJson);
+  const outboundMedia = asRecord(root?.outboundMedia);
+
+  return Boolean(
+    outboundMedia &&
+      typeof outboundMedia.kind === "string" &&
+      typeof outboundMedia.mimeType === "string" &&
+      typeof outboundMedia.dataBase64 === "string" &&
+      outboundMedia.dataBase64.length > 0
+  );
+}
+
 export class MessageIngestionService {
   constructor(
     private readonly contactService = new ContactService(),
@@ -116,6 +137,13 @@ export class MessageIngestionService {
         sentAt: input.sentAt,
         ackStatus: input.direction === "outgoing" ? "server_ack" : undefined
       });
+
+      if (!inserted && input.direction === "incoming" && input.mediaAttachment && !hasStoredMediaAttachment(message.content_json)) {
+        await this.messageRepository.updateInboundMediaAttachment(client, {
+          messageId: message.id,
+          mediaAttachment: input.mediaAttachment
+        });
+      }
 
       if (inserted) {
         await this.conversationRepository.bumpLastMessage(client, {

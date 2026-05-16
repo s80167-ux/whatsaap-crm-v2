@@ -114,6 +114,28 @@ export class MessageRepository {
     return result.rows[0];
   }
 
+  async updateInboundMediaAttachment(
+    client: PoolClient,
+    input: {
+      messageId: string;
+      mediaAttachment: unknown;
+    }
+  ): Promise<void> {
+    await client.query(
+      `
+        update messages
+        set content_json = case
+              when $2::jsonb is null then content_json
+              when content_json is null then jsonb_build_object('outboundMedia', $2::jsonb)
+              else content_json || jsonb_build_object('outboundMedia', $2::jsonb)
+            end,
+            updated_at = timezone('utc', now())
+        where id = $1
+      `,
+      [input.messageId, input.mediaAttachment ?? null]
+    );
+  }
+
   async insertIfAbsent(
     client: PoolClient,
     input: {
