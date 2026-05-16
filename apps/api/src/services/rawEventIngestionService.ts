@@ -1,6 +1,7 @@
 import { withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
+import type { InboundMediaAttachmentInput } from "../types/domain.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
 
 export class RawEventIngestionService {
@@ -23,6 +24,7 @@ export class RawEventIngestionService {
     direction: "incoming" | "outgoing";
     sentAt: Date;
     rawPayload: unknown;
+    mediaAttachment?: InboundMediaAttachmentInput | null;
   }) {
     const rawEvent = await withTransaction((client) =>
       this.rawEventRepository.enqueue(client, {
@@ -45,7 +47,8 @@ export class RawEventIngestionService {
           messageType: input.messageType,
           direction: input.direction,
           sentAt: input.sentAt.toISOString(),
-          rawPayload: input.rawPayload
+          rawPayload: input.rawPayload,
+          mediaAttachment: input.mediaAttachment ?? null
         }
       })
     );

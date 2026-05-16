@@ -11,6 +11,7 @@ import {
   getWhatsAppJidType,
   isWhatsAppDirectChatJid
 } from "../utils/phone.js";
+import type { InboundMediaAttachmentInput } from "../types/domain.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
 
@@ -29,6 +30,7 @@ type WhatsAppMessageEventPayload = {
   direction: "incoming" | "outgoing";
   sentAt: string;
   rawPayload: unknown;
+  mediaAttachment?: InboundMediaAttachmentInput | null;
 };
 
 type WhatsAppMessageStatusEventPayload = {
@@ -222,7 +224,8 @@ export class RawEventProcessorService {
           messageType,
           direction: payload.direction,
           sentAt,
-          rawPayload: payload.rawPayload
+          rawPayload: payload.rawPayload,
+          mediaAttachment: payload.mediaAttachment ?? null
         });
 
         await this.rawEventRepository.markProcessed(client, event.id);

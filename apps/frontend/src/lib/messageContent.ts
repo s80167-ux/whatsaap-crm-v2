@@ -13,6 +13,39 @@ export interface MessagePresentation {
   fileName: string | null;
 }
 
+export function normalizeMessageType(messageType: string | null | undefined): string {
+  switch (messageType) {
+    case "conversation":
+    case "extendedTextMessage":
+      return "text";
+    case "imageMessage":
+      return "image";
+    case "videoMessage":
+      return "video";
+    case "audioMessage":
+    case "pttMessage":
+      return "audio";
+    case "documentMessage":
+      return "document";
+    case "stickerMessage":
+      return "sticker";
+    case "locationMessage":
+      return "location";
+    case "contactMessage":
+    case "contactsArrayMessage":
+      return "contact";
+    case "reactionMessage":
+      return "reaction";
+    case "protocolMessage":
+    case "unknown":
+    case null:
+    case undefined:
+      return "system";
+    default:
+      return messageType;
+  }
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -134,14 +167,15 @@ function getNodeByKey(node: RawMessageNode | null, key: string) {
 }
 
 function buildFallbackPresentation(message: Message): MessagePresentation {
-  const label = message.message_type !== "text" ? message.message_type.toUpperCase() : null;
+  const normalizedMessageType = normalizeMessageType(message.message_type);
+  const label = normalizedMessageType !== "text" ? normalizedMessageType.toUpperCase() : null;
   const contentText = message.content_text ?? getRawMessageText(message.content_json);
   return {
     label,
-    title: contentText ?? (message.message_type === "text" ? "Message" : `${message.message_type} message`),
+    title: contentText ?? (normalizedMessageType === "text" ? "Message" : `${normalizedMessageType} message`),
     caption: contentText,
     details: [],
-    isMedia: message.message_type !== "text",
+    isMedia: normalizedMessageType !== "text",
     previewUrl: null,
     mimeType: null,
     fileName: null
@@ -149,11 +183,12 @@ function buildFallbackPresentation(message: Message): MessagePresentation {
 }
 
 export function getMessagePresentation(message: Message): MessagePresentation {
+  const normalizedMessageType = normalizeMessageType(message.message_type);
   const rawMessage = unwrapRawMessageNode(getRawMessageNode(message.content_json));
   const outboundMedia = getOutboundMediaNode(message.content_json);
   const contentText = message.content_text ?? getRawMessageText(message.content_json);
 
-  switch (message.message_type) {
+  switch (normalizedMessageType) {
     case "text":
       return {
         label: null,
@@ -304,7 +339,7 @@ export function getConversationPreview(preview: string | null, messageType?: str
     return preview;
   }
 
-  switch (messageType) {
+  switch (normalizeMessageType(messageType)) {
     case "image":
       return "Image";
     case "video":

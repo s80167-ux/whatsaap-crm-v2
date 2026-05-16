@@ -377,31 +377,10 @@ export function InboxPage() {
                 messages={messages}
                 historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
                 organizationId={activeOrganizationId}
+                onOpenContact={() => setIsContactSheetOpen(true)}
               />
             </div>
           )}
-          <PopupOverlay
-            open={isContactSheetOpen}
-            onClose={() => setIsContactSheetOpen(false)}
-            title="Contact details"
-            description="Contact summary and assignment for the active conversation."
-            panelClassName="max-w-[min(36rem,100vw)] sm:max-w-[min(36rem,calc(100vw-2rem))]"
-          >
-            <ContactInfoPanel
-              className="text-xs"
-              conversation={stableSelectedConversation}
-              mobileSheet
-              onAssigned={(assignedUserId) => {
-                if (!stableSelectedConversation?.id) {
-                  return;
-                }
-                patchConversationInCache(queryClient, stableSelectedConversation.id, (conversation) => ({
-                  ...conversation,
-                  assigned_user_id: assignedUserId
-                }));
-              }}
-            />
-          </PopupOverlay>
         </>
       ) : (
         <div className="inbox-workspace-grid">
@@ -415,25 +394,34 @@ export function InboxPage() {
               messages={messages}
               historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
               organizationId={activeOrganizationId}
-            />
-          </div>
-          <div className="inbox-side-rail inbox-detail-rail">
-            <ContactInfoPanel
-              className="workspace-block border-primary/10 text-xs"
-              conversation={stableSelectedConversation}
-              onAssigned={(assignedUserId) => {
-                if (!stableSelectedConversation?.id) {
-                  return;
-                }
-                patchConversationInCache(queryClient, stableSelectedConversation.id, (conversation) => ({
-                  ...conversation,
-                  assigned_user_id: assignedUserId
-                }));
-              }}
+              onOpenContact={() => setIsContactSheetOpen(true)}
             />
           </div>
         </div>
       )}
+      <PopupOverlay
+        open={isContactSheetOpen}
+        onClose={() => setIsContactSheetOpen(false)}
+        title="Contact details"
+        description="Contact summary and assignment for the active conversation."
+        panelClassName="max-w-[min(36rem,100vw)] sm:max-w-[min(36rem,calc(100vw-2rem))]"
+      >
+        <ContactInfoPanel
+          className="text-xs"
+          conversation={stableSelectedConversation}
+          organizationId={activeOrganizationId}
+          mobileSheet
+          onAssigned={(assignedUserId) => {
+            if (!stableSelectedConversation?.id) {
+              return;
+            }
+            patchConversationInCache(queryClient, stableSelectedConversation.id, (conversation) => ({
+              ...conversation,
+              assigned_user_id: assignedUserId
+            }));
+          }}
+        />
+      </PopupOverlay>
     </section>
   );
 }

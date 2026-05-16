@@ -1,6 +1,14 @@
 import { withTransaction } from "../config/database.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 
+type InboundMediaAttachmentInput = {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  fileSizeBytes: number;
+};
+
 export class RawEventIngestionService {
   constructor(private readonly rawEventRepository = new RawEventRepository()) {}
 
@@ -18,6 +26,7 @@ export class RawEventIngestionService {
     direction: "incoming" | "outgoing";
     sentAt: Date;
     rawPayload: unknown;
+    mediaAttachment?: InboundMediaAttachmentInput | null;
   }) {
     return withTransaction((client) =>
       this.rawEventRepository.enqueue(client, {
@@ -40,7 +49,8 @@ export class RawEventIngestionService {
           messageType: input.messageType,
           direction: input.direction,
           sentAt: input.sentAt.toISOString(),
-          rawPayload: input.rawPayload
+          rawPayload: input.rawPayload,
+          mediaAttachment: input.mediaAttachment ?? null
         }
       })
     );

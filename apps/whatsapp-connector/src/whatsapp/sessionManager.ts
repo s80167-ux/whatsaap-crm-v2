@@ -1,5 +1,6 @@
 import {
   type Contact,
+  downloadMediaMessage,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
@@ -17,7 +18,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountRepository.js";
 import { WhatsAppRuntimeRepository } from "../repositories/whatsAppRuntimeRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
-import { detectMessageType, extractTextContent } from "../utils/message.js";
+import { detectMessageType, extractInboundMediaAttachment, extractTextContent } from "../utils/message.js";
 import {
   bestPhoneFromWhatsAppMessageKey,
   extractAllWhatsAppJidCandidates,
@@ -63,6 +64,25 @@ type ConnectionWaiter = {
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
 const SEND_RECONNECT_TIMEOUT_MS = 20_000;
+
+async function downloadInboundMedia(socket: ReturnType<typeof makeWASocket>, message: WAMessage) {
+  const attachment = extractInboundMediaAttachment(message);
+
+  if (!attachment) {
+    return null;
+  }
+
+  const buffer = await downloadMediaMessage(message, "buffer", {}, {
+    logger,
+    reuploadRequest: socket.updateMediaMessage
+  });
+
+  return {
+    ...attachment,
+    dataBase64: buffer.toString("base64"),
+    fileSizeBytes: attachment.fileSizeBytes > 0 ? attachment.fileSizeBytes : buffer.length
+  };
+}
 
 function isWithinHistorySyncWindow(sentAt: Date, lookbackDays: number | null | undefined) {
   if (lookbackDays === -1) {
@@ -553,6 +573,13 @@ export class WhatsAppSessionManager {
         const profileName = this.resolveCanonicalProfileName(account.id, message);
         const profilePushName = this.resolvePushProfileName(account.id, message);
         const profileAvatarUrl = await this.resolveProfileAvatarUrl(account.id, socket, message.key.remoteJid, messageKey);
+        const mediaAttachment =
+          direction === "incoming"
+            ? await downloadInboundMedia(socket, message).catch((error) => {
+                logger.warn({ error, accountId: account.id, messageId: message.key.id }, "Failed to download inbound media");
+                return null;
+              })
+            : null;
 
         try {
           await this.rawEventIngestionService.enqueueMessageEvent({
@@ -568,7 +595,8 @@ export class WhatsAppSessionManager {
             messageType: detectMessageType(message),
             direction,
             sentAt,
-            rawPayload: message
+            rawPayload: message,
+            mediaAttachment
           });
         } catch (error) {
           logger.error({ error, accountId: account.id, messageId: message.key.id }, "Failed to enqueue raw event");

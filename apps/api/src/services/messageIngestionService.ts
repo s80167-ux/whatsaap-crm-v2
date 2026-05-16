@@ -10,6 +10,17 @@ import { ConversationService } from "./conversationService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
+function buildStoredMessageContent(rawPayload: unknown, mediaAttachment: InboundMessageInput["mediaAttachment"]) {
+  if (!mediaAttachment) {
+    return rawPayload;
+  }
+
+  return {
+    rawPayload,
+    outboundMedia: mediaAttachment
+  };
+}
+
 export class MessageIngestionService {
   constructor(
     private readonly contactService = new ContactService(),
@@ -101,7 +112,7 @@ export class MessageIngestionService {
         direction: input.direction,
         messageType: normalizeMessageType(input.messageType),
         contentText: input.textBody,
-        rawPayload: input.rawPayload,
+        rawPayload: buildStoredMessageContent(input.rawPayload, input.mediaAttachment ?? null),
         sentAt: input.sentAt,
         ackStatus: input.direction === "outgoing" ? "server_ack" : undefined
       });

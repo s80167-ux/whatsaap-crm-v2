@@ -68,8 +68,10 @@
   --shell-sidebar-width: 264px;
   --shell-sidebar-width-wide: 288px;
   --surface-radius-sm: 10px;
-  --surface-radius-md: 14px;
-  --surface-radius-lg: 18px;
+  --surface-radius-md: 0;
+  --surface-radius-lg: 0;
+  --surface-padding-x: 0.75rem;
+  --surface-padding-y: 0.65rem;
   --motion-fast: 160ms;
   --motion-page: 220ms;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -659,7 +661,8 @@ canvas {
 
   /* Card surfaces */
   .card-surface {
-    @apply app-card px-7 py-6 transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-panel;
+    @apply app-card transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-panel;
+    padding: var(--surface-padding-y) var(--surface-padding-x);
     border-radius: var(--surface-radius-lg);
   }
 
@@ -926,14 +929,14 @@ canvas {
 
   .workspace-page-header {
     @apply app-card shadow-soft;
-    border-radius: calc(var(--surface-radius-lg) + 2px);
+    border-radius: 0;
     background:
       linear-gradient(135deg, rgb(var(--card) / var(--surface-strong-alpha)), rgb(var(--muted) / 0.42));
   }
 
   .workspace-block {
     @apply app-card shadow-soft;
-    border-radius: var(--surface-radius-lg);
+    border-radius: 0;
   }
 
   .workspace-subtle {
@@ -941,7 +944,7 @@ canvas {
     background: rgb(var(--muted) / var(--surface-muted-alpha));
     -webkit-backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
     backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
-    border-radius: var(--surface-radius-md);
+    border-radius: 0;
   }
 
   .workspace-form-panel {
@@ -949,11 +952,11 @@ canvas {
     background: rgb(var(--muted) / var(--surface-muted-alpha));
     -webkit-backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
     backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
-    border-radius: var(--surface-radius-md);
+    border-radius: 0;
   }
 
   .platform-page .workspace-page-header {
-    border-radius: var(--surface-radius-lg);
+    border-radius: 0;
   }
 
   .platform-state-pill {
@@ -965,7 +968,7 @@ canvas {
   .platform-metric-tile,
   .platform-event-row {
     @apply border border-border bg-card shadow-soft;
-    border-radius: var(--surface-radius-md);
+    border-radius: 0;
   }
 
   .platform-attention-card {
@@ -1019,7 +1022,7 @@ canvas {
 
   .workspace-empty-state {
     @apply border border-dashed border-border bg-muted text-center;
-    border-radius: var(--surface-radius-md);
+    border-radius: 0;
   }
 
   .rainbow .app-card,
@@ -1368,7 +1371,7 @@ canvas {
     background: rgb(var(--card) / var(--surface-alpha));
     -webkit-backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
     backdrop-filter: blur(calc(var(--surface-blur) * 0.65));
-    border-radius: var(--surface-radius-md);
+    border-radius: 0;
   }
 
   .workspace-table {
@@ -1622,8 +1625,8 @@ canvas {
   .inbox-workspace-grid {
     display: grid;
     gap: 1.25rem;
-    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.4fr) minmax(280px, 0.72fr);
-    grid-template-areas: "queue chat detail";
+    grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.6fr);
+    grid-template-areas: "queue chat";
     align-items: start;
   }
 
@@ -1640,10 +1643,6 @@ canvas {
   .inbox-chat-rail {
     grid-area: chat;
     min-width: 0;
-  }
-
-  .inbox-detail-rail {
-    grid-area: detail;
   }
 
   .sidebar-hero-copy {
@@ -1711,12 +1710,65 @@ canvas {
   border-radius: 9999px !important;
 }
 
+.app-sharp-surfaces :is(
+  .app-shell,
+  .app-card,
+  .card-surface,
+  .workspace-page-header,
+  .workspace-block,
+  .workspace-subtle,
+  .workspace-form-panel,
+  .workspace-empty-state,
+  .workspace-table-wrap,
+  .conversation-item,
+  .popup-overlay__panel,
+  .platform-attention-card,
+  .platform-metric-tile,
+  .platform-event-row
+),
+:is(
+  .app-shell,
+  .app-card,
+  .card-surface,
+  .workspace-page-header,
+  .workspace-block,
+  .workspace-subtle,
+  .workspace-form-panel,
+  .workspace-empty-state,
+  .workspace-table-wrap,
+  .conversation-item,
+  .popup-overlay__panel,
+  .platform-attention-card,
+  .platform-metric-tile,
+  .platform-event-row
+) {
+  border-radius: 0 !important;
+}
+
+:is(
+  .card-surface,
+  .workspace-page-header,
+  .workspace-block,
+  .workspace-subtle,
+  .workspace-form-panel,
+  .workspace-empty-state
+):not(.metric-card):not(.clear-org-metric-card):not(.clear-org-stat-card):not(.clear-org-hero-stat):not(.clear-org-revenue-tile) {
+  padding: var(--surface-padding-y) var(--surface-padding-x) !important;
+}
+
+:is(.popup-overlay__panel, .workspace-table-wrap) > :not(table),
+.popup-overlay__panel > div {
+  border-radius: 0 !important;
+}
+
+:is(section, article, div, aside, header, footer)[class*="rounded-"]:not([class*="rounded-full"]):not(.metric-card):not(.clear-org-metric-card):not(.clear-org-stat-card):not(.clear-org-hero-stat):not(.clear-org-revenue-tile):not(.brand-badge):not(.platform-state-pill) {
+  border-radius: 0 !important;
+}
+
 @media (max-width: 1400px) {
   .inbox-workspace-grid {
     grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.35fr);
-    grid-template-areas:
-      "queue chat"
-      "detail chat";
+    grid-template-areas: "queue chat";
     row-gap: 1rem;
   }
 }
@@ -1727,8 +1779,7 @@ canvas {
     grid-template-columns: 1fr;
     grid-template-areas:
       "queue"
-      "chat"
-      "detail";
+      "chat";
   }
 }
 
@@ -2025,4 +2076,35 @@ canvas {
   .popup-overlay__panel {
     border-radius: 0;
   }
+}
+
+:is(
+  .card-surface,
+  .workspace-page-header,
+  .workspace-block,
+  .workspace-subtle,
+  .workspace-form-panel,
+  .workspace-empty-state
+):not(.metric-card):not(.clear-org-metric-card):not(.clear-org-stat-card):not(.clear-org-hero-stat):not(.clear-org-revenue-tile) {
+  padding: var(--surface-padding-y) var(--surface-padding-x) !important;
+}
+
+:is(
+  .app-shell,
+  .app-card,
+  .card-surface,
+  .workspace-page-header,
+  .workspace-block,
+  .workspace-subtle,
+  .workspace-form-panel,
+  .workspace-empty-state,
+  .workspace-table-wrap,
+  .conversation-item,
+  .popup-overlay__panel,
+  .platform-attention-card,
+  .platform-metric-tile,
+  .platform-event-row
+),
+:is(section, article, div, aside, header, footer)[class*="rounded-"]:not([class*="rounded-full"]):not(.metric-card):not(.clear-org-metric-card):not(.clear-org-stat-card):not(.clear-org-hero-stat):not(.clear-org-revenue-tile):not(.brand-badge):not(.platform-state-pill) {
+  border-radius: 0 !important;
 }

@@ -1,5 +1,12 @@
 type MessageNode = Record<string, any>;
 
+export type InboundMediaAttachment = {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+};
+
 function unwrapMessage(message: MessageNode | null | undefined, depth = 0): MessageNode | null {
   if (!message || depth > 8) {
     return null;
@@ -15,6 +22,19 @@ function unwrapMessage(message: MessageNode | null | undefined, depth = 0): Mess
     message.protocolMessage?.editedMessage?.message;
 
   return wrapped ? unwrapMessage(wrapped, depth + 1) : message;
+}
+
+function asPositiveNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  return null;
 }
 
 export function extractTextContent(payload: any): string | null {
@@ -102,4 +122,54 @@ export function detectMessageType(payload: any): string {
 
   const [messageType] = Object.keys(message);
   return normalizeMessageType(messageType);
+}
+
+export function extractInboundMediaAttachment(payload: any): InboundMediaAttachment | null {
+  const message = unwrapMessage(payload?.message);
+
+  if (!message) {
+    return null;
+  }
+
+  const image = message.imageMessage;
+  if (image) {
+    return {
+      kind: "image",
+      fileName: image.fileName || image.caption || "image",
+      mimeType: image.mimetype || "image/jpeg",
+      fileSizeBytes: asPositiveNumber(image.fileLength) ?? 0
+    };
+  }
+
+  const video = message.videoMessage;
+  if (video) {
+    return {
+      kind: "video",
+      fileName: video.fileName || video.caption || "video",
+      mimeType: video.mimetype || "video/mp4",
+      fileSizeBytes: asPositiveNumber(video.fileLength) ?? 0
+    };
+  }
+
+  const audio = message.audioMessage || message.pttMessage;
+  if (audio) {
+    return {
+      kind: "audio",
+      fileName: audio.fileName || "audio",
+      mimeType: audio.mimetype || "audio/ogg",
+      fileSizeBytes: asPositiveNumber(audio.fileLength) ?? 0
+    };
+  }
+
+  const document = message.documentMessage;
+  if (document) {
+    return {
+      kind: "document",
+      fileName: document.fileName || document.caption || "document",
+      mimeType: document.mimetype || "application/octet-stream",
+      fileSizeBytes: asPositiveNumber(document.fileLength) ?? 0
+    };
+  }
+
+  return null;
 }

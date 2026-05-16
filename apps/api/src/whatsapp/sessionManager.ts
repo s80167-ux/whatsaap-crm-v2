@@ -1,7 +1,9 @@
 import {
+  downloadMediaMessage,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  type WAMessage,
   WAMessageStatus,
   useMultiFileAuthState
 } from "baileys";
@@ -14,10 +16,29 @@ import { logger } from "../config/logger.js";
 import { pool, withTransaction } from "../config/database.js";
 import { WhatsAppAccountRepository } from "../repositories/whatsAppAccountRepository.js";
 import { RawEventIngestionService } from "../services/rawEventIngestionService.js";
-import { detectMessageType, extractTextContent } from "../utils/message.js";
+import { detectMessageType, extractInboundMediaAttachment, extractTextContent } from "../utils/message.js";
 import { bestPhoneFromWhatsAppPayload, isWhatsAppDirectChatJid } from "../utils/phone.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
+
+async function downloadInboundMedia(socket: ReturnType<typeof makeWASocket>, message: WAMessage) {
+  const attachment = extractInboundMediaAttachment(message);
+
+  if (!attachment) {
+    return null;
+  }
+
+  const buffer = await downloadMediaMessage(message, "buffer", {}, {
+    logger,
+    reuploadRequest: socket.updateMediaMessage
+  });
+
+  return {
+    ...attachment,
+    dataBase64: buffer.toString("base64"),
+    fileSizeBytes: attachment.fileSizeBytes > 0 ? attachment.fileSizeBytes : buffer.length
+  };
+}
 
 function mapBaileysStatusToAckStatus(status: number | null | undefined) {
   switch (status) {
@@ -144,6 +165,13 @@ export class WhatsAppSessionManager {
 
         const direction = message.key.fromMe ? "outgoing" : "incoming";
         const sentAt = new Date(Number(message.messageTimestamp) * 1000 || Date.now());
+        const mediaAttachment =
+          direction === "incoming"
+            ? await downloadInboundMedia(socket, message).catch((error) => {
+                logger.warn({ error, accountId: account.id, messageId: message.key.id }, "Failed to download inbound media");
+                return null;
+              })
+            : null;
 
         try {
           await this.rawEventIngestionService.enqueueMessageEvent({
@@ -157,7 +185,8 @@ export class WhatsAppSessionManager {
             messageType: detectMessageType(message),
             direction,
             sentAt,
-            rawPayload: message
+            rawPayload: message,
+            mediaAttachment
           });
         } catch (error) {
           logger.error({ error, accountId: account.id, messageId: message.key.id }, "Failed to ingest message");

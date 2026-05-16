@@ -24,7 +24,7 @@ import {
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
 import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
-import { getMessagePresentation } from "../lib/messageContent";
+import { getMessagePresentation, normalizeMessageType } from "../lib/messageContent";
 import {
   markMessagesDeletedInCache,
   patchConversationFromMessageInCache,
@@ -148,7 +148,7 @@ function getAckTone(status?: string) {
 }
 
 function getMessageTypeIcon(messageType: string) {
-  switch (messageType) {
+  switch (normalizeMessageType(messageType)) {
     case "image":
       return ImageIcon;
     case "video":
@@ -169,18 +169,29 @@ function getMessageTypeIcon(messageType: string) {
   }
 }
 
+function getContactInitials(name: string | null | undefined) {
+  return (name ?? "Unknown")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+}
+
 export function ChatPanel({
   conversation,
   conversations,
   messages,
   historyRangeLabel,
-  organizationId
+  organizationId,
+  onOpenContact
 }: {
   conversation?: Conversation;
   conversations: Conversation[];
   messages: Message[];
   historyRangeLabel: string;
   organizationId?: string | null;
+  onOpenContact?: () => void;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -922,8 +933,30 @@ export function ChatPanel({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">Live conversation</p>
-            <p className="mt-2 truncate text-xl font-semibold text-text">{conversation.contact_name}</p>
-            <p className="mt-1 text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</p>
+            <button
+              type="button"
+              className="mt-2 flex max-w-full items-center gap-3 text-left transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              onClick={onOpenContact}
+              disabled={!onOpenContact}
+              aria-label={`Open contact details for ${conversation.contact_name}`}
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-primary/10 text-sm font-semibold text-primary">
+                {conversation.contact_avatar_url ? (
+                  <img
+                    src={conversation.contact_avatar_url}
+                    alt={conversation.contact_name ? `${conversation.contact_name} profile` : "Contact profile"}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span>{getContactInitials(conversation.contact_name)}</span>
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-xl font-semibold text-text">{conversation.contact_name}</span>
+                <span className="mt-1 block truncate text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</span>
+              </span>
+            </button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -1426,7 +1459,8 @@ function MessageBubble({
   onCreateSales: (message: Message) => void;
 }) {
   const presentation = getMessagePresentation(message);
-  const Icon = getMessageTypeIcon(message.message_type);
+  const normalizedMessageType = normalizeMessageType(message.message_type);
+  const Icon = getMessageTypeIcon(normalizedMessageType);
   const replyContext = getReplyContext(message, repliedMessage);
   const isDeleted = Boolean(message.is_deleted);
   const showSelectionActions = !isDeleted;
@@ -1497,7 +1531,7 @@ function MessageBubble({
             </div>
             {presentation.previewUrl ? (
               <MediaPreview
-                messageType={message.message_type}
+                messageType={normalizedMessageType}
                 previewUrl={presentation.previewUrl}
                 mimeType={presentation.mimeType}
                 fileName={presentation.fileName ?? presentation.title}

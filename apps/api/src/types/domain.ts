@@ -97,6 +97,7 @@ export interface InboundMessageInput {
   direction: "incoming" | "outgoing";
   sentAt: Date;
   rawPayload: unknown;
+  mediaAttachment?: InboundMediaAttachmentInput | null;
 }
 
 export interface SendMessageInput {
@@ -121,6 +122,14 @@ export interface SendMessageOptions {
 }
 
 export interface OutboundMediaAttachmentInput {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  fileSizeBytes: number;
+}
+
+export interface InboundMediaAttachmentInput {
   kind: "image" | "video" | "audio" | "document";
   fileName: string;
   mimeType: string;

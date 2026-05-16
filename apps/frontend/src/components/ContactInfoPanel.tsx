@@ -53,11 +53,13 @@ export function ContactInfoPanel({
   className,
   conversation,
   onAssigned,
+  organizationId,
   mobileSheet = false
 }: {
   className?: string;
   conversation?: Conversation;
   onAssigned?: (assignedUserId: string) => void;
+  organizationId?: string | null;
   mobileSheet?: boolean;
 }) {
   const [isAssigning, setIsAssigning] = useState(false);
@@ -65,7 +67,11 @@ export function ContactInfoPanel({
   const navigate = useNavigate();
   const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
-  const { data: contactResponse, isLoading: contactLoading } = useContact(conversation?.contact_id);
+  const resolvedOrganizationId = organizationId ?? currentUser?.organizationId ?? conversation?.organization_id;
+  const { data: contactResponse, isLoading: contactLoading } = useContact(
+    conversation?.contact_id,
+    resolvedOrganizationId
+  );
   const activeContact = contactResponse && !isMergedContactRedirect(contactResponse) ? contactResponse : null;
   const mergedRedirect = isMergedContactRedirect(contactResponse) ? contactResponse : null;
   const canAssign = Boolean(currentUser?.organizationUserId && currentUser.permissionKeys.includes("conversations.assign"));
@@ -79,8 +85,7 @@ export function ContactInfoPanel({
   const dialablePhoneNumber = getDialablePhoneNumber(contactResponse ?? null, conversation);
   const showMobileSheet = mobileSheet && isMobile;
 
-  const organizationId = currentUser?.organizationId ?? conversation?.organization_id;
-  const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(organizationId);
+  const { data: organizationUsers = [], isLoading: organizationUsersLoading } = useOrganizationUsers(resolvedOrganizationId);
   const assignableUsers = organizationUsers.filter((user) => user.status === "active" && user.role !== "super_admin");
   const ownerUser = activeContact?.owner_user_id
     ? organizationUsers.find((user) => user.id === activeContact.owner_user_id)
