@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
 import { Button } from "../../../components/Button";
 import { Input, Select } from "../../../components/Input";
 import { PopupOverlay } from "../../../components/PopupOverlay";
@@ -365,6 +366,13 @@ export function CreateCampaignDrawer({
                 placeholder={defaultTemplate}
               />
             </label>
+            <AiMessageAssist
+              value={messageTemplate}
+              onChange={setMessageTemplate}
+              source="campaign"
+              variables={["first_name", "name", "business_name", "phone", "salutation", "tag"]}
+              campaignObjective={campaignName}
+            />
 
             <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dynamic variables</p>

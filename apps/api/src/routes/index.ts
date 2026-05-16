@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireCsrf, requireOrganizationContext } from "../middleware/authMiddleware.js";
 import { adminRoutes } from "../modules/admin/admin.routes.js";
+import { aiRoutes } from "../modules/ai/ai.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
 import { contactRoutes } from "../modules/contacts/contacts.routes.js";
 import { campaignsRoutes } from "../modules/campaigns/campaigns.routes.js";
@@ -53,6 +54,7 @@ apiRouter.use((req, res, next) => {
 });
 
 apiRouter.use("/inbox", inboxRoutes);
+apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/campaigns", campaignsRoutes);
 apiRouter.use("/conversations", conversationRoutes);
 apiRouter.use("/contacts", contactRoutes);

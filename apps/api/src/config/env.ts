@@ -59,6 +59,9 @@ const envSchema = z.object({
   CAMPAIGN_DISPATCH_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
   CAMPAIGN_DISPATCH_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(600000),
   CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES: z.coerce.number().int().min(1).default(3),
+  DEEPSEEK_API_KEY: z.string().min(1).optional(),
+  DEEPSEEK_MODEL: z.string().min(1).default("deepseek-v4-flash"),
+  AI_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()
 });
 

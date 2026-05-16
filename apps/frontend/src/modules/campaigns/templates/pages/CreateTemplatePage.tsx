@@ -2,6 +2,7 @@ import { ArrowLeft, CheckCircle2, FileText } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { AiMessageAssist } from "../../../../components/ai/AiMessageAssist";
 import { Button } from "../../../../components/Button";
 import { Card } from "../../../../components/Card";
 import { Input, Select } from "../../../../components/Input";
@@ -187,6 +188,13 @@ export function CreateTemplatePage() {
                       onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
                       className="input-base min-h-[260px] resize-y leading-6"
                       placeholder="Write your WhatsApp blast message"
+                    />
+                    <AiMessageAssist
+                      value={draft.content}
+                      onChange={(nextValue) => setDraft((current) => ({ ...current, content: nextValue }))}
+                      source="template"
+                      variables={["first_name", "name", "business_name", "phone", "order_id", ...configurableTemplateVariables.map((variable) => variable.key)]}
+                      templatePurpose={draft.description || draft.category}
                     />
                   </WizardField>
                   <div className="flex flex-wrap gap-2">
