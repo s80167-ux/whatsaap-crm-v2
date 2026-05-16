@@ -183,6 +183,38 @@ export const router = createBrowserRouter([
             )
           },
           {
+            path: "campaigns/email/sender-setup",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="senderSetup" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/suppression-list",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="suppressionList" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/compliance",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="compliance" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/email/reports",
+            element: withRouteFallback(
+              <CampaignsRouteGuard>
+                <EmailCampaignPage activeTab="reports" />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
             path: "campaigns/email/history",
             element: withRouteFallback(
               <CampaignsRouteGuard>

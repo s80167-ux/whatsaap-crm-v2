@@ -221,7 +221,7 @@ export function CreateAudienceGroupDrawer({
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className="mt-1 border-border bg-white px-3 py-2 text-text"
+                className="mt-1 border-border bg-card px-3 py-2 text-text"
                 placeholder="Example: Raya VIP Customers"
               />
             </label>
@@ -230,7 +230,7 @@ export function CreateAudienceGroupDrawer({
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                className="input-base mt-1 min-h-24 border-border bg-white px-3 py-2 text-text"
+                className="input-base mt-1 min-h-24 border-border bg-card px-3 py-2 text-text"
                 placeholder="Short note for your team"
               />
             </label>
@@ -255,8 +255,8 @@ export function CreateAudienceGroupDrawer({
                 Validation will normalize Malaysia phone numbers, detect duplicates, link existing CRM Contacts when possible, and block invalid recipients before import.
               </p>
               <div className="mt-3 grid gap-2 text-xs text-text-muted sm:grid-cols-2">
-                <span className="border border-border bg-white px-3 py-2">Phone column: {mapping.phone ?? "Not mapped"}</span>
-                <span className="border border-border bg-white px-3 py-2">Name column: {mapping.name ?? "Not mapped"}</span>
+                <span className="border border-border bg-card px-3 py-2">Phone column: {mapping.phone ?? "Not mapped"}</span>
+                <span className="border border-border bg-card px-3 py-2">Name column: {mapping.name ?? "Not mapped"}</span>
               </div>
             </div>
           </div>

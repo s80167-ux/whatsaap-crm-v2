@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { FileText, History, ListPlus, Mail, Megaphone, PlusCircle } from "lucide-react";
+import { FileCheck2, FileText, History, ListPlus, Mail, Megaphone, PlusCircle, ShieldCheck, UserX, WalletCards } from "lucide-react";
 
 const campaignModuleTabs = {
   whatsapp: [
@@ -14,6 +14,10 @@ const campaignModuleTabs = {
     { label: "Create Email", to: "/campaigns/email/create", icon: PlusCircle, end: true },
     { label: "Templates", to: "/campaigns/email/templates", icon: FileText, end: true },
     { label: "Audience", to: "/campaigns/email/audience", icon: ListPlus, end: true },
+    { label: "Sender Setup", to: "/campaigns/email/sender-setup", icon: WalletCards, end: true },
+    { label: "Suppression List", to: "/campaigns/email/suppression-list", icon: UserX, end: true },
+    { label: "Compliance", to: "/campaigns/email/compliance", icon: ShieldCheck, end: true },
+    { label: "Reports", to: "/campaigns/email/reports", icon: FileCheck2, end: true },
     { label: "History", to: "/campaigns/email/history", icon: History, end: true }
   ]
 } as const;

@@ -46,7 +46,7 @@ export function AudienceCsvUploadStep({ fileName, onCsvLoaded }: AudienceCsvUplo
             </p>
             {fileName ? <p className="mt-2 text-xs font-semibold text-primary">{fileName}</p> : null}
           </div>
-          <label className="inline-flex min-h-[2.625rem] cursor-pointer items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-dark">
+          <label className="inline-flex min-h-[2.625rem] cursor-pointer items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary-dark">
             <FileUp size={16} />
             Upload CSV
             <input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleFileChange} />

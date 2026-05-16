@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useOutletContext } from "react-router-dom";
-import { BarChart3, CalendarDays, Download, Filter, LayoutGrid, Printer, RotateCcw, Table2 } from "lucide-react";
+import { CalendarDays, Download, Filter, LayoutGrid, Printer, RotateCcw, Table2 } from "lucide-react";
 import { Card } from "../components/Card";
 import { useDailyReport } from "../hooks/useReports";
 import { getStoredUser } from "../lib/auth";
@@ -196,18 +196,11 @@ export function ReportsPage() {
 
   return (
     <div className="reports-page space-y-6">
-      <section className="workspace-page-header reports-hero">
+      <section className="workspace-page-header reports-hero p-5 sm:p-6">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary-soft p-3 text-primary">
-              <BarChart3 size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Reports</p>
-              <h1 className="mt-2 section-title">Analytics &amp; Reports</h1>
-              <p className="section-copy mt-1">Comprehensive insights into sales performance and pipeline health.</p>
-            </div>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Reports</p>
+          <h1 className="mt-3 section-title">Analytics &amp; Reports</h1>
+          <p className="section-copy mt-2 max-w-2xl">Comprehensive insights into sales performance and pipeline health.</p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <ReportStat label="Sales Value" value={`RM ${totalSales.toLocaleString("en-MY")}`} />

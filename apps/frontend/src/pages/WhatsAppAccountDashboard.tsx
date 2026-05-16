@@ -592,14 +592,14 @@ export function WhatsAppAccountDashboard() {
 
   return (
     <section className="space-y-6">
-      <Card elevated className="workspace-block">
-        <div className="workspace-page-header">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),340px] xl:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Channels</p>
             <h2 className="mt-3 section-title">WhatsApp Account Management</h2>
             <p className="section-copy mt-2">Create, pair, and maintain WhatsApp accounts for each organization without leaving the admin workspace.</p>
           </div>
-          <div className="workspace-subtle max-w-xs p-4">
+          <div className="workspace-subtle p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Workspace focus</p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               Keep connection health, pairing, and history sync actions clear for non-technical operators.

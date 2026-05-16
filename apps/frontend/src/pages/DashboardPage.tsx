@@ -204,27 +204,27 @@ export function DashboardPage() {
 
       {data?.sales?.trends?.length ? (
         <CompactSection title="Recent daily buckets" eyebrow="Trend Drill-Down" summary="Click a bucket to open matching orders" defaultOpen={!isMobile}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {data.sales.trends.map((point) => (
               <div
                 key={`${point.metric}-${point.range_start}`}
-                className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
+                className="workspace-subtle p-3 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
               >
                 <Link to={appendSalesSection(point.href ?? "/sales", "timeline")}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft">
                     {point.metric === "won_revenue" ? "Won revenue" : "Created orders"}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-text">{point.label}</p>
-                  <p className="mt-2 text-xl font-semibold text-text">{String(point.value)}</p>
-                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                  <p className="mt-1 text-base font-semibold text-text">{String(point.value)}</p>
+                  <p className="mt-0.5 text-xs leading-4 text-text-muted">
                     {formatTrendRange(point.range_start, point.range_end)}
                   </p>
                 </Link>
-                <div className="mt-2">
+                <div className="mt-1">
                   <button
                     type="button"
                     title={`Copy timeline link for ${point.label}`}
-                    className="text-xs font-medium text-primary/80 transition hover:text-primary"
+                    className="text-[11px] font-medium text-primary/80 transition hover:text-primary"
                     onClick={() =>
                       void copyTimelineLink({
                         href: point.href ?? "/sales",
@@ -234,7 +234,7 @@ export function DashboardPage() {
                       })
                     }
                   >
-                    Copy timeline link
+                    Copy link
                   </button>
                 </div>
               </div>

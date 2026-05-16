@@ -30,7 +30,7 @@ export function AudienceColumnMappingStep({ headers, mapping, onChange }: Audien
               {field === "phone" || field === "name" ? <span className="text-coral"> *</span> : null}
             </span>
             <Select
-              className="mt-1 border-border bg-white px-3 py-2 text-text"
+              className="mt-1 border-border bg-card px-3 py-2 text-text"
               value={mapping[field] ?? ""}
               onChange={(event) => onChange({ ...mapping, [field]: event.target.value || undefined })}
             >

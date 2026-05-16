@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
@@ -134,12 +134,10 @@ export function CreateTemplatePage() {
 
   return (
     <section className="space-y-5">
-      <Card elevated className="workspace-page-header p-4 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary">
-              <FileText size={18} />
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Templates</p>
             <h2 className="mt-3 section-title">{editTemplateId ? "Edit Message Template" : "Create Message Template"}</h2>
             <p className="mt-2 max-w-2xl section-copy">Build reusable message content for future WhatsApp campaigns.</p>
           </div>

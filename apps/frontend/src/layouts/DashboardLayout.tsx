@@ -231,14 +231,18 @@ function SidebarContent({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Rezeki CRM</p>
-                <p className="truncate text-[11px] text-sidebar-foreground/55">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+                <p className="text-[11px] leading-4 text-sidebar-foreground/55 break-words">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
               </div>
             </div>
           </div>
         ) : (
           <div>
-            <div className="logo-panel">
-              <img src={brandLogo} alt="Rezeki Dashboard" className="h-auto w-full" />
+            <div className="logo-panel flex min-h-[8.5rem] items-center overflow-hidden px-2.5 py-2.5">
+              <img
+                src={brandLogo}
+                alt="Rezeki Dashboard"
+                className="dashboard-brand-logo"
+              />
             </div>
             <div className="mt-4">
               <p className="brand-badge">Rezeki Dashboard</p>
@@ -349,6 +353,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const isMobile = useIsMobileViewport();
   const mobileNavTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const desktopSidebarRef = useRef<HTMLElement | null>(null);
   const wasMobileNavOpenRef = useRef(false);
   const [user, setUser] = useState(() => getStoredUser());
   const isSuperAdmin = user?.role === "super_admin";
@@ -400,13 +405,7 @@ export function DashboardLayout() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [mobileNavSectionId, setMobileNavSectionId] = useState<string | null>(null);
   const [isMobileSecondTierVisible, setIsMobileSecondTierVisible] = useState(false);
-  const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem("crm_desktop_nav_collapsed") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(true);
 
   const navSections: SidebarSection[] = [
     {
@@ -599,12 +598,23 @@ export function DashboardLayout() {
   }, [isMobileNavOpen]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("crm_desktop_nav_collapsed", String(isDesktopNavCollapsed));
-    } catch {
-      // noop
+    if (isMobile || isDesktopNavCollapsed) {
+      return;
     }
-  }, [isDesktopNavCollapsed]);
+
+    function handlePointerDown(event: PointerEvent) {
+      const sidebarElement = desktopSidebarRef.current;
+
+      if (!sidebarElement || sidebarElement.contains(event.target as Node)) {
+        return;
+      }
+
+      setIsDesktopNavCollapsed(true);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isDesktopNavCollapsed, isMobile]);
 
   async function handleUpdatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1005,12 +1015,9 @@ export function DashboardLayout() {
           isDesktopNavCollapsed ? "dashboard-content--sidebar-collapsed" : "dashboard-content--sidebar-expanded"
         )}
       >
-        <motion.aside className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block md:h-[calc(100dvh-3rem)]" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
+        <motion.aside ref={desktopSidebarRef} className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block md:h-[calc(100dvh-3rem)]" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex flex-row overflow-hidden p-0" elevated>
             <nav className="sidebar-icon-rail flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label="Primary navigation">
-              <div className="mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
-                <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
-              </div>
               {navSections.map((section) => {
                 const isActive = section.id === activeNavSection.id;
                 return (
@@ -1025,9 +1032,12 @@ export function DashboardLayout() {
                     aria-current={isActive ? "page" : undefined}
                     title={section.label}
                     onClick={() => {
-                      if (isDesktopNavCollapsed) {
-                        setIsDesktopNavCollapsed(false);
+                      if (!isDesktopNavCollapsed && isActive) {
+                        setIsDesktopNavCollapsed(true);
+                        return;
                       }
+
+                      setIsDesktopNavCollapsed(false);
                       const firstItem = section.items[0];
                       if (firstItem && !location.pathname.startsWith(firstItem.to)) {
                         navigate(firstItem.to);
@@ -1060,8 +1070,15 @@ export function DashboardLayout() {
                 aria-hidden={isDesktopNavCollapsed}
               >
                 <div className="border-b border-sidebar-foreground/10 pb-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
+                      <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</p>
+                    </div>
+                  </div>
                 </div>
 
                 {isSuperAdmin ? (

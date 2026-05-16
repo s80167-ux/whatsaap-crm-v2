@@ -1,4 +1,4 @@
-import { Megaphone, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
@@ -155,14 +155,12 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
 
   return (
     <section className="space-y-5">
-      <Card elevated className="workspace-page-header p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-3 lg:items-end">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <p className="hidden h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary sm:inline-flex">
-              <Megaphone size={18} />
-            </p>
-            <h2 className="section-title sm:mt-3">WhatsApp Campaign</h2>
-            <p className="mt-2 hidden max-w-2xl section-copy sm:block">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Campaigns</p>
+            <h2 className="mt-3 section-title">WhatsApp Campaign</h2>
+            <p className="mt-2 max-w-2xl section-copy">
               Manage WhatsApp broadcasts, templates, audiences, and campaign history.
             </p>
           </div>
@@ -254,7 +252,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                       className={`inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition ${
                         statusFilter === filter.value
                           ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-white text-text-muted hover:bg-background-tint hover:text-text"
+                          : "border-border bg-card text-text-muted hover:bg-background-tint hover:text-text"
                       }`}
                       onClick={() => setStatusFilter(filter.value)}
                     >

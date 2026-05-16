@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { CalendarDays, Database, Download, Filter, ShieldCheck } from "lucide-react";
+import { CalendarDays, Download, Filter, ShieldCheck } from "lucide-react";
 import { downloadDataExport, type ExportDataset } from "../api/exports";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -110,26 +110,23 @@ export function DataExportPage() {
 
   return (
     <section className="space-y-6">
-      <div className="workspace-page-header">
-        <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-primary-soft p-3 text-primary">
-            <Database size={24} />
-          </div>
+      <div className="workspace-page-header p-5 sm:p-6">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),340px] xl:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Data Export</p>
-            <h1 className="mt-2 section-title">CRM downloads</h1>
-            <p className="section-copy mt-1">
+            <h1 className="mt-3 section-title">CRM downloads</h1>
+            <p className="section-copy mt-2 max-w-2xl">
               {isSuperAdmin
                 ? dashboardContext.selectedOrganizationName ?? "Choose an organization to begin."
                 : "Download organization-scoped CRM data."}
             </p>
           </div>
-        </div>
-        <div className="workspace-subtle max-w-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Access</p>
-          <p className="mt-2 text-sm leading-6 text-text-muted">
-            {currentUser?.role === "super_admin" ? "Super admin" : "Org admin"} exports are recorded in audit history.
-          </p>
+          <div className="workspace-subtle p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Access</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              {currentUser?.role === "super_admin" ? "Super admin" : "Org admin"} exports are recorded in audit history.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, TrendingUp } from "lucide-react";
+import { Search } from "lucide-react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import {
   convertLeadToOrder,
@@ -775,13 +775,11 @@ export function SalesPage() {
         </div>
       </PopupOverlay>
 
-      <Card elevated className="workspace-page-header border-primary/15 bg-gradient-to-br from-primary/10 via-card to-success/10 p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-3 lg:items-end">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <p className="hidden h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary sm:inline-flex">
-              <TrendingUp size={18} />
-            </p>
-            <h2 className="section-title sm:mt-3">Sales</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Sales</p>
+            <h2 className="mt-3 section-title">Sales</h2>
             <p className="mt-2 max-w-2xl section-copy">Track active deals, team momentum and monthly wins.</p>
           </div>
           <Button className="shrink-0 px-3 sm:px-5" onClick={() => setIsCreateSalesModalOpen(true)} disabled={!canWriteSales}>
@@ -1315,15 +1313,15 @@ export function SalesPage() {
         </Card>
 
       <section ref={orderDetailRef}>
-        <Card elevated className="workspace-block">
-          <div className="flex items-end justify-between gap-4">
+        <Card elevated className="workspace-block !p-4 sm:!p-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Order Detail</p>
-              <h3 className="mt-2 text-lg font-semibold text-text">
+              <h3 className="mt-1 text-base font-semibold text-text sm:text-lg">
                 {selectedOrderDetail?.order.contact_name ?? "Select a sales order"}
               </h3>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {selectedOrderDetail?.order ? (
                 <>
                   <Button
@@ -1343,7 +1341,7 @@ export function SalesPage() {
                     Copy order link
                   </Button>
                   <span
-                    className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}
+                    className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getSalesStatusTone(selectedOrderDetail.order.status)}`}
                   >
                     {formatSalesStatus(selectedOrderDetail.order.status)}
                   </span>
@@ -1354,22 +1352,22 @@ export function SalesPage() {
 
           {selectedOrderId ? (
             detailLoading ? (
-              <p className="mt-5 text-sm leading-6 text-text-muted">Loading sales order detail...</p>
+              <p className="mt-4 text-sm leading-5 text-text-muted">Loading sales order detail...</p>
             ) : selectedOrderDetail ? (
-              <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.2fr),380px]">
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+              <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.35fr),320px]">
+                <div className="space-y-3">
+                  <div className="grid gap-x-4 gap-y-1.5 rounded-xl border border-border bg-background-tint p-3 text-sm leading-5 text-text-muted sm:grid-cols-2">
                     <p>Order ID: {selectedOrderDetail.order.id}</p>
                     <p>Total: {formatCurrency(selectedOrderDetail.order.total_amount, selectedOrderDetail.order.currency)}</p>
                     <p>Lead status: {selectedOrderDetail.order.lead_status ?? "--"}</p>
                     <p>Owner: {selectedOrderDetail.order.assigned_user_id ?? "Unassigned"}</p>
                   </div>
 
-                  <div className="workspace-subtle p-4">
-                    <div className="flex items-start justify-between gap-4">
+                  <div className="workspace-subtle p-3 sm:p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Order Actions</p>
-                        <h4 className="mt-2 text-base font-semibold text-text">Status and ownership</h4>
+                        <h4 className="mt-1 text-base font-semibold text-text">Status and ownership</h4>
                       </div>
                       <Button
                         variant="secondary"
@@ -1401,7 +1399,7 @@ export function SalesPage() {
                       </Button>
                     </div>
 
-                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
                       {SALES_STATUSES.map((option) => (
                         <Button
                           key={option.value}
@@ -1439,40 +1437,40 @@ export function SalesPage() {
                       ))}
                     </div>
 
-                    <p className="mt-4 text-sm leading-6 text-text-muted">
+                    <p className="mt-3 text-sm leading-5 text-text-muted">
                       Use the status buttons above to keep the pipeline current. Item-line changes will continue updating the order total automatically.
                     </p>
 
-                    {orderNotice ? <p className="mt-4 text-sm leading-6 text-text-muted">{orderNotice}</p> : null}
+                    {orderNotice ? <p className="mt-3 text-sm leading-5 text-text-muted">{orderNotice}</p> : null}
                   </div>
 
                   <div className="workspace-table-wrap sales-table-wrap">
                     <table className="workspace-table workspace-table-compact sales-items-table">
                       <thead>
                         <tr>
-                          <th className="px-5 py-4">Item</th>
-                          <th className="px-5 py-4">Qty</th>
-                          <th className="px-5 py-4">Unit</th>
-                          <th className="px-5 py-4">Total</th>
+                          <th className="px-4 py-3">Item</th>
+                          <th className="px-4 py-3">Qty</th>
+                          <th className="px-4 py-3">Unit</th>
+                          <th className="px-4 py-3">Total</th>
                         </tr>
                       </thead>
                       <tbody>
                         {selectedOrderDetail.items.length === 0 ? (
                           <tr>
-                            <td className="px-5 py-6 text-sm text-text-muted" colSpan={4}>
+                            <td className="px-4 py-5 text-sm text-text-muted" colSpan={4}>
                               No item lines yet. Add the first item line from the panel on the right.
                             </td>
                           </tr>
                         ) : (
                           selectedOrderDetail.items.map((item) => (
                             <tr key={item.id} className="border-t border-border/80 text-sm text-text-muted">
-                              <td className="px-5 py-4">
+                              <td className="px-4 py-3">
                                 <p className="font-medium text-text">{item.package_name ?? item.product_type ?? "Item"}</p>
                                 <p className="mt-1 text-xs text-text-soft">{item.product_type ?? "--"}</p>
                               </td>
-                              <td className="px-5 py-4">{item.quantity}</td>
-                              <td className="px-5 py-4">{formatCurrency(item.unit_price, selectedOrderDetail.order.currency)}</td>
-                              <td className="px-5 py-4 font-medium text-text">
+                              <td className="px-4 py-3">{item.quantity}</td>
+                              <td className="px-4 py-3">{formatCurrency(item.unit_price, selectedOrderDetail.order.currency)}</td>
+                              <td className="px-4 py-3 font-medium text-text">
                                 {formatCurrency(item.total_price, selectedOrderDetail.order.currency)}
                               </td>
                             </tr>
@@ -1483,7 +1481,7 @@ export function SalesPage() {
                   </div>
                 </div>
 
-                <div className="workspace-form-panel space-y-4 p-4">
+                <div className="workspace-form-panel space-y-3 p-3 sm:p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Add Item Line</p>
 
                   <label className="block">
@@ -1496,7 +1494,7 @@ export function SalesPage() {
                     <Input value={itemPackageName} onChange={(event) => setItemPackageName(event.target.value)} placeholder="Package name" />
                   </label>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
                       <span className="workspace-label">Unit price</span>
                       <Input type="number" min="0" step="0.01" value={itemUnitPrice} onChange={(event) => setItemUnitPrice(event.target.value)} />
@@ -1507,7 +1505,7 @@ export function SalesPage() {
                     </label>
                   </div>
 
-                  {itemNotice ? <p className="text-sm leading-6 text-text-muted">{itemNotice}</p> : null}
+                  {itemNotice ? <p className="text-sm leading-5 text-text-muted">{itemNotice}</p> : null}
 
                   <Button
                     onClick={async () => {
@@ -1560,14 +1558,14 @@ export function SalesPage() {
                 </div>
               </div>
             ) : (
-              <p className="mt-5 text-sm leading-6 text-text-muted">
+              <p className="mt-4 text-sm leading-5 text-text-muted">
                 {salesFilters.orderId && orderDetailError
                   ? "This order could not be loaded from the shared link. It may no longer exist or may be outside your access scope."
                   : "Unable to load the selected sales order."}
               </p>
             )
           ) : (
-            <p className="mt-5 text-sm leading-6 text-text-muted">
+            <p className="mt-4 text-sm leading-5 text-text-muted">
               Select a sales order from the table above to inspect item lines and add new pricing entries.
             </p>
           )}
@@ -1575,31 +1573,31 @@ export function SalesPage() {
       </section>
 
       <section ref={leadDetailRef}>
-        <Card elevated>
-          <div className="flex items-end justify-between gap-4">
+        <Card elevated className="workspace-block !p-4 sm:!p-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Detail</p>
-              <h3 className="mt-2 text-lg font-semibold text-text">
+              <h3 className="mt-1 text-base font-semibold text-text sm:text-lg">
                 {selectedLeadDetail?.contact_name ?? "Select a lead or an order with a linked lead"}
               </h3>
             </div>
             {selectedLeadDetail ? (
-              <span className="rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-semibold text-text">
+              <span className="rounded-full border border-border bg-background-tint px-2 py-0.5 text-[11px] font-semibold text-text">
                 {formatLeadStatus(selectedLeadDetail.status)}
               </span>
             ) : null}
           </div>
 
           {activeLeadId ? (
-            <div className="mt-6 grid gap-5 xl:grid-cols-[360px,minmax(0,1fr)]">
-              <div className="workspace-form-panel space-y-4 p-4 text-sm leading-6 text-text-muted">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[300px,minmax(0,1fr)]">
+              <div className="workspace-form-panel space-y-3 p-3 sm:p-4 text-sm leading-5 text-text-muted">
                 {leadDetailLoading ? (
                   <p>Loading lead detail...</p>
                 ) : selectedLeadDetail ? (
                   <>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Lead Snapshot</p>
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-2.5 space-y-1.5">
                         <p className="text-text">Lead ID: {selectedLeadDetail.id}</p>
                         <p>Contact: {selectedLeadDetail.contact_name ?? "Unknown"}</p>
                         <p>Phone: {selectedLeadDetail.primary_phone_normalized ?? "--"}</p>
@@ -1611,7 +1609,7 @@ export function SalesPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       <Button
                         variant="secondary"
                         className="px-3 py-2 text-xs"
@@ -1655,13 +1653,13 @@ export function SalesPage() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="sales-timeline-panel workspace-block p-4">
-                <div className="sales-timeline-header flex items-end justify-between gap-4">
+              <div ref={timelineRef} className="sales-timeline-panel workspace-block p-3 sm:p-4">
+                <div className="sales-timeline-header flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Unified Timeline</p>
-                    <h4 className="mt-2 text-base font-semibold text-text">Lead and sales activity</h4>
+                    <h4 className="mt-1 text-base font-semibold text-text">Lead and sales activity</h4>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <p className="text-sm text-text-muted">{timelineEntries.length} events</p>
                     {activeLeadId || selectedOrderId ? (
                       <Button
@@ -1685,15 +1683,15 @@ export function SalesPage() {
                 </div>
 
                 {leadHistoryLoading || orderHistoryLoading ? (
-                  <p className="mt-5 text-sm leading-6 text-text-muted">Loading timeline...</p>
+                  <p className="mt-4 text-sm leading-5 text-text-muted">Loading timeline...</p>
                 ) : timelineEntries.length === 0 ? (
-                  <p className="mt-5 text-sm leading-6 text-text-muted">
+                  <p className="mt-4 text-sm leading-5 text-text-muted">
                     No timeline entries yet for the selected lead or order.
                   </p>
                 ) : (
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 space-y-2.5">
                     {timelinePagination.visibleItems.map((entry) => (
-                      <div key={`${entry.entityType}-${entry.id}`} className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+                      <div key={`${entry.entityType}-${entry.id}`} className="rounded-xl border border-border bg-background-tint px-3.5 py-3">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold text-text">{formatTimelineAction(entry.action)}</p>
@@ -1704,17 +1702,17 @@ export function SalesPage() {
                           <p className="text-xs text-text-soft">{new Date(entry.created_at).toLocaleString()}</p>
                         </div>
 
-                        <p className="mt-2 text-sm leading-6 text-text-muted">
+                        <p className="mt-2 text-sm leading-5 text-text-muted">
                           {formatTimelineDescription(entry.metadata, entry.action)}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-soft">
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-soft">
                           <span>{entry.actor_name ?? "System"}</span>
                           <span>/</span>
                           <span>{entry.actor_role ?? "service"}</span>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2.5 flex flex-wrap gap-1.5">
                           {entry.entityType === "lead" && activeLeadId ? (
                             <>
                               <Button
@@ -1784,7 +1782,7 @@ export function SalesPage() {
               </div>
             </div>
           ) : (
-            <p className="mt-5 text-sm leading-6 text-text-muted">
+            <p className="mt-4 text-sm leading-5 text-text-muted">
               Select a lead from the conversion queue, or select an order that already has a linked lead, to inspect its detail and timeline.
             </p>
           )}

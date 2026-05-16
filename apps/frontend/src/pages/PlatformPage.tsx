@@ -147,12 +147,12 @@ export function PlatformPage() {
 
   return (
     <section className="platform-page space-y-5">
-      <Card elevated className="workspace-page-header px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Platform</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text">Super admin overview</h2>
-            <p className="mt-1 text-sm text-text-muted">Tenant health, WhatsApp runtime, and delivery operations in one command view.</p>
+            <h2 className="mt-3 section-title">Super admin overview</h2>
+            <p className="mt-2 max-w-2xl section-copy">Tenant health, WhatsApp runtime, and delivery operations in one command view.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="platform-state-pill">

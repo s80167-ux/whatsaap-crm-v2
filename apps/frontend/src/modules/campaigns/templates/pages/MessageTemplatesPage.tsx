@@ -1,4 +1,4 @@
-import { FileText, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
@@ -103,14 +103,12 @@ export function MessageTemplatesPage() {
 
   return (
     <section className="space-y-5">
-      <Card elevated className="workspace-page-header p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-3 lg:items-end">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <p className="hidden h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary sm:inline-flex">
-              <FileText size={18} />
-            </p>
-            <h2 className="section-title sm:mt-3">Message Templates</h2>
-            <p className="mt-2 hidden max-w-2xl section-copy sm:block">Create and manage reusable WhatsApp blast messages.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Templates</p>
+            <h2 className="mt-3 section-title">Message Templates</h2>
+            <p className="mt-2 max-w-2xl section-copy">Create and manage reusable WhatsApp blast messages.</p>
           </div>
           <Button className="shrink-0 px-3 sm:px-5" onClick={() => navigate("/campaigns/whatsapp/templates/create")}>
             Create

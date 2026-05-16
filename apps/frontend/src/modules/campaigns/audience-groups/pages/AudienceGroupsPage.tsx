@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
-import { ListPlus } from "lucide-react";
 import { Button } from "../../../../components/Button";
 import { Card } from "../../../../components/Card";
 import { Toast } from "../../../../components/Toast";
@@ -62,11 +61,9 @@ export function AudienceGroupsPage() {
   return (
     <section className="space-y-5">
       <Card elevated className="workspace-page-header p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary">
-              <ListPlus size={18} />
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Audience</p>
             <h2 className="mt-3 section-title">Audience Groups</h2>
             <p className="mt-2 max-w-2xl section-copy">
               Upload, validate and manage recipient lists before creating campaigns.

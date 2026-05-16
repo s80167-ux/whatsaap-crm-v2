@@ -289,7 +289,7 @@ export function CreateCampaignDrawer({
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-5">
-          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+          <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
             <div className="mb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Campaign setup</p>
@@ -351,7 +351,7 @@ export function CreateCampaignDrawer({
             ) : null}
           </section>
 
-          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+          <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
             <div className="mb-4">
               <p className="text-sm font-semibold text-text">Message Template</p>
               <p className="mt-1 text-sm text-text-muted">Use variables to personalise the message automatically for each contact.</p>
@@ -378,10 +378,10 @@ export function CreateCampaignDrawer({
             <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dynamic variables</p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-text-muted">
-                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{name}}"}</span>
-                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{phone}}"}</span>
-                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{salutation}}"}</span>
-                <span className="rounded-full border border-primary/10 bg-white px-3 py-1">{"{{tag}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{name}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{phone}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{salutation}}"}</span>
+                <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{tag}}"}</span>
               </div>
             </div>
           </section>
@@ -432,7 +432,7 @@ export function CreateCampaignDrawer({
             tempoLabel={tempoLabel}
           />
 
-          <section className="rounded-3xl border border-border bg-white p-5 shadow-soft">
+          <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
             <div>
               <p className="text-sm font-semibold text-text">Test Delivery</p>
               <p className="mt-1 text-sm text-text-muted">Send one preview message before you launch the campaign.</p>
@@ -477,7 +477,7 @@ function TempoInput({ label, value, onChange }: { label: string; value: number; 
         min={1}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 border-border bg-white px-3 py-2 text-text"
+        className="mt-1 border-border bg-card px-3 py-2 text-text"
       />
     </label>
   );
