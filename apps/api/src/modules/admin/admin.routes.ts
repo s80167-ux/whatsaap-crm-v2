@@ -36,7 +36,7 @@ import {
 
 export const adminRoutes = Router();
 
-adminRoutes.get("/organization-modules/campaigns/status", asyncHandler(getCampaignsModuleStatus));
+adminRoutes.get("/organization-modules/:moduleKey/status", asyncHandler(getCampaignsModuleStatus));
 adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
 adminRoutes.patch("/organizations/:organizationId/access-limits", asyncHandler(updateOrganizationAccessLimits));
 adminRoutes.get("/google-signup-requests", requirePermission("platform.manage_organizations"), asyncHandler(listGoogleSignupRequests));

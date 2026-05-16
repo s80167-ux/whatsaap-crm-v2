@@ -1,4 +1,4 @@
-export type ModuleKey = "campaigns";
+export type ModuleKey = "campaigns" | "ai_message_assist";
 
 export interface OrganizationModule {
   id: string;
@@ -27,13 +27,29 @@ export interface OrganizationAccessLimits {
     maxWhatsappAccounts: number;
     historySyncDays: number;
     maxUsers?: number | null;
+    aiDailyCredits: number;
+    aiMonthlyCredits: number;
   };
   usage: {
     whatsappAccounts: number;
+    ai: {
+      today: AiUsageWindow;
+      month: AiUsageWindow;
+    };
   };
   coreFeatures: {
     whatsappCrm: {
       availableByDefault: boolean;
     };
   };
+}
+
+export interface AiUsageWindow {
+  requests: number;
+  deepseekRequests: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  creditUnits: number;
+  lastUsedAt: string | null;
 }

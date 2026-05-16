@@ -190,9 +190,11 @@ export function CreateTemplatePage() {
                       placeholder="Write your WhatsApp blast message"
                     />
                     <AiMessageAssist
+                      actions={["generate", "improve", "shorten", "friendly", "professional", "check"]}
                       value={draft.content}
                       onChange={(nextValue) => setDraft((current) => ({ ...current, content: nextValue }))}
                       source="template"
+                      organizationId={organizationId}
                       variables={["first_name", "name", "business_name", "phone", "order_id", ...configurableTemplateVariables.map((variable) => variable.key)]}
                       templatePurpose={draft.description || draft.category}
                     />

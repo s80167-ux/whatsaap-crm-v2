@@ -370,6 +370,7 @@ export function CreateCampaignDrawer({
               value={messageTemplate}
               onChange={setMessageTemplate}
               source="campaign"
+              organizationId={organizationId}
               variables={["first_name", "name", "business_name", "phone", "salutation", "tag"]}
               campaignObjective={campaignName}
             />

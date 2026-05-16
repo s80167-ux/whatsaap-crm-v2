@@ -13,23 +13,56 @@ import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
 
 const CAMPAIGNS_MODULE_KEY = "campaigns";
+const AI_MESSAGE_ASSIST_MODULE_KEY = "ai_message_assist";
+const SUPPORTED_MODULE_KEYS = [CAMPAIGNS_MODULE_KEY, AI_MESSAGE_ASSIST_MODULE_KEY] as const;
 const MAX_WHATSAPP_ACCOUNTS_KEY = "max_whatsapp_accounts";
 const HISTORY_SYNC_DAYS_KEY = "history_sync_days";
 const MAX_USERS_KEY = "max_users";
+const AI_DAILY_CREDITS_KEY = "ai_daily_credits";
+const AI_MONTHLY_CREDITS_KEY = "ai_monthly_credits";
 const DEFAULT_MAX_WHATSAPP_ACCOUNTS = 1;
 const DEFAULT_HISTORY_SYNC_DAYS = 7;
+const DEFAULT_AI_DAILY_CREDITS = 100;
+const DEFAULT_AI_MONTHLY_CREDITS = 1000;
 
 type OrganizationLimitKey =
   | typeof MAX_WHATSAPP_ACCOUNTS_KEY
   | typeof HISTORY_SYNC_DAYS_KEY
-  | typeof MAX_USERS_KEY;
+  | typeof MAX_USERS_KEY
+  | typeof AI_DAILY_CREDITS_KEY
+  | typeof AI_MONTHLY_CREDITS_KEY;
 
 type OrganizationAccessLimitsUpdateInput = {
   campaignsEnabled?: boolean;
+  aiMessageAssistEnabled?: boolean;
   maxWhatsappAccounts?: number;
   historySyncDays?: number;
   maxUsers?: number | null;
+  aiDailyCredits?: number;
+  aiMonthlyCredits?: number;
 };
+
+type AiUsageWindow = {
+  requests: number;
+  deepseekRequests: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  creditUnits: number;
+  lastUsedAt: string | null;
+};
+
+const EMPTY_AI_USAGE_WINDOW: AiUsageWindow = {
+  requests: 0,
+  deepseekRequests: 0,
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+  creditUnits: 0,
+  lastUsedAt: null
+};
+
+export type OrganizationModuleKey = (typeof SUPPORTED_MODULE_KEYS)[number];
 
 function slugifyOrganizationName(name: string) {
   return name
@@ -57,6 +90,10 @@ function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id
   }
 
   return Boolean(authUser.organizationUserId && account.created_by === authUser.organizationUserId);
+}
+
+function isMissingRelationError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }
 
 export class AdminService {
@@ -123,13 +160,13 @@ export class AdminService {
     });
   }
 
-  async getCampaignsModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+  async getOrganizationModuleStatus(authUser: AuthUser, moduleKey: OrganizationModuleKey, organizationId?: string | null) {
     const resolvedOrganizationId = authUser.role === "super_admin" ? organizationId ?? null : authUser.organizationId;
 
     if (!resolvedOrganizationId) {
       return {
         organizationId: null,
-        moduleKey: CAMPAIGNS_MODULE_KEY,
+        moduleKey,
         isEnabled: false
       };
     }
@@ -144,17 +181,25 @@ export class AdminService {
             and module_key = $2
           limit 1
         `,
-        [resolvedOrganizationId, CAMPAIGNS_MODULE_KEY]
+        [resolvedOrganizationId, moduleKey]
       );
 
       return {
         organizationId: resolvedOrganizationId,
-        moduleKey: CAMPAIGNS_MODULE_KEY,
+        moduleKey,
         isEnabled: result.rows[0]?.is_enabled ?? false
       };
     } finally {
       client.release();
     }
+  }
+
+  async getCampaignsModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, CAMPAIGNS_MODULE_KEY, organizationId);
+  }
+
+  async getAiMessageAssistModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, AI_MESSAGE_ASSIST_MODULE_KEY, organizationId);
   }
 
   async listOrganizationModules(organizationId: string) {
@@ -194,13 +239,22 @@ export class AdminService {
   }
 
   async updateCampaignsModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
-    return withTransaction((client) => this.updateCampaignsModuleWithClient(client, authUser, organizationId, isEnabled));
+    return withTransaction((client) =>
+      this.updateOrganizationModuleWithClient(client, authUser, organizationId, CAMPAIGNS_MODULE_KEY, isEnabled)
+    );
   }
 
-  private async updateCampaignsModuleWithClient(
+  async updateAiMessageAssistModule(authUser: AuthUser, organizationId: string, isEnabled: boolean) {
+    return withTransaction((client) =>
+      this.updateOrganizationModuleWithClient(client, authUser, organizationId, AI_MESSAGE_ASSIST_MODULE_KEY, isEnabled)
+    );
+  }
+
+  private async updateOrganizationModuleWithClient(
     client: PoolClient,
     authUser: AuthUser,
     organizationId: string,
+    moduleKey: OrganizationModuleKey,
     isEnabled: boolean
   ) {
     const result = await client.query<{
@@ -246,7 +300,7 @@ export class AdminService {
             created_at,
             updated_at
         `,
-        [organizationId, CAMPAIGNS_MODULE_KEY, isEnabled, authUser.authUserId ?? null]
+        [organizationId, moduleKey, isEnabled, authUser.authUserId ?? null]
       );
 
     return result.rows[0];
@@ -339,6 +393,156 @@ export class AdminService {
     );
   }
 
+  private async getAiUsageWindowWithClient(client: PoolClient, organizationId: string, window: "day" | "month"): Promise<AiUsageWindow> {
+    let result;
+
+    try {
+      result = await client.query<{
+        requests: number;
+        deepseek_requests: number;
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        credit_units: number;
+        last_used_at: string | null;
+      }>(
+        `
+          select
+            count(*)::int as requests,
+            count(*) filter (where provider = 'deepseek')::int as deepseek_requests,
+            coalesce(sum(prompt_tokens), 0)::int as prompt_tokens,
+            coalesce(sum(completion_tokens), 0)::int as completion_tokens,
+            coalesce(sum(total_tokens), 0)::int as total_tokens,
+            coalesce(sum(credit_units), 0)::int as credit_units,
+            max(created_at)::text as last_used_at
+          from ai_usage_events
+          where organization_id = $1
+            and created_at >= date_trunc($2, now())
+        `,
+        [organizationId, window]
+      );
+    } catch (error) {
+      if (isMissingRelationError(error)) {
+        logger.warn(
+          { organizationId, window },
+          "AI usage events table is missing; returning zero usage until migration is applied"
+        );
+        return EMPTY_AI_USAGE_WINDOW;
+      }
+
+      throw error;
+    }
+
+    const row = result.rows[0];
+
+    return {
+      requests: row?.requests ?? 0,
+      deepseekRequests: row?.deepseek_requests ?? 0,
+      promptTokens: row?.prompt_tokens ?? 0,
+      completionTokens: row?.completion_tokens ?? 0,
+      totalTokens: row?.total_tokens ?? 0,
+      creditUnits: row?.credit_units ?? 0,
+      lastUsedAt: row?.last_used_at ?? null
+    };
+  }
+
+  async assertAiUsageAllowed(authUser: AuthUser, organizationId: string) {
+    const client = await pool.connect();
+    try {
+      const dailyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "day");
+      const monthlyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "month");
+      const dailyLimit = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        AI_DAILY_CREDITS_KEY,
+        DEFAULT_AI_DAILY_CREDITS
+      );
+      const monthlyLimit = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        AI_MONTHLY_CREDITS_KEY,
+        DEFAULT_AI_MONTHLY_CREDITS
+      );
+
+      if (dailyUsage.creditUnits >= (dailyLimit ?? DEFAULT_AI_DAILY_CREDITS)) {
+        throw new AppError("This organization has reached its daily AI usage limit.", 403, "AI_DAILY_LIMIT_REACHED");
+      }
+
+      if (monthlyUsage.creditUnits >= (monthlyLimit ?? DEFAULT_AI_MONTHLY_CREDITS)) {
+        throw new AppError("This organization has reached its monthly AI usage limit.", 403, "AI_MONTHLY_LIMIT_REACHED");
+      }
+
+      if (authUser.organizationId && authUser.organizationId !== organizationId && authUser.role !== "super_admin") {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+    } finally {
+      client.release();
+    }
+  }
+
+  async recordAiUsage(
+    authUser: AuthUser,
+    organizationId: string,
+    input: {
+      source: string;
+      action: string;
+      provider: "deepseek" | "fallback";
+      model: string | null;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      creditUnits: number;
+    }
+  ) {
+    const client = await pool.connect();
+    try {
+      await client.query(
+        `
+          insert into ai_usage_events (
+            organization_id,
+            organization_user_id,
+            auth_user_id,
+            feature_key,
+            source,
+            action,
+            provider,
+            model,
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+            credit_units
+          )
+          values ($1, $2, $3, 'ai_message_assist', $4, $5, $6, $7, $8, $9, $10, $11)
+        `,
+        [
+          organizationId,
+          authUser.organizationUserId ?? null,
+          authUser.authUserId ?? null,
+          input.source,
+          input.action,
+          input.provider,
+          input.model,
+          input.promptTokens,
+          input.completionTokens,
+          input.totalTokens,
+          input.creditUnits
+        ]
+      );
+    } catch (error) {
+      if (isMissingRelationError(error)) {
+        logger.warn(
+          { organizationId, provider: input.provider, source: input.source, action: input.action },
+          "AI usage event was not recorded because the usage table is missing"
+        );
+        return;
+      }
+
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getOrganizationAccessLimits(authUser: AuthUser, organizationId: string) {
     if (authUser.role !== "super_admin") {
       throw new AppError("Insufficient permissions", 403, "forbidden");
@@ -347,6 +551,7 @@ export class AdminService {
     const client = await pool.connect();
     try {
       const campaignsStatus = await this.getCampaignsModuleStatus(authUser, organizationId);
+      const aiMessageAssistStatus = await this.getAiMessageAssistModuleStatus(authUser, organizationId);
       const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
         client,
         organizationId,
@@ -360,7 +565,21 @@ export class AdminService {
         DEFAULT_HISTORY_SYNC_DAYS
       );
       const maxUsers = await this.getOrganizationLimitValueWithClient(client, organizationId, MAX_USERS_KEY, null);
+      const aiDailyCredits = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        AI_DAILY_CREDITS_KEY,
+        DEFAULT_AI_DAILY_CREDITS
+      );
+      const aiMonthlyCredits = await this.getOrganizationLimitValueWithClient(
+        client,
+        organizationId,
+        AI_MONTHLY_CREDITS_KEY,
+        DEFAULT_AI_MONTHLY_CREDITS
+      );
       const whatsappAccounts = await this.whatsappRepository.countByOrganization(client, organizationId);
+      const aiDailyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "day");
+      const aiMonthlyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "month");
 
       return {
         organizationId,
@@ -368,15 +587,25 @@ export class AdminService {
           {
             moduleKey: CAMPAIGNS_MODULE_KEY,
             isEnabled: campaignsStatus.isEnabled
+          },
+          {
+            moduleKey: AI_MESSAGE_ASSIST_MODULE_KEY,
+            isEnabled: aiMessageAssistStatus.isEnabled
           }
         ],
         limits: {
           maxWhatsappAccounts: maxWhatsappAccounts ?? DEFAULT_MAX_WHATSAPP_ACCOUNTS,
           historySyncDays: historySyncDays ?? DEFAULT_HISTORY_SYNC_DAYS,
-          maxUsers
+          maxUsers,
+          aiDailyCredits: aiDailyCredits ?? DEFAULT_AI_DAILY_CREDITS,
+          aiMonthlyCredits: aiMonthlyCredits ?? DEFAULT_AI_MONTHLY_CREDITS
         },
         usage: {
-          whatsappAccounts
+          whatsappAccounts,
+          ai: {
+            today: aiDailyUsage,
+            month: aiMonthlyUsage
+          }
         },
         coreFeatures: {
           whatsappCrm: {
@@ -400,7 +629,23 @@ export class AdminService {
 
     await withTransaction(async (client) => {
       if (input.campaignsEnabled !== undefined) {
-        await this.updateCampaignsModuleWithClient(client, authUser, organizationId, input.campaignsEnabled);
+        await this.updateOrganizationModuleWithClient(
+          client,
+          authUser,
+          organizationId,
+          CAMPAIGNS_MODULE_KEY,
+          input.campaignsEnabled
+        );
+      }
+
+      if (input.aiMessageAssistEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(
+          client,
+          authUser,
+          organizationId,
+          AI_MESSAGE_ASSIST_MODULE_KEY,
+          input.aiMessageAssistEnabled
+        );
       }
 
       if (input.maxWhatsappAccounts !== undefined) {
@@ -418,6 +663,14 @@ export class AdminService {
 
       if (input.maxUsers !== undefined) {
         await this.updateOrganizationLimitWithClient(client, organizationId, MAX_USERS_KEY, input.maxUsers);
+      }
+
+      if (input.aiDailyCredits !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, AI_DAILY_CREDITS_KEY, input.aiDailyCredits);
+      }
+
+      if (input.aiMonthlyCredits !== undefined) {
+        await this.updateOrganizationLimitWithClient(client, organizationId, AI_MONTHLY_CREDITS_KEY, input.aiMonthlyCredits);
       }
     });
 

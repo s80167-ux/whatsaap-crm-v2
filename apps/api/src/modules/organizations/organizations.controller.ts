@@ -21,6 +21,11 @@ const updateCampaignsModuleSchema = z.object({
   isEnabled: z.boolean()
 });
 
+const organizationModuleParamsSchema = z.object({
+  organizationId: z.string().uuid(),
+  moduleKey: z.enum(["campaigns", "ai_message_assist"])
+});
+
 export async function listOrganizations(_request: Request, response: Response) {
   const organizations = await adminService.listOrganizations();
   return response.json({ data: organizations });
@@ -96,9 +101,12 @@ export async function updateCampaignsModule(request: Request, response: Response
     throw new AppError("Authentication required", 401, "auth_required");
   }
 
-  const organizationId = z.string().uuid().parse(request.params.organizationId);
+  const { organizationId, moduleKey } = organizationModuleParamsSchema.parse(request.params);
   const input = updateCampaignsModuleSchema.parse(request.body);
-  const module = await adminService.updateCampaignsModule(request.auth, organizationId, input.isEnabled);
+  const module =
+    moduleKey === "ai_message_assist"
+      ? await adminService.updateAiMessageAssistModule(request.auth, organizationId, input.isEnabled)
+      : await adminService.updateCampaignsModule(request.auth, organizationId, input.isEnabled);
 
   await auditLogService.record(request.auth, {
     organizationId,
@@ -106,7 +114,7 @@ export async function updateCampaignsModule(request: Request, response: Response
     entityType: "organization_module",
     entityId: module.id ?? organizationId,
     metadata: {
-      module_key: "campaigns",
+      module_key: moduleKey,
       is_enabled: input.isEnabled
     },
     request: getRequestAuditContext(request)

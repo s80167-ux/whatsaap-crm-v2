@@ -201,9 +201,12 @@ export async function updateOrganizationAccessLimits(
   organizationId: string,
   payload: {
     campaignsEnabled?: boolean;
+    aiMessageAssistEnabled?: boolean;
     maxWhatsappAccounts?: number;
     historySyncDays?: number;
     maxUsers?: number | null;
+    aiDailyCredits?: number;
+    aiMonthlyCredits?: number;
   }
 ) {
   const response = await apiPatch<{ data: OrganizationAccessLimits }>(

@@ -1,7 +1,8 @@
 import { Button } from "../Button";
 import type { AiMessageAction } from "../../api/ai";
 
-const actions: Array<{ action: AiMessageAction; label: string; helper: string }> = [
+const actionItems: Array<{ action: AiMessageAction; label: string; helper: string; loadingLabel?: string }> = [
+  { action: "generate", label: "Generate Draft", helper: "Tukar point ringkas kepada template mesej.", loadingLabel: "Generating..." },
   { action: "improve", label: "Improve", helper: "Kemaskan ayat tanpa ubah maksud." },
   { action: "shorten", label: "Shorten", helper: "Pendekkan mesej supaya lebih sesuai untuk WhatsApp." },
   { action: "friendly", label: "Friendly", helper: "Jadikan ayat lebih mesra." },
@@ -10,15 +11,18 @@ const actions: Array<{ action: AiMessageAction; label: string; helper: string }>
 ];
 
 type AiAssistToolbarProps = {
+  actions?: AiMessageAction[];
   disabled: boolean;
   loadingAction: AiMessageAction | null;
   onAction: (action: AiMessageAction) => void;
 };
 
-export function AiAssistToolbar({ disabled, loadingAction, onAction }: AiAssistToolbarProps) {
+export function AiAssistToolbar({ actions, disabled, loadingAction, onAction }: AiAssistToolbarProps) {
+  const visibleActions = actions ?? ["improve", "shorten", "friendly", "professional", "check"];
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {actions.map((item) => (
+      {actionItems.filter((item) => visibleActions.includes(item.action)).map((item) => (
         <Button
           key={item.action}
           size="sm"
@@ -27,7 +31,7 @@ export function AiAssistToolbar({ disabled, loadingAction, onAction }: AiAssistT
           title={item.helper}
           onClick={() => onAction(item.action)}
         >
-          {loadingAction === item.action ? "Checking..." : item.label}
+          {loadingAction === item.action ? item.loadingLabel ?? "Checking..." : item.label}
         </Button>
       ))}
     </div>

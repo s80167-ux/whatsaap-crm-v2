@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { requestAiMessageAssist } from "../../api/ai";
 import type { AiMessageAction, AiMessageAssistResponse, AiMessageLanguage, AiMessageSource } from "../../api/ai";
+import { useAiMessageAssistModuleStatus } from "../../hooks/useAdmin";
+import { getStoredUser } from "../../lib/auth";
 import { AiAssistToolbar } from "./AiAssistToolbar";
 import { AiSuggestionCard } from "./AiSuggestionCard";
 import { MessageMetaBar } from "./MessageMetaBar";
 
 export type AiMessageAssistProps = {
+  actions?: AiMessageAction[];
   value: string;
   onChange: (nextValue: string) => void;
   source: AiMessageSource;
+  organizationId?: string | null;
   variables?: string[];
   language?: AiMessageLanguage;
   tone?: string;
@@ -17,9 +21,11 @@ export type AiMessageAssistProps = {
 };
 
 export function AiMessageAssist({
+  actions,
   value,
   onChange,
   source,
+  organizationId,
   variables,
   language = "ms-MY",
   tone = "friendly",
@@ -30,6 +36,16 @@ export function AiMessageAssist({
   const [result, setResult] = useState<AiMessageAssistResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const trimmedValue = value.trim();
+  const user = getStoredUser();
+  const shouldFetchModuleStatus = user?.role === "org_admin" || (user?.role === "super_admin" && Boolean(organizationId));
+  const moduleStatusQuery = useAiMessageAssistModuleStatus(organizationId, shouldFetchModuleStatus);
+  const isEnabled = user?.role === "super_admin" || user?.role === "org_admin"
+    ? moduleStatusQuery.data?.isEnabled === true
+    : false;
+
+  if (!shouldFetchModuleStatus || moduleStatusQuery.isLoading || !isEnabled) {
+    return null;
+  }
 
   async function handleAction(action: AiMessageAction) {
     if (!trimmedValue || loadingAction) {
@@ -45,6 +61,7 @@ export function AiMessageAssist({
         source,
         action,
         message: value,
+        organizationId,
         language,
         tone,
         variables,
@@ -61,7 +78,7 @@ export function AiMessageAssist({
 
   return (
     <div className="mt-3 space-y-3">
-      <AiAssistToolbar disabled={!trimmedValue} loadingAction={loadingAction} onAction={handleAction} />
+      <AiAssistToolbar actions={actions} disabled={!trimmedValue} loadingAction={loadingAction} onAction={handleAction} />
       <MessageMetaBar value={value} latestReview={result?.review ?? null} />
       {error ? <p className="rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs font-semibold text-text-muted">{error}</p> : null}
       {result ? (

@@ -61,11 +61,18 @@ const campaignsModuleStatusQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
 
+const moduleStatusParamsSchema = z.object({
+  moduleKey: z.enum(["campaigns", "ai_message_assist"])
+});
+
 const updateOrganizationAccessLimitsSchema = z.object({
   campaignsEnabled: z.boolean().optional(),
+  aiMessageAssistEnabled: z.boolean().optional(),
   maxWhatsappAccounts: z.coerce.number().int().min(0).max(20).optional(),
   historySyncDays: z.coerce.number().int().min(0).max(365).optional(),
-  maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional()
+  maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional(),
+  aiDailyCredits: z.coerce.number().int().min(0).max(100000).optional(),
+  aiMonthlyCredits: z.coerce.number().int().min(0).max(1000000).optional()
 });
 
 const listGoogleSignupRequestsQuerySchema = z.object({
@@ -160,7 +167,9 @@ export async function deleteOrganization(request: Request, response: Response) {
 export async function getCampaignsModuleStatus(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { organization_id: organizationId } = campaignsModuleStatusQuerySchema.parse(request.query);
-  const status = await adminService.getCampaignsModuleStatus(auth, organizationId ?? null);
+  const params = moduleStatusParamsSchema.safeParse(request.params);
+  const moduleKey = params.success ? params.data.moduleKey : "campaigns";
+  const status = await adminService.getOrganizationModuleStatus(auth, moduleKey, organizationId ?? null);
 
   return response.json({
     data: status

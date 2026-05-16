@@ -2,7 +2,7 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 
 export type AiMessageSource = "campaign" | "template";
-export type AiMessageAction = "improve" | "shorten" | "friendly" | "professional" | "check";
+export type AiMessageAction = "generate" | "improve" | "shorten" | "friendly" | "professional" | "check";
 export type AiMessageLanguage = "ms-MY" | "en-MY";
 
 export type AiMessageReview = {
@@ -32,11 +32,26 @@ export type AiMessageAssistResult = {
   suggestedMessage: string | null;
   review: AiMessageReview;
   provider: "deepseek" | "fallback";
+  usage: AiMessageAssistUsage;
 };
 
 type DeepSeekJson = {
   suggestedMessage?: unknown;
   review?: Partial<Record<keyof AiMessageReview, unknown>>;
+};
+
+export type AiMessageAssistUsage = {
+  model: string | null;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  creditUnits: number;
+};
+
+type DeepSeekUsage = {
+  prompt_tokens?: unknown;
+  completion_tokens?: unknown;
+  total_tokens?: unknown;
 };
 
 const placeholderPattern = /\{\{[^}]+\}\}/g;
@@ -53,6 +68,7 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
   const timeout = setTimeout(() => controller.abort(), env.AI_TIMEOUT_MS);
 
   try {
+    const model = getDeepSeekModel();
     const response = await fetch(deepSeekChatCompletionsUrl, {
       method: "POST",
       headers: {
@@ -60,7 +76,7 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: getDeepSeekModel(),
+        model,
         messages: buildMessages(input),
         thinking: { type: "disabled" },
         temperature: 0.4,
@@ -81,6 +97,8 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
+      model?: string;
+      usage?: DeepSeekUsage;
     };
     const content = data.choices?.[0]?.message?.content;
 
@@ -89,7 +107,11 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
     }
 
     const parsed = JSON.parse(content) as DeepSeekJson;
-    const suggestedMessage = input.action === "check" ? null : sanitizeSuggestion(parsed.suggestedMessage, input.message);
+    const deepSeekSuggestion = input.action === "check" ? null : sanitizeSuggestion(parsed.suggestedMessage);
+    const suggestedMessage =
+      deepSeekSuggestion && !areMessagesEquivalent(deepSeekSuggestion, input.message)
+        ? deepSeekSuggestion
+        : buildFallbackSuggestion(input);
 
     return {
       success: true,
@@ -97,7 +119,8 @@ export async function callDeepSeekMessageAssist(input: AiMessageAssistInput): Pr
       action: input.action,
       suggestedMessage,
       review: normalizeReview(parsed.review, fallback),
-      provider: "deepseek"
+      provider: "deepseek",
+      usage: normalizeDeepSeekUsage(data.usage, data.model ?? model)
     };
   } catch (error) {
     logger.warn(
@@ -189,7 +212,14 @@ function buildFallbackResult(input: AiMessageAssistInput, review: AiMessageRevie
     action: input.action,
     suggestedMessage: buildFallbackSuggestion(input),
     review,
-    provider: "fallback"
+    provider: "fallback",
+    usage: {
+      model: null,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      creditUnits: 0
+    }
   };
 }
 
@@ -202,28 +232,23 @@ function buildFallbackSuggestion(input: AiMessageAssistInput) {
   const greeting = getFallbackGreeting(input);
   const cta = input.source === "campaign" ? getCampaignCta(normalized) : "";
 
+  if (input.action === "generate") {
+    return generateTemplateDraft(normalized, greeting);
+  }
+
   if (input.action === "shorten") {
     return shortenMessage(normalized, input.source);
   }
 
   if (input.action === "friendly") {
-    return joinMessageParts([
-      ensureGreeting(normalized, greeting),
-      input.source === "campaign" ? cta : ""
-    ]);
+    return makeFriendlyMessage(normalized, greeting, input.source);
   }
 
   if (input.action === "professional") {
-    return joinMessageParts([
-      ensureGreeting(normalized, greeting.replace("Hi", "Salam")),
-      input.source === "campaign" ? cta.replace("Boleh", "Sila") : ""
-    ]);
+    return makeProfessionalMessage(normalized, greeting.replace("Hi", "Salam"), input.source);
   }
 
-  return joinMessageParts([
-    ensureGreeting(normalized, greeting),
-    input.source === "campaign" ? cta : ""
-  ]);
+  return improveMessage(normalized, greeting, input.source, cta);
 }
 
 function normalizeMessageText(message: string) {
@@ -250,6 +275,58 @@ function ensureGreeting(message: string, greeting: string) {
   }
 
   return `${greeting} ${lowercaseFirstLetter(message)}`;
+}
+
+function generateTemplateDraft(message: string, greeting: string) {
+  const points = message
+    .split(/\n|,|;|-/)
+    .map((point) => point.trim())
+    .filter(Boolean);
+  const body = points.length > 0 ? points.join(". ") : message;
+  const normalizedBody = body
+    .replace(/\bfollow up\b/gi, "terima kasih kerana berminat")
+    .replace(/\breply\b/gi, "balas mesej ini")
+    .replace(/\bdetails\b/gi, "maklumat lanjut")
+    .replace(/\bminat\b/gi, "berminat");
+
+  return joinMessageParts([
+    `${greeting} ${lowercaseFirstLetter(normalizedBody)}`,
+    "Jika masih berminat, boleh balas mesej ini dan kami akan bantu kongsikan maklumat lanjut."
+  ]);
+}
+
+function improveMessage(message: string, greeting: string, source: AiMessageSource, cta: string) {
+  const improved = ensureGreeting(message, greeting)
+    .replace(/\bboss\b/gi, "{{first_name}}")
+    .replace(/\bpromo\b/gi, "promosi")
+    .replace(/\breply\b/gi, "balas")
+    .replace(/\bminat\b/gi, "berminat")
+    .replace(/\bunifi\b/gi, "Unifi");
+
+  return joinMessageParts([improved, source === "campaign" ? cta : ""]);
+}
+
+function makeFriendlyMessage(message: string, greeting: string, source: AiMessageSource) {
+  const friendly = ensureGreeting(message, greeting)
+    .replace(/\bKalau\b/g, "Jika")
+    .replace(/\bkalau\b/g, "jika")
+    .replace(/\breply\b/gi, "balas")
+    .replace(/\bminat\b/gi, "berminat");
+
+  const suffix = source === "campaign" ? "Boleh balas mesej ini ya jika berminat." : "";
+  return joinMessageParts([friendly, suffix]);
+}
+
+function makeProfessionalMessage(message: string, greeting: string, source: AiMessageSource) {
+  const professional = ensureGreeting(message, greeting)
+    .replace(/\bboss\b/gi, "{{first_name}}")
+    .replace(/\bpromo\b/gi, "promosi")
+    .replace(/\breply\b/gi, "balas mesej")
+    .replace(/\bminat\b/gi, "berminat")
+    .replace(/\bunifi\b/gi, "Unifi");
+
+  const suffix = source === "campaign" ? "Sila balas mesej ini jika anda berminat untuk maklumat lanjut." : "";
+  return joinMessageParts([professional, suffix]);
 }
 
 function lowercaseFirstLetter(message: string) {
@@ -294,10 +371,11 @@ function buildMessages(input: AiMessageAssistInput) {
       : "Source is template. Optimize for reusable template wording. Keep wording neutral and suitable for repeated use. Avoid time-sensitive phrases unless they exist in the original message. Avoid campaign-style hard selling unless the original template is clearly promotional. Protect variables/placeholders carefully.";
 
   const actionRules: Record<AiMessageAction, string> = {
-    improve: "Polish the message without changing meaning.",
-    shorten: "Make it shorter and suitable for WhatsApp.",
-    friendly: "Make it warmer and more friendly.",
-    professional: "Make it more professional but still natural.",
+    generate: "Convert the user's rough key points into a clean reusable WhatsApp message template. Treat the input as notes, not final copy. The suggestedMessage must be a complete ready-to-use template.",
+    improve: "Polish the message without changing meaning. The suggestedMessage must be visibly improved and must not be identical to the original.",
+    shorten: "Make it shorter and suitable for WhatsApp. The suggestedMessage must be shorter than the original unless the original is already under 80 characters.",
+    friendly: "Make it warmer and more friendly. The suggestedMessage must sound noticeably friendlier than the original.",
+    professional: "Make it more professional but still natural. The suggestedMessage must sound noticeably more professional than the original.",
     check: "Do not rewrite. suggestedMessage must be null. Only return review."
   };
 
@@ -314,6 +392,8 @@ function buildMessages(input: AiMessageAssistInput) {
         "Do not remove or corrupt placeholders.",
         "Keep the original intent.",
         "Avoid spammy words, excessive emoji, excessive uppercase, and too many exclamation marks.",
+        "For generate, if the user provided rough notes or bullet points, write a complete template from those points.",
+        "For generate, use neutral reusable wording and include {{first_name}} if no personalization placeholder is present.",
         "Return json only with suggestedMessage and review.",
         "Example json output: {\"suggestedMessage\":\"Hi {{first_name}}, terima kasih kerana berminat.\",\"review\":{\"spamRisk\":\"low\",\"readability\":\"easy\",\"ctaClarity\":\"good\",\"warnings\":[],\"tips\":[]}}.",
         sourceRules,
@@ -355,6 +435,24 @@ function getDeepSeekModel() {
   return env.DEEPSEEK_MODEL;
 }
 
+function normalizeDeepSeekUsage(usage: DeepSeekUsage | undefined, model: string): AiMessageAssistUsage {
+  const promptTokens = normalizeTokenCount(usage?.prompt_tokens);
+  const completionTokens = normalizeTokenCount(usage?.completion_tokens);
+  const totalTokens = normalizeTokenCount(usage?.total_tokens) || promptTokens + completionTokens;
+
+  return {
+    model,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    creditUnits: totalTokens > 0 ? Math.max(1, Math.ceil(totalTokens / 1000)) : 0
+  };
+}
+
+function normalizeTokenCount(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
 async function readDeepSeekErrorSummary(response: Response) {
   try {
     const body = await response.json() as { error?: { message?: unknown; type?: unknown; code?: unknown }; message?: unknown };
@@ -368,17 +466,21 @@ async function readDeepSeekErrorSummary(response: Response) {
   }
 }
 
-function sanitizeSuggestion(value: unknown, originalMessage: string) {
+function sanitizeSuggestion(value: unknown) {
   if (typeof value !== "string") {
     return null;
   }
 
   const trimmed = value.trim();
-  if (!trimmed || trimmed === originalMessage.trim()) {
-    return trimmed || null;
-  }
+  return trimmed || null;
+}
 
-  return trimmed;
+function areMessagesEquivalent(first: string, second: string) {
+  return normalizeForComparison(first) === normalizeForComparison(second);
+}
+
+function normalizeForComparison(message: string) {
+  return message.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function normalizeReview(review: DeepSeekJson["review"], fallback: AiMessageReview): AiMessageReview {

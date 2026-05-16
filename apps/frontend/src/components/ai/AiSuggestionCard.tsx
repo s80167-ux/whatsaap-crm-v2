@@ -11,6 +11,7 @@ type AiSuggestionCardProps = {
 export function AiSuggestionCard({ result, onUse, onDismiss }: AiSuggestionCardProps) {
   const isCheck = result.action === "check";
   const title = isCheck ? "AI Review" : result.source === "template" ? "Suggested Template" : "Suggested Version";
+  const providerLabel = result.provider === "deepseek" ? "DeepSeek AI" : "Fallback review";
 
   async function handleCopy() {
     if (!result.suggestedMessage) {
@@ -25,7 +26,14 @@ export function AiSuggestionCard({ result, onUse, onDismiss }: AiSuggestionCardP
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-text">{title}</p>
-          <p className="mt-1 text-xs font-semibold text-text-muted">Spam risk: {result.review.spamRisk} · Readability: {result.review.readability} · CTA: {result.review.ctaClarity}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              {providerLabel}
+            </span>
+            <span className="text-xs font-semibold text-text-muted">
+              Spam risk: {result.review.spamRisk} · Readability: {result.review.readability} · CTA: {result.review.ctaClarity}
+            </span>
+          </div>
         </div>
         <Button size="icon" variant="ghost" aria-label="Dismiss" onClick={onDismiss}>
           <X className="h-4 w-4" />

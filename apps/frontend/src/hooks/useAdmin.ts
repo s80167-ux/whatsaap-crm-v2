@@ -45,6 +45,14 @@ export function useCampaignsModuleStatus(organizationId?: string | null, enabled
   });
 }
 
+export function useAiMessageAssistModuleStatus(organizationId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["organization-module-status", "ai_message_assist", organizationId ?? "current"],
+    queryFn: () => fetchOrganizationModuleStatus("ai_message_assist", organizationId),
+    enabled
+  });
+}
+
 export function useOrganizationModules(organizationId?: string | null, enabled = true) {
   return useQuery({
     queryKey: ["organization-modules", organizationId],

@@ -1,7 +1,7 @@
 import { apiPost } from "../lib/http";
 
 export type AiMessageSource = "campaign" | "template";
-export type AiMessageAction = "improve" | "shorten" | "friendly" | "professional" | "check";
+export type AiMessageAction = "generate" | "improve" | "shorten" | "friendly" | "professional" | "check";
 export type AiMessageLanguage = "ms-MY" | "en-MY";
 
 export type AiMessageReview = {
@@ -16,6 +16,7 @@ export type AiMessageAssistInput = {
   source: AiMessageSource;
   action: AiMessageAction;
   message: string;
+  organizationId?: string | null;
   language?: AiMessageLanguage;
   tone?: string;
   variables?: string[];
@@ -31,6 +32,13 @@ export type AiMessageAssistResponse = {
   suggestedMessage: string | null;
   review: AiMessageReview;
   provider: "deepseek" | "fallback";
+  usage: {
+    model: string | null;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    creditUnits: number;
+  };
 };
 
 export function requestAiMessageAssist(input: AiMessageAssistInput) {
