@@ -5,7 +5,9 @@ import { ConversationRepository } from "../repositories/conversationRepository.j
 import { MessageRepository } from "../repositories/messageRepository.js";
 import type { InboundMessageInput } from "../types/domain.js";
 import { normalizeMessageType } from "../utils/message.js";
+import { isWeakDisplayName } from "../utils/contactIdentity.js";
 import { ContactService } from "./contactService.js";
+import { ContactRepairProposalService } from "./contactRepairProposalService.js";
 import { ConversationService } from "./conversationService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
@@ -160,6 +162,22 @@ export class MessageIngestionService {
         contactId: contact.id,
         sentAt: input.sentAt
       });
+
+      try {
+        if (
+          !contact.primary_phone_normalized ||
+          identity.identity_quality === "weak" ||
+          identity.identity_quality === "lid_only" ||
+          isWeakDisplayName(contact.display_name)
+        ) {
+          await ContactRepairProposalService.detectWeakIdentityForContact(client, {
+            organizationId: input.organizationId,
+            contactId: contact.id
+          });
+        }
+      } catch (error) {
+        logger.warn({ err: error, contactId: contact.id }, "Failed to create weak contact identity repair proposal");
+      }
 
       if (inserted && input.direction === "incoming") {
         await this.quickReplyOutcomeService.markCustomerReply(client, {

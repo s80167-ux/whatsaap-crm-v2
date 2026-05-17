@@ -1,4 +1,5 @@
 import { withTransaction } from "../config/database.js";
+import { isWeakDisplayName, normalizeDisplayName } from "../utils/contactIdentity.js";
 import { AuditLogService } from "./auditLogService.js";
 import { ContactIdentityRepairService } from "./contactIdentityRepairService.js";
 
@@ -451,36 +452,527 @@ export async function applyDuplicateContactMerge(
 }
 
 export class ContactRepairProposalService {
+  private static async ensureTableOnClient(client: any) {
+    await client.query(`
+      create table if not exists contact_repair_proposals (
+        id uuid primary key default gen_random_uuid(),
+        organization_id uuid not null,
+        contact_id uuid not null,
+        status text not null default 'pending',
+        reason text not null,
+        confidence text not null default 'medium',
+        proposed_action text not null,
+        before_snapshot jsonb not null default '{}'::jsonb,
+        proposed_after_snapshot jsonb not null default '{}'::jsonb,
+        repair_plan jsonb not null default '{}'::jsonb,
+        detected_at timestamptz not null default timezone('utc', now()),
+        reviewed_at timestamptz,
+        reviewed_by uuid,
+        review_note text,
+        created_at timestamptz not null default timezone('utc', now()),
+        updated_at timestamptz not null default timezone('utc', now())
+      )
+    `);
+    await client.query(`
+      create index if not exists idx_contact_repair_proposals_org_status
+      on contact_repair_proposals (organization_id, status, detected_at desc)
+    `);
+    await client.query(`
+      create index if not exists idx_contact_repair_proposals_contact
+      on contact_repair_proposals (contact_id, status)
+    `);
+  }
+
   static async ensureTable() {
     await withTransaction(async (client: any) => {
-      await client.query(`
-        create table if not exists contact_repair_proposals (
-          id uuid primary key default gen_random_uuid(),
-          organization_id uuid not null,
-          contact_id uuid not null,
-          status text not null default 'pending',
-          reason text not null,
-          confidence text not null default 'medium',
-          proposed_action text not null,
-          before_snapshot jsonb not null default '{}'::jsonb,
-          proposed_after_snapshot jsonb not null default '{}'::jsonb,
-          repair_plan jsonb not null default '{}'::jsonb,
-          detected_at timestamptz not null default timezone('utc', now()),
-          reviewed_at timestamptz,
-          reviewed_by uuid,
-          review_note text,
-          created_at timestamptz not null default timezone('utc', now()),
-          updated_at timestamptz not null default timezone('utc', now())
-        )
-      `);
-      await client.query(`
-        create index if not exists idx_contact_repair_proposals_org_status
-        on contact_repair_proposals (organization_id, status, detected_at desc)
-      `);
-      await client.query(`
-        create index if not exists idx_contact_repair_proposals_contact
-        on contact_repair_proposals (contact_id, status)
-      `);
+      await this.ensureTableOnClient(client);
+    });
+  }
+
+  static async detectWeakIdentityForContact(
+    client: any,
+    input: { organizationId: string; contactId: string }
+  ): Promise<{ created: boolean; issueType?: string; proposedAction?: string }> {
+    await this.ensureTableOnClient(client);
+
+    const result = await client.query(
+      `
+        select
+          c.id,
+          c.organization_id,
+          c.display_name,
+          c.primary_phone_normalized,
+          c.primary_phone_e164,
+          c.primary_avatar_url,
+          c.identity_status,
+          latest_identity.wa_jid,
+          latest_identity.phone_normalized as identity_phone_normalized,
+          latest_identity.profile_name,
+          latest_identity.profile_push_name,
+          latest_identity.profile_avatar_url as identity_avatar_url,
+          latest_identity.identity_quality,
+          latest_identity.identity_score,
+          best_name.profile_name as best_known_identity_name,
+          phone_conflict.conflicting_contact_ids
+        from contacts c
+        left join lateral (
+          select *
+          from contact_identities ci
+          where ci.contact_id = c.id
+            and coalesce(ci.is_active, true)
+            and ci.deleted_at is null
+          order by ci.last_seen_at desc nulls last, ci.updated_at desc, ci.created_at desc, ci.id desc
+          limit 1
+        ) latest_identity on true
+        left join lateral (
+          select nullif(trim(ci.profile_name), '') as profile_name
+          from contact_identities ci
+          where ci.contact_id = c.id
+            and coalesce(ci.is_active, true)
+            and ci.deleted_at is null
+            and nullif(trim(ci.profile_name), '') is not null
+            and lower(trim(ci.profile_name)) not in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact')
+          order by ci.identity_score desc nulls last, ci.last_seen_at desc nulls last, ci.updated_at desc
+          limit 1
+        ) best_name on true
+        left join lateral (
+          select array_agg(distinct ci.contact_id) filter (where ci.contact_id != c.id) as conflicting_contact_ids
+          from contact_identities ci
+          where ci.organization_id = c.organization_id
+            and ci.deleted_at is null
+            and coalesce(ci.is_active, true)
+            and ci.phone_normalized is not null
+            and ci.phone_normalized = coalesce(c.primary_phone_normalized, latest_identity.phone_normalized)
+        ) phone_conflict on true
+        where c.id = $1
+          and c.organization_id = $2
+        limit 1
+      `,
+      [input.contactId, input.organizationId]
+    );
+
+    const row = result.rows[0];
+
+    if (!row) {
+      return { created: false };
+    }
+
+    const hasNoPhone = !row.primary_phone_normalized && !row.primary_phone_e164;
+    const hasAvatar = Boolean(normalizeDisplayName(row.primary_avatar_url) || normalizeDisplayName(row.identity_avatar_url));
+    const displayNameIsWeak = isWeakDisplayName(row.display_name);
+    const conflictingContactIds = Array.isArray(row.conflicting_contact_ids)
+      ? row.conflicting_contact_ids.filter(Boolean)
+      : [];
+
+    let issueType: string | null = null;
+    let reason: string | null = null;
+    let proposedAction: string | null = null;
+    let confidence = "medium";
+
+    if (conflictingContactIds.length > 0) {
+      issueType = "conflicting_identity_phone";
+      reason = "Multiple contacts have identities pointing to the same normalized phone.";
+      proposedAction = "merge_duplicate_contact";
+      confidence = "high";
+    } else if (hasAvatar && hasNoPhone) {
+      issueType = "avatar_without_phone";
+      reason = "Profile picture exists but phone number is missing.";
+      proposedAction = "resolve_missing_phone_from_whatsapp_identity";
+      confidence = "high";
+    } else if (row.identity_quality === "lid_only" && hasNoPhone) {
+      issueType = "lid_without_phone";
+      reason = "Latest WhatsApp identity is LID-only and the contact has no phone number.";
+      proposedAction = "resolve_lid_identity";
+      confidence = "high";
+    } else if (displayNameIsWeak && row.best_known_identity_name) {
+      issueType = "unknown_name_with_previous_identity";
+      reason = "Contact display name is weak but a better previous identity name exists.";
+      proposedAction = "restore_best_known_name";
+    } else if (row.identity_quality === "weak" || row.identity_status === "provisional") {
+      issueType = "weak_identity_created";
+      reason = "Contact was created from weak WhatsApp identity metadata.";
+      proposedAction = "review_weak_identity";
+    }
+
+    if (!issueType || !reason || !proposedAction) {
+      return { created: false };
+    }
+
+    const existing = await client.query(
+      `
+        select id
+        from contact_repair_proposals
+        where organization_id = $1
+          and contact_id = $2
+          and status = 'pending'
+          and proposed_action = $3
+        limit 1
+      `,
+      [input.organizationId, input.contactId, proposedAction]
+    );
+
+    if (existing.rows[0]) {
+      return { created: false, issueType, proposedAction };
+    }
+
+    await client.query(
+      `
+        insert into contact_repair_proposals (
+          organization_id,
+          contact_id,
+          status,
+          reason,
+          confidence,
+          proposed_action,
+          before_snapshot,
+          proposed_after_snapshot,
+          repair_plan
+        ) values ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        input.organizationId,
+        input.contactId,
+        reason,
+        confidence,
+        proposedAction,
+        row,
+        row.best_known_identity_name ? { display_name: row.best_known_identity_name } : {},
+        {
+          issue_type: issueType,
+          proposed_action: proposedAction,
+          merge_mode: proposedAction === "merge_duplicate_contact" ? "admin_approval_required" : "admin_review_required",
+          conflicting_contact_ids: conflictingContactIds,
+          best_known_identity_name: row.best_known_identity_name ?? null
+        }
+      ]
+    );
+
+    return { created: true, issueType, proposedAction };
+  }
+
+  static async detectBackfillDuplicateRepairProposals(input: {
+    organizationId: string;
+    whatsappAccountId?: string | null;
+  }): Promise<{ created: number; candidates: number }> {
+    return withTransaction(async (client: any) => {
+      await this.ensureTableOnClient(client);
+
+      const candidates: Array<{
+        contact_id: string;
+        reason: string;
+        proposed_action: string;
+        confidence: string;
+        issue_type: string;
+        repair_plan: Record<string, unknown>;
+        before_snapshot: Record<string, unknown>;
+        proposed_after_snapshot: Record<string, unknown>;
+      }> = [];
+
+      const duplicateContacts = await client.query(
+        `
+          with duplicate_groups as (
+            select organization_id, primary_phone_normalized
+            from contacts
+            where organization_id = $1
+              and primary_phone_normalized is not null
+              and deleted_at is null
+              and coalesce(status, 'active') != 'merged'
+            group by organization_id, primary_phone_normalized
+            having count(*) > 1
+          ),
+          ranked as (
+            select
+              c.*,
+              row_number() over (
+                partition by c.organization_id, c.primary_phone_normalized
+                order by
+                  case when c.is_anchor_locked then 1 else 0 end desc,
+                  case when nullif(trim(c.display_name), '') is not null then 1 else 0 end desc,
+                  c.updated_at desc nulls last,
+                  c.created_at asc nulls last,
+                  c.id
+              ) as duplicate_rank,
+              first_value(c.id) over (
+                partition by c.organization_id, c.primary_phone_normalized
+                order by
+                  case when c.is_anchor_locked then 1 else 0 end desc,
+                  case when nullif(trim(c.display_name), '') is not null then 1 else 0 end desc,
+                  c.updated_at desc nulls last,
+                  c.created_at asc nulls last,
+                  c.id
+              ) as target_contact_id
+            from contacts c
+            join duplicate_groups dg
+              on dg.organization_id = c.organization_id
+             and dg.primary_phone_normalized = c.primary_phone_normalized
+            where c.deleted_at is null
+              and coalesce(c.status, 'active') != 'merged'
+          )
+          select id as source_contact_id, target_contact_id, primary_phone_normalized, display_name
+          from ranked
+          where duplicate_rank > 1
+          limit 100
+        `,
+        [input.organizationId]
+      );
+
+      for (const row of duplicateContacts.rows) {
+        candidates.push({
+          contact_id: row.source_contact_id,
+          reason: "Duplicate contacts share the same normalized phone. Merge requires admin approval.",
+          proposed_action: "merge_duplicate_contact",
+          confidence: "high",
+          issue_type: "duplicate_contact_phone",
+          before_snapshot: row,
+          proposed_after_snapshot: { target_contact_id: row.target_contact_id },
+          repair_plan: {
+            issue_type: "duplicate_contact_phone",
+            duplicate_contact: {
+              source_contact_id: row.source_contact_id,
+              target_contact_id: row.target_contact_id,
+              duplicate_signals: ["same_primary_phone_normalized"],
+              merge_mode: "admin_approval_required"
+            }
+          }
+        });
+      }
+
+      const duplicateIdentities = await client.query(
+        `
+          with duplicate_identity_groups as (
+            select organization_id, phone_normalized
+            from contact_identities
+            where organization_id = $1
+              and ($2::uuid is null or whatsapp_account_id = $2)
+              and phone_normalized is not null
+              and deleted_at is null
+              and coalesce(is_active, true)
+            group by organization_id, phone_normalized
+            having count(distinct contact_id) > 1
+          ),
+          ranked as (
+            select
+              ci.*,
+              row_number() over (
+                partition by ci.organization_id, ci.phone_normalized
+                order by
+                  coalesce(ci.identity_score, 0) desc,
+                  ci.last_seen_at desc nulls last,
+                  ci.updated_at desc nulls last,
+                  ci.created_at asc nulls last,
+                  ci.id
+              ) as duplicate_rank,
+              first_value(ci.contact_id) over (
+                partition by ci.organization_id, ci.phone_normalized
+                order by
+                  coalesce(ci.identity_score, 0) desc,
+                  ci.last_seen_at desc nulls last,
+                  ci.updated_at desc nulls last,
+                  ci.created_at asc nulls last,
+                  ci.id
+              ) as target_contact_id
+            from contact_identities ci
+            join duplicate_identity_groups dig
+              on dig.organization_id = ci.organization_id
+             and dig.phone_normalized = ci.phone_normalized
+            where ci.deleted_at is null
+              and coalesce(ci.is_active, true)
+          )
+          select contact_id as source_contact_id, target_contact_id, phone_normalized, wa_jid, identity_quality, identity_score
+          from ranked
+          where duplicate_rank > 1
+            and contact_id != target_contact_id
+          limit 100
+        `,
+        [input.organizationId, input.whatsappAccountId ?? null]
+      );
+
+      for (const row of duplicateIdentities.rows) {
+        candidates.push({
+          contact_id: row.source_contact_id,
+          reason: "Multiple contact identities point to the same normalized phone on different contacts.",
+          proposed_action: "merge_duplicate_contact",
+          confidence: "high",
+          issue_type: "duplicate_identity_phone",
+          before_snapshot: row,
+          proposed_after_snapshot: { target_contact_id: row.target_contact_id },
+          repair_plan: {
+            issue_type: "duplicate_identity_phone",
+            duplicate_contact: {
+              source_contact_id: row.source_contact_id,
+              target_contact_id: row.target_contact_id,
+              duplicate_signals: ["same_identity_phone_normalized"],
+              merge_mode: "admin_approval_required"
+            }
+          }
+        });
+      }
+
+      const likelyLidMatches = await client.query(
+        `
+          with lid_contacts as (
+            select
+              c.id as lid_contact_id,
+              c.display_name,
+              ci.wa_jid,
+              coalesce(nullif(trim(c.display_name), ''), nullif(trim(ci.profile_name), '')) as match_name
+            from contacts c
+            join contact_identities ci on ci.contact_id = c.id
+            where c.organization_id = $1
+              and ($2::uuid is null or ci.whatsapp_account_id = $2)
+              and c.primary_phone_normalized is null
+              and c.primary_phone_e164 is null
+              and ci.deleted_at is null
+              and coalesce(ci.is_active, true)
+              and ci.wa_jid like '%@lid'
+          ),
+          phone_contacts as (
+            select
+              c.id as phone_contact_id,
+              c.display_name,
+              c.primary_phone_normalized,
+              coalesce(nullif(trim(c.display_name), ''), nullif(trim(ci.profile_name), '')) as match_name
+            from contacts c
+            left join contact_identities ci on ci.contact_id = c.id
+              and ci.deleted_at is null
+              and coalesce(ci.is_active, true)
+            where c.organization_id = $1
+              and c.primary_phone_normalized is not null
+              and c.deleted_at is null
+              and coalesce(c.status, 'active') != 'merged'
+          )
+          select
+            lc.lid_contact_id as source_contact_id,
+            pc.phone_contact_id as target_contact_id,
+            lc.wa_jid,
+            pc.primary_phone_normalized,
+            lc.match_name
+          from lid_contacts lc
+          join phone_contacts pc
+            on lower(trim(lc.match_name)) = lower(trim(pc.match_name))
+          where nullif(trim(lc.match_name), '') is not null
+            and lower(trim(lc.match_name)) not in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact')
+            and lc.lid_contact_id != pc.phone_contact_id
+          limit 100
+        `,
+        [input.organizationId, input.whatsappAccountId ?? null]
+      );
+
+      for (const row of likelyLidMatches.rows) {
+        candidates.push({
+          contact_id: row.source_contact_id,
+          reason: "LID-only contact likely matches a phone contact by non-weak display name. Merge requires admin approval.",
+          proposed_action: "merge_duplicate_contact",
+          confidence: "medium",
+          issue_type: "lid_only_likely_phone_match",
+          before_snapshot: row,
+          proposed_after_snapshot: { target_contact_id: row.target_contact_id },
+          repair_plan: {
+            issue_type: "lid_only_likely_phone_match",
+            duplicate_contact: {
+              source_contact_id: row.source_contact_id,
+              target_contact_id: row.target_contact_id,
+              duplicate_signals: ["same_non_weak_display_name", "lid_without_phone_matches_phone_contact"],
+              merge_mode: "admin_approval_required"
+            }
+          }
+        });
+      }
+
+      const duplicateConversations = await client.query(
+        `
+          with duplicate_conversations as (
+            select organization_id, whatsapp_account_id, contact_id
+            from conversations
+            where organization_id = $1
+              and ($2::uuid is null or whatsapp_account_id = $2)
+              and channel = 'whatsapp'
+            group by organization_id, whatsapp_account_id, contact_id
+            having count(*) > 1
+          )
+          select
+            dc.contact_id,
+            dc.whatsapp_account_id,
+            array_agg(c.id order by c.last_message_at desc nulls last, c.updated_at desc nulls last) as conversation_ids
+          from duplicate_conversations dc
+          join conversations c
+            on c.organization_id = dc.organization_id
+           and c.whatsapp_account_id = dc.whatsapp_account_id
+           and c.contact_id = dc.contact_id
+           and c.channel = 'whatsapp'
+          group by dc.contact_id, dc.whatsapp_account_id
+          limit 100
+        `,
+        [input.organizationId, input.whatsappAccountId ?? null]
+      );
+
+      for (const row of duplicateConversations.rows) {
+        candidates.push({
+          contact_id: row.contact_id,
+          reason: "Duplicate conversations exist for the same organization, WhatsApp account, and contact.",
+          proposed_action: "review_duplicate_conversations",
+          confidence: "high",
+          issue_type: "duplicate_conversation",
+          before_snapshot: row,
+          proposed_after_snapshot: {},
+          repair_plan: {
+            issue_type: "duplicate_conversation",
+            conversation_ids: row.conversation_ids,
+            repair_function: "repair_duplicate_conversations_for_contact",
+            merge_mode: "admin_approval_required"
+          }
+        });
+      }
+
+      let created = 0;
+
+      for (const candidate of candidates) {
+        const existing = await client.query(
+          `
+            select id
+            from contact_repair_proposals
+            where organization_id = $1
+              and contact_id = $2
+              and status = 'pending'
+              and proposed_action = $3
+            limit 1
+          `,
+          [input.organizationId, candidate.contact_id, candidate.proposed_action]
+        );
+
+        if (existing.rows[0]) {
+          continue;
+        }
+
+        await client.query(
+          `
+            insert into contact_repair_proposals (
+              organization_id,
+              contact_id,
+              status,
+              reason,
+              confidence,
+              proposed_action,
+              before_snapshot,
+              proposed_after_snapshot,
+              repair_plan
+            ) values ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
+          `,
+          [
+            input.organizationId,
+            candidate.contact_id,
+            candidate.reason,
+            candidate.confidence,
+            candidate.proposed_action,
+            candidate.before_snapshot,
+            candidate.proposed_after_snapshot,
+            candidate.repair_plan
+          ]
+        );
+        created += 1;
+      }
+
+      return { created, candidates: candidates.length };
     });
   }
 
@@ -552,6 +1044,23 @@ export class ContactRepairProposalService {
     );
 
     if (!shouldPropose) {
+      const weakIdentityProposal = await withTransaction(async (client: any) => {
+        return await this.detectWeakIdentityForContact(client, {
+          organizationId: options.user.organizationId,
+          contactId
+        });
+      });
+
+      if (weakIdentityProposal.created) {
+        return {
+          created: true,
+          status: "pending",
+          preview,
+          candidate,
+          weakIdentityProposal
+        };
+      }
+
       return {
         created: false,
         status: "clean",

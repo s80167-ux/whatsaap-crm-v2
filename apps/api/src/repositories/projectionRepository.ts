@@ -93,8 +93,10 @@ export class ProjectionRepository {
         left join lateral (
           select
             case
+              when coalesce(ci.identity_quality, 'normal') in ('weak', 'lid_only') then null
               when nullif(trim(ci.profile_name), '') is null then null
               when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              when lower(trim(ci.profile_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then null
               else nullif(trim(ci.profile_name), '')
             end as profile_name,
             nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
@@ -214,8 +216,10 @@ export class ProjectionRepository {
         left join lateral (
           select
             case
+              when coalesce(ci.identity_quality, 'normal') in ('weak', 'lid_only') then null
               when nullif(trim(ci.profile_name), '') is null then null
               when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              when lower(trim(ci.profile_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then null
               else nullif(trim(ci.profile_name), '')
             end as profile_name,
             nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
@@ -418,8 +422,10 @@ export class ProjectionRepository {
         left join lateral (
           select
             case
+              when coalesce(ci.identity_quality, 'normal') in ('weak', 'lid_only') then null
               when nullif(trim(ci.profile_name), '') is null then null
               when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              when lower(trim(ci.profile_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then null
               else nullif(trim(ci.profile_name), '')
             end as profile_name,
             nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
@@ -547,8 +553,10 @@ export class ProjectionRepository {
         left join lateral (
           select
             case
+              when coalesce(ci.identity_quality, 'normal') in ('weak', 'lid_only') then null
               when nullif(trim(ci.profile_name), '') is null then null
               when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              when lower(trim(ci.profile_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then null
               else nullif(trim(ci.profile_name), '')
             end as profile_name,
             nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,

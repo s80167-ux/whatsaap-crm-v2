@@ -42,37 +42,72 @@ export class ConversationRepository {
       return existing.rows[0];
     }
 
-    const result = await client.query<ConversationRecord>(
-      `
-        insert into conversations (
-          organization_id,
-          channel,
-          whatsapp_account_id,
-          contact_id,
-          external_thread_key,
-          thread_type,
-          status
-        )
-        values ($1, 'whatsapp', $2, $3, $4, 'direct', 'open')
-        on conflict (organization_id, whatsapp_account_id, contact_id)
-        do update set updated_at = timezone('utc', now())
-        returning
-          id,
-          organization_id,
-          whatsapp_account_id,
-          contact_id,
-          assigned_user_id,
-          channel,
-          external_thread_key,
-          last_message_at,
-          last_incoming_at,
-          last_outgoing_at,
-          unread_count
-      `,
-      [input.organizationId, input.whatsappAccountId, input.contactId, `contact:${input.contactId}`]
-    );
+    try {
+      const result = await client.query<ConversationRecord>(
+        `
+          insert into conversations (
+            organization_id,
+            channel,
+            whatsapp_account_id,
+            contact_id,
+            external_thread_key,
+            thread_type,
+            status
+          )
+          values ($1, 'whatsapp', $2, $3, $4, 'direct', 'open')
+          returning
+            id,
+            organization_id,
+            whatsapp_account_id,
+            contact_id,
+            assigned_user_id,
+            channel,
+            external_thread_key,
+            last_message_at,
+            last_incoming_at,
+            last_outgoing_at,
+            unread_count
+        `,
+        [input.organizationId, input.whatsappAccountId, input.contactId, `contact:${input.contactId}`]
+      );
 
-    return result.rows[0];
+      return result.rows[0];
+    } catch (error: any) {
+      if (error?.code !== "23505") {
+        throw error;
+      }
+
+      const duplicate = await client.query<ConversationRecord>(
+        `
+          select
+            id,
+            organization_id,
+            whatsapp_account_id,
+            contact_id,
+            assigned_user_id,
+            channel,
+            external_thread_key,
+            last_message_at,
+            last_incoming_at,
+            last_outgoing_at,
+            unread_count
+          from conversations
+          where organization_id = $1
+            and whatsapp_account_id = $2
+            and contact_id = $3
+            and channel = 'whatsapp'
+          order by last_message_at desc nulls last, created_at asc
+          limit 1
+        `,
+        [input.organizationId, input.whatsappAccountId, input.contactId]
+      );
+
+      if (!duplicate.rows[0]) {
+        throw error;
+      }
+
+      return duplicate.rows[0];
+    }
   }
 
   async bumpLastMessage(

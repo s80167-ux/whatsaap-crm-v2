@@ -27,6 +27,8 @@ export class ContactRepository {
         from contacts
         where organization_id = $1
           and primary_phone_normalized = $2
+          and deleted_at is null
+          and coalesce(status, 'active') != 'merged'
         limit 1
       `,
       [organizationId, normalizedPhone]
@@ -103,8 +105,10 @@ export class ContactRepository {
         left join lateral (
           select
             case
+              when coalesce(ci.identity_quality, 'normal') in ('weak', 'lid_only') then null
               when nullif(trim(ci.profile_name), '') is null then null
               when lower(trim(ci.profile_name)) = any(blocked_names.blocked_names) then null
+              when lower(trim(ci.profile_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then null
               else nullif(trim(ci.profile_name), '')
             end as profile_name,
             nullif(trim(ci.profile_avatar_url), '') as profile_avatar_url,
@@ -178,56 +182,92 @@ export class ContactRepository {
       companyName?: string | null;
       notes?: string | null;
       primaryAvatarUrl?: string | null;
+      identityStatus?: string | null;
     }
   ): Promise<ContactRecord> {
-    const result = await client.query<ContactRecord>(
-      `
-        insert into contacts (
-          organization_id,
-          display_name,
-          primary_phone_e164,
-          primary_phone_normalized,
-          email,
-          company_name,
-          notes,
-          primary_avatar_url
-        )
-        values ($1, nullif(trim($2), ''), $3, $4, nullif(trim($5), ''), nullif(trim($6), ''), nullif(trim($7), ''), $8)
-        on conflict (organization_id, primary_phone_normalized)
-        where primary_phone_normalized is not null and deleted_at is null
-        do update set
-          display_name = case
-            when contacts.is_anchor_locked then contacts.display_name
-            when nullif(trim(excluded.display_name), '') is null then contacts.display_name
-            when nullif(trim(contacts.display_name), '') is null then excluded.display_name
-            when length(trim(excluded.display_name)) > length(trim(contacts.display_name)) then excluded.display_name
-            else contacts.display_name
-          end,
-          primary_phone_e164 = coalesce(contacts.primary_phone_e164, excluded.primary_phone_e164),
-          primary_avatar_url = coalesce(excluded.primary_avatar_url, contacts.primary_avatar_url)
-        returning
-          id,
-          organization_id,
-          display_name,
-          primary_phone_e164,
-          primary_phone_normalized,
-          email,
-          company_name,
-          notes,
-          primary_avatar_url,
-          owner_user_id
-      `,
-      [
-        input.organizationId,
-        input.displayName,
-        input.primaryPhoneE164,
-        input.primaryPhoneNormalized,
-        input.email ?? null,
-        input.companyName ?? null,
-        input.notes ?? null,
-        input.primaryAvatarUrl ?? null
-      ]
-    );
+    if (input.primaryPhoneNormalized) {
+      const existing = await this.findByNormalizedPhone(client, input.organizationId, input.primaryPhoneNormalized);
+
+      if (existing) {
+        return this.anchor(client, {
+          contactId: existing.id,
+          displayName: input.displayName,
+          primaryPhoneE164: input.primaryPhoneE164,
+          primaryPhoneNormalized: input.primaryPhoneNormalized,
+          email: input.email ?? null,
+          companyName: input.companyName ?? null,
+          notes: input.notes ?? null,
+          primaryAvatarUrl: input.primaryAvatarUrl ?? null,
+          identityStatus: input.identityStatus ?? null
+        });
+      }
+    }
+
+    let result;
+
+    try {
+      result = await client.query<ContactRecord>(
+        `
+          insert into contacts (
+            organization_id,
+            display_name,
+            primary_phone_e164,
+            primary_phone_normalized,
+            email,
+            company_name,
+            notes,
+            primary_avatar_url,
+            identity_status
+          )
+          values ($1, nullif(trim($2), ''), $3, $4, nullif(trim($5), ''), nullif(trim($6), ''), nullif(trim($7), ''), $8, coalesce($9, 'resolved'))
+          returning
+            id,
+            organization_id,
+            display_name,
+            primary_phone_e164,
+            primary_phone_normalized,
+            email,
+            company_name,
+            notes,
+            primary_avatar_url,
+            identity_status,
+            owner_user_id
+        `,
+        [
+          input.organizationId,
+          input.displayName,
+          input.primaryPhoneE164,
+          input.primaryPhoneNormalized,
+          input.email ?? null,
+          input.companyName ?? null,
+          input.notes ?? null,
+          input.primaryAvatarUrl ?? null,
+          input.identityStatus ?? null
+        ]
+      );
+    } catch (error: any) {
+      if (error?.code !== "23505" || !input.primaryPhoneNormalized) {
+        throw error;
+      }
+
+      const existing = await this.findByNormalizedPhone(client, input.organizationId, input.primaryPhoneNormalized);
+
+      if (!existing) {
+        throw error;
+      }
+
+      return this.anchor(client, {
+        contactId: existing.id,
+        displayName: input.displayName,
+        primaryPhoneE164: input.primaryPhoneE164,
+        primaryPhoneNormalized: input.primaryPhoneNormalized,
+        email: input.email ?? null,
+        companyName: input.companyName ?? null,
+        notes: input.notes ?? null,
+        primaryAvatarUrl: input.primaryAvatarUrl ?? null,
+        identityStatus: input.identityStatus ?? null
+      });
+    }
 
     return result.rows[0];
   }
@@ -243,6 +283,7 @@ export class ContactRepository {
       companyName?: string | null;
       notes?: string | null;
       primaryAvatarUrl?: string | null;
+      identityStatus?: string | null;
     }
   ): Promise<ContactRecord> {
     const result = await client.query<ContactRecord>(
@@ -252,7 +293,7 @@ export class ContactRepository {
               when is_anchor_locked then display_name
               when nullif(trim($2), '') is null then display_name
               when nullif(trim(display_name), '') is null then nullif(trim($2), '')
-              when length(trim($2)) > length(trim(display_name)) then nullif(trim($2), '')
+              when lower(trim(display_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then nullif(trim($2), '')
               else display_name
             end,
             primary_phone_e164 = case
@@ -271,16 +312,23 @@ export class ContactRepository {
             company_name = coalesce(nullif(trim($6), ''), company_name),
             notes = coalesce(nullif(trim($7), ''), notes),
             primary_avatar_url = coalesce(nullif(trim($8), ''), primary_avatar_url),
+            identity_status = case
+              when $9::text is null then identity_status
+              when coalesce(identity_status, 'resolved') in ('needs_merge_review', 'needs_phone') then identity_status
+              when $9::text in ('needs_phone', 'needs_merge_review') then $9::text
+              when coalesce(identity_status, 'resolved') = 'resolved' and $9::text in ('provisional') then identity_status
+              else $9::text
+            end,
             anchored_at = case
               when is_anchor_locked or nullif(trim($2), '') is null then anchored_at
               when nullif(trim(display_name), '') is null then timezone('utc', now())
-              when length(trim($2)) > length(trim(display_name)) then timezone('utc', now())
+              when lower(trim(display_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then timezone('utc', now())
               else anchored_at
             end,
             anchored_by_source = case
               when is_anchor_locked or nullif(trim($2), '') is null then anchored_by_source
               when nullif(trim(display_name), '') is null then 'whatsapp_identity'
-              when length(trim($2)) > length(trim(display_name)) then 'whatsapp_identity'
+              when lower(trim(display_name)) in ('unknown', 'customer', 'no name', 'whatsapp', 'business', 'user', 'device', 'iphone', 'android', 'test', 'admin', 'contact') then 'whatsapp_identity'
               else anchored_by_source
             end
         where id = $1
@@ -294,6 +342,7 @@ export class ContactRepository {
           company_name,
           notes,
           primary_avatar_url,
+          identity_status,
           owner_user_id
       `,
       [
@@ -304,7 +353,8 @@ export class ContactRepository {
         input.email ?? null,
         input.companyName ?? null,
         input.notes ?? null,
-        input.primaryAvatarUrl ?? null
+        input.primaryAvatarUrl ?? null,
+        input.identityStatus ?? null
       ]
     );
 

@@ -24,6 +24,7 @@ import {
   extractAllWhatsAppJidCandidates,
   isWhatsAppDirectChatJid,
   jidToPhone,
+  normalizePhoneNumber,
   normalizeWhatsAppJid
 } from "../utils/phone.js";
 
@@ -64,6 +65,20 @@ type ConnectionWaiter = {
 const HISTORY_SYNC_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_HISTORY_SYNC_LOOKBACK_DAYS = 7;
 const SEND_RECONNECT_TIMEOUT_MS = 20_000;
+const WEAK_CONTACT_NAMES = new Set([
+  "unknown",
+  "customer",
+  "no name",
+  "whatsapp",
+  "business",
+  "user",
+  "device",
+  "iphone",
+  "android",
+  "test",
+  "admin",
+  "contact"
+]);
 
 async function downloadInboundMedia(socket: ReturnType<typeof makeWASocket>, message: WAMessage) {
   const attachment = extractInboundMediaAttachment(message);
@@ -82,6 +97,40 @@ async function downloadInboundMedia(socket: ReturnType<typeof makeWASocket>, mes
     dataBase64: buffer.toString("base64"),
     fileSizeBytes: attachment.fileSizeBytes > 0 ? attachment.fileSizeBytes : buffer.length
   };
+}
+
+function normalizeContactName(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function hasUsefulContactName(value: string | null | undefined) {
+  const normalized = normalizeContactName(value);
+  return Boolean(normalized && !WEAK_CONTACT_NAMES.has(normalized.toLowerCase()));
+}
+
+function scoreStoredContact(snapshot: StoredContactSnapshot) {
+  const phone = normalizePhoneNumber(jidToPhone(snapshot.jid));
+  return (
+    (phone ? 100 : 0) +
+    (normalizeWhatsAppJid(snapshot.jid)?.endsWith("@s.whatsapp.net") || normalizeWhatsAppJid(snapshot.jid)?.endsWith("@c.us") ? 30 : 0) +
+    (hasUsefulContactName(snapshot.verifiedName) ? 25 : 0) +
+    (hasUsefulContactName(snapshot.name) ? 20 : 0) +
+    (hasUsefulContactName(snapshot.notify) ? 10 : 0) +
+    (normalizeContactName(snapshot.imgUrl) ? 10 : 0)
+  );
+}
+
+function storedContactDedupeKey(accountScopedKey: string, snapshot: StoredContactSnapshot) {
+  const phone = normalizePhoneNumber(jidToPhone(snapshot.jid));
+  const normalizedJid = normalizeWhatsAppJid(snapshot.jid);
+  const normalizedLid = normalizeWhatsAppJid(snapshot.lid);
+
+  return phone ?? normalizedJid ?? normalizedLid ?? snapshot.id ?? accountScopedKey;
 }
 
 function isWithinHistorySyncWindow(sentAt: Date, lookbackDays: number | null | undefined) {
@@ -171,18 +220,20 @@ export class WhatsAppSessionManager {
         continue;
       }
 
-      const dedupeKey = snapshot.jid ?? snapshot.lid ?? snapshot.id ?? key;
+      const candidate = {
+        id: snapshot.id,
+        jid: snapshot.jid,
+        lid: snapshot.lid,
+        name: snapshot.name,
+        notify: snapshot.notify,
+        verifiedName: snapshot.verifiedName,
+        imgUrl: snapshot.imgUrl
+      };
+      const dedupeKey = storedContactDedupeKey(key, candidate);
+      const existing = contacts.get(dedupeKey);
 
-      if (!contacts.has(dedupeKey)) {
-        contacts.set(dedupeKey, {
-          id: snapshot.id,
-          jid: snapshot.jid,
-          lid: snapshot.lid,
-          name: snapshot.name,
-          notify: snapshot.notify,
-          verifiedName: snapshot.verifiedName,
-          imgUrl: snapshot.imgUrl
-        });
+      if (!existing || scoreStoredContact(candidate) > scoreStoredContact(existing)) {
+        contacts.set(dedupeKey, candidate);
       }
     }
 

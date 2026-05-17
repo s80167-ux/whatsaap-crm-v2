@@ -12,6 +12,7 @@ export interface ContactRecord {
   company_name: string | null;
   notes: string | null;
   primary_avatar_url?: string | null;
+  identity_status?: "resolved" | "provisional" | "needs_phone" | "needs_merge_review" | string | null;
   owner_user_id?: UUID | null;
   whatsapp_source_count?: number;
   whatsapp_sources?: Array<{
@@ -31,6 +32,8 @@ export interface ContactIdentityRecord {
   profile_name: string | null;
   profile_push_name?: string | null;
   profile_avatar_url?: string | null;
+  identity_quality?: "strong" | "normal" | "weak" | "lid_only" | "phone_verified" | string | null;
+  identity_score?: number | null;
 }
 
 export interface ConversationRecord {

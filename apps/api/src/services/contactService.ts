@@ -2,7 +2,11 @@ import type { PoolClient } from "pg";
 import { ContactIdentityRepository } from "../repositories/contactIdentityRepository.js";
 import { ContactRepository } from "../repositories/contactRepository.js";
 import type { ContactIdentityRecord, ContactRecord } from "../types/domain.js";
-import { normalizePhoneNumber, normalizeWhatsAppJid } from "../utils/phone.js";
+import {
+  sanitizeWhatsAppDisplayName,
+  scoreContactIdentity
+} from "../utils/contactIdentity.js";
+import { getWhatsAppJidType, jidToPhone, normalizePhoneNumber, normalizeWhatsAppJid } from "../utils/phone.js";
 
 export class ContactService {
   constructor(
@@ -22,10 +26,20 @@ export class ContactService {
       profileAvatarUrl?: string | null;
     }
   ): Promise<{ contact: ContactRecord; identity: ContactIdentityRecord }> {
-    const normalizedPhone = normalizePhoneNumber(input.phoneRaw);
-    const primaryPhone = normalizedPhone ?? input.phoneRaw;
     const whatsappJid = normalizeWhatsAppJid(input.whatsappJid) ?? input.whatsappJid;
-    const bestProfileName = input.profileName ?? input.profilePushName ?? null;
+    const jidType = getWhatsAppJidType(whatsappJid);
+    const normalizedPhone = normalizePhoneNumber(input.phoneRaw) ?? jidToPhone(whatsappJid);
+    const primaryPhone = normalizedPhone ?? input.phoneRaw;
+    const blockedNames = await this.findBlockedWhatsAppAccountNames(client, input.whatsappAccountId);
+    const bestProfileName =
+      sanitizeWhatsAppDisplayName(input.profileName, blockedNames) ??
+      sanitizeWhatsAppDisplayName(input.profilePushName, blockedNames);
+    const scoredIdentity = scoreContactIdentity({
+      normalizedPhone,
+      displayName: bestProfileName,
+      profileAvatarUrl: input.profileAvatarUrl ?? null,
+      jidType
+    });
     const existingIdentity = await this.identityRepository.findByJid(
       client,
       input.organizationId,
@@ -64,7 +78,8 @@ export class ContactService {
         displayName: bestProfileName,
         primaryPhoneE164: primaryPhone,
         primaryPhoneNormalized: normalizedPhone,
-        primaryAvatarUrl: input.profileAvatarUrl ?? null
+        primaryAvatarUrl: input.profileAvatarUrl ?? null,
+        identityStatus: scoredIdentity.contactStatus
       });
     } else {
       contact = await this.contactRepository.anchor(client, {
@@ -72,7 +87,8 @@ export class ContactService {
         displayName: bestProfileName,
         primaryPhoneE164: primaryPhone,
         primaryPhoneNormalized: normalizedPhone,
-        primaryAvatarUrl: input.profileAvatarUrl ?? null
+        primaryAvatarUrl: input.profileAvatarUrl ?? null,
+        identityStatus: scoredIdentity.contactStatus
       });
     }
 
@@ -84,8 +100,10 @@ export class ContactService {
       phoneE164: primaryPhone,
       phoneNormalized: normalizedPhone,
       profileName: bestProfileName,
-      profilePushName: input.profilePushName ?? null,
-      profileAvatarUrl: input.profileAvatarUrl ?? null
+      profilePushName: sanitizeWhatsAppDisplayName(input.profilePushName, blockedNames),
+      profileAvatarUrl: input.profileAvatarUrl ?? null,
+      identityQuality: scoredIdentity.identityQuality,
+      identityScore: scoredIdentity.score
     });
 
     if (identity.contact_id !== contact.id) {
@@ -97,5 +115,20 @@ export class ContactService {
     }
 
     return { contact, identity };
+  }
+
+  private async findBlockedWhatsAppAccountNames(client: PoolClient, whatsappAccountId: string) {
+    const result = await client.query<{ label: string | null; display_name: string | null }>(
+      `
+        select label, display_name
+        from whatsapp_accounts
+        where id = $1
+        limit 1
+      `,
+      [whatsappAccountId]
+    );
+
+    const account = result.rows[0];
+    return [account?.label ?? null, account?.display_name ?? null];
   }
 }

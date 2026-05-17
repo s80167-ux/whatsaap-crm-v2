@@ -3,10 +3,18 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
 import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
 import type { AuthUser } from "../types/auth.js";
-import { isWhatsAppDirectChatJid, jidToPhone } from "../utils/phone.js";
+import { isWeakDisplayName, normalizeDisplayName } from "../utils/contactIdentity.js";
+import {
+  getWhatsAppJidType,
+  isWhatsAppDirectChatJid,
+  jidToPhone,
+  normalizePhoneNumber,
+  normalizeWhatsAppJid
+} from "../utils/phone.js";
 import { ConnectorClient } from "./connectorClient.js";
 import { ContactIdentityRepository } from "./../repositories/contactIdentityRepository.js";
 import { ContactRepository } from "./../repositories/contactRepository.js";
+import { ContactRepairProposalService } from "./contactRepairProposalService.js";
 import { ContactService } from "./contactService.js";
 import { WhatsAppSyncJobService } from "./whatsAppSyncJobService.js";
 
@@ -26,6 +34,97 @@ function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id
   }
 
   return Boolean(authUser.organizationUserId && account.created_by === authUser.organizationUserId);
+}
+
+type ConnectorContact = Awaited<ReturnType<ConnectorClient["syncAccountContacts"]>>["contacts"][number];
+
+type PreparedBackfillContact = {
+  source: ConnectorContact;
+  selectedJid: string;
+  selectedJidType: ReturnType<typeof getWhatsAppJidType>;
+  phoneRaw: string | null;
+  normalizedPhone: string | null;
+  phoneJid: string | null;
+  lidJid: string | null;
+  profileName: string | null;
+  profilePushName: string | null;
+  profileAvatarUrl: string | null;
+  score: number;
+};
+
+function bestNonWeakName(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const normalized = normalizeDisplayName(value);
+
+    if (normalized && !isWeakDisplayName(normalized)) {
+      return normalized;
+    }
+  }
+
+  return null;
+}
+
+function prepareBackfillContact(contact: ConnectorContact): PreparedBackfillContact | null {
+  const normalizedJid = normalizeWhatsAppJid(contact.jid);
+  const normalizedLid = normalizeWhatsAppJid(contact.lid);
+  const jidType = getWhatsAppJidType(normalizedJid);
+  const lidType = getWhatsAppJidType(normalizedLid);
+  const phoneJid = jidType === "phone" ? normalizedJid : null;
+  const lidJid = lidType === "lid" ? normalizedLid : null;
+  const selectedJid = phoneJid ?? lidJid;
+
+  if (!selectedJid || !isWhatsAppDirectChatJid(selectedJid)) {
+    return null;
+  }
+
+  const phoneRaw = jidToPhone(phoneJid) ?? jidToPhone(normalizedJid) ?? null;
+  const normalizedPhone = normalizePhoneNumber(phoneRaw);
+  const profileName = bestNonWeakName(contact.verifiedName, contact.name, contact.notify);
+  const profilePushName = bestNonWeakName(contact.notify);
+  const profileAvatarUrl = normalizeDisplayName(contact.imgUrl);
+
+  if (!normalizedPhone && getWhatsAppJidType(selectedJid) === "lid" && !profileName && !profilePushName && !profileAvatarUrl) {
+    return null;
+  }
+
+  const score =
+    (normalizedPhone ? 100 : 0) +
+    (phoneJid ? 30 : 0) +
+    (contact.verifiedName && !isWeakDisplayName(contact.verifiedName) ? 25 : 0) +
+    (profileName ? 20 : 0) +
+    (profileAvatarUrl ? 10 : 0) -
+    (!normalizedPhone && lidJid ? 30 : 0);
+
+  return {
+    source: contact,
+    selectedJid,
+    selectedJidType: getWhatsAppJidType(selectedJid),
+    phoneRaw,
+    normalizedPhone,
+    phoneJid,
+    lidJid,
+    profileName,
+    profilePushName,
+    profileAvatarUrl,
+    score
+  };
+}
+
+function backfillDedupeKey(contact: PreparedBackfillContact) {
+  return (
+    contact.normalizedPhone ??
+    contact.phoneJid ??
+    contact.lidJid ??
+    (typeof contact.source.id === "string" && contact.source.id.length > 0 ? `connector:${contact.source.id}` : contact.selectedJid)
+  );
+}
+
+function isBetterBackfillContact(candidate: PreparedBackfillContact, existing: PreparedBackfillContact) {
+  if (candidate.normalizedPhone && !existing.normalizedPhone) return true;
+  if (!candidate.normalizedPhone && existing.normalizedPhone) return false;
+  if (candidate.phoneJid && !existing.phoneJid) return true;
+  if (!candidate.phoneJid && existing.phoneJid) return false;
+  return candidate.score > existing.score;
 }
 
 export class AdminBackfillService {
@@ -105,21 +204,28 @@ export class AdminBackfillService {
     });
 
     const connectorResult = await this.connectorClient.syncAccountContacts(account.id);
-    const uniqueContacts = new Map<string, (typeof connectorResult.contacts)[number]>();
+    const uniqueContacts = new Map<string, PreparedBackfillContact>();
+    let skippedWeakEmpty = 0;
+    let dedupedWithinBatch = 0;
 
     for (const contact of connectorResult.contacts) {
-      const jid = typeof contact.jid === "string" && contact.jid.length > 0
-        ? contact.jid
-        : typeof contact.lid === "string" && contact.lid.length > 0
-          ? contact.lid
-          : null;
+      const preparedContact = prepareBackfillContact(contact);
 
-      if (!jid || !isWhatsAppDirectChatJid(jid)) {
+      if (!preparedContact) {
+        skippedWeakEmpty += 1;
         continue;
       }
 
-      const dedupeKey = contact.jid ?? contact.lid ?? contact.id;
-      uniqueContacts.set(dedupeKey, contact);
+      const dedupeKey = backfillDedupeKey(preparedContact);
+      const existing = uniqueContacts.get(dedupeKey);
+
+      if (existing) {
+        dedupedWithinBatch += 1;
+      }
+
+      if (!existing || isBetterBackfillContact(preparedContact, existing)) {
+        uniqueContacts.set(dedupeKey, preparedContact);
+      }
     }
 
     if (connectorResult.contacts.length === 0) {
@@ -136,46 +242,38 @@ export class AdminBackfillService {
       imported: 0,
       created: 0,
       updated: 0,
-      skipped: 0
+      skipped: skippedWeakEmpty,
+      weakImported: 0,
+      provisionalCreated: 0,
+      needsPhone: 0,
+      skippedWeakEmpty,
+      dedupedWithinBatch,
+      repairProposalsCreated: 0,
+      linkedByPhone: 0,
+      linkedByJid: 0,
+      linkedByLid: 0
     };
 
     for (const contact of uniqueContacts.values()) {
-      const whatsappJid = contact.jid ?? contact.lid ?? null;
-
-      if (!whatsappJid) {
-        summary.skipped += 1;
-        continue;
-      }
-
-      const phoneRaw = jidToPhone(contact.jid ?? null);
-      const profileName = contact.verifiedName?.trim() || contact.name?.trim() || null;
-      const profilePushName = contact.notify?.trim() || null;
-      const profileAvatarUrl = contact.imgUrl?.trim() || null;
-
-      if (!phoneRaw && !profileName && !profilePushName) {
-        summary.skipped += 1;
-        continue;
-      }
-
       await withTransaction(async (client) => {
         const existingIdentity = await this.contactIdentityRepository.findByJid(
           client,
           account.organization_id,
           account.id,
-          whatsappJid
+          contact.selectedJid
         );
-        const existingContact = phoneRaw
-          ? await this.contactRepository.findByNormalizedPhone(client, account.organization_id, phoneRaw)
+        const existingContact = contact.normalizedPhone
+          ? await this.contactRepository.findByNormalizedPhone(client, account.organization_id, contact.normalizedPhone)
           : null;
 
-        await this.contactService.findOrCreateCanonicalContact(client, {
+        const resolved = await this.contactService.findOrCreateCanonicalContact(client, {
           organizationId: account.organization_id,
           whatsappAccountId: account.id,
-          whatsappJid,
-          phoneRaw,
-          profileName,
-          profilePushName,
-          profileAvatarUrl
+          whatsappJid: contact.selectedJid,
+          phoneRaw: contact.phoneRaw,
+          profileName: contact.profileName,
+          profilePushName: contact.profilePushName,
+          profileAvatarUrl: contact.profileAvatarUrl
         });
 
         if (!existingIdentity && !existingContact) {
@@ -183,15 +281,52 @@ export class AdminBackfillService {
         } else {
           summary.updated += 1;
         }
+
+        if (existingContact) {
+          summary.linkedByPhone += 1;
+        } else if (existingIdentity && getWhatsAppJidType(existingIdentity.wa_jid) === "lid") {
+          summary.linkedByLid += 1;
+        } else if (existingIdentity) {
+          summary.linkedByJid += 1;
+        }
+
+        if (resolved.identity.identity_quality === "weak" || resolved.identity.identity_quality === "lid_only") {
+          summary.weakImported += 1;
+        }
+
+        if (resolved.contact.identity_status === "provisional") {
+          summary.provisionalCreated += 1;
+        }
+
+        if (resolved.contact.identity_status === "needs_phone" || !resolved.contact.primary_phone_normalized) {
+          summary.needsPhone += 1;
+        }
+
+        const weakProposal = await ContactRepairProposalService.detectWeakIdentityForContact(client, {
+          organizationId: account.organization_id,
+          contactId: resolved.contact.id
+        });
+
+        if (weakProposal.created) {
+          summary.repairProposalsCreated += 1;
+        }
+
         summary.imported += 1;
       });
     }
+
+    const duplicateRepairSummary = await ContactRepairProposalService.detectBackfillDuplicateRepairProposals({
+      organizationId: account.organization_id,
+      whatsappAccountId: account.id
+    });
+    summary.repairProposalsCreated += duplicateRepairSummary.created;
 
     return {
       accountId: account.id,
       organizationId: account.organization_id,
       importedAt: new Date().toISOString(),
-      summary
+      summary,
+      duplicateRepairSummary
     };
   }
 }
