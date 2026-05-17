@@ -1,10 +1,12 @@
 import crypto from "node:crypto";
+import type { PoolClient } from "pg";
 import { withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
+import { WhatsAppAccountAccessRepository } from "../repositories/whatsAppAccountAccessRepository.js";
 import type { SendMessageInput, SendMessageOptions } from "../types/domain.js";
 import { MessageDispatchService } from "./messageDispatchService.js";
 import { ProjectionService } from "./projectionService.js";
@@ -14,6 +16,7 @@ export class SendMessageService {
   constructor(
     private readonly messageRepository = new MessageRepository(),
     private readonly conversationRepository = new ConversationRepository(),
+    private readonly whatsappAccessRepository = new WhatsAppAccountAccessRepository(),
     private readonly messageDispatchService = new MessageDispatchService(),
     private readonly projectionService = new ProjectionService(),
     private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
@@ -56,6 +59,8 @@ export class SendMessageService {
       if (!recipientJid) {
         throw new Error("Recipient identity not found for conversation");
       }
+
+      await this.assertCanReply(client, input);
 
       let replyContextMessage:
         | {
@@ -267,6 +272,33 @@ export class SendMessageService {
       400,
       "local_connector_send_disabled"
     );
+  }
+
+  private async assertCanReply(client: PoolClient, input: SendMessageInput) {
+    if (!input.authUser) {
+      return;
+    }
+
+    if (input.authUser.role === "super_admin" || input.authUser.role === "org_admin" || input.authUser.role === "manager") {
+      return;
+    }
+
+    const organizationUserId = input.authUser.organizationUserId ?? input.organizationUserId ?? null;
+
+    if (!organizationUserId) {
+      throw new AppError("WhatsApp number reply access is required", 403, "whatsapp_account_reply_forbidden");
+    }
+
+    const canReply = await this.whatsappAccessRepository.hasPermission(client, {
+      organizationId: input.organizationId,
+      whatsappAccountId: input.whatsappAccountId,
+      organizationUserId,
+      permission: "can_reply"
+    });
+
+    if (!canReply) {
+      throw new AppError("You do not have reply access for this WhatsApp number", 403, "whatsapp_account_reply_forbidden");
+    }
   }
 }
 

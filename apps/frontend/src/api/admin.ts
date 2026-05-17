@@ -1,8 +1,11 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "../lib/http";
 import type {
   GoogleSignupRequestSummary,
   OrganizationSummary,
   UserSummary,
+  WhatsAppAccountAccessDetail,
+  WhatsAppAccountAccessOverview,
+  WhatsAppAccountAccessRole,
   WhatsAppAccountSummary,
   WhatsAppSyncJobSummary
 } from "../types/admin";
@@ -312,6 +315,38 @@ export async function fetchWhatsAppAccounts(organizationId?: string | null) {
   const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
   const response = await apiGet<{ data: WhatsAppAccountApiRecord[] }>(`/admin/whatsapp-accounts${suffix}`);
   return response.data.map(mapWhatsAppAccount);
+}
+
+export async function fetchWhatsAppAccountAccess(organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: WhatsAppAccountAccessOverview }>(`/admin/whatsapp-account-access${suffix}`);
+  return response.data;
+}
+
+export async function fetchWhatsAppAccountAccessDetail(whatsappAccountId: string) {
+  const response = await apiGet<{ data: WhatsAppAccountAccessDetail }>(
+    `/admin/whatsapp-account-access/${whatsappAccountId}`
+  );
+  return response.data;
+}
+
+export async function updateWhatsAppAccountAccess(
+  whatsappAccountId: string,
+  accessList: Array<{
+    organizationUserId: string;
+    accessRole: WhatsAppAccountAccessRole;
+    canView: boolean;
+    canReply: boolean;
+    canCreateSales: boolean;
+    canEditSales: boolean;
+    isActive: boolean;
+  }>
+) {
+  const response = await apiPut<{ data: Omit<WhatsAppAccountAccessDetail, "users"> }>(
+    `/admin/whatsapp-account-access/${whatsappAccountId}`,
+    { accessList }
+  );
+  return response.data;
 }
 
 export async function createWhatsAppAccount(payload: {

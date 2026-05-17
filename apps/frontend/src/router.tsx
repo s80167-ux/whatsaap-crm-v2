@@ -238,6 +238,7 @@ export const router = createBrowserRouter([
           },
           { path: "setup/channels", element: withRouteFallback(<ChannelSetupPage />) },
           { path: "setup/channels/whatsapp", element: withRouteFallback(<WhatsAppAccountDashboard />) },
+          { path: "setup/whatsapp-number-access", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "setup/channels/social", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="social" />) },
           { path: "setup/channels/ecommerce", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="ecommerce" />) },
           { path: "setup/channels/email", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="email" />) },

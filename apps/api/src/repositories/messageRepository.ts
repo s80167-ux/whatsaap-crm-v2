@@ -449,6 +449,15 @@ export class MessageRepository {
                     where ca.conversation_id = c.id
                       and ca.organization_user_id = $4
                   )
+                  or exists (
+                    select 1
+                    from whatsapp_account_user_access wau
+                    where wau.organization_id = c.organization_id
+                      and wau.whatsapp_account_id = c.whatsapp_account_id
+                      and wau.organization_user_id = $4
+                      and wau.is_active = true
+                      and wau.can_view = true
+                  )
                 )
             )
           )

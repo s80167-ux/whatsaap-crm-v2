@@ -162,6 +162,38 @@ export class ContactRepository {
               where co.contact_id = c.id
                 and co.organization_user_id = $4
             )
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = c.organization_id
+                and wau.organization_user_id = $4
+                and wau.is_active = true
+                and wau.can_view = true
+                and (
+                  exists (
+                    select 1
+                    from conversations conv
+                    where conv.organization_id = c.organization_id
+                      and conv.contact_id = c.id
+                      and conv.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                  or exists (
+                    select 1
+                    from contact_identities ci
+                    where ci.organization_id = c.organization_id
+                      and ci.contact_id = c.id
+                      and ci.whatsapp_account_id = wau.whatsapp_account_id
+                      and ci.deleted_at is null
+                  )
+                  or exists (
+                    select 1
+                    from messages m
+                    where m.organization_id = c.organization_id
+                      and m.contact_id = c.id
+                      and m.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                )
+            )
           )
         limit 1
       `,

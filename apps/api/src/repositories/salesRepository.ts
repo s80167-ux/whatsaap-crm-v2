@@ -113,6 +113,38 @@ export class SalesRepository {
           and (
             not $2::boolean
             or so.assigned_user_id = $3
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = so.organization_id
+                and wau.organization_user_id = $3
+                and wau.is_active = true
+                and wau.can_view = true
+                and (
+                  exists (
+                    select 1
+                    from conversations c
+                    where c.organization_id = so.organization_id
+                      and c.contact_id = so.contact_id
+                      and c.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                  or exists (
+                    select 1
+                    from contact_identities ci
+                    where ci.organization_id = so.organization_id
+                      and ci.contact_id = so.contact_id
+                      and ci.whatsapp_account_id = wau.whatsapp_account_id
+                      and ci.deleted_at is null
+                  )
+                  or exists (
+                    select 1
+                    from messages m
+                    where m.organization_id = so.organization_id
+                      and m.contact_id = so.contact_id
+                      and m.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                )
+            )
           )
         order by so.updated_at desc, so.created_at desc, so.id desc
       `,
@@ -153,6 +185,38 @@ export class SalesRepository {
           and (
             not $2::boolean
             or so.assigned_user_id = $3
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = so.organization_id
+                and wau.organization_user_id = $3
+                and wau.is_active = true
+                and wau.can_view = true
+                and (
+                  exists (
+                    select 1
+                    from conversations c
+                    where c.organization_id = so.organization_id
+                      and c.contact_id = so.contact_id
+                      and c.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                  or exists (
+                    select 1
+                    from contact_identities ci
+                    where ci.organization_id = so.organization_id
+                      and ci.contact_id = so.contact_id
+                      and ci.whatsapp_account_id = wau.whatsapp_account_id
+                      and ci.deleted_at is null
+                  )
+                  or exists (
+                    select 1
+                    from messages m
+                    where m.organization_id = so.organization_id
+                      and m.contact_id = so.contact_id
+                      and m.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                )
+            )
           )
       `,
       [input.organizationId, input.assignedOnly, input.organizationUserId ?? null]
@@ -304,6 +368,38 @@ export class SalesRepository {
           and (
             not $3::boolean
             or so.assigned_user_id = $4
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = so.organization_id
+                and wau.organization_user_id = $4
+                and wau.is_active = true
+                and wau.can_view = true
+                and (
+                  exists (
+                    select 1
+                    from conversations c
+                    where c.organization_id = so.organization_id
+                      and c.contact_id = so.contact_id
+                      and c.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                  or exists (
+                    select 1
+                    from contact_identities ci
+                    where ci.organization_id = so.organization_id
+                      and ci.contact_id = so.contact_id
+                      and ci.whatsapp_account_id = wau.whatsapp_account_id
+                      and ci.deleted_at is null
+                  )
+                  or exists (
+                    select 1
+                    from messages m
+                    where m.organization_id = so.organization_id
+                      and m.contact_id = so.contact_id
+                      and m.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                )
+            )
           )
         limit 1
       `,

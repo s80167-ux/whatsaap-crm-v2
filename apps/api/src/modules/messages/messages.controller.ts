@@ -116,6 +116,7 @@ export async function sendWhatsAppMessage(request: Request, response: Response) 
 
   const message = await sendMessageService.send({
     ...input,
+    authUser: auth,
     organizationId,
     organizationUserId: auth.organizationUserId ?? null
   });
@@ -260,6 +261,7 @@ export async function forwardMessage(request: Request, response: Response) {
 
   const forwardedMessage = await sendMessageService.send({
     organizationId,
+    authUser: auth,
     organizationUserId: auth.organizationUserId ?? null,
     whatsappAccountId: targetConversation.whatsapp_account_id,
     conversationId: input.targetConversationId,

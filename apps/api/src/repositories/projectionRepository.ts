@@ -464,6 +464,15 @@ export class ProjectionRepository {
               where ca.conversation_id = its.conversation_id
                 and ca.organization_user_id = $3
             )
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = its.organization_id
+                and wau.whatsapp_account_id = its.whatsapp_account_id
+                and wau.organization_user_id = $3
+                and wau.is_active = true
+                and wau.can_view = true
+            )
           )
         order by coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) desc nulls last,
                  its.updated_at desc,
@@ -626,6 +635,38 @@ export class ProjectionRepository {
               from contact_owners co
               where co.contact_id = ct.id
                 and co.organization_user_id = $3
+            )
+            or exists (
+              select 1
+              from whatsapp_account_user_access wau
+              where wau.organization_id = ct.organization_id
+                and wau.organization_user_id = $3
+                and wau.is_active = true
+                and wau.can_view = true
+                and (
+                  exists (
+                    select 1
+                    from conversations c
+                    where c.organization_id = ct.organization_id
+                      and c.contact_id = ct.id
+                      and c.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                  or exists (
+                    select 1
+                    from contact_identities ci
+                    where ci.organization_id = ct.organization_id
+                      and ci.contact_id = ct.id
+                      and ci.whatsapp_account_id = wau.whatsapp_account_id
+                      and ci.deleted_at is null
+                  )
+                  or exists (
+                    select 1
+                    from messages m
+                    where m.organization_id = ct.organization_id
+                      and m.contact_id = ct.id
+                      and m.whatsapp_account_id = wau.whatsapp_account_id
+                  )
+                )
             )
           )
         order by greatest(

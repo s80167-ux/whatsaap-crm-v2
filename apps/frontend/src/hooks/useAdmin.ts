@@ -6,6 +6,8 @@ import {
   fetchGoogleSignupRequests,
   fetchOrganizations,
   fetchUsers,
+  fetchWhatsAppAccountAccess,
+  fetchWhatsAppAccountAccessDetail,
   fetchWhatsAppAccounts
 } from "../api/admin";
 import { getStoredUser } from "../lib/auth";
@@ -35,6 +37,22 @@ export function useWhatsAppAccounts(organizationId?: string | null, enabled = tr
     queryFn: () => fetchWhatsAppAccounts(organizationId),
     enabled,
     staleTime: 0
+  });
+}
+
+export function useWhatsAppAccountAccess(organizationId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["whatsapp-account-access", organizationId ?? "current"],
+    queryFn: () => fetchWhatsAppAccountAccess(organizationId),
+    enabled
+  });
+}
+
+export function useWhatsAppAccountAccessDetail(whatsappAccountId?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["whatsapp-account-access-detail", whatsappAccountId],
+    queryFn: () => fetchWhatsAppAccountAccessDetail(whatsappAccountId ?? ""),
+    enabled: enabled && Boolean(whatsappAccountId)
   });
 }
 

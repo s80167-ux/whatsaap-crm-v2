@@ -91,6 +91,14 @@ export async function apiPatch<T>(path: string, body: unknown, _includeAuth = tr
   });
 }
 
+export async function apiPut<T>(path: string, body: unknown, _includeAuth = true): Promise<T> {
+  return request<T>(path, {
+    method: "PUT",
+    headers: buildHeaders("PUT"),
+    body: JSON.stringify(body)
+  });
+}
+
 export async function apiDelete<T>(path: string, _includeAuth = true): Promise<T> {
   return request<T>(path, {
     method: "DELETE",

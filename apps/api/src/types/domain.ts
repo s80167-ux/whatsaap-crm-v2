@@ -1,3 +1,5 @@
+import type { AuthUser } from "./auth.js";
+
 export type UUID = string;
 
 export interface ContactRecord {
@@ -107,6 +109,7 @@ export interface SendMessageInput {
   organizationId: UUID;
   whatsappAccountId: UUID;
   conversationId: UUID;
+  authUser?: AuthUser | null;
   organizationUserId?: UUID | null;
   quickReplyTemplateId?: UUID | null;
   replyToMessageId?: UUID | null;

@@ -50,6 +50,20 @@ const listWhatsAppAccountsQuerySchema = z.object({
   organization_id: z.string().uuid().optional()
 });
 
+const whatsappAccountAccessRoleSchema = z.enum(["owner", "manager", "agent", "viewer"]);
+
+const updateWhatsAppAccountAccessSchema = z.object({
+  accessList: z.array(z.object({
+    organizationUserId: z.string().uuid(),
+    accessRole: whatsappAccountAccessRoleSchema,
+    canView: z.boolean(),
+    canReply: z.boolean(),
+    canCreateSales: z.boolean(),
+    canEditSales: z.boolean(),
+    isActive: z.boolean()
+  })).min(1)
+});
+
 const listRawEventsQuerySchema = z.object({
   organization_id: z.string().uuid().optional(),
   whatsapp_account_id: z.string().uuid().optional(),
@@ -142,6 +156,68 @@ function mapWhatsAppAccount(account: {
     last_disconnected_at: account.last_disconnected_at ?? null,
     health_score: account.health_score ?? null,
     history_sync_lookback_days: account.history_sync_lookback_days ?? 7
+  };
+}
+
+function mapWhatsAppAccessAccount(account: {
+  id: string;
+  organization_id: string;
+  created_by?: string | null;
+  label: string | null;
+  account_phone_e164: string | null;
+  account_phone_normalized: string | null;
+  connection_status: string;
+  display_name?: string | null;
+  owner_name?: string | null;
+  access_count?: number | null;
+}) {
+  return {
+    id: account.id,
+    organization_id: account.organization_id,
+    created_by: account.created_by ?? null,
+    name: account.label ?? account.display_name ?? "Untitled account",
+    phone_number: account.account_phone_e164,
+    phone_number_normalized: account.account_phone_normalized,
+    status: account.connection_status,
+    display_name: account.display_name ?? null,
+    owner_name: account.owner_name ?? null,
+    access_count: account.access_count ?? 0
+  };
+}
+
+function mapWhatsAppAccountAccess(access: {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  organization_user_id: string;
+  access_role: string;
+  can_view: boolean;
+  can_reply: boolean;
+  can_create_sales: boolean;
+  can_edit_sales: boolean;
+  is_active: boolean;
+  user_email?: string | null;
+  user_full_name?: string | null;
+  user_role?: string | null;
+  user_status?: string | null;
+}) {
+  return {
+    id: access.id,
+    organization_id: access.organization_id,
+    whatsapp_account_id: access.whatsapp_account_id,
+    organization_user_id: access.organization_user_id,
+    access_role: access.access_role,
+    can_view: access.can_view,
+    can_reply: access.can_reply,
+    can_create_sales: access.can_create_sales,
+    can_edit_sales: access.can_edit_sales,
+    is_active: access.is_active,
+    user: {
+      email: access.user_email ?? null,
+      full_name: access.user_full_name ?? null,
+      role: access.user_role ?? null,
+      status: access.user_status ?? null
+    }
   };
 }
 
@@ -339,6 +415,63 @@ export async function listWhatsAppAccounts(request: Request, response: Response)
   const { organization_id: organizationId } = listWhatsAppAccountsQuerySchema.parse(request.query);
   const accounts = await adminService.listWhatsAppAccounts(auth, organizationId);
   return response.json({ data: accounts.map(mapWhatsAppAccount) });
+}
+
+export async function listWhatsAppAccountAccess(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { organization_id: organizationId } = listWhatsAppAccountsQuerySchema.parse(request.query);
+  const result = await adminService.listWhatsAppAccountAccess(auth, organizationId ?? null);
+
+  return response.json({
+    data: {
+      organization_id: result.organizationId,
+      accounts: result.accounts.map(mapWhatsAppAccessAccount),
+      users: result.users
+    }
+  });
+}
+
+export async function getWhatsAppAccountAccess(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const whatsappAccountId = z.string().uuid().parse(request.params.whatsappAccountId);
+  const result = await adminService.getWhatsAppAccountAccess(auth, whatsappAccountId);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccessAccount(result.account),
+      accessList: result.accessList.map(mapWhatsAppAccountAccess),
+      users: result.users
+    }
+  });
+}
+
+export async function updateWhatsAppAccountAccess(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const whatsappAccountId = z.string().uuid().parse(request.params.whatsappAccountId);
+  const input = updateWhatsAppAccountAccessSchema.parse(request.body);
+  const result = await adminService.updateWhatsAppAccountAccess(
+    auth,
+    whatsappAccountId,
+    input.accessList
+  );
+
+  await auditLogService.record(auth, {
+    organizationId: result.account.organization_id,
+    action: "whatsapp_account_access.updated",
+    entityType: "whatsapp_account",
+    entityId: whatsappAccountId,
+    metadata: {
+      access_count: result.accessList.length
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccessAccount(result.account),
+      accessList: result.accessList.map(mapWhatsAppAccountAccess)
+    }
+  });
 }
 
 export async function createWhatsAppAccount(request: Request, response: Response) {

@@ -34,6 +34,52 @@ export interface WhatsAppAccountSummary {
   history_sync_lookback_days?: number | null;
 }
 
+export type WhatsAppAccountAccessRole = "owner" | "manager" | "agent" | "viewer";
+
+export interface WhatsAppAccountAccessAccount {
+  id: string;
+  organization_id: string;
+  created_by?: string | null;
+  name: string;
+  phone_number: string | null;
+  phone_number_normalized: string | null;
+  status: string;
+  display_name?: string | null;
+  owner_name?: string | null;
+  access_count: number;
+}
+
+export interface WhatsAppAccountUserAccess {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  organization_user_id: string;
+  access_role: WhatsAppAccountAccessRole;
+  can_view: boolean;
+  can_reply: boolean;
+  can_create_sales: boolean;
+  can_edit_sales: boolean;
+  is_active: boolean;
+  user?: {
+    email: string | null;
+    full_name: string | null;
+    role: string | null;
+    status: string | null;
+  };
+}
+
+export interface WhatsAppAccountAccessOverview {
+  organization_id: string;
+  accounts: WhatsAppAccountAccessAccount[];
+  users: UserSummary[];
+}
+
+export interface WhatsAppAccountAccessDetail {
+  account: WhatsAppAccountAccessAccount;
+  accessList: WhatsAppAccountUserAccess[];
+  users: UserSummary[];
+}
+
 export interface GoogleSignupRequestSummary {
   id: string;
   auth_user_id: string;

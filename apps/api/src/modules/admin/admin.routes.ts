@@ -23,6 +23,8 @@ import {
   listGoogleSignupRequests,
   listRawEvents,
   listWhatsAppAccounts,
+  listWhatsAppAccountAccess,
+  getWhatsAppAccountAccess,
   disconnectWhatsAppAccount,
   getCampaignsModuleStatus,
   getOrganizationAccessLimits,
@@ -31,6 +33,7 @@ import {
   rejectGoogleSignupRequest,
   replayRawEvents,
   updateOrganizationAccessLimits,
+  updateWhatsAppAccountAccess,
   updateWhatsAppAccount
 } from "./admin.controller.js";
 
@@ -52,6 +55,9 @@ adminRoutes.post(
 );
 
 adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
+adminRoutes.get("/whatsapp-account-access", asyncHandler(listWhatsAppAccountAccess));
+adminRoutes.get("/whatsapp-account-access/:whatsappAccountId", asyncHandler(getWhatsAppAccountAccess));
+adminRoutes.put("/whatsapp-account-access/:whatsappAccountId", asyncHandler(updateWhatsAppAccountAccess));
 adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));
 adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAccountQr));
 adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));

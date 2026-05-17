@@ -28,9 +28,20 @@ export class ContactService {
   ): Promise<{ contact: ContactRecord; identity: ContactIdentityRecord }> {
     const whatsappJid = normalizeWhatsAppJid(input.whatsappJid) ?? input.whatsappJid;
     const jidType = getWhatsAppJidType(whatsappJid);
-    const normalizedPhone = normalizePhoneNumber(input.phoneRaw) ?? jidToPhone(whatsappJid);
-    const primaryPhone = normalizedPhone ?? input.phoneRaw;
-    const blockedNames = await this.findBlockedWhatsAppAccountNames(client, input.whatsappAccountId);
+    const accountIdentityBlocklist = await this.findWhatsAppAccountIdentityBlocklist(client, input.whatsappAccountId);
+    const blockedPhoneSet = new Set(
+      accountIdentityBlocklist.phones
+        .map((value) => normalizePhoneNumber(value))
+        .filter((value): value is string => Boolean(value))
+    );
+    const normalizedPhoneCandidate = normalizePhoneNumber(input.phoneRaw) ?? jidToPhone(whatsappJid);
+    const normalizedPhone =
+      normalizedPhoneCandidate && !blockedPhoneSet.has(normalizedPhoneCandidate) ? normalizedPhoneCandidate : null;
+    const primaryPhoneCandidate = normalizedPhone ?? input.phoneRaw;
+    const primaryPhoneNormalized = normalizePhoneNumber(primaryPhoneCandidate);
+    const primaryPhone =
+      primaryPhoneNormalized && blockedPhoneSet.has(primaryPhoneNormalized) ? null : primaryPhoneCandidate;
+    const blockedNames = accountIdentityBlocklist.names;
     const bestProfileName =
       sanitizeWhatsAppDisplayName(input.profileName, blockedNames) ??
       sanitizeWhatsAppDisplayName(input.profilePushName, blockedNames);
@@ -117,10 +128,15 @@ export class ContactService {
     return { contact, identity };
   }
 
-  private async findBlockedWhatsAppAccountNames(client: PoolClient, whatsappAccountId: string) {
-    const result = await client.query<{ label: string | null; display_name: string | null }>(
+  private async findWhatsAppAccountIdentityBlocklist(client: PoolClient, whatsappAccountId: string) {
+    const result = await client.query<{
+      label: string | null;
+      display_name: string | null;
+      account_phone_e164: string | null;
+      account_phone_normalized: string | null;
+    }>(
       `
-        select label, display_name
+        select label, display_name, account_phone_e164, account_phone_normalized
         from whatsapp_accounts
         where id = $1
         limit 1
@@ -129,6 +145,9 @@ export class ContactService {
     );
 
     const account = result.rows[0];
-    return [account?.label ?? null, account?.display_name ?? null];
+    return {
+      names: [account?.label ?? null, account?.display_name ?? null],
+      phones: [account?.account_phone_e164 ?? null, account?.account_phone_normalized ?? null]
+    };
   }
 }

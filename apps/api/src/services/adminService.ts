@@ -7,6 +7,10 @@ import { GoogleSignupRequestRepository, type GoogleSignupRequestStatus } from ".
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { UserAdminRepository } from "../repositories/userAdminRepository.js";
 import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
+import {
+  WhatsAppAccountAccessRepository,
+  type WhatsAppAccountAccessInput
+} from "../repositories/whatsAppAccountAccessRepository.js";
 import { AuthService } from "./authService.js";
 import type { AuthUser, UserRole } from "../types/auth.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
@@ -182,6 +186,18 @@ function canManageWhatsAppAccount(authUser: AuthUser, account: { organization_id
   return Boolean(authUser.organizationUserId && account.created_by === authUser.organizationUserId);
 }
 
+function canManageWhatsAppNumberAccess(authUser: AuthUser, organizationId: string) {
+  if (authUser.role === "super_admin") {
+    return true;
+  }
+
+  if (authUser.organizationId !== organizationId) {
+    return false;
+  }
+
+  return authUser.role === "org_admin" || authUser.role === "manager";
+}
+
 function isMissingRelationError(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }
@@ -192,6 +208,7 @@ export class AdminService {
     private readonly userRepository = new UserAdminRepository(),
     private readonly googleSignupRequestRepository = new GoogleSignupRequestRepository(),
     private readonly whatsappRepository = new WhatsAppAdminRepository(),
+    private readonly whatsappAccessRepository = new WhatsAppAccountAccessRepository(),
     private readonly rawEventRepository = new RawEventRepository(),
     private readonly authService = new AuthService(),
     private readonly rawEventProcessorService = new RawEventProcessorService(),
@@ -1421,6 +1438,107 @@ export class AdminService {
     }
   }
 
+  async listWhatsAppAccountAccess(authUser: AuthUser, organizationId?: string | null) {
+    const resolvedOrganizationId = authUser.role === "super_admin" ? organizationId ?? null : authUser.organizationId;
+
+    if (!resolvedOrganizationId) {
+      throw new AppError("organization_id is required", 400, "organization_required");
+    }
+
+    if (!canManageWhatsAppNumberAccess(authUser, resolvedOrganizationId)) {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    const client = await pool.connect();
+    try {
+      const accounts = await this.whatsappAccessRepository.listAccountSummaries(client, resolvedOrganizationId);
+      const users = await this.userRepository.listByOrganization(client, resolvedOrganizationId);
+
+      return {
+        organizationId: resolvedOrganizationId,
+        accounts,
+        users
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async getWhatsAppAccountAccess(authUser: AuthUser, whatsappAccountId: string) {
+    const client = await pool.connect();
+    try {
+      const account = await this.whatsappRepository.findById(client, whatsappAccountId);
+
+      if (!account) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (!canManageWhatsAppNumberAccess(authUser, account.organization_id)) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      const accessList = await this.whatsappAccessRepository.listAccessForAccount(client, {
+        organizationId: account.organization_id,
+        whatsappAccountId
+      });
+      const users = await this.userRepository.listByOrganization(client, account.organization_id);
+
+      return {
+        account,
+        accessList,
+        users
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async updateWhatsAppAccountAccess(
+    authUser: AuthUser,
+    whatsappAccountId: string,
+    accessList: WhatsAppAccountAccessInput[]
+  ) {
+    return withTransaction(async (client) => {
+      const account = await this.whatsappRepository.findById(client, whatsappAccountId);
+
+      if (!account) {
+        throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+      }
+
+      if (!canManageWhatsAppNumberAccess(authUser, account.organization_id)) {
+        throw new AppError("Insufficient permissions", 403, "forbidden");
+      }
+
+      try {
+        await this.whatsappAccessRepository.replaceAccessForAccount(client, {
+          organizationId: account.organization_id,
+          whatsappAccountId,
+          accessList
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "At least one active owner is required") {
+          throw new AppError(error.message, 400, "whatsapp_account_owner_required");
+        }
+
+        if (error instanceof Error && error.message === "All users must belong to the same organization") {
+          throw new AppError(error.message, 400, "whatsapp_account_access_user_scope_invalid");
+        }
+
+        throw error;
+      }
+
+      const updatedAccessList = await this.whatsappAccessRepository.listAccessForAccount(client, {
+        organizationId: account.organization_id,
+        whatsappAccountId
+      });
+
+      return {
+        account,
+        accessList: updatedAccessList
+      };
+    });
+  }
+
   async createWhatsAppAccount(
     authUser: AuthUser,
     input: {
@@ -1461,13 +1579,35 @@ export class AdminService {
         );
       }
 
-      return this.whatsappRepository.create(client, {
+      const account = await this.whatsappRepository.create(client, {
         organizationId: resolvedOrganizationId,
         name: input.name.trim(),
         phoneNumber: input.phoneNumber,
         createdBy: authUser.organizationUserId,
         historySyncLookbackDays: input.historySyncLookbackDays ?? 7
       });
+
+      if (authUser.organizationUserId) {
+        await client.query(
+          `
+            insert into whatsapp_account_user_access (
+              organization_id,
+              whatsapp_account_id,
+              organization_user_id,
+              access_role,
+              can_view,
+              can_reply,
+              can_create_sales,
+              can_edit_sales
+            )
+            values ($1, $2, $3, 'owner', true, true, true, true)
+            on conflict (whatsapp_account_id, organization_user_id) do nothing
+          `,
+          [resolvedOrganizationId, account.id, authUser.organizationUserId]
+        );
+      }
+
+      return account;
     });
 
     void this.connectorClient.initializeAccount(account.id).catch((error) => {

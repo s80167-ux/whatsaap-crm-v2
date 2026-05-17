@@ -204,14 +204,42 @@ export function extractAllPhoneCandidatesFromWhatsAppPayload(payload: unknown): 
   return [...candidates];
 }
 
-export function bestPhoneFromWhatsAppPayload(payload: unknown): string | null {
-  const candidates = extractAllPhoneCandidatesFromWhatsAppPayload(payload);
+export function pickBestPhoneCandidate(
+  candidates: Array<string | null | undefined>,
+  options?: { blockedPhones?: Array<string | null | undefined> }
+): string | null {
+  const blockedPhones = new Set(
+    (options?.blockedPhones ?? [])
+      .map((value) => normalizePhoneNumber(value))
+      .filter((value): value is string => Boolean(value))
+  );
+  const uniqueCandidates: string[] = [];
+  const seenCandidates = new Set<string>();
 
   for (const candidate of candidates) {
+    const normalizedCandidate = normalizePhoneNumber(candidate);
+
+    if (!normalizedCandidate || blockedPhones.has(normalizedCandidate) || seenCandidates.has(normalizedCandidate)) {
+      continue;
+    }
+
+    seenCandidates.add(normalizedCandidate);
+    uniqueCandidates.push(normalizedCandidate);
+  }
+
+  for (const candidate of uniqueCandidates) {
     if (candidate.startsWith("+60")) {
       return candidate;
     }
   }
 
-  return candidates[0] ?? null;
+  return uniqueCandidates[0] ?? null;
+}
+
+export function bestPhoneFromWhatsAppPayload(
+  payload: unknown,
+  options?: { blockedPhones?: Array<string | null | undefined> }
+): string | null {
+  const candidates = extractAllPhoneCandidatesFromWhatsAppPayload(payload);
+  return pickBestPhoneCandidate(candidates, options);
 }

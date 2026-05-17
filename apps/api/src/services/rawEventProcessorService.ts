@@ -9,11 +9,13 @@ import {
   bestPhoneFromWhatsAppPayload,
   extractAllPhoneCandidatesFromWhatsAppPayload,
   getWhatsAppJidType,
-  isWhatsAppDirectChatJid
+  isWhatsAppDirectChatJid,
+  pickBestPhoneCandidate
 } from "../utils/phone.js";
 import type { InboundMediaAttachmentInput } from "../types/domain.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
+import type { PoolClient } from "pg";
 
 type WhatsAppMessageEventPayload = {
   organizationId: string;
@@ -91,6 +93,21 @@ export class RawEventProcessorService {
     }
 
     return parsed;
+  }
+
+  private async findWhatsAppAccountPhones(client: PoolClient, whatsappAccountId: string) {
+    const result = await client.query<{ account_phone_e164: string | null; account_phone_normalized: string | null }>(
+      `
+        select account_phone_e164, account_phone_normalized
+        from whatsapp_accounts
+        where id = $1
+        limit 1
+      `,
+      [whatsappAccountId]
+    );
+
+    const account = result.rows[0];
+    return [account?.account_phone_e164 ?? null, account?.account_phone_normalized ?? null];
   }
 
   async processEvent(event: RawChannelEventRecord) {
@@ -184,53 +201,56 @@ export class RawEventProcessorService {
           return "ignored" as const;
         }
 
+          const blockedPhones = await this.findWhatsAppAccountPhones(client, payload.whatsappAccountId);
         const extractedPhoneCandidates = extractAllPhoneCandidatesFromWhatsAppPayload(payload.rawPayload);
-        const payloadPhone = payload.phone ?? null;
-        const extractedPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload);
-        const phoneRaw = payloadPhone ?? payload.phoneRaw ?? extractedPhone;
-        const textBody = payload.textBody ?? extractTextContent(payload.rawPayload);
-        const messageType = payload.messageType === "system" || payload.messageType === "unknown"
-          ? detectMessageType(payload.rawPayload)
-          : payload.messageType;
+          const payloadPhone = payload.phone ?? null;
+          const extractedPhone = bestPhoneFromWhatsAppPayload(payload.rawPayload, { blockedPhones });
+          const phoneRaw = pickBestPhoneCandidate([payloadPhone, payload.phoneRaw, ...extractedPhoneCandidates], {
+            blockedPhones
+          });
+          const textBody = payload.textBody ?? extractTextContent(payload.rawPayload);
+          const messageType = payload.messageType === "system" || payload.messageType === "unknown"
+            ? detectMessageType(payload.rawPayload)
+            : payload.messageType;
 
-        if (payload.direction === "outgoing" && messageType === "system" && !textBody) {
-          await this.rawEventRepository.markIgnored(client, event.id, "WhatsApp outgoing protocol event without chat content");
-          return "ignored" as const;
-        }
+          if (payload.direction === "outgoing" && messageType === "system" && !textBody) {
+            await this.rawEventRepository.markIgnored(client, event.id, "WhatsApp outgoing protocol event without chat content");
+            return "ignored" as const;
+          }
 
-        logger.debug(
-          {
+          logger.debug(
+            {
+              organizationId: payload.organizationId,
+              whatsappAccountId: payload.whatsappAccountId,
+              externalMessageId: payload.externalMessageId,
+              remoteJid: payload.remoteJid,
+              phoneCandidateCount: extractedPhoneCandidates.length,
+              selectedPhoneRaw: phoneRaw,
+              isRemoteJidLid: getWhatsAppJidType(payload.remoteJid) === "lid"
+            },
+            "Resolved WhatsApp message phone candidates"
+          );
+
+          await this.messageIngestionService.ingest({
             organizationId: payload.organizationId,
             whatsappAccountId: payload.whatsappAccountId,
             externalMessageId: payload.externalMessageId,
             remoteJid: payload.remoteJid,
-            phoneCandidateCount: extractedPhoneCandidates.length,
-            selectedPhoneRaw: phoneRaw,
-            isRemoteJidLid: getWhatsAppJidType(payload.remoteJid) === "lid"
-          },
-          "Resolved WhatsApp message phone candidates"
-        );
+            phoneRaw,
+            profileName: payload.profileName,
+            profilePushName: payload.profilePushName ?? null,
+            profileAvatarUrl: payload.profileAvatarUrl ?? null,
+            textBody,
+            messageType,
+            direction: payload.direction,
+            sentAt,
+            rawPayload: payload.rawPayload,
+            mediaAttachment: payload.mediaAttachment ?? null
+          });
 
-        await this.messageIngestionService.ingest({
-          organizationId: payload.organizationId,
-          whatsappAccountId: payload.whatsappAccountId,
-          externalMessageId: payload.externalMessageId,
-          remoteJid: payload.remoteJid,
-          phoneRaw,
-          profileName: payload.profileName,
-          profilePushName: payload.profilePushName ?? null,
-          profileAvatarUrl: payload.profileAvatarUrl ?? null,
-          textBody,
-          messageType,
-          direction: payload.direction,
-          sentAt,
-          rawPayload: payload.rawPayload,
-          mediaAttachment: payload.mediaAttachment ?? null
+          await this.rawEventRepository.markProcessed(client, event.id);
+          return "processed" as const;
         });
-
-        await this.rawEventRepository.markProcessed(client, event.id);
-        return "processed" as const;
-      });
 
       if (status === "ignored") {
         return;

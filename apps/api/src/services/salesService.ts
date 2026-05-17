@@ -3,6 +3,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { AppError } from "../lib/errors.js";
 import { LeadRepository } from "../repositories/leadRepository.js";
 import { SalesRepository } from "../repositories/salesRepository.js";
+import { WhatsAppAccountAccessRepository } from "../repositories/whatsAppAccountAccessRepository.js";
 import type { AuthUser } from "../types/auth.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
@@ -33,6 +34,7 @@ export class SalesService {
   constructor(
     private readonly salesRepository = new SalesRepository(),
     private readonly leadRepository = new LeadRepository(),
+    private readonly whatsappAccessRepository = new WhatsAppAccountAccessRepository(),
     private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
   ) {}
 
@@ -93,6 +95,8 @@ export class SalesService {
       throw new AppError("Contact not found", 404, "contact_not_found");
     }
 
+    await this.assertCanCreateSales(client, input.authUser, input.organizationId, input.contactId);
+
     const canAssignToOthers =
       input.authUser.role === "super_admin" || input.authUser.permissionKeys.includes("sales.read_all");
 
@@ -142,6 +146,26 @@ export class SalesService {
 
   async createOrderInNewTransaction(input: CreateSalesOrderInput) {
     return withTransaction((client) => this.createOrder(client, input));
+  }
+
+  private async assertCanCreateSales(client: PoolClient, authUser: AuthUser, organizationId: string, contactId: string) {
+    if (authUser.role === "super_admin" || authUser.role === "org_admin" || authUser.role === "manager") {
+      return;
+    }
+
+    if (!authUser.organizationUserId) {
+      throw new AppError("WhatsApp number sales access is required", 403, "whatsapp_account_sales_forbidden");
+    }
+
+    const canCreateSales = await this.whatsappAccessRepository.canCreateSalesForContact(client, {
+      organizationId,
+      contactId,
+      organizationUserId: authUser.organizationUserId
+    });
+
+    if (!canCreateSales) {
+      throw new AppError("You do not have sales creation access for this WhatsApp number", 403, "whatsapp_account_sales_forbidden");
+    }
   }
 
   async getOrderDetail(authUser: AuthUser, organizationId: string | null, orderId: string) {

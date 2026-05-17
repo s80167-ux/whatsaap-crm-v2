@@ -4,6 +4,7 @@ import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
+import { WhatsAppNumberAccessPanel } from "./WhatsAppNumberAccessPage";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccounts";
@@ -971,6 +972,10 @@ export function WhatsAppAccountDashboard() {
           totalItems={accountPagination.totalItems}
           onPageChange={accountPagination.setPage}
         />
+      </Card>
+
+      <Card elevated className="workspace-block min-w-0 xl:col-span-3">
+        <WhatsAppNumberAccessPanel showHeader={false} />
       </Card>
     </section>
   );
