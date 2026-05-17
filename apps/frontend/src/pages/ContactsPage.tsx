@@ -17,6 +17,7 @@ import { useIsMobileViewport, useMediaQuery } from "../hooks/useMediaQuery";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 import type { Contact, ContactDetailResponse, MergedContactRedirect } from "../types/api";
+import type { WhatsAppAccountSummary } from "../types/admin";
 
 type ContactSortMode = "alphabetical" | "latest" | "oldest";
 
@@ -94,6 +95,21 @@ function getDialablePhoneNumber(contact: Contact | null) {
 
 function getMessageableSources(contact: Contact | null) {
   return contact?.whatsapp_sources?.filter((source) => source.id) ?? [];
+}
+
+function getWhatsAppAccountLabel(account: WhatsAppAccountSummary) {
+  return account.name || account.display_name || account.phone_number || account.id;
+}
+
+function getDefaultComposeAccountId(contact: Contact, accounts: WhatsAppAccountSummary[]) {
+  const contactSourceIds = new Set(getMessageableSources(contact).map((source) => source.id));
+  const matchingSource = accounts.find((account) => contactSourceIds.has(account.id));
+
+  return matchingSource?.id ?? accounts[0]?.id ?? "";
+}
+
+function canOpenWhatsAppComposer(contact: Contact, accounts: WhatsAppAccountSummary[]) {
+  return Boolean(getDialablePhoneNumber(contact) && accounts.length > 0);
 }
 
 function getUserLabel(user: { full_name: string | null; email: string | null; role: string }) {
@@ -396,7 +412,15 @@ export function ContactsPage() {
     }
   }, [searchParams]);
   const selectedContactDialableNumber = useMemo(() => getDialablePhoneNumber(activeContact), [activeContact]);
-  const composeSources = useMemo(() => getMessageableSources(composeContact), [composeContact]);
+  const composeSources = useMemo(() => {
+    const contactSourceIds = new Set(getMessageableSources(composeContact).map((source) => source.id));
+
+    return whatsappAccounts.map((account) => ({
+      id: account.id,
+      label: getWhatsAppAccountLabel(account),
+      isContactSource: contactSourceIds.has(account.id)
+    }));
+  }, [composeContact, whatsappAccounts]);
   const contactsById = useMemo(
     () => new Map(contacts.map((contact) => [contact.id, contact])),
     [contacts]
@@ -561,10 +585,8 @@ export function ContactsPage() {
   }
 
   function openCompose(contact: Contact) {
-    const sources = getMessageableSources(contact);
-
     setComposeContact(contact);
-    setComposeAccountId(sources[0]?.id ?? "");
+    setComposeAccountId(getDefaultComposeAccountId(contact, whatsappAccounts));
     setComposeText("");
     setComposeNotice(null);
   }
@@ -854,7 +876,7 @@ export function ContactsPage() {
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                         title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                         aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
-                        disabled={!canSendMessages || getMessageableSources(contact).length === 0}
+                        disabled={!canSendMessages || !canOpenWhatsAppComposer(contact, whatsappAccounts)}
                         onClick={(event) => {
                           event.stopPropagation();
                           openCompose(contact);
@@ -1012,7 +1034,7 @@ export function ContactsPage() {
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-text-muted transition hover:bg-background-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                             title={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
                             aria-label={`Send WhatsApp to ${contact.display_name ?? "contact"}`}
-                            disabled={!canSendMessages || getMessageableSources(contact).length === 0}
+                            disabled={!canSendMessages || !canOpenWhatsAppComposer(contact, whatsappAccounts)}
                             onClick={(event) => {
                               event.stopPropagation();
                               openCompose(contact);
@@ -1169,7 +1191,7 @@ export function ContactsPage() {
                 variant="secondary"
                 className="h-11 px-4 text-sm"
                 onClick={() => openCompose(activeContact)}
-                disabled={!canSendMessages || getMessageableSources(activeContact).length === 0}
+                disabled={!canSendMessages || !canOpenWhatsAppComposer(activeContact, whatsappAccounts)}
               >
                 <MessageCircle size={16} aria-hidden="true" />
                 Send WhatsApp
@@ -1342,7 +1364,7 @@ export function ContactsPage() {
               >
                 {composeSources.map((source) => (
                   <option key={source.id} value={source.id}>
-                    {source.label ?? source.id}
+                    {source.isContactSource ? `${source.label} - current source` : source.label}
                   </option>
                 ))}
               </Select>

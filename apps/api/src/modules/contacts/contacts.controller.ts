@@ -6,14 +6,19 @@ import { ContactAssignmentService } from "../../services/contactAssignmentServic
 import { ContactCommandService } from "../../services/contactCommandService.js";
 import { ContactRepairProposalService } from "../../services/contactRepairProposalService.js";
 import { ConversationService } from "../../services/conversationService.js";
+import { ContactIdentityRepository } from "../../repositories/contactIdentityRepository.js";
+import { WhatsAppAccountRepository } from "../../repositories/whatsAppAccountRepository.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
+import { normalizePhoneNumber } from "../../utils/phone.js";
 
 const queryService = new QueryService();
 const contactAssignmentService = new ContactAssignmentService();
 const contactCommandService = new ContactCommandService();
 const conversationService = new ConversationService();
+const contactIdentityRepository = new ContactIdentityRepository();
+const whatsappAccountRepository = new WhatsAppAccountRepository();
 const auditLogService = new AuditLogService();
 
 const contactParamsSchema = z.object({
@@ -283,19 +288,41 @@ export async function startContactConversation(request: Request, response: Respo
   }
 
   const activeContact = contact as Exclude<typeof contact, { is_merged: boolean }>;
-  const hasSelectedSource = activeContact.whatsapp_sources?.some((source) => source.id === whatsappAccountId);
+  const normalizedPhone = normalizePhoneNumber(activeContact.primary_phone_normalized ?? activeContact.primary_phone_e164);
 
-  if (!hasSelectedSource) {
-    throw new AppError("Contact has no WhatsApp source for the selected account", 400, "contact_whatsapp_source_missing");
+  if (!normalizedPhone) {
+    throw new AppError("Contact has no usable WhatsApp phone number", 400, "contact_phone_missing");
   }
 
-  const conversation = await withTransaction((client) =>
-    conversationService.findOrCreateConversation(client, {
+  const recipientJid = `${normalizedPhone.replace(/\D/g, "")}@s.whatsapp.net`;
+
+  const conversation = await withTransaction(async (client) => {
+    const whatsappAccount = await whatsappAccountRepository.findById(client, whatsappAccountId);
+
+    if (!whatsappAccount || whatsappAccount.organization_id !== auth.organizationId) {
+      throw new AppError("WhatsApp source not found for this organization", 404, "whatsapp_account_not_found");
+    }
+
+    await contactIdentityRepository.upsert(client, {
+      organizationId: auth.organizationId!,
+      whatsappAccountId,
+      contactId,
+      whatsappJid: recipientJid,
+      phoneE164: normalizedPhone,
+      phoneNormalized: normalizedPhone,
+      profileName: activeContact.display_name ?? null,
+      profilePushName: null,
+      profileAvatarUrl: null,
+      identityQuality: "phone_verified",
+      identityScore: 80
+    });
+
+    return conversationService.findOrCreateConversation(client, {
       organizationId: auth.organizationId!,
       whatsappAccountId,
       contactId
-    })
-  );
+    });
+  });
 
   return response.status(201).json({ data: conversation });
 }

@@ -41,6 +41,10 @@ export class SendMessageService {
           where c.id = $1
             and c.organization_id = $2
             and c.whatsapp_account_id = $3
+            and ci.deleted_at is null
+          order by
+            case when ci.wa_jid like '%@s.whatsapp.net' then 0 else 1 end,
+            ci.last_seen_at desc nulls last
           limit 1
         `,
         [input.conversationId, input.organizationId, input.whatsappAccountId]

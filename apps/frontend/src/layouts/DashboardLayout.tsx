@@ -310,7 +310,7 @@ function SidebarContent({
           label="Setup"
           items={[
             { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
-            { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
+            { to: "/setup/channels", icon: <PlugZap size={16} />, label: "Channels" }
           ]}
           onNavigate={onNavigate}
           compact={mobile}
@@ -462,7 +462,7 @@ export function DashboardLayout() {
       icon: <Settings2 size={18} />,
       items: [
         { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
-        { to: "/whatsapp-accounts", icon: <PlugZap size={16} />, label: "WhatsApp Accounts" }
+        { to: "/setup/channels", icon: <PlugZap size={16} />, label: "Channels" }
       ]
     },
     ...(isSuperAdmin

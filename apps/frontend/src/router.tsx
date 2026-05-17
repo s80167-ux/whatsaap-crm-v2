@@ -31,6 +31,10 @@ const PlatformPage = lazy(() => import("./pages/PlatformPage").then((module) => 
 const ReportsPage = lazy(() => import("./pages/ReportsPage").then((module) => ({ default: module.ReportsPage })));
 const SalesPage = lazy(() => import("./pages/SalesPage").then((module) => ({ default: module.SalesPage })));
 const SetupPage = lazy(() => import("./pages/SetupPage").then((module) => ({ default: module.SetupPage })));
+const ChannelSetupPage = lazy(() => import("./pages/ChannelSetupPage").then((module) => ({ default: module.ChannelSetupPage })));
+const ChannelSetupPlaceholderPage = lazy(() =>
+  import("./pages/ChannelSetupPlaceholderPage").then((module) => ({ default: module.ChannelSetupPlaceholderPage }))
+);
 const WhatsAppAccountDashboard = lazy(() => import("./pages/WhatsAppAccountDashboard").then((module) => ({ default: module.WhatsAppAccountDashboard })));
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
@@ -232,7 +236,12 @@ export const router = createBrowserRouter([
             path: "setup",
             element: withRouteFallback(<SetupPage />)
           },
-          { path: "setup/whatsapp-accounts", element: <Navigate to="/whatsapp-accounts" replace /> },
+          { path: "setup/channels", element: withRouteFallback(<ChannelSetupPage />) },
+          { path: "setup/channels/whatsapp", element: withRouteFallback(<WhatsAppAccountDashboard />) },
+          { path: "setup/channels/social", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="social" />) },
+          { path: "setup/channels/ecommerce", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="ecommerce" />) },
+          { path: "setup/channels/email", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="email" />) },
+          { path: "setup/whatsapp-accounts", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "whatsapp-accounts", element: withRouteFallback(<WhatsAppAccountDashboard />) },
           { path: "super-admin-map", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/data-structure", element: withRouteFallback(<SuperAdminMapPage />) },
