@@ -20,6 +20,9 @@ const ContactsPage = lazy(() => import("./pages/ContactsPage").then((module) => 
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const DataExportPage = lazy(() => import("./pages/DataExportPage").then((module) => ({ default: module.DataExportPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((module) => ({ default: module.InboxPage })));
+const InboxChannelPlaceholderPage = lazy(() =>
+  import("./pages/InboxChannelPlaceholderPage").then((module) => ({ default: module.InboxChannelPlaceholderPage }))
+);
 const InboxReplyLibraryPage = lazy(() =>
   import("./pages/InboxReplyLibraryPage").then((module) => ({ default: module.InboxReplyLibraryPage }))
 );
@@ -90,7 +93,13 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
           { index: true, element: <Navigate to="/inbox" replace /> },
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
+<<<<<<< HEAD
           { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
+=======
+          { path: "inbox/whatsapp", element: <Navigate to="/inbox" replace /> },
+          { path: "inbox/social", element: withRouteFallback(<InboxChannelPlaceholderPage variant="social" />) },
+          { path: "inbox/ecommerce", element: withRouteFallback(<InboxChannelPlaceholderPage variant="ecommerce" />) },
+>>>>>>> d28d6763420fa4f15eab1cebc8b20cc61295d1ea
           { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
