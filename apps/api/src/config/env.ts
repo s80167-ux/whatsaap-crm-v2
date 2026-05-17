@@ -62,6 +62,11 @@ const envSchema = z.object({
   DEEPSEEK_API_KEY: z.string().min(1).optional(),
   DEEPSEEK_MODEL: z.string().min(1).default("deepseek-v4-flash"),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  META_APP_ID: z.string().min(1).optional(),
+  META_APP_SECRET: z.string().min(1).optional(),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().min(1).optional(),
+  META_REDIRECT_URI: z.string().url().optional(),
+  META_GRAPH_API_VERSION: z.string().min(1).default("v20.0"),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()
 });
 

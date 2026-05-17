@@ -12,6 +12,7 @@ declare global {
       auth?: AuthUser;
       authSession?: AuthSessionState;
       requestId?: string;
+      rawBody?: Buffer;
     }
   }
 }

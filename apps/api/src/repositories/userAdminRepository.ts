@@ -19,9 +19,9 @@ export class UserAdminRepository {
   async listAll(client: PoolClient): Promise<UserSummaryRecord[]> {
     const result = await client.query<UserSummaryRecord>(
       `
-        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, coalesce(role, 'user') as role, coalesce(status, 'active') as status, created_at
         from organization_users
-        where status <> 'disabled'
+        where coalesce(status, 'active') <> 'disabled'
         order by created_at desc
       `
     );
@@ -32,10 +32,10 @@ export class UserAdminRepository {
   async listByOrganization(client: PoolClient, organizationId: string): Promise<UserSummaryRecord[]> {
     const result = await client.query<UserSummaryRecord>(
       `
-        select id, organization_id, auth_user_id, email, full_name, avatar_url, role, status, created_at
+        select id, organization_id, auth_user_id, email, full_name, avatar_url, coalesce(role, 'user') as role, coalesce(status, 'active') as status, created_at
         from organization_users
         where organization_id = $1
-          and status <> 'disabled'
+          and coalesce(status, 'active') <> 'disabled'
         order by created_at desc
       `,
       [organizationId]

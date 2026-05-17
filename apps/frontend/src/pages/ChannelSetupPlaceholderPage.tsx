@@ -3,7 +3,7 @@ import { ArrowRight, Clock, Mail, MessageCircle, ShoppingBag, Sparkles, type Luc
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 
-type ChannelSetupPlaceholderVariant = "social" | "ecommerce" | "email";
+type ChannelSetupPlaceholderVariant = "social" | "tiktok" | "ecommerce" | "email";
 
 type SetupItem = {
   title: string;
@@ -57,6 +57,27 @@ const CONTENT: Record<ChannelSetupPlaceholderVariant, PlaceholderContent> = {
       "Map external profile to CRM contact",
       "Show message thread in unified inbox",
       "Route unread conversations to sales owner"
+    ]
+  },
+  tiktok: {
+    eyebrow: "TikTok DM",
+    title: "TikTok DM Setup",
+    description:
+      "This page is prepared as a setup placeholder for TikTok DM. No connector, database migration, API sync or message ingestion has been enabled yet.",
+    icon: MessageCircle,
+    items: [
+      {
+        title: "TikTok DM",
+        logo: "tiktok",
+        details: ["Future requirement: TikTok Business/API access review"],
+        inbox: "/inbox/social"
+      }
+    ],
+    roadmap: [
+      "Confirm TikTok Business/API access",
+      "Review official messaging permissions",
+      "Map external profile to CRM contact",
+      "Show message thread in unified inbox"
     ]
   },
   ecommerce: {

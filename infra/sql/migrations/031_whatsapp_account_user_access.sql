@@ -100,7 +100,7 @@ join lateral (
   from organization_users ou
   where ou.organization_id = wa.organization_id
     and ou.role = 'org_admin'
-    and ou.status = 'active'
+    and coalesce(ou.status, 'active') = 'active'
   order by ou.created_at asc, ou.id asc
   limit 1
 ) fallback_owner on true
@@ -133,7 +133,7 @@ begin
         from organization_users ou
         where ou.organization_id = wa.organization_id
           and ou.role = 'org_admin'
-          and ou.status = 'active'
+          and coalesce(ou.status, 'active') = 'active'
       )
   loop
     raise notice 'Orphan WhatsApp account skipped by whatsapp_account_user_access backfill: %', orphan.id;

@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { apiRouter } from "./routes/index.js";
+import { socialWebhooksRoutes } from "./modules/socialWebhooks/socialWebhooks.routes.js";
 
 export const app = express();
 
@@ -86,9 +87,15 @@ app.use((_request, response, next) => {
   next();
 });
 app.use(cookieParser());
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({
+  limit: "8mb",
+  verify(request, _response, buffer) {
+    (request as express.Request).rawBody = Buffer.from(buffer);
+  }
+}));
 app.use(morgan("dev"));
 
+app.use("/api/social-webhook", socialWebhooksRoutes);
 app.use("/api", apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

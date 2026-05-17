@@ -214,7 +214,7 @@ export class WhatsAppAccountAccessRepository {
         from organization_users
         where organization_id = $1
           and id = any($2::uuid[])
-          and status <> 'disabled'
+          and coalesce(status, 'active') <> 'disabled'
       `,
       [input.organizationId, userIds]
     );

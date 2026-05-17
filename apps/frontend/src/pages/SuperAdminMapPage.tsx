@@ -1,12 +1,10 @@
 import clsx from "clsx";
-import { Database, GitBranch, Network, SlidersHorizontal } from "lucide-react";
-import { Navigate, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { Database, GitBranch, Network } from "lucide-react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
-import { Button } from "../components/Button";
 import { SuperAdminFlowMap } from "../components/SuperAdminFlowMap";
 import { SuperAdminDataStructureMap, SuperAdminOrganizationStructureMap } from "../components/SuperAdminStructureMaps";
 import { getStoredUser } from "../lib/auth";
-import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 
 type SuperAdminMapTab = "workflow" | "data" | "organization";
 
@@ -44,7 +42,6 @@ export function SuperAdminMapPage() {
   const user = getStoredUser();
   const location = useLocation();
   const navigate = useNavigate();
-  const { selectedOrganizationId, selectedOrganizationName } = useOutletContext<DashboardOutletContext>();
   const activeTab = resolveActiveTab(location.pathname);
   const activeTabConfig = mapTabs.find((tab) => tab.id === activeTab) ?? mapTabs[0];
   const isSuperAdmin = user?.role === "super_admin";
@@ -99,44 +96,6 @@ export function SuperAdminMapPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">{activeTabConfig.label}</p>
           <p className="mt-1 text-sm text-text-muted">{activeTabConfig.description}</p>
         </div>
-      </Card>
-
-      <Card elevated className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Organization Access</p>
-          <h3 className="mt-2 text-xl font-semibold tracking-tight text-text">Access & Limits</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-            Campaigns access and WhatsApp connection limits now live in the centralized access control page.
-          </p>
-        </div>
-
-        {!selectedOrganizationId ? (
-          <div className="rounded-2xl border border-border bg-background-tint px-4 py-3 text-sm text-text-muted">
-            Select an organization from the sidebar to manage access and limits.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background-tint text-primary">
-                  <SlidersHorizontal size={17} />
-                </span>
-                <h4 className="text-base font-semibold text-text">Organization Access & Limits</h4>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-text-muted">
-                Manage Campaigns and WhatsApp connection limits for {selectedOrganizationName ?? "the selected organization"}.
-              </p>
-            </div>
-
-            <Button
-              variant="primary"
-              className="shrink-0"
-              onClick={() => navigate("/super-admin/access-limits")}
-            >
-              Open Access & Limits
-            </Button>
-          </div>
-        )}
       </Card>
 
       {activeTab === "workflow" ? <SuperAdminFlowMap /> : null}

@@ -89,7 +89,7 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
 
   const accounts = overview?.accounts ?? [];
   const overviewUsers = overview?.users ?? [];
-  const detailUsers = detailQuery.data?.users ?? overviewUsers;
+  const detailUsers = detailQuery.data?.users?.length ? detailQuery.data.users : overviewUsers;
   const activeOwnerCount = drafts.filter((draft) => draft.isActive && draft.accessRole === "owner").length;
 
   const saveMutation = useMutation({
