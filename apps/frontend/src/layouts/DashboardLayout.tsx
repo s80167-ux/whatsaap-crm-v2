@@ -13,6 +13,7 @@ import {
   Megaphone,
   Menu,
   MessageSquare,
+  ShoppingBag,
   Settings2,
   ShieldAlert,
   SlidersHorizontal,
@@ -40,18 +41,16 @@ import { NotificationBell } from "../components/NotificationBell";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
 import { ThemeSwitcher } from "../components/theme-switcher";
-import { WhatsAppConnectionsBadge } from "../components/WhatsAppConnectionsBadge";
 import {
   useCampaignEmailModuleStatus,
   useCampaignsModuleStatus,
   useCampaignWhatsAppModuleStatus,
-  useOrganizations,
-  useWhatsAppAccounts
+  useOrganizations
 } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
 import { canAccessCampaigns } from "../lib/moduleAccess";
-import type { OrganizationSummary, WhatsAppAccountSummary } from "../types/admin";
+import type { OrganizationSummary } from "../types/admin";
 
 const SUPER_ADMIN_ORGANIZATION_KEY = "crm_super_admin_organization_id";
 const MAX_PROFILE_PICTURE_BYTES = 512 * 1024;
@@ -199,7 +198,6 @@ function SidebarContent({
   selectedOrganizationId,
   selectedOrganizationName,
   setSelectedOrganizationId,
-  whatsappAccounts,
   showCampaigns,
   whatsappCampaignBadge,
   emailCampaignBadge,
@@ -212,7 +210,6 @@ function SidebarContent({
   selectedOrganizationId: string;
   selectedOrganizationName: string | null;
   setSelectedOrganizationId: (organizationId: string) => void;
-  whatsappAccounts: WhatsAppAccountSummary[];
   showCampaigns: boolean;
   whatsappCampaignBadge?: ReactNode;
   emailCampaignBadge?: ReactNode;
@@ -274,8 +271,11 @@ function SidebarContent({
           icon={<MessageSquare size={18} />}
           label="Inbox"
           items={[
-            { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
-            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template library" }
+            { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
+            { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
+            { to: "/inbox/social", icon: <Users size={16} />, label: "Social Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+            { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
           ]}
           onNavigate={onNavigate}
           compact={mobile}
@@ -372,7 +372,6 @@ export function DashboardLayout() {
   const selectedOrganizationName = isSuperAdmin
     ? organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null
     : user?.organizationName ?? null;
-  const { data: whatsappAccounts = [] } = useWhatsAppAccounts(activeOrganizationId);
   const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
   const { data: campaignWhatsAppModuleStatus } = useCampaignWhatsAppModuleStatus(null, user?.role === "org_admin");
   const { data: campaignEmailModuleStatus } = useCampaignEmailModuleStatus(null, user?.role === "org_admin");
@@ -421,8 +420,11 @@ export function DashboardLayout() {
       label: "Inbox",
       icon: <MessageSquare size={18} />,
       items: [
-        { to: "/inbox", icon: <MessageSquare size={16} />, label: "Conversations", badge: <WhatsAppConnectionsBadge accounts={whatsappAccounts} /> },
-        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template library" }
+        { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
+        { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
+        { to: "/inbox/social", icon: <Users size={16} />, label: "Social Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+        { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
       ]
     },
     {

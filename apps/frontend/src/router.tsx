@@ -90,6 +90,7 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
           { index: true, element: <Navigate to="/inbox" replace /> },
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
+          { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
