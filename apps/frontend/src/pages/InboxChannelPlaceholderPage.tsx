@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, ShoppingBag, Sparkles } from "lucide-react";
+import { MessageCircle, ShoppingBag, Sparkles, type LucideIcon } from "lucide-react";
 import { Card } from "../components/Card";
 import { InboxSubTabs } from "../components/InboxSubTabs";
 
@@ -15,7 +15,7 @@ const PLACEHOLDER_CONTENT: Record<InboxPlaceholderVariant, {
   title: string;
   description: string;
   badge: string;
-  icon: typeof MessageCircle;
+  icon: LucideIcon;
   channels: ChannelPreview[];
   roadmap: string[];
 }> = {
