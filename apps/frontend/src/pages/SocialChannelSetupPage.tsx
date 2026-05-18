@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { ArrowLeft, AlertCircle, CheckCircle, Clock, ExternalLink, Pencil, PlugZap, RefreshCw, Save, Trash2, Unplug, X } from "lucide-react";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { getStoredUser } from "../lib/auth";
 import { config } from "../lib/config";
 import {
   createSocialChannelAccount,
@@ -19,6 +20,11 @@ import {
 
 type SocialChannelSetupPageProps = {
   platform: SocialChannelPlatform;
+};
+
+type DashboardOutletContext = {
+  isSuperAdmin: boolean;
+  selectedOrganizationId: string;
 };
 
 type FormState = {
@@ -142,6 +148,9 @@ function getMessengerInboxBadge(account: SocialChannelAccount) {
 export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps) {
   const content = PLATFORM_CONTENT[platform];
   const navigate = useNavigate();
+  const dashboardContext = useOutletContext<DashboardOutletContext>();
+  const currentUser = getStoredUser();
+  const activeOrganizationId = dashboardContext.isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const [accounts, setAccounts] = useState<SocialChannelAccount[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm(content.defaultLabel));
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
@@ -165,17 +174,17 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
 
   useEffect(() => {
     void loadAccounts();
-  }, []);
+  }, [activeOrganizationId]);
 
   useEffect(() => {
     void loadOauthReadiness();
-  }, [platform]);
+  }, [activeOrganizationId, platform]);
 
   async function loadAccounts() {
     setLoading(true);
 
     try {
-      const nextAccounts = await listSocialChannelAccounts();
+      const nextAccounts = await listSocialChannelAccounts(activeOrganizationId);
       setAccounts(nextAccounts);
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to load social channel accounts" });
@@ -195,7 +204,8 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
           label: form.label,
           externalAccountName: form.externalAccountName || null,
           externalAccountId: form.externalAccountId || null,
-          username: form.username || null
+          username: form.username || null,
+          organizationId: activeOrganizationId
         });
 
         setAccounts((current) => current.map((item) => (item.id === account.id ? account : item)));
@@ -207,7 +217,8 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
           label: form.label,
           externalAccountName: form.externalAccountName || null,
           externalAccountId: form.externalAccountId || null,
-          username: form.username || null
+          username: form.username || null,
+          organizationId: activeOrganizationId
         });
 
         setAccounts((current) => [account, ...current]);
@@ -249,7 +260,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     setNotice(null);
 
     try {
-      const status = await getSocialChannelAccountStatus(accountId);
+      const status = await getSocialChannelAccountStatus(accountId, activeOrganizationId);
       setAccounts((current) =>
         current.map((account) =>
           account.id === accountId
@@ -276,7 +287,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     setNotice(null);
 
     try {
-      const account = await disconnectSocialChannelAccount(accountId);
+      const account = await disconnectSocialChannelAccount(accountId, activeOrganizationId);
       setAccounts((current) => current.map((item) => (item.id === account.id ? account : item)));
       setNotice({ type: "success", message: platform === "facebook" ? "Facebook Page disconnected." : "Account placeholder disconnected." });
     } catch (error) {
@@ -297,7 +308,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     setNotice(null);
 
     try {
-      await deleteSocialChannelAccount(account.id);
+      await deleteSocialChannelAccount(account.id, activeOrganizationId);
       setAccounts((current) => current.filter((item) => item.id !== account.id));
       if (editingAccountId === account.id) {
         setEditingAccountId(null);
@@ -315,7 +326,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     setOauthLoading(true);
 
     try {
-      const readiness = await getMetaConnectUrl(platform);
+      const readiness = await getMetaConnectUrl(platform, activeOrganizationId);
       setOauthReadiness(readiness);
     } catch (error) {
       setOauthReadiness(null);
@@ -333,7 +344,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
 
     if (!readiness) {
       try {
-        readiness = await getMetaConnectUrl(platform);
+        readiness = await getMetaConnectUrl(platform, activeOrganizationId);
         setOauthReadiness(readiness);
       } catch {
         setNotice({ type: "error", message: FACEBOOK_NOT_READY_MESSAGE });

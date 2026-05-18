@@ -29,6 +29,7 @@ type CreateSocialChannelAccountInput = {
   externalAccountName?: string | null;
   externalAccountId?: string | null;
   username?: string | null;
+  organizationId?: string | null;
 };
 
 type UpdateSocialChannelAccountInput = {
@@ -36,6 +37,7 @@ type UpdateSocialChannelAccountInput = {
   externalAccountName?: string | null;
   externalAccountId?: string | null;
   username?: string | null;
+  organizationId?: string | null;
 };
 
 type MetaExchangeCodeInput = {
@@ -80,16 +82,30 @@ const META_PAGE_CACHE_TTL_MS = 10 * 60 * 1000;
 const metaPageSelectionCache = new Map<string, CachedMetaPages>();
 
 export class SocialChannelsService {
-  private getOrganizationId(auth: AuthUser) {
+  private getOrganizationId(auth: AuthUser, requestedOrganizationId?: string | null) {
+    if (auth.role === "super_admin") {
+      const organizationId = requestedOrganizationId ?? null;
+
+      if (!organizationId) {
+        throw new AppError("organization_id is required", 400, "organization_required");
+      }
+
+      return organizationId;
+    }
+
     if (!auth.organizationId) {
       throw new AppError("organization_id is required", 400, "organization_required");
+    }
+
+    if (requestedOrganizationId && requestedOrganizationId !== auth.organizationId) {
+      throw new AppError("Cannot access another organization", 403, "organization_forbidden");
     }
 
     return auth.organizationId;
   }
 
-  async listAccounts(auth: AuthUser) {
-    const organizationId = this.getOrganizationId(auth);
+  async listAccounts(auth: AuthUser, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
     const result = await query<SocialChannelAccount>(
       `
         select
@@ -119,7 +135,7 @@ export class SocialChannelsService {
   }
 
   async createAccount(auth: AuthUser, input: CreateSocialChannelAccountInput) {
-    const organizationId = this.getOrganizationId(auth);
+    const organizationId = this.getOrganizationId(auth, input.organizationId);
 
     return withTransaction(async (client) => {
       const result = await client.query<SocialChannelAccount>(
@@ -169,7 +185,7 @@ export class SocialChannelsService {
   }
 
   async updateAccount(auth: AuthUser, accountId: string, input: UpdateSocialChannelAccountInput) {
-    const organizationId = this.getOrganizationId(auth);
+    const organizationId = this.getOrganizationId(auth, input.organizationId);
 
     const result = await withTransaction((client) =>
       client.query<SocialChannelAccount>(
@@ -218,8 +234,8 @@ export class SocialChannelsService {
     return account;
   }
 
-  async getAccountStatus(auth: AuthUser, accountId: string) {
-    const account = await this.findAccount(auth, accountId);
+  async getAccountStatus(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
+    const account = await this.findAccount(auth, accountId, requestedOrganizationId);
 
     return {
       id: account.id,
@@ -231,8 +247,8 @@ export class SocialChannelsService {
     };
   }
 
-  async disconnectAccount(auth: AuthUser, accountId: string) {
-    const organizationId = this.getOrganizationId(auth);
+  async disconnectAccount(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
 
     const result = await withTransaction((client) =>
       client.query<SocialChannelAccount>(
@@ -272,8 +288,8 @@ export class SocialChannelsService {
     return account;
   }
 
-  async deleteAccount(auth: AuthUser, accountId: string) {
-    const organizationId = this.getOrganizationId(auth);
+  async deleteAccount(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
 
     const result = await withTransaction((client) =>
       client.query<Pick<SocialChannelAccount, "id">>(
@@ -296,8 +312,8 @@ export class SocialChannelsService {
     return account;
   }
 
-  getMetaConnectUrl(auth: AuthUser, platform: SocialChannelPlatform) {
-    this.getOrganizationId(auth);
+  getMetaConnectUrl(auth: AuthUser, platform: SocialChannelPlatform, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
 
     const missingConfig = [
       env.META_APP_ID ? null : "META_APP_ID",
@@ -329,7 +345,7 @@ export class SocialChannelsService {
     url.searchParams.set("scope", scopes.join(","));
     url.searchParams.set(
       "state",
-      Buffer.from(JSON.stringify({ platform, organizationId: auth.organizationId })).toString("base64url")
+      Buffer.from(JSON.stringify({ platform, organizationId })).toString("base64url")
     );
 
     return {
@@ -341,7 +357,8 @@ export class SocialChannelsService {
   }
 
   async exchangeMetaCode(auth: AuthUser, input: MetaExchangeCodeInput): Promise<MetaExchangeCodeResponse> {
-    const organizationId = this.getOrganizationId(auth);
+    const stateContext = this.getStateContext(input.state);
+    const organizationId = this.getOrganizationId(auth, stateContext.organizationId);
 
     if (!input.code) {
       return {
@@ -359,7 +376,7 @@ export class SocialChannelsService {
       };
     }
 
-    const statePlatform = this.getPlatformFromState(input.state) ?? "facebook";
+    const statePlatform = stateContext.platform ?? "facebook";
 
     try {
       const userAccessToken = await this.exchangeCodeForUserAccessToken(input.code);
@@ -405,7 +422,8 @@ export class SocialChannelsService {
   }
 
   async connectMetaPage(auth: AuthUser, input: ConnectMetaPageInput): Promise<MetaExchangeCodeResponse> {
-    const organizationId = this.getOrganizationId(auth);
+    const stateContext = this.getStateContext(input.state ?? undefined);
+    const organizationId = this.getOrganizationId(auth, stateContext.organizationId);
     const cached = this.getCachedPageSelection(organizationId, input.state);
 
     if (!cached) {
@@ -618,16 +636,23 @@ export class SocialChannelsService {
     return `${organizationId}:${state ?? "default"}`;
   }
 
-  private getPlatformFromState(state: string | undefined): SocialChannelPlatform | null {
+  private getStateContext(state: string | undefined): { platform: SocialChannelPlatform | null; organizationId: string | null } {
     if (!state) {
-      return null;
+      return { platform: null, organizationId: null };
     }
 
     try {
-      const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as { platform?: unknown };
-      return parsed.platform === "facebook" || parsed.platform === "instagram" ? parsed.platform : null;
+      const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as {
+        platform?: unknown;
+        organizationId?: unknown;
+      };
+
+      return {
+        platform: parsed.platform === "facebook" || parsed.platform === "instagram" ? parsed.platform : null,
+        organizationId: typeof parsed.organizationId === "string" ? parsed.organizationId : null
+      };
     } catch {
-      return null;
+      return { platform: null, organizationId: null };
     }
   }
 
@@ -641,8 +666,8 @@ export class SocialChannelsService {
     return "Facebook connection is not ready yet. Please contact your CRM administrator.";
   }
 
-  private async findAccount(auth: AuthUser, accountId: string) {
-    const organizationId = this.getOrganizationId(auth);
+  private async findAccount(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
     const client = await pool.connect();
 
     try {

@@ -9,8 +9,13 @@ const accountParamsSchema = z.object({
   accountId: z.string().uuid()
 });
 
+const organizationQuerySchema = z.object({
+  organization_id: z.string().uuid().optional()
+});
+
 const metaConnectQuerySchema = z.object({
-  platform: z.enum(["facebook", "instagram"])
+  platform: z.enum(["facebook", "instagram"]),
+  organization_id: z.string().uuid().optional()
 });
 
 const metaExchangeSchema = z.object({
@@ -29,7 +34,8 @@ const createAccountSchema = z.object({
   label: z.string().trim().min(2).max(120),
   externalAccountName: z.string().trim().max(160).optional().nullable(),
   externalAccountId: z.string().trim().max(160).optional().nullable(),
-  username: z.string().trim().max(160).optional().nullable()
+  username: z.string().trim().max(160).optional().nullable(),
+  organizationId: z.string().uuid().optional().nullable()
 });
 
 const updateAccountSchema = createAccountSchema.omit({ platform: true });
@@ -44,7 +50,8 @@ function requireAuth(request: Request) {
 
 export async function listSocialChannelAccounts(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const accounts = await socialChannelsService.listAccounts(auth);
+  const { organization_id: organizationId } = organizationQuerySchema.parse(request.query);
+  const accounts = await socialChannelsService.listAccounts(auth, organizationId);
 
   return response.json({ data: accounts });
 }
@@ -69,7 +76,8 @@ export async function updateSocialChannelAccount(request: Request, response: Res
 export async function getSocialChannelAccountStatus(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { accountId } = accountParamsSchema.parse(request.params);
-  const status = await socialChannelsService.getAccountStatus(auth, accountId);
+  const { organization_id: organizationId } = organizationQuerySchema.parse(request.query);
+  const status = await socialChannelsService.getAccountStatus(auth, accountId, organizationId);
 
   return response.json({ data: status });
 }
@@ -77,7 +85,8 @@ export async function getSocialChannelAccountStatus(request: Request, response: 
 export async function disconnectSocialChannelAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { accountId } = accountParamsSchema.parse(request.params);
-  const account = await socialChannelsService.disconnectAccount(auth, accountId);
+  const { organizationId } = z.object({ organizationId: z.string().uuid().optional().nullable() }).parse(request.body ?? {});
+  const account = await socialChannelsService.disconnectAccount(auth, accountId, organizationId);
 
   return response.json({ data: account });
 }
@@ -85,15 +94,16 @@ export async function disconnectSocialChannelAccount(request: Request, response:
 export async function deleteSocialChannelAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { accountId } = accountParamsSchema.parse(request.params);
-  await socialChannelsService.deleteAccount(auth, accountId);
+  const { organization_id: organizationId } = organizationQuerySchema.parse(request.query);
+  await socialChannelsService.deleteAccount(auth, accountId, organizationId);
 
   return response.json({ ok: true });
 }
 
 export async function getMetaConnectUrl(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const { platform } = metaConnectQuerySchema.parse(request.query);
-  const result = socialChannelsService.getMetaConnectUrl(auth, platform);
+  const { platform, organization_id: organizationId } = metaConnectQuerySchema.parse(request.query);
+  const result = socialChannelsService.getMetaConnectUrl(auth, platform, organizationId);
 
   return response.json({ data: result });
 }

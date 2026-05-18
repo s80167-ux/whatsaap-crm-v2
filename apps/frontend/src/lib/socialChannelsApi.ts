@@ -48,6 +48,19 @@ export type MetaPageOption = {
   pictureUrl?: string | null;
 };
 
+function organizationQuery(organizationId?: string | null) {
+  return organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+}
+
+function appendOrganizationQuery(path: string, organizationId?: string | null) {
+  if (!organizationId) {
+    return path;
+  }
+
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}organization_id=${encodeURIComponent(organizationId)}`;
+}
+
 export type MetaExchangeCodeResponse = {
   enabled?: boolean;
   success?: boolean;
@@ -57,37 +70,37 @@ export type MetaExchangeCodeResponse = {
   pages?: MetaPageOption[];
 };
 
-export async function listSocialChannelAccounts() {
-  const response = await apiGet<{ data: SocialChannelAccount[] }>("/social-channels/accounts");
+export async function listSocialChannelAccounts(organizationId?: string | null) {
+  const response = await apiGet<{ data: SocialChannelAccount[] }>(`/social-channels/accounts${organizationQuery(organizationId)}`);
   return response.data;
 }
 
-export async function createSocialChannelAccount(input: CreateSocialChannelAccountInput) {
+export async function createSocialChannelAccount(input: CreateSocialChannelAccountInput & { organizationId?: string | null }) {
   const response = await apiPost<{ data: SocialChannelAccount }>("/social-channels/accounts", input);
   return response.data;
 }
 
-export async function updateSocialChannelAccount(accountId: string, input: UpdateSocialChannelAccountInput) {
+export async function updateSocialChannelAccount(accountId: string, input: UpdateSocialChannelAccountInput & { organizationId?: string | null }) {
   const response = await apiPatch<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}`, input);
   return response.data;
 }
 
-export async function getSocialChannelAccountStatus(accountId: string) {
-  const response = await apiGet<{ data: SocialChannelAccountStatus }>(`/social-channels/accounts/${accountId}/status`);
+export async function getSocialChannelAccountStatus(accountId: string, organizationId?: string | null) {
+  const response = await apiGet<{ data: SocialChannelAccountStatus }>(appendOrganizationQuery(`/social-channels/accounts/${accountId}/status`, organizationId));
   return response.data;
 }
 
-export async function disconnectSocialChannelAccount(accountId: string) {
-  const response = await apiPost<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}/disconnect`, {});
+export async function disconnectSocialChannelAccount(accountId: string, organizationId?: string | null) {
+  const response = await apiPost<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}/disconnect`, { organizationId });
   return response.data;
 }
 
-export async function deleteSocialChannelAccount(accountId: string) {
-  return apiDelete<{ ok: true }>(`/social-channels/accounts/${accountId}`);
+export async function deleteSocialChannelAccount(accountId: string, organizationId?: string | null) {
+  return apiDelete<{ ok: true }>(appendOrganizationQuery(`/social-channels/accounts/${accountId}`, organizationId));
 }
 
-export async function getMetaConnectUrl(platform: SocialChannelPlatform) {
-  const response = await apiGet<{ data: MetaConnectUrlResponse }>(`/social-channels/meta/connect-url?platform=${platform}`);
+export async function getMetaConnectUrl(platform: SocialChannelPlatform, organizationId?: string | null) {
+  const response = await apiGet<{ data: MetaConnectUrlResponse }>(appendOrganizationQuery(`/social-channels/meta/connect-url?platform=${platform}`, organizationId));
   return response.data;
 }
 
