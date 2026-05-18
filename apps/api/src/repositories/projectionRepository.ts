@@ -5,6 +5,7 @@ export interface ConversationSummaryRow {
   id: string;
   organization_id: string;
   whatsapp_account_id: string | null;
+  social_channel_account_id: string | null;
   whatsapp_account_label: string | null;
   contact_id: string;
   assigned_user_id: string | null;
@@ -32,6 +33,8 @@ export class ProjectionRepository {
           conversation_id,
           organization_id,
           whatsapp_account_id,
+          social_channel_account_id,
+          channel,
           contact_id,
           contact_display_name,
           contact_primary_phone,
@@ -49,6 +52,8 @@ export class ProjectionRepository {
           c.id,
           c.organization_id,
           c.whatsapp_account_id,
+          c.social_channel_account_id,
+          c.channel,
           c.contact_id,
           case
             when ct.is_anchor_locked and nullif(trim(ct.display_name), '') is not null then ct.display_name
@@ -120,6 +125,8 @@ export class ProjectionRepository {
         do update set
           organization_id = excluded.organization_id,
           whatsapp_account_id = excluded.whatsapp_account_id,
+          social_channel_account_id = excluded.social_channel_account_id,
+          channel = excluded.channel,
           contact_id = excluded.contact_id,
           contact_display_name = excluded.contact_display_name,
           contact_primary_phone = excluded.contact_primary_phone,
@@ -361,10 +368,21 @@ export class ProjectionRepository {
           its.conversation_id as id,
           its.organization_id,
           its.whatsapp_account_id,
-          coalesce(wa.label, wa.display_name, wa.account_phone_normalized, wa.account_phone_e164, wa.id::text) as whatsapp_account_label,
+          its.social_channel_account_id,
+          coalesce(
+            wa.label,
+            wa.display_name,
+            wa.account_phone_normalized,
+            wa.account_phone_e164,
+            sca.label,
+            sca.external_account_name,
+            sca.username,
+            sca.id::text,
+            wa.id::text
+          ) as whatsapp_account_label,
           its.contact_id,
           its.assigned_user_id,
-          'whatsapp'::text as channel,
+          coalesce(its.channel, c.channel, 'whatsapp') as channel,
           c.external_thread_key,
           coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) as last_message_at,
           c.last_incoming_at,
@@ -400,6 +418,7 @@ export class ProjectionRepository {
         join conversations c on c.id = its.conversation_id
         join contacts ct on ct.id = its.contact_id
         left join whatsapp_accounts wa on wa.id = its.whatsapp_account_id
+        left join social_channel_accounts sca on sca.id = its.social_channel_account_id
         left join lateral (
           select coalesce(
             array_remove(

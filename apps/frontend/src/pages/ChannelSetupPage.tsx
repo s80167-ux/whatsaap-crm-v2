@@ -11,7 +11,7 @@ type ChannelCard = {
   actionLabel: string;
   to: string;
   icon: LucideIcon;
-  logo?: "whatsapp" | "tiktok";
+  logo?: "facebook" | "instagram" | "whatsapp" | "tiktok";
   note?: string;
   subItems?: string[];
 };
@@ -36,6 +36,7 @@ const CHANNELS: ChannelCard[] = [
     actionLabel: "Open Facebook Setup",
     to: "/setup/channels/facebook",
     icon: MessageCircle,
+    logo: "facebook",
     subItems: ["Meta App", "Facebook Page", "Webhook readiness"]
   },
   {
@@ -46,6 +47,7 @@ const CHANNELS: ChannelCard[] = [
     actionLabel: "Open Instagram Setup",
     to: "/setup/channels/instagram",
     icon: Instagram,
+    logo: "instagram",
     subItems: ["Professional Account", "Linked Facebook Page", "Messaging permission"]
   },
   {
@@ -100,6 +102,41 @@ function ChannelLogo({ channel, Icon }: { channel: ChannelCard; Icon: LucideIcon
             fill="#fff"
             d="M17.77 14.52c-.24.68-1.19 1.24-1.92 1.4-.51.11-1.18.2-3.42-.73-2.87-1.19-4.72-4.1-4.86-4.29-.14-.19-1.16-1.55-1.16-2.96s.73-2.1.99-2.39c.24-.27.53-.34.7-.34h.5c.16.01.38-.06.6.45.24.58.8 1.99.87 2.13.07.15.11.32.02.51-.09.19-.14.31-.28.48-.14.16-.29.36-.42.48-.14.14-.29.29-.12.58.16.29.72 1.19 1.55 1.93 1.07.96 1.96 1.26 2.25 1.4.29.15.46.13.63-.07.19-.22.72-.84.91-1.13.19-.29.39-.24.65-.15.27.1 1.7.8 1.99.95.29.14.48.22.55.34.07.12.07.72-.17 1.4Z"
           />
+        </svg>
+      </div>
+    );
+  }
+
+  if (channel.logo === "facebook") {
+    return (
+      <div className="channel-logo channel-logo--facebook flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background shadow-soft" aria-label="Facebook logo">
+        <svg className="h-7 w-7" viewBox="0 0 24 24" role="img" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#1877F2" />
+          <path
+            fill="#fff"
+            d="M13.62 20v-5.47h1.85l.28-2.14h-2.13V11.02c0-.62.17-1.04 1.06-1.04h1.13V8.07c-.2-.03-.86-.07-1.64-.07-1.62 0-2.73.99-2.73 2.81v1.57H9.6v2.14h1.84V20h2.18Z"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (channel.logo === "instagram") {
+    return (
+      <div className="channel-logo channel-logo--instagram flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background shadow-soft" aria-label="Instagram logo">
+        <svg className="h-7 w-7" viewBox="0 0 24 24" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="instagram-channel-logo-gradient" x1="20.3" x2="3.7" y1="3.7" y2="20.3" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#FEDA75" />
+              <stop offset="0.32" stopColor="#FA7E1E" />
+              <stop offset="0.58" stopColor="#D62976" />
+              <stop offset="0.82" stopColor="#962FBF" />
+              <stop offset="1" stopColor="#4F5BD5" />
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="18" height="18" rx="5" fill="url(#instagram-channel-logo-gradient)" />
+          <circle cx="12" cy="12" r="4.1" fill="none" stroke="#fff" strokeWidth="1.9" />
+          <circle cx="17.25" cy="6.75" r="1.15" fill="#fff" />
         </svg>
       </div>
     );

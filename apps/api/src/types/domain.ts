@@ -28,6 +28,8 @@ export interface ContactIdentityRecord {
   organization_id: UUID;
   contact_id: UUID;
   whatsapp_account_id: UUID | null;
+  social_channel_account_id?: UUID | null;
+  external_profile_id?: string | null;
   wa_jid: string;
   phone_e164: string | null;
   phone_normalized: string | null;
@@ -41,7 +43,8 @@ export interface ContactIdentityRecord {
 export interface ConversationRecord {
   id: UUID;
   organization_id: UUID;
-  whatsapp_account_id: UUID;
+  whatsapp_account_id: UUID | null;
+  social_channel_account_id?: UUID | null;
   contact_id: UUID;
   assigned_user_id?: UUID | null;
   channel?: string;
@@ -57,8 +60,10 @@ export interface MessageRecord {
   organization_id: UUID;
   conversation_id: UUID;
   contact_id: UUID;
-  whatsapp_account_id: UUID;
-  external_message_id: string;
+  whatsapp_account_id: UUID | null;
+  social_channel_account_id?: UUID | null;
+  channel?: string;
+  external_message_id: string | null;
   external_chat_id?: string | null;
   reply_to_message_id?: UUID | null;
   is_deleted?: boolean;

@@ -16,6 +16,8 @@
     "worker:message-outbox:once": "tsx src/workers/processMessageOutbox.ts --once",
     "worker:campaign-dispatch": "tsx src/workers/processCampaignDispatch.ts",
     "worker:campaign-dispatch:once": "tsx src/workers/processCampaignDispatch.ts --once",
+    "worker:social-events": "tsx src/workers/processSocialEvents.ts",
+    "worker:social-events:once": "tsx src/workers/processSocialEvents.ts --once",
     "worker:projections:rebuild": "tsx src/workers/rebuildProjections.ts",
     "worker:raw-events:replay": "tsx src/workers/replayRawEvents.ts",
     "worker:usage-daily": "tsx src/workers/aggregateUsageDaily.ts"

@@ -1,7 +1,8 @@
 export interface Conversation {
   id: string;
   organization_id: string;
-  whatsapp_account_id: string;
+  whatsapp_account_id: string | null;
+  social_channel_account_id?: string | null;
   whatsapp_account_label?: string | null;
   contact_id: string;
   assigned_user_id?: string | null;
@@ -26,8 +27,10 @@ export interface Message {
   organization_id: string;
   conversation_id: string;
   contact_id: string;
-  whatsapp_account_id: string;
-  external_message_id: string;
+  whatsapp_account_id: string | null;
+  social_channel_account_id?: string | null;
+  channel?: string;
+  external_message_id: string | null;
   external_chat_id?: string | null;
   reply_to_message_id?: string | null;
   is_deleted?: boolean;

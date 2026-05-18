@@ -225,6 +225,7 @@ export function ChatPanel({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const slashInsertionBaseRef = useRef<string | null>(null);
   const latestOutgoingMessage = [...messages].reverse().find((message) => message.direction === "outgoing");
+  const isSocialConversation = conversation?.channel === "facebook" || conversation?.channel === "instagram";
   const latestOutgoingStatus = latestOutgoingMessage?.ack_status;
   const latestOutgoingStatusLabel = formatAckStatus(latestOutgoingStatus);
   const messagesById = new Map(messages.map((message) => [message.id, message]));
@@ -353,6 +354,11 @@ export function ChatPanel({
       return;
     }
 
+    if (isSocialConversation) {
+      setSendNotice("Social replies are not enabled yet. This Phase 3 view is read-only until Meta send permissions are configured.");
+      return;
+    }
+
     const resolvedText = resolveComposerBody(text, conversation).trim();
 
     if (!resolvedText && !attachment) {
@@ -361,6 +367,13 @@ export function ChatPanel({
 
     if (!resolvedOrganizationId) {
       setSendNotice("Organization not set. Please refresh.");
+      return;
+    }
+
+    const whatsappAccountId = conversation.whatsapp_account_id;
+
+    if (!whatsappAccountId) {
+      setSendNotice("This conversation does not have a WhatsApp account for outbound sending.");
       return;
     }
 
@@ -381,7 +394,7 @@ export function ChatPanel({
       organization_id: resolvedOrganizationId,
       conversation_id: conversation.id,
       contact_id: conversation.contact_id,
-      whatsapp_account_id: conversation.whatsapp_account_id,
+      whatsapp_account_id: whatsappAccountId,
       external_message_id: optimisticId,
       external_chat_id: conversation.external_thread_key ?? null,
       reply_to_message_id: replyDraft?.messageId ?? null,
@@ -398,7 +411,7 @@ export function ChatPanel({
 
     try {
       const response = await sendMessage({
-        whatsappAccountId: conversation.whatsapp_account_id,
+        whatsappAccountId,
         conversationId: conversation.id,
         organizationId: resolvedOrganizationId,
         quickReplyTemplateId: selectedQuickReplyTemplateId,
@@ -960,7 +973,11 @@ export function ChatPanel({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              {conversation.whatsapp_account_label ?? "WhatsApp account"}
+              {conversation.channel === "facebook"
+                ? conversation.whatsapp_account_label ?? "Facebook Messenger"
+                : conversation.channel === "instagram"
+                  ? conversation.whatsapp_account_label ?? "Instagram DM"
+                  : conversation.whatsapp_account_label ?? "WhatsApp account"}
             </span>
             {conversation.unread_count > 0 ? (
               <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
@@ -1079,6 +1096,11 @@ export function ChatPanel({
         <div ref={messageEndRef} aria-hidden="true" />
       </div>
       <footer className="border-t border-primary/10 bg-muted/80 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
+        {isSocialConversation ? (
+          <div className="mb-3 rounded-2xl border border-primary/15 bg-primary/10 p-3 text-sm leading-6 text-text-muted">
+            Social inbox is read-only in this phase. Incoming Facebook and Instagram messages can be reviewed here after the social event worker processes webhooks.
+          </div>
+        ) : null}
         {replyDraft ? (
           <div className="mb-3 rounded-2xl border border-primary/15 bg-primary/10 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -1178,6 +1200,7 @@ export function ChatPanel({
                 }}
                 onKeyDown={handleSlashKeyDown}
                 placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
+                disabled={isSocialConversation}
                 rows={isMobile ? 2 : 3}
                 className="min-h-[72px] w-full resize-y rounded-xl border-2 border-border bg-input px-4 py-3 text-[15px] leading-6 text-foreground shadow-soft outline-none transition focus:border-primary focus:bg-card focus:ring-2 focus:ring-ring/15 sm:min-h-[92px]"
               />
@@ -1229,7 +1252,7 @@ export function ChatPanel({
                 <span className="hidden text-xs font-semibold lg:inline">Insert</span>
               </Button>
             </div>
-              <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
+              <Button onClick={handleSend} disabled={isSocialConversation || isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
               {isSending ? "Sending..." : "Send"}
               </Button>
             </div>

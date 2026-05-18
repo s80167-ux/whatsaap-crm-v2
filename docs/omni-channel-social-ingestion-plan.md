@@ -75,3 +75,15 @@ Recommended Phase 3 order:
 3. Add social conversation projection tables or generalize conversation source fields.
 4. Render social threads in a unified inbox tab without reply sending.
 5. Add Meta reply sending only after account tokens, permissions, and delivery status handling are reviewed.
+
+## Phase 3 Foundation Implemented
+
+The first Phase 3 foundation adds:
+
+- `social_channel_account_id` support on conversations, messages, contact identities, and inbox summaries.
+- `facebook` and `instagram` channel support in conversation/message/contact identity checks.
+- A dedicated `SocialMessageIngestionService` that processes `social_raw_events`.
+- A `processSocialEvents` worker for async raw social event processing.
+- Read-only rendering for Facebook and Instagram conversations in the existing inbox.
+
+Reply sending remains intentionally disabled for social channels until Meta token exchange, permissions, and send API handling are reviewed.

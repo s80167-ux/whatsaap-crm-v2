@@ -6,6 +6,14 @@ import { getConversationPreview } from "../lib/messageContent";
 import { PanelPagination, usePanelPagination } from "./PanelPagination";
 
 function getConversationSourceLabel(conversation: Conversation) {
+  if (conversation.channel === "facebook") {
+    return conversation.whatsapp_account_label ?? "Facebook Messenger";
+  }
+
+  if (conversation.channel === "instagram") {
+    return conversation.whatsapp_account_label ?? "Instagram DM";
+  }
+
   return conversation.whatsapp_account_label ?? conversation.whatsapp_account_id ?? "Unknown connection";
 }
 

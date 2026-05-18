@@ -67,6 +67,8 @@ const envSchema = z.object({
   META_WEBHOOK_VERIFY_TOKEN: z.string().min(1).optional(),
   META_REDIRECT_URI: z.string().url().optional(),
   META_GRAPH_API_VERSION: z.string().min(1).default("v20.0"),
+  SOCIAL_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
+  SOCIAL_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()
 });
 

@@ -5,6 +5,7 @@ const serviceName = process.env.RAILWAY_SERVICE_NAME ?? "";
 const serviceCommands = new Map([
   ["campaign-dispatch-worker", ["run", "worker:campaign-dispatch"]],
   ["message-outbox-worker", ["run", "worker:message-outbox"]],
+  ["social-events-worker", ["run", "worker:social-events"]],
   ["whatsapp-connector", ["--workspace", "apps/whatsapp-connector", "start"]],
   ["whatsaap-crm-v2", ["--workspace", "apps/api", "start"]]
 ]);
