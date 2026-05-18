@@ -27,6 +27,9 @@ const InboxReplyLibraryPage = lazy(() =>
   import("./pages/InboxReplyLibraryPage").then((module) => ({ default: module.InboxReplyLibraryPage }))
 );
 const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const PublicCompliancePage = lazy(() =>
+  import("./pages/PublicCompliancePage").then((module) => ({ default: module.PublicCompliancePage }))
+);
 const PlatformPage = lazy(() => import("./pages/PlatformPage").then((module) => ({ default: module.PlatformPage })));
 const ReportsPage = lazy(() => import("./pages/ReportsPage").then((module) => ({ default: module.ReportsPage })));
 const SalesPage = lazy(() => import("./pages/SalesPage").then((module) => ({ default: module.SalesPage })));
@@ -90,6 +93,14 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: withRouteFallback(<LoginPage />)
+  },
+  {
+    path: "/data-deletion",
+    element: withRouteFallback(<PublicCompliancePage variant="data-deletion" />)
+  },
+  {
+    path: "/terms",
+    element: withRouteFallback(<PublicCompliancePage variant="terms" />)
   },
   {
     element: <ProtectedLayout />, 
