@@ -42,9 +42,19 @@ export type MetaConnectUrlResponse = {
   message: string;
 };
 
+export type MetaPageOption = {
+  id: string;
+  name: string;
+  pictureUrl?: string | null;
+};
+
 export type MetaExchangeCodeResponse = {
-  enabled: boolean;
+  enabled?: boolean;
+  success?: boolean;
   message: string;
+  account?: SocialChannelAccount | null;
+  requiresPageSelection?: boolean;
+  pages?: MetaPageOption[];
 };
 
 export async function listSocialChannelAccounts() {
@@ -83,5 +93,14 @@ export async function getMetaConnectUrl(platform: SocialChannelPlatform) {
 
 export async function exchangeMetaCode(input: { code?: string; state?: string }) {
   const response = await apiPost<{ data: MetaExchangeCodeResponse }>("/social-channels/meta/exchange-code", input);
+  return response.data;
+}
+
+export async function connectMetaPage(input: {
+  platform: SocialChannelPlatform;
+  pageId: string;
+  state?: string | null;
+}) {
+  const response = await apiPost<{ data: MetaExchangeCodeResponse }>("/social-channels/meta/connect-page", input);
   return response.data;
 }

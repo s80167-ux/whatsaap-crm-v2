@@ -38,6 +38,9 @@ const ChannelSetupPlaceholderPage = lazy(() =>
 const SocialChannelSetupPage = lazy(() =>
   import("./pages/SocialChannelSetupPage").then((module) => ({ default: module.SocialChannelSetupPage }))
 );
+const MetaOAuthCallbackPage = lazy(() =>
+  import("./pages/MetaOAuthCallbackPage").then((module) => ({ default: module.MetaOAuthCallbackPage }))
+);
 const WhatsAppAccountDashboard = lazy(() => import("./pages/WhatsAppAccountDashboard").then((module) => ({ default: module.WhatsAppAccountDashboard })));
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
@@ -244,6 +247,7 @@ export const router = createBrowserRouter([
           { path: "setup/whatsapp-number-access", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "setup/channels/facebook", element: withRouteFallback(<SocialChannelSetupPage platform="facebook" />) },
           { path: "setup/channels/instagram", element: withRouteFallback(<SocialChannelSetupPage platform="instagram" />) },
+          { path: "setup/channels/meta/callback", element: withRouteFallback(<MetaOAuthCallbackPage />) },
           { path: "setup/channels/tiktok", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="tiktok" />) },
           { path: "setup/channels/social", element: <Navigate to="/setup/channels/facebook" replace /> },
           { path: "setup/channels/ecommerce", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="ecommerce" />) },

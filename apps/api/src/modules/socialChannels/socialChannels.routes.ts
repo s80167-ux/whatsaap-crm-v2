@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import {
+  connectMetaPage,
   createSocialChannelAccount,
   deleteSocialChannelAccount,
   disconnectSocialChannelAccount,
@@ -17,6 +18,7 @@ socialChannelsRoutes.get("/accounts", asyncHandler(listSocialChannelAccounts));
 socialChannelsRoutes.post("/accounts", asyncHandler(createSocialChannelAccount));
 socialChannelsRoutes.get("/meta/connect-url", asyncHandler(getMetaConnectUrl));
 socialChannelsRoutes.post("/meta/exchange-code", asyncHandler(exchangeMetaCode));
+socialChannelsRoutes.post("/meta/connect-page", asyncHandler(connectMetaPage));
 socialChannelsRoutes.get("/accounts/:accountId/status", asyncHandler(getSocialChannelAccountStatus));
 socialChannelsRoutes.patch("/accounts/:accountId", asyncHandler(updateSocialChannelAccount));
 socialChannelsRoutes.delete("/accounts/:accountId", asyncHandler(deleteSocialChannelAccount));

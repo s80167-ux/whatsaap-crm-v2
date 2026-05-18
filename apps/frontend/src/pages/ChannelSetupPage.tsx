@@ -30,14 +30,14 @@ const CHANNELS: ChannelCard[] = [
   },
   {
     title: "Facebook Messenger",
-    status: "Setup Preview",
+    status: "Ready",
     statusTone: "ready",
-    description: "Prepare Facebook Page details for a future Meta Messenger connection. No OAuth or message ingestion is enabled yet.",
-    actionLabel: "Open Facebook Setup",
+    description: "Connect a Facebook Page so Messenger conversations can appear in your CRM Inbox.",
+    actionLabel: "Connect Facebook Page",
     to: "/setup/channels/facebook",
     icon: MessageCircle,
     logo: "facebook",
-    subItems: ["Meta App", "Facebook Page", "Webhook readiness"]
+    subItems: ["Facebook login", "Choose Page", "CRM Inbox"]
   },
   {
     title: "Instagram DM",
@@ -191,7 +191,7 @@ export function ChannelSetupPage() {
               <Sparkles size={16} />
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">Control centre</p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-text-muted">Only WhatsApp is active today. Other channel pages are setup placeholders.</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">WhatsApp is active. Facebook Messenger can be connected from its channel page.</p>
           </div>
         </div>
       </div>

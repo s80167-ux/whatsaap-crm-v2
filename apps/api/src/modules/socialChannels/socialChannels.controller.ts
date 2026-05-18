@@ -18,6 +18,12 @@ const metaExchangeSchema = z.object({
   state: z.string().trim().min(1).optional()
 });
 
+const metaConnectPageSchema = z.object({
+  platform: z.enum(["facebook", "instagram"]),
+  pageId: z.string().trim().min(1),
+  state: z.string().trim().optional().nullable()
+});
+
 const createAccountSchema = z.object({
   platform: z.enum(["facebook", "instagram"]),
   label: z.string().trim().min(2).max(120),
@@ -94,8 +100,24 @@ export async function getMetaConnectUrl(request: Request, response: Response) {
 
 export async function exchangeMetaCode(request: Request, response: Response) {
   const auth = requireAuth(request);
-  metaExchangeSchema.parse(request.body);
-  const result = socialChannelsService.exchangeMetaCode(auth);
+  const input = metaExchangeSchema.parse(request.body);
+  const result = await socialChannelsService.exchangeMetaCode(auth, input);
+  const status = result.enabled === false ? 501 : 200;
 
-  return response.status(501).json({ data: result, error: result.message });
+  return response.status(status).json({
+    data: result,
+    error: result.enabled === false ? result.message : undefined
+  });
+}
+
+export async function connectMetaPage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const input = metaConnectPageSchema.parse(request.body);
+  const result = await socialChannelsService.connectMetaPage(auth, input);
+  const status = result.enabled === false ? 501 : 200;
+
+  return response.status(status).json({
+    data: result,
+    error: result.enabled === false ? result.message : undefined
+  });
 }
