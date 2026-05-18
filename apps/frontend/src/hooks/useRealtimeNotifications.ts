@@ -7,16 +7,17 @@ import { supabase } from "../lib/supabase";
 export function useRealtimeNotifications() {
   const queryClient = useQueryClient();
   const user = getStoredUser();
+  const userId = user?.id ?? null;
+  const userRole = user?.role ?? null;
   const organizationId = user?.organizationId;
 
   useEffect(() => {
     const supabaseClient = supabase;
 
-    if (!user || !supabaseClient) {
+    if (!userId || !userRole || !supabaseClient) {
       return;
     }
 
-    const currentUser = user;
     const realtimeClient = supabaseClient;
     let isSubscribed = true;
     const channels: Array<ReturnType<typeof realtimeClient.channel>> = [];
@@ -42,11 +43,11 @@ export function useRealtimeNotifications() {
         event: "*",
         schema: "public",
         table: "notifications",
-        ...(currentUser.role === "super_admin" || !organizationId ? {} : { filter: `organization_id=eq.${organizationId}` })
+        ...(userRole === "super_admin" || !organizationId ? {} : { filter: `organization_id=eq.${organizationId}` })
       } as const;
 
       const channel = realtimeClient
-        .channel(`crm-notifications-${currentUser.id ?? "current"}`)
+        .channel(`crm-notifications-${userId}`)
         .on("postgres_changes", changes, () => {
           void queryClient.invalidateQueries({ queryKey: ["notifications"] });
         })
@@ -63,5 +64,5 @@ export function useRealtimeNotifications() {
         void realtimeClient.removeChannel(channel);
       });
     };
-  }, [organizationId, queryClient, user]);
+  }, [organizationId, queryClient, userId, userRole]);
 }
