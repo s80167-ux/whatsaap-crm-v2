@@ -151,6 +151,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const currentUser = getStoredUser();
   const activeOrganizationId = dashboardContext.isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
+  const canViewAdvancedAdminSettings = dashboardContext.isSuperAdmin || currentUser?.role === "super_admin";
   const [accounts, setAccounts] = useState<SocialChannelAccount[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm(content.defaultLabel));
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
@@ -511,7 +512,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
           </Card>
         )}
 
-        {renderAdvancedAdminSettings()}
+        {canViewAdvancedAdminSettings ? renderAdvancedAdminSettings() : null}
 
         <Button variant="secondary" onClick={() => navigate("/setup/channels")}>
           <ArrowLeft size={16} />
