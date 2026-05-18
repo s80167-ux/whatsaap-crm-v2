@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Card } from "../components/Card";
 
 type PublicCompliancePageProps = {
-  variant: "data-deletion" | "terms";
+  variant: "data-deletion" | "privacy-policy" | "terms";
 };
 
 const supportEmail = "support@rezekicrm.com";
@@ -11,6 +11,13 @@ const productName = "Rezeki CRM";
 
 export function PublicCompliancePage({ variant }: PublicCompliancePageProps) {
   const isDataDeletion = variant === "data-deletion";
+  const isPrivacyPolicy = variant === "privacy-policy";
+  const pageTitle = isDataDeletion ? "Data Deletion Instructions" : isPrivacyPolicy ? "Privacy Policy" : "Terms of Service";
+  const pageDescription = isDataDeletion
+    ? "Instructions for requesting removal of data connected through Facebook Login, Facebook Messenger, or other supported channel integrations."
+    : isPrivacyPolicy
+      ? "How Rezeki CRM collects, uses, protects, and manages information for CRM users and connected messaging channels."
+      : "Standard terms for using the Rezeki CRM web application and connected messaging tools.";
 
   return (
     <main className="min-h-screen bg-hero-grid px-4 py-10 text-text sm:px-6 lg:px-8">
@@ -19,12 +26,10 @@ export function PublicCompliancePage({ variant }: PublicCompliancePageProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{productName}</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              {isDataDeletion ? "Data Deletion Instructions" : "Terms of Service"}
+              {pageTitle}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted">
-              {isDataDeletion
-                ? "Instructions for requesting removal of data connected through Facebook Login, Facebook Messenger, or other supported channel integrations."
-                : "Standard terms for using the Rezeki CRM web application and connected messaging tools."}
+              {pageDescription}
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card shadow-soft">
@@ -33,7 +38,7 @@ export function PublicCompliancePage({ variant }: PublicCompliancePageProps) {
         </div>
 
         <Card className="space-y-8 p-6 sm:p-8" elevated>
-          {isDataDeletion ? <DataDeletionContent /> : <TermsContent />}
+          {isDataDeletion ? <DataDeletionContent /> : isPrivacyPolicy ? <PrivacyPolicyContent /> : <TermsContent />}
         </Card>
       </div>
     </main>
@@ -70,6 +75,45 @@ function DataDeletionContent() {
       <Section title="Contact">
         <p>
           For privacy and deletion requests, contact <EmailLink />.
+        </p>
+      </Section>
+    </>
+  );
+}
+
+function PrivacyPolicyContent() {
+  return (
+    <>
+      <Section title="Information We Collect">
+        <p>
+          {productName} may collect account details, organization details, user access information, contact records, customer conversation content, and connected channel information needed to provide the CRM service.
+        </p>
+        <p>
+          If you connect Facebook Messenger or other Meta channels, we may process Page information, permissions, identifiers, messages, and related metadata required to route conversations into your CRM workspace.
+        </p>
+      </Section>
+
+      <Section title="How We Use Information">
+        <p>
+          We use information to operate CRM features, manage users and permissions, display customer conversations, support connected channels, provide reporting, protect accounts, and respond to support requests.
+        </p>
+      </Section>
+
+      <Section title="Data Sharing">
+        <p>
+          We do not sell personal data. We may share limited information with infrastructure, hosting, messaging, analytics, or support providers only where needed to operate and secure the service.
+        </p>
+      </Section>
+
+      <Section title="Security and Retention">
+        <p>
+          We use reasonable technical and organizational safeguards to protect data. We retain information for as long as needed to provide the service, meet legal obligations, resolve disputes, and maintain audit records.
+        </p>
+      </Section>
+
+      <Section title="Your Choices">
+        <p>
+          You may request access, correction, or deletion of personal data by contacting <EmailLink />. Facebook-related deletion instructions are available on our Data Deletion page.
         </p>
       </Section>
     </>

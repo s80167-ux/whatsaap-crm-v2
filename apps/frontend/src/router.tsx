@@ -99,6 +99,10 @@ export const router = createBrowserRouter([
     element: withRouteFallback(<PublicCompliancePage variant="data-deletion" />)
   },
   {
+    path: "/privacy-policy",
+    element: withRouteFallback(<PublicCompliancePage variant="privacy-policy" />)
+  },
+  {
     path: "/terms",
     element: withRouteFallback(<PublicCompliancePage variant="terms" />)
   },
