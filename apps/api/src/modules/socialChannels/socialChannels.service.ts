@@ -31,6 +31,13 @@ type CreateSocialChannelAccountInput = {
   username?: string | null;
 };
 
+type UpdateSocialChannelAccountInput = {
+  label: string;
+  externalAccountName?: string | null;
+  externalAccountId?: string | null;
+  username?: string | null;
+};
+
 export class SocialChannelsService {
   private getOrganizationId(auth: AuthUser) {
     if (!auth.organizationId) {
@@ -120,6 +127,56 @@ export class SocialChannelsService {
     });
   }
 
+  async updateAccount(auth: AuthUser, accountId: string, input: UpdateSocialChannelAccountInput) {
+    const organizationId = this.getOrganizationId(auth);
+
+    const result = await withTransaction((client) =>
+      client.query<SocialChannelAccount>(
+        `
+          update social_channel_accounts
+          set label = $3,
+              external_account_id = nullif($4, ''),
+              external_account_name = nullif($5, ''),
+              username = nullif($6, '')
+          where id = $1
+            and organization_id = $2
+          returning
+            id,
+            organization_id,
+            platform,
+            label,
+            external_account_id,
+            external_account_name,
+            username,
+            profile_picture_url,
+            connection_status,
+            webhook_status,
+            token_expires_at,
+            last_sync_at,
+            created_by,
+            created_at,
+            updated_at
+        `,
+        [
+          accountId,
+          organizationId,
+          input.label,
+          input.externalAccountId ?? null,
+          input.externalAccountName ?? null,
+          input.username ?? null
+        ]
+      )
+    );
+
+    const account = result.rows[0];
+
+    if (!account) {
+      throw new AppError("Social channel account not found", 404, "social_channel_account_not_found");
+    }
+
+    return account;
+  }
+
   async getAccountStatus(auth: AuthUser, accountId: string) {
     const account = await this.findAccount(auth, accountId);
 
@@ -160,6 +217,30 @@ export class SocialChannelsService {
             created_by,
             created_at,
             updated_at
+        `,
+        [accountId, organizationId]
+      )
+    );
+
+    const account = result.rows[0];
+
+    if (!account) {
+      throw new AppError("Social channel account not found", 404, "social_channel_account_not_found");
+    }
+
+    return account;
+  }
+
+  async deleteAccount(auth: AuthUser, accountId: string) {
+    const organizationId = this.getOrganizationId(auth);
+
+    const result = await withTransaction((client) =>
+      client.query<Pick<SocialChannelAccount, "id">>(
+        `
+          delete from social_channel_accounts
+          where id = $1
+            and organization_id = $2
+          returning id
         `,
         [accountId, organizationId]
       )

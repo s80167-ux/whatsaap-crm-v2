@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Clock, ExternalLink, PlugZap, RefreshCw, Save, Unplug } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, ExternalLink, Pencil, PlugZap, RefreshCw, Save, Trash2, Unplug, X } from "lucide-react";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { config } from "../lib/config";
 import {
   createSocialChannelAccount,
+  deleteSocialChannelAccount,
   disconnectSocialChannelAccount,
   getMetaConnectUrl,
   getSocialChannelAccountStatus,
   listSocialChannelAccounts,
+  updateSocialChannelAccount,
   type MetaConnectUrlResponse,
   type SocialChannelAccount,
   type SocialChannelPlatform
@@ -102,6 +104,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<SocialChannelAccount[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm(content.defaultLabel));
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [workingAccountId, setWorkingAccountId] = useState<string | null>(null);
@@ -115,6 +118,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
 
   useEffect(() => {
     setForm(emptyForm(content.defaultLabel));
+    setEditingAccountId(null);
     setNotice(null);
   }, [content.defaultLabel, platform]);
 
@@ -145,22 +149,53 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     setNotice(null);
 
     try {
-      const account = await createSocialChannelAccount({
-        platform,
-        label: form.label,
-        externalAccountName: form.externalAccountName || null,
-        externalAccountId: form.externalAccountId || null,
-        username: form.username || null
-      });
+      if (editingAccountId) {
+        const account = await updateSocialChannelAccount(editingAccountId, {
+          label: form.label,
+          externalAccountName: form.externalAccountName || null,
+          externalAccountId: form.externalAccountId || null,
+          username: form.username || null
+        });
 
-      setAccounts((current) => [account, ...current]);
+        setAccounts((current) => current.map((item) => (item.id === account.id ? account : item)));
+        setEditingAccountId(null);
+        setNotice({ type: "success", message: "Setup placeholder updated." });
+      } else {
+        const account = await createSocialChannelAccount({
+          platform,
+          label: form.label,
+          externalAccountName: form.externalAccountName || null,
+          externalAccountId: form.externalAccountId || null,
+          username: form.username || null
+        });
+
+        setAccounts((current) => [account, ...current]);
+        setNotice({ type: "success", message: "Setup placeholder saved." });
+      }
+
       setForm(emptyForm(content.defaultLabel));
-      setNotice({ type: "success", message: "Setup placeholder saved." });
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to save setup placeholder" });
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEditingAccount(account: SocialChannelAccount) {
+    setEditingAccountId(account.id);
+    setForm({
+      label: account.label,
+      externalAccountName: account.external_account_name ?? "",
+      externalAccountId: account.external_account_id ?? "",
+      username: account.username ?? ""
+    });
+    setNotice(null);
+  }
+
+  function cancelEditingAccount() {
+    setEditingAccountId(null);
+    setForm(emptyForm(content.defaultLabel));
+    setNotice(null);
   }
 
   async function refreshStatus(accountId: string) {
@@ -200,6 +235,31 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
       setNotice({ type: "success", message: "Account placeholder disconnected." });
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to disconnect account" });
+    } finally {
+      setWorkingAccountId(null);
+    }
+  }
+
+  async function deleteAccount(account: SocialChannelAccount) {
+    const label = account.external_account_name || account.label;
+
+    if (!window.confirm(`Delete ${content.eyebrow} connection "${label}"?`)) {
+      return;
+    }
+
+    setWorkingAccountId(account.id);
+    setNotice(null);
+
+    try {
+      await deleteSocialChannelAccount(account.id);
+      setAccounts((current) => current.filter((item) => item.id !== account.id));
+      if (editingAccountId === account.id) {
+        setEditingAccountId(null);
+        setForm(emptyForm(content.defaultLabel));
+      }
+      setNotice({ type: "success", message: "Account placeholder deleted." });
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to delete account" });
     } finally {
       setWorkingAccountId(null);
     }
@@ -320,7 +380,17 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
         </div>
 
         <Card elevated className="p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Setup Placeholder Form</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              {editingAccountId ? "Edit Setup Placeholder" : "Setup Placeholder Form"}
+            </p>
+            {editingAccountId ? (
+              <Button variant="ghost" size="sm" onClick={cancelEditingAccount}>
+                <X size={14} />
+                Cancel Edit
+              </Button>
+            ) : null}
+          </div>
           <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
             <label className="text-sm font-medium text-foreground">
               Label
@@ -362,7 +432,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
             <div className="md:col-span-2">
               <Button type="submit" disabled={saving}>
                 <Save size={16} />
-                {saving ? "Saving..." : "Save Setup Placeholder"}
+                {saving ? "Saving..." : editingAccountId ? "Update Setup Placeholder" : "Save Setup Placeholder"}
               </Button>
             </div>
           </form>
@@ -403,6 +473,10 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
                   <p className="mt-1 text-xs text-text-soft">Last sync: {formatDate(account.last_sync_at)}</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button variant="secondary" size="sm" onClick={() => startEditingAccount(account)} disabled={workingAccountId === account.id}>
+                    <Pencil size={14} />
+                    Edit
+                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => void refreshStatus(account.id)} disabled={workingAccountId === account.id}>
                     <RefreshCw size={14} />
                     Refresh Status
@@ -410,6 +484,10 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
                   <Button variant="danger" size="sm" onClick={() => void disconnectAccount(account.id)} disabled={workingAccountId === account.id}>
                     <Unplug size={14} />
                     Disconnect
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => void deleteAccount(account)} disabled={workingAccountId === account.id}>
+                    <Trash2 size={14} />
+                    Delete
                   </Button>
                 </div>
               </div>

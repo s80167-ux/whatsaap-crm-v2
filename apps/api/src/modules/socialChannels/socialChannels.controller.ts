@@ -26,6 +26,8 @@ const createAccountSchema = z.object({
   username: z.string().trim().max(160).optional().nullable()
 });
 
+const updateAccountSchema = createAccountSchema.omit({ platform: true });
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -49,6 +51,15 @@ export async function createSocialChannelAccount(request: Request, response: Res
   return response.status(201).json({ data: account });
 }
 
+export async function updateSocialChannelAccount(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { accountId } = accountParamsSchema.parse(request.params);
+  const input = updateAccountSchema.parse(request.body);
+  const account = await socialChannelsService.updateAccount(auth, accountId, input);
+
+  return response.json({ data: account });
+}
+
 export async function getSocialChannelAccountStatus(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { accountId } = accountParamsSchema.parse(request.params);
@@ -63,6 +74,14 @@ export async function disconnectSocialChannelAccount(request: Request, response:
   const account = await socialChannelsService.disconnectAccount(auth, accountId);
 
   return response.json({ data: account });
+}
+
+export async function deleteSocialChannelAccount(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { accountId } = accountParamsSchema.parse(request.params);
+  await socialChannelsService.deleteAccount(auth, accountId);
+
+  return response.json({ ok: true });
 }
 
 export async function getMetaConnectUrl(request: Request, response: Response) {

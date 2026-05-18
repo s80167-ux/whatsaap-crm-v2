@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./http";
 
 export type SocialChannelPlatform = "facebook" | "instagram";
 
@@ -33,6 +33,8 @@ export type CreateSocialChannelAccountInput = {
   username?: string | null;
 };
 
+export type UpdateSocialChannelAccountInput = Omit<CreateSocialChannelAccountInput, "platform">;
+
 export type MetaConnectUrlResponse = {
   configured: boolean;
   url: string | null;
@@ -55,6 +57,11 @@ export async function createSocialChannelAccount(input: CreateSocialChannelAccou
   return response.data;
 }
 
+export async function updateSocialChannelAccount(accountId: string, input: UpdateSocialChannelAccountInput) {
+  const response = await apiPatch<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}`, input);
+  return response.data;
+}
+
 export async function getSocialChannelAccountStatus(accountId: string) {
   const response = await apiGet<{ data: SocialChannelAccountStatus }>(`/social-channels/accounts/${accountId}/status`);
   return response.data;
@@ -63,6 +70,10 @@ export async function getSocialChannelAccountStatus(accountId: string) {
 export async function disconnectSocialChannelAccount(accountId: string) {
   const response = await apiPost<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}/disconnect`, {});
   return response.data;
+}
+
+export async function deleteSocialChannelAccount(accountId: string) {
+  return apiDelete<{ ok: true }>(`/social-channels/accounts/${accountId}`);
 }
 
 export async function getMetaConnectUrl(platform: SocialChannelPlatform) {
