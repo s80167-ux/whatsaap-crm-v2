@@ -79,16 +79,18 @@ export function CreateCampaignDrawer({
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
 
   const connectedAccounts = useMemo(
-    () => whatsappAccounts.filter((account) => connectedStatuses.has(account.status.toLowerCase())),
+    () => whatsappAccounts.filter((account) => isSenderConnected(account)),
     [whatsappAccounts]
   );
+  const unavailableSenderCount = whatsappAccounts.length - connectedAccounts.length;
 
   const readyAudienceGroups = useMemo(
     () => audienceGroups.filter((group) => group.status === "imported" && group.valid_count > 0),
     [audienceGroups]
   );
 
-  const selectedSender = connectedAccounts.find((account) => account.id === senderWhatsAppAccountId) ?? null;
+  const selectedSender = whatsappAccounts.find((account) => account.id === senderWhatsAppAccountId) ?? null;
+  const selectedSenderIsConnected = selectedSender ? isSenderConnected(selectedSender) : false;
   const selectedAudienceGroup = readyAudienceGroups.find((group) => group.id === audienceGroupId) ?? null;
   const preview = useMemo(() => renderCampaignTemplate(messageTemplate, sampleContact), [messageTemplate, sampleContact]);
   const senderLabel = selectedSender ? formatSenderLabel(selectedSender) : null;
@@ -105,6 +107,15 @@ export function CreateCampaignDrawer({
   function validateSender() {
     if (!senderWhatsAppAccountId || !selectedSender) {
       showError("Select a Sender WhatsApp Number first.");
+      return false;
+    }
+
+    if (!selectedSenderIsConnected) {
+      showError(
+        selectedSender.live_status_error
+          ? "The selected sender could not be verified with the live WhatsApp connector. Reconnect it and try again."
+          : `The selected sender is currently ${formatSenderStatus(selectedSender)}. Reconnect it and try again.`
+      );
       return false;
     }
 
@@ -276,7 +287,7 @@ export function CreateCampaignDrawer({
     }
   }
 
-  const actionDisabled = !selectedSender;
+  const actionDisabled = !selectedSender || !selectedSenderIsConnected;
   const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign;
 
   return (
@@ -306,13 +317,16 @@ export function CreateCampaignDrawer({
               <label className="block">
                 <span className="workspace-label">Sender WhatsApp Number</span>
                 <Select value={senderWhatsAppAccountId} onChange={(event) => setSenderWhatsAppAccountId(event.target.value)}>
-                  <option value="">Select connected sender</option>
+                  <option value="">Select live connected sender</option>
                   {connectedAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
                       {formatSenderLabel(account)}
                     </option>
                   ))}
                 </Select>
+                {selectedSender ? (
+                  <p className="mt-2 text-xs text-text-muted">Live status: {formatSenderStatus(selectedSender)}</p>
+                ) : null}
               </label>
 
               <label className="block">
@@ -330,7 +344,13 @@ export function CreateCampaignDrawer({
 
             {connectedAccounts.length === 0 ? (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-                No connected WhatsApp number available. Please connect a WhatsApp account before starting a campaign.
+                No live connected WhatsApp number available. Please reconnect a WhatsApp account before starting a campaign.
+              </div>
+            ) : null}
+
+            {unavailableSenderCount > 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
+                Showing {connectedAccounts.length} live connected sender{connectedAccounts.length === 1 ? "" : "s"}. {unavailableSenderCount} sender{unavailableSenderCount === 1 ? " is" : "s are"} hidden because the live WhatsApp connection is disconnected or could not be verified.
               </div>
             ) : null}
 
@@ -485,7 +505,23 @@ function TempoInput({ label, value, onChange }: { label: string; value: number; 
 
 function formatSenderLabel(account: WhatsAppAccountSummary) {
   const phone = account.phone_number || account.phone_number_normalized || "No phone";
-  return `${account.name} - ${phone} - ${account.status}`;
+  return `${account.name} - ${phone} - ${formatSenderStatus(account)}`;
+}
+
+function isSenderConnected(account: WhatsAppAccountSummary) {
+  if (typeof account.live_connected === "boolean") {
+    return account.live_connected;
+  }
+
+  return connectedStatuses.has(account.status.toLowerCase());
+}
+
+function formatSenderStatus(account: WhatsAppAccountSummary) {
+  if (account.live_status_error) {
+    return "unverified";
+  }
+
+  return account.live_connection_status ?? account.status;
 }
 
 function formatTempoLabel(tempo: CampaignTempo) {

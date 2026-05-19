@@ -1413,7 +1413,8 @@ export class AdminService {
     const client = await pool.connect();
     try {
       if (authUser.role === "super_admin" && !resolvedOrganizationId) {
-        return await this.whatsappRepository.listAll(client);
+        const accounts = await this.whatsappRepository.listAll(client);
+        return await this.attachLiveStatus(accounts);
       }
 
       if (!resolvedOrganizationId) {
@@ -1425,17 +1426,52 @@ export class AdminService {
           throw new AppError("Organization user context is required", 403, "organization_user_required");
         }
 
-        return await this.whatsappRepository.listByOrganizationAndCreator(
+        const accounts = await this.whatsappRepository.listByOrganizationAndCreator(
           client,
           resolvedOrganizationId,
           authUser.organizationUserId
         );
+
+        return await this.attachLiveStatus(accounts);
       }
 
-      return await this.whatsappRepository.listByOrganization(client, resolvedOrganizationId);
+      const accounts = await this.whatsappRepository.listByOrganization(client, resolvedOrganizationId);
+      return await this.attachLiveStatus(accounts);
     } finally {
       client.release();
     }
+  }
+
+  private async attachLiveStatus(accounts: import("../types/domain.js").WhatsAppAccountRecord[]) {
+    return await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          const liveStatus = await this.connectorClient.getAccountStatus(account.id);
+
+          return {
+            ...account,
+            live_connection_status: liveStatus.connectionStatus,
+            live_connected: liveStatus.connected,
+            live_status_error: null
+          };
+        } catch (error) {
+          logger.warn(
+            {
+              err: error,
+              whatsappAccountId: account.id
+            },
+            "Unable to verify live WhatsApp account status"
+          );
+
+          return {
+            ...account,
+            live_connection_status: null,
+            live_connected: null,
+            live_status_error: error instanceof Error ? error.message : "Unable to verify live connector status"
+          };
+        }
+      })
+    );
   }
 
   async listWhatsAppAccountAccess(authUser: AuthUser, organizationId?: string | null) {

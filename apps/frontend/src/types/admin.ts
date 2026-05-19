@@ -32,6 +32,9 @@ export interface WhatsAppAccountSummary {
   last_disconnected_at?: string | null;
   health_score?: number | null;
   history_sync_lookback_days?: number | null;
+  live_connection_status?: string | null;
+  live_connected?: boolean | null;
+  live_status_error?: string | null;
 }
 
 export type WhatsAppAccountAccessRole = "owner" | "manager" | "agent" | "viewer";

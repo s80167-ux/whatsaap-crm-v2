@@ -93,6 +93,9 @@ type WhatsAppAccountApiRecord = {
   last_disconnected_at?: string | null;
   health_score?: number | null;
   history_sync_lookback_days?: number | null;
+  live_connection_status?: string | null;
+  live_connected?: boolean | null;
+  live_status_error?: string | null;
 };
 
 type WhatsAppSyncJobApiRecord = WhatsAppSyncJobSummary;
@@ -140,7 +143,10 @@ function mapWhatsAppAccount(record: WhatsAppAccountApiRecord): WhatsAppAccountSu
     last_connected_at: record.last_connected_at ?? null,
     last_disconnected_at: record.last_disconnected_at ?? null,
     health_score: record.health_score ?? null,
-    history_sync_lookback_days: record.history_sync_lookback_days ?? 7
+    history_sync_lookback_days: record.history_sync_lookback_days ?? 7,
+    live_connection_status: record.live_connection_status ?? null,
+    live_connected: record.live_connected ?? null,
+    live_status_error: record.live_status_error ?? null
   };
 }
 

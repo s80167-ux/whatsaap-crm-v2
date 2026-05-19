@@ -47,6 +47,9 @@ function mapWhatsAppAccount(account: {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  live_connection_status?: string | null;
+  live_connected?: boolean | null;
+  live_status_error?: string | null;
 }) {
   return {
     id: account.id,
@@ -57,7 +60,10 @@ function mapWhatsAppAccount(account: {
     status: account.connection_status,
     last_connected_at: account.last_connected_at ?? null,
     last_disconnected_at: account.last_disconnected_at ?? null,
-    health_score: account.health_score ?? null
+    health_score: account.health_score ?? null,
+    live_connection_status: account.live_connection_status ?? null,
+    live_connected: account.live_connected ?? null,
+    live_status_error: account.live_status_error ?? null
   };
 }
 

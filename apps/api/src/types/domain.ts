@@ -91,6 +91,9 @@ export interface WhatsAppAccountRecord {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  live_connection_status?: string | null;
+  live_connected?: boolean | null;
+  live_status_error?: string | null;
 }
 
 export interface InboundMessageInput {
