@@ -1,7 +1,7 @@
 import { pool, query, withTransaction } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../lib/errors.js";
-import { encryptSocialToken } from "../../lib/socialTokenCrypto.js";
+import { decryptSocialToken, encryptSocialToken } from "../../lib/socialTokenCrypto.js";
 import type { AuthUser } from "../../types/auth.js";
 
 export type SocialChannelPlatform = "facebook" | "instagram";
@@ -69,6 +69,11 @@ type MetaExchangeCodeResponse = {
   account?: SocialChannelAccount | null;
   requiresPageSelection?: boolean;
   pages?: MetaPageOption[];
+};
+
+type MetaWebhookSubscriptionResult = {
+  status: SocialChannelAccount["webhook_status"];
+  errorMessage: string | null;
 };
 
 type CachedMetaPages = {
@@ -287,6 +292,96 @@ export class SocialChannelsService {
     }
 
     return account;
+  }
+
+  async resubscribeAccount(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
+    const organizationId = this.getOrganizationId(auth, requestedOrganizationId);
+    const accountResult = await query<SocialChannelAccount & { access_token_encrypted: string | null }>(
+      `
+        select
+          id,
+          organization_id,
+          platform,
+          label,
+          external_account_id,
+          external_account_name,
+          username,
+          profile_picture_url,
+          connection_status,
+          webhook_status,
+          token_expires_at,
+          last_sync_at,
+          created_by,
+          created_at,
+          updated_at,
+          access_token_encrypted
+        from social_channel_accounts
+        where id = $1
+          and organization_id = $2
+      `,
+      [accountId, organizationId]
+    );
+
+    const account = accountResult.rows[0];
+
+    if (!account) {
+      throw new AppError("Social channel account not found", 404, "social_channel_account_not_found");
+    }
+
+    if (account.platform !== "facebook" || !account.external_account_id) {
+      throw new AppError("Only connected Facebook Page accounts can be repaired", 400, "social_repair_not_supported");
+    }
+
+    if (!account.access_token_encrypted) {
+      throw new AppError("Facebook Page access token is not stored. Reconnect the Page.", 400, "social_token_missing");
+    }
+
+    const pageAccessToken = decryptSocialToken(account.access_token_encrypted);
+    const subscription = await this.subscribePageToWebhook(account.external_account_id, pageAccessToken);
+
+    const updateResult = await withTransaction((client) =>
+      client.query<SocialChannelAccount>(
+        `
+          update social_channel_accounts
+          set webhook_status = $3,
+              connection_status = case when $3 = 'active' then 'connected' else connection_status end,
+              token_last_verified_at = case when $3 = 'active' then now() else token_last_verified_at end,
+              token_error_message = $4,
+              last_sync_at = case when $3 = 'active' then now() else last_sync_at end
+          where id = $1
+            and organization_id = $2
+          returning
+            id,
+            organization_id,
+            platform,
+            label,
+            external_account_id,
+            external_account_name,
+            username,
+            profile_picture_url,
+            connection_status,
+            webhook_status,
+            token_expires_at,
+            last_sync_at,
+            created_by,
+            created_at,
+            updated_at
+        `,
+        [accountId, organizationId, subscription.status, subscription.errorMessage]
+      )
+    );
+
+    const updatedAccount = updateResult.rows[0];
+
+    if (subscription.status !== "active") {
+      throw new AppError(
+        subscription.errorMessage ?? "Facebook Page connected, but Messenger inbox sync is not active yet.",
+        502,
+        "social_webhook_resubscribe_failed"
+      );
+    }
+
+    return updatedAccount;
   }
 
   async deleteAccount(auth: AuthUser, accountId: string, requestedOrganizationId?: string | null) {
@@ -525,7 +620,7 @@ export class SocialChannelsService {
     platform: SocialChannelPlatform,
     page: MetaPageWithToken
   ) {
-    const webhookStatus = await this.subscribePageToWebhook(page.id, page.accessToken);
+    const webhookSubscription = await this.subscribePageToWebhook(page.id, page.accessToken);
 
     const encryptedAccessToken = encryptSocialToken(page.accessToken);
     const result = await withTransaction((client) =>
@@ -546,7 +641,7 @@ export class SocialChannelsService {
             last_sync_at,
             created_by
           )
-          values ($1, $2, $3, $4, $5, $6, 'connected', $7, $8, now(), null, now(), $9)
+          values ($1, $2, $3, $4, $5, $6, 'connected', $7, $8, now(), $10, now(), $9)
           on conflict (organization_id, platform, external_account_id)
             where external_account_id is not null
           do update set
@@ -557,7 +652,7 @@ export class SocialChannelsService {
             webhook_status = excluded.webhook_status,
             access_token_encrypted = excluded.access_token_encrypted,
             token_last_verified_at = excluded.token_last_verified_at,
-            token_error_message = null,
+            token_error_message = excluded.token_error_message,
             last_sync_at = now()
           returning
             id,
@@ -583,9 +678,10 @@ export class SocialChannelsService {
           page.id,
           page.name,
           page.pictureUrl ?? null,
-          webhookStatus,
+          webhookSubscription.status,
           encryptedAccessToken,
-          auth.organizationUserId
+          auth.organizationUserId,
+          webhookSubscription.errorMessage
         ]
       )
     );
@@ -593,17 +689,24 @@ export class SocialChannelsService {
     return result.rows[0];
   }
 
-  private async subscribePageToWebhook(pageId: string, pageAccessToken: string): Promise<SocialChannelAccount["webhook_status"]> {
+  private async subscribePageToWebhook(pageId: string, pageAccessToken: string): Promise<MetaWebhookSubscriptionResult> {
     const url = new URL(`https://graph.facebook.com/${env.META_GRAPH_API_VERSION}/${pageId}/subscribed_apps`);
     url.searchParams.set("subscribed_fields", "messages,messaging_postbacks,messaging_optins,message_deliveries,message_reads");
     url.searchParams.set("access_token", pageAccessToken);
 
     try {
       const response = await fetch(url, { method: "POST" });
+      const body = await response.json().catch(() => null) as { error?: { message?: string } } | null;
 
-      return response.ok ? "active" : "failed";
-    } catch {
-      return "failed";
+      return {
+        status: response.ok ? "active" : "failed",
+        errorMessage: response.ok ? null : body?.error?.message ?? "Unable to activate Facebook Messenger webhook subscription."
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unable to activate Facebook Messenger webhook subscription."
+      };
     }
   }
 

@@ -12,6 +12,7 @@ import {
   getMetaConnectUrl,
   getSocialChannelAccountStatus,
   listSocialChannelAccounts,
+  resubscribeSocialChannelAccount,
   updateSocialChannelAccount,
   type MetaConnectUrlResponse,
   type SocialChannelAccount,
@@ -311,6 +312,21 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
     }
   }
 
+  async function repairMessengerSync(accountId: string) {
+    setWorkingAccountId(accountId);
+    setNotice(null);
+
+    try {
+      const account = await resubscribeSocialChannelAccount(accountId, activeOrganizationId);
+      setAccounts((current) => current.map((item) => (item.id === account.id ? account : item)));
+      setNotice({ type: "success", message: "Messenger webhook subscription repaired. Send a new Facebook DM to test the inbox." });
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to repair Messenger sync" });
+    } finally {
+      setWorkingAccountId(null);
+    }
+  }
+
   async function deleteAccount(account: SocialChannelAccount) {
     const label = account.external_account_name || account.label;
 
@@ -461,6 +477,10 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
                   <RefreshCw size={16} />
                   Refresh Status
                 </Button>
+                <Button variant="secondary" onClick={() => void repairMessengerSync(primaryAccount.id)} disabled={workingAccountId === primaryAccount.id}>
+                  <PlugZap size={16} />
+                  Repair Messenger Sync
+                </Button>
                 <Button variant="danger" onClick={() => void disconnectAccount(primaryAccount.id)} disabled={workingAccountId === primaryAccount.id}>
                   <Unplug size={16} />
                   Disconnect
@@ -504,6 +524,12 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
                 <RefreshCw size={16} />
                 Retry Connection
               </Button>
+              {primaryAccount ? (
+                <Button variant="secondary" onClick={() => void repairMessengerSync(primaryAccount.id)} disabled={workingAccountId === primaryAccount.id}>
+                  <PlugZap size={16} />
+                  Repair Messenger Sync
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={() => setNotice({ type: "error", message: "Please contact your CRM administrator." })}>
                 Contact Admin
               </Button>

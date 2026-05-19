@@ -95,6 +95,11 @@ export async function disconnectSocialChannelAccount(accountId: string, organiza
   return response.data;
 }
 
+export async function resubscribeSocialChannelAccount(accountId: string, organizationId?: string | null) {
+  const response = await apiPost<{ data: SocialChannelAccount }>(`/social-channels/accounts/${accountId}/resubscribe`, { organizationId });
+  return response.data;
+}
+
 export async function deleteSocialChannelAccount(accountId: string, organizationId?: string | null) {
   return apiDelete<{ ok: true }>(appendOrganizationQuery(`/social-channels/accounts/${accountId}`, organizationId));
 }

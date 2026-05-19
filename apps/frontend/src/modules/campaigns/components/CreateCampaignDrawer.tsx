@@ -74,6 +74,7 @@ export function CreateCampaignDrawer({
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
   const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
+  const [testSendNotice, setTestSendNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
@@ -102,6 +103,11 @@ export function CreateCampaignDrawer({
 
   function showError(message: string) {
     onPlaceholderAction(message, "error");
+  }
+
+  function showTestSendNotice(message: string, variant: "success" | "error") {
+    setTestSendNotice({ message, variant });
+    onPlaceholderAction(message, variant);
   }
 
   function validateSender() {
@@ -147,6 +153,7 @@ export function CreateCampaignDrawer({
 
   async function handleAudienceGroupChange(nextAudienceGroupId: string) {
     setAudienceGroupId(nextAudienceGroupId);
+    setTestSendNotice(null);
 
     if (!nextAudienceGroupId) {
       setSampleContact(fallbackSampleContact);
@@ -228,6 +235,7 @@ export function CreateCampaignDrawer({
       return;
     }
 
+    setTestSendNotice(null);
     setIsSendingTest(true);
 
     try {
@@ -237,9 +245,9 @@ export function CreateCampaignDrawer({
         testPhoneNumber: testPhoneNumber.trim(),
         messageTemplate: preview
       });
-      onPlaceholderAction(result.message || `Test message queued from ${senderLabel} to ${testPhoneNumber.trim()}.`, "success");
+      showTestSendNotice(result.message || `Test message queued from ${senderLabel} to ${testPhoneNumber.trim()}.`, "success");
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to send test message.");
+      showTestSendNotice(error instanceof Error ? error.message : "Unable to send test message.", "error");
     } finally {
       setIsSendingTest(false);
     }
@@ -316,7 +324,10 @@ export function CreateCampaignDrawer({
 
               <label className="block">
                 <span className="workspace-label">Sender WhatsApp Number</span>
-                <Select value={senderWhatsAppAccountId} onChange={(event) => setSenderWhatsAppAccountId(event.target.value)}>
+                <Select value={senderWhatsAppAccountId} onChange={(event) => {
+                  setSenderWhatsAppAccountId(event.target.value);
+                  setTestSendNotice(null);
+                }}>
                   <option value="">Select live connected sender</option>
                   {connectedAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -460,8 +471,25 @@ export function CreateCampaignDrawer({
 
             <label className="mt-4 block">
               <span className="workspace-label">Test Phone Number</span>
-              <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="+60123456789" />
+              <Input
+                value={testPhoneNumber}
+                onChange={(event) => {
+                  setTestPhoneNumber(event.target.value);
+                  setTestSendNotice(null);
+                }}
+                placeholder="+60123456789"
+              />
             </label>
+
+            {testSendNotice ? (
+              <div
+                className={testSendNotice.variant === "error"
+                  ? "mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900"
+                  : "mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"}
+              >
+                {testSendNotice.message}
+              </div>
+            ) : null}
 
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
               Campaigns should only be sent to customers who have given permission to receive messages. Always provide a clear way for customers to opt out.

@@ -9,6 +9,7 @@ import {
   getMetaConnectUrl,
   getSocialChannelAccountStatus,
   listSocialChannelAccounts,
+  resubscribeSocialChannelAccount,
   updateSocialChannelAccount
 } from "./socialChannels.controller.js";
 
@@ -23,3 +24,4 @@ socialChannelsRoutes.get("/accounts/:accountId/status", asyncHandler(getSocialCh
 socialChannelsRoutes.patch("/accounts/:accountId", asyncHandler(updateSocialChannelAccount));
 socialChannelsRoutes.delete("/accounts/:accountId", asyncHandler(deleteSocialChannelAccount));
 socialChannelsRoutes.post("/accounts/:accountId/disconnect", asyncHandler(disconnectSocialChannelAccount));
+socialChannelsRoutes.post("/accounts/:accountId/resubscribe", asyncHandler(resubscribeSocialChannelAccount));

@@ -91,6 +91,15 @@ export async function disconnectSocialChannelAccount(request: Request, response:
   return response.json({ data: account });
 }
 
+export async function resubscribeSocialChannelAccount(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { accountId } = accountParamsSchema.parse(request.params);
+  const { organizationId } = z.object({ organizationId: z.string().uuid().optional().nullable() }).parse(request.body ?? {});
+  const account = await socialChannelsService.resubscribeAccount(auth, accountId, organizationId);
+
+  return response.json({ data: account });
+}
+
 export async function deleteSocialChannelAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { accountId } = accountParamsSchema.parse(request.params);
