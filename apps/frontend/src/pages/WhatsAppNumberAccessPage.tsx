@@ -411,7 +411,7 @@ export function WhatsAppNumberAccessPanel({
           )}
         </div>
         <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
-          <Button variant="secondary" onClick={handleClose}>
+          <Button variant="secondary" onClick={() => handleClose()}>
             Cancel
           </Button>
           <Button
