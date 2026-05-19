@@ -233,14 +233,7 @@ export class SendMessageService {
       };
     });
 
-    if (env.OUTBOUND_DISPATCH_MODE === "worker_only") {
-      if (options.waitForDispatch) {
-        logger.info(
-          { outboxId, messageId: message.id },
-          "Synchronous outbound dispatch is disabled because OUTBOUND_DISPATCH_MODE=worker_only"
-        );
-      }
-
+    if (env.OUTBOUND_DISPATCH_MODE === "worker_only" && !options.waitForDispatch) {
       return message;
     }
 
