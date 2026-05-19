@@ -2165,19 +2165,114 @@ canvas {
 .inbox-channel-facebook {
   --messenger-blue: 0 132 255;
   --messenger-blue-strong: 0 100 224;
+  --messenger-blue-deep: 8 102 255;
+  --messenger-violet: 120 82 255;
   --messenger-ink: 15 23 42;
+  --messenger-cloud: 244 248 255;
+  --messenger-line: 205 220 245;
+  background:
+    linear-gradient(180deg, rgb(var(--messenger-cloud) / 0.94), rgb(255 255 255 / 0.98) 18rem),
+    rgb(255 255 255);
+  margin: calc(var(--surface-padding-y) * -0.25) calc(var(--surface-padding-x) * -0.25);
+  padding: calc(var(--surface-padding-y) * 0.25) calc(var(--surface-padding-x) * 0.25);
 }
 
 .inbox-channel-facebook .workspace-page-header {
-  border-color: rgb(var(--messenger-blue) / 0.18);
+  position: relative;
+  overflow: hidden;
+  border-color: rgb(var(--messenger-blue) / 0.2);
   background:
-    linear-gradient(135deg, rgb(var(--messenger-blue) / 0.08), rgb(255 255 255 / 0.94) 44%, rgb(247 250 255 / 0.98)),
+    linear-gradient(135deg, rgb(var(--messenger-blue) / 0.16), rgb(255 255 255 / 0.98) 42%, rgb(238 245 255 / 0.98)),
     rgb(var(--card) / 0.96);
+  box-shadow: 0 18px 42px rgb(var(--messenger-blue-deep) / 0.12);
+}
+
+.inbox-channel-facebook .workspace-page-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.35rem;
+  background: linear-gradient(180deg, rgb(var(--messenger-blue)), rgb(var(--messenger-violet)));
+}
+
+.inbox-channel-facebook .workspace-page-header::after {
+  content: "";
+  position: absolute;
+  right: 1.5rem;
+  top: -3.6rem;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px !important;
+  background: radial-gradient(circle, rgb(var(--messenger-blue) / 0.14), transparent 67%);
+  pointer-events: none;
+}
+
+.inbox-channel-facebook .workspace-page-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.inbox-channel-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.facebook-messenger-mark {
+  display: inline-flex;
+  width: 3.2rem;
+  height: 3.2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px !important;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgb(var(--messenger-blue)), rgb(var(--messenger-violet)));
+  box-shadow: 0 14px 30px rgb(var(--messenger-blue-deep) / 0.28);
+}
+
+.facebook-messenger-mark svg {
+  width: 2.45rem;
+  height: 2.45rem;
+}
+
+.inbox-channel-facebook .workspace-page-header [class~="app-card"] {
+  border-color: rgb(var(--messenger-line) / 0.9);
+  background: rgb(255 255 255 / 0.82);
+  box-shadow: 0 12px 28px rgb(var(--messenger-blue-deep) / 0.08);
+}
+
+.inbox-channel-facebook .workspace-page-header [class~="app-card"] p:last-child {
+  color: rgb(var(--messenger-ink));
+}
+
+.inbox-channel-facebook .workspace-page-header a {
+  border-radius: 9999px !important;
+}
+
+.inbox-channel-facebook .workspace-page-header a[aria-current="page"],
+.inbox-channel-facebook .workspace-page-header a.active {
+  border-color: rgb(var(--messenger-blue));
+  background: linear-gradient(135deg, rgb(var(--messenger-blue)), rgb(var(--messenger-blue-deep)));
+  color: #ffffff !important;
+  box-shadow: 0 12px 28px rgb(var(--messenger-blue-deep) / 0.22);
+}
+
+.inbox-channel-facebook .workspace-block {
+  border-color: rgb(var(--messenger-line) / 0.86);
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 18px 44px rgb(15 23 42 / 0.08);
+}
+
+.inbox-channel-facebook .inbox-queue-rail .workspace-block {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(247 250 255 / 0.96)),
+    #ffffff;
 }
 
 .inbox-channel-facebook .chat-panel-card > header {
   border-bottom-color: rgb(var(--messenger-blue) / 0.16);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(var(--messenger-blue) / 0.045));
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.99), rgb(var(--messenger-blue) / 0.07));
 }
 
 .inbox-channel-facebook .chat-panel-card > header [class*="bg-primary\\/10"],
@@ -2185,30 +2280,74 @@ canvas {
   color: rgb(var(--messenger-blue-strong));
 }
 
+.inbox-channel-facebook .chat-panel-card > header button > span:first-child {
+  border-radius: 9999px !important;
+  border-color: rgb(var(--messenger-blue) / 0.24);
+  background: linear-gradient(135deg, rgb(var(--messenger-blue) / 0.12), rgb(var(--messenger-violet) / 0.12));
+  color: rgb(var(--messenger-blue-strong));
+}
+
+.inbox-channel-facebook .chat-panel-card > header [class*="rounded-full"] {
+  border-color: rgb(var(--messenger-line) / 0.95);
+}
+
 .inbox-channel-facebook .chat-panel-card > div.min-h-0 {
   background:
-    radial-gradient(circle at 18% 12%, rgb(var(--messenger-blue) / 0.08), transparent 28rem),
-    linear-gradient(180deg, #f7fbff 0%, #ffffff 52%, #f4f8ff 100%);
+    linear-gradient(rgb(210 225 248 / 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(210 225 248 / 0.22) 1px, transparent 1px),
+    linear-gradient(180deg, #f6f9ff 0%, #ffffff 48%, #f3f7ff 100%);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.inbox-channel-facebook .input-base {
+  border-color: rgb(var(--messenger-line) / 0.95);
+  background: rgb(240 246 255 / 0.88);
+  color: rgb(var(--messenger-ink));
+}
+
+.inbox-channel-facebook .input-base:focus {
+  border-color: rgb(var(--messenger-blue) / 0.72);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgb(var(--messenger-blue) / 0.12);
+}
+
+.inbox-channel-facebook .inbox-queue-rail button[aria-pressed="true"],
+.inbox-channel-facebook .inbox-queue-rail button:hover {
+  color: rgb(var(--messenger-blue-strong));
 }
 
 .inbox-channel-facebook .conversation-item {
-  border-color: rgb(var(--messenger-blue) / 0.12);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 0.05);
+  border-color: rgb(var(--messenger-line) / 0.84);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: none;
 }
 
 .inbox-channel-facebook .conversation-item:hover,
 .inbox-channel-facebook .conversation-item-active {
-  border-color: rgb(var(--messenger-blue) / 0.34);
-  background: rgb(var(--messenger-blue) / 0.08);
+  border-color: rgb(var(--messenger-blue) / 0.36);
+  background: linear-gradient(135deg, rgb(var(--messenger-blue) / 0.12), rgb(255 255 255 / 0.96));
+  box-shadow: inset 3px 0 0 rgb(var(--messenger-blue)), 0 12px 28px rgb(var(--messenger-blue-deep) / 0.1);
+}
+
+.inbox-channel-facebook .conversation-item [class*="bg-primary\\/10"] {
+  border-color: rgb(var(--messenger-blue) / 0.2);
+  background: rgb(var(--messenger-blue) / 0.1);
+  color: rgb(var(--messenger-blue-strong));
+}
+
+.inbox-channel-facebook .conversation-item [class*="bg-primary"]:not([class*="bg-primary\\/"]) {
+  background: rgb(var(--messenger-blue)) !important;
+  color: #ffffff !important;
 }
 
 .inbox-channel-facebook .message-bubble {
-  border-radius: 8px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.07);
 }
 
 .inbox-channel-facebook .message-bubble-outgoing {
   border-color: rgb(var(--messenger-blue) / 0.2) !important;
-  background: linear-gradient(135deg, rgb(var(--messenger-blue)), rgb(72 96 255)) !important;
+  background: linear-gradient(135deg, rgb(var(--messenger-blue)), rgb(var(--messenger-violet))) !important;
   color: #ffffff !important;
 }
 
@@ -2222,16 +2361,43 @@ canvas {
 }
 
 .inbox-channel-facebook .message-bubble-incoming {
-  border-color: rgb(203 213 225 / 0.9) !important;
-  background: #ffffff !important;
+  border-color: rgb(226 232 240 / 0.95) !important;
+  background: #f0f2f5 !important;
+  color: rgb(var(--messenger-ink)) !important;
 }
 
 .inbox-channel-facebook footer {
   border-top-color: rgb(var(--messenger-blue) / 0.14);
-  background: linear-gradient(180deg, rgb(247 250 255 / 0.92), rgb(255 255 255 / 0.98));
+  background: linear-gradient(180deg, rgb(247 250 255 / 0.96), rgb(255 255 255 / 0.99));
 }
 
 .inbox-channel-facebook textarea:focus {
   border-color: rgb(var(--messenger-blue) / 0.72);
   box-shadow: 0 0 0 3px rgb(var(--messenger-blue) / 0.12);
+}
+
+.inbox-channel-facebook .chat-panel-card + *,
+.inbox-channel-facebook .workspace-empty-state {
+  border-color: rgb(var(--messenger-line) / 0.86);
+}
+
+@media (max-width: 640px) {
+  .inbox-channel-facebook {
+    margin: 0;
+    padding: 0;
+  }
+
+  .inbox-channel-heading {
+    align-items: flex-start;
+  }
+
+  .facebook-messenger-mark {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .facebook-messenger-mark svg {
+    width: 2.05rem;
+    height: 2.05rem;
+  }
 }

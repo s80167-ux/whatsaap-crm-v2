@@ -33,13 +33,26 @@ type InboxPageProps = {
   channel?: InboxChannelFilter;
 };
 
+function FacebookMessengerMark() {
+  return (
+    <span className="facebook-messenger-mark" aria-hidden="true">
+      <svg viewBox="0 0 36 36" role="img" focusable="false">
+        <path
+          fill="currentColor"
+          d="M18 2.8C9.3 2.8 2.8 8.9 2.8 17.2c0 4.4 1.8 8.2 4.8 10.8v5.2l5.2-2.8c1.6.5 3.3.8 5.2.8 8.7 0 15.2-6.1 15.2-14.4S26.7 2.8 18 2.8Zm1.5 19.1-3.8-4-7.4 4 8.1-8.7 3.9 4 7.3-4-8.1 8.7Z"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function getInboxPageContent(channel: InboxChannelFilter) {
   switch (channel) {
     case "facebook":
       return {
         eyebrow: "Facebook Messenger",
-        title: "FB Messenger Inbox",
-        description: "Handle Page Messenger conversations in a focused Facebook-style workspace.",
+        title: "Facebook Inbox",
+        description: "Handle Page Messenger conversations in a focused Meta workspace.",
         className: "inbox-channel-facebook"
       };
     case "instagram":
@@ -360,12 +373,15 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         <Card elevated className="workspace-page-header p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">{pageContent.eyebrow}</p>
-              <h1 className="mt-2 section-title">{pageContent.title}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
-                {pageContent.description}
-              </p>
+            <div className="inbox-channel-heading min-w-0">
+              {channel === "facebook" ? <FacebookMessengerMark /> : null}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">{pageContent.eyebrow}</p>
+                <h1 className="mt-2 section-title">{pageContent.title}</h1>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
+                  {pageContent.description}
+                </p>
+              </div>
             </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
               <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
