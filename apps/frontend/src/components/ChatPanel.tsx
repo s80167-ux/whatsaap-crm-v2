@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
 import type { InboxChannelFilter } from "../api/crm";
-import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage, sendSocialMessage } from "../api/crm";
+import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import {
   markMessagesDeletedInCache,
@@ -51,40 +51,51 @@ import {
   type InsertMessageVariable
 } from "./composer/InsertMessageModal";
 import { SlashSuggestionMenu, type SlashSuggestionItem } from "./composer/SlashSuggestionMenu";
+import { InboxAiAssistantCard } from "./inbox/InboxAiAssistantCard";
+import type { AiInboxAssistAction } from "../api/aiInbox";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
 const INITIAL_VISIBLE_MESSAGES = 12;
 const LOAD_OLDER_MESSAGES_STEP = 12;
+const SOCIAL_INBOX_ON_HOLD_MESSAGE = "Facebook and Instagram replies are coming soon. Social messaging is paused while platform restrictions are cleared.";
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
 const MAX_SLASH_SUGGESTIONS = 8;
 const AI_ACTIONS: InsertMessageAiAction[] = [
   {
-    id: "rewrite_professional",
-    title: "Rewrite professionally",
-    description: "Refine the current draft into a more polished customer-facing response.",
-    disabled: true,
-    keywords: ["rewrite", "professional", "tone"]
+    id: "suggest_reply",
+    title: "Suggest reply",
+    description: "Generate a short reply from the current conversation context.",
+    keywords: ["reply", "suggest", "follow-up"]
   },
   {
-    id: "shorten_message",
-    title: "Shorten message",
-    description: "Trim the current draft while keeping the meaning intact.",
-    disabled: true,
-    keywords: ["shorten", "concise", "brief"]
+    id: "detect_intent",
+    title: "Detect intent",
+    description: "Identify customer intent, sentiment, urgency, and next step.",
+    keywords: ["intent", "sentiment", "urgency"]
   },
   {
-    id: "translate_message",
-    title: "Translate message",
-    description: "Translate the draft into the preferred customer language.",
-    disabled: true,
-    keywords: ["translate", "language"]
+    id: "summarize",
+    title: "Summarize",
+    description: "Summarize the recent conversation and next best action.",
+    keywords: ["summary", "recap", "next"]
   },
   {
-    id: "generate_follow_up",
-    title: "Generate follow-up",
-    description: "Generate the next best follow-up based on the conversation context.",
-    disabled: true,
-    keywords: ["follow-up", "generate", "next step"]
+    id: "match_quick_reply",
+    title: "Find template",
+    description: "Find the best quick reply template for this conversation.",
+    keywords: ["template", "quick reply", "find"]
+  },
+  {
+    id: "rewrite_draft",
+    title: "Improve draft",
+    description: "Polish the current draft without sending it.",
+    keywords: ["rewrite", "improve", "tone"]
+  },
+  {
+    id: "check_reply",
+    title: "Check draft",
+    description: "Review the current draft for clarity and risk.",
+    keywords: ["check", "review", "draft"]
   }
 ];
 
@@ -220,14 +231,14 @@ function getChannelContextLabel(channelContext?: InboxChannelFilter) {
 
 function getSocialComposerNotice(conversation?: Conversation, channelContext?: InboxChannelFilter) {
   if (conversation?.channel === "facebook" || channelContext === "facebook") {
-    return "Facebook Messenger text replies are enabled. Attachments will be added later.";
+    return "Facebook Messenger replies are coming soon. Sending is paused while platform restrictions are cleared.";
   }
 
   if (conversation?.channel === "instagram" || channelContext === "instagram") {
-    return "Instagram DM text replies are enabled. Attachments will be added later.";
+    return "Instagram DM replies are coming soon. Sending is paused while platform restrictions are cleared.";
   }
 
-  return "Social Inbox supports Facebook and Instagram text replies. Attachments will be added later.";
+  return SOCIAL_INBOX_ON_HOLD_MESSAGE;
 }
 
 export function ChatPanel({
@@ -264,6 +275,7 @@ export function ChatPanel({
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<TemplatePreviewState | null>(null);
   const [selectedQuickReplyTemplateId, setSelectedQuickReplyTemplateId] = useState<string | null>(null);
+  const [requestedAiAction, setRequestedAiAction] = useState<AiInboxAssistAction | null>(null);
   const [replyDraft, setReplyDraft] = useState<ReplyDraftState | null>(null);
   const [forwardSourceMessage, setForwardSourceMessage] = useState<Message | null>(null);
   const [forwardTargetConversationId, setForwardTargetConversationId] = useState("");
@@ -324,6 +336,14 @@ export function ChatPanel({
         isOrganizationTemplate: true
       }))
     : [];
+  const composerAiActions = useMemo(
+    () =>
+      AI_ACTIONS.map((action) => ({
+        ...action,
+        disabled: (action.id === "rewrite_draft" || action.id === "check_reply") && !text.trim()
+      })),
+    [text]
+  );
   const insertVariables = useMemo<InsertMessageVariable[]>(() => {
     const items: InsertMessageVariable[] = [
       {
@@ -414,13 +434,8 @@ export function ChatPanel({
       return;
     }
 
-    if (isSocialConversation && attachment) {
-      setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
-      return;
-    }
-
-    if (isSocialConversation && !resolvedText) {
-      setSendNotice("Please type a text reply for Social Inbox.");
+    if (isSocialConversation) {
+      setSendNotice(getSocialComposerNotice(conversation, channelContext));
       return;
     }
 
@@ -453,7 +468,7 @@ export function ChatPanel({
       organization_id: resolvedOrganizationId,
       conversation_id: conversation.id,
       contact_id: conversation.contact_id,
-      whatsapp_account_id: isSocialConversation ? null : whatsappAccountId,
+      whatsapp_account_id: whatsappAccountId,
       social_channel_account_id: conversation.social_channel_account_id ?? null,
       channel: conversation.channel,
       external_message_id: optimisticId,
@@ -471,32 +486,22 @@ export function ChatPanel({
     patchConversationFromMessageInCache(queryClient, optimisticMessage);
 
     try {
-      const response = isSocialConversation
-        ? await sendSocialMessage({
-            conversationId: conversation.id,
-            organizationId: resolvedOrganizationId,
-            text: resolvedText
-          })
-        : await sendMessage({
-            whatsappAccountId: whatsappAccountId as string,
-            conversationId: conversation.id,
-            organizationId: resolvedOrganizationId,
-            quickReplyTemplateId: selectedQuickReplyTemplateId,
-            replyToMessageId: replyDraft?.messageId ?? null,
-            text: resolvedText || undefined,
-            attachment
-          });
+      const response = await sendMessage({
+        whatsappAccountId: whatsappAccountId as string,
+        conversationId: conversation.id,
+        organizationId: resolvedOrganizationId,
+        quickReplyTemplateId: selectedQuickReplyTemplateId,
+        replyToMessageId: replyDraft?.messageId ?? null,
+        text: resolvedText || undefined,
+        attachment
+      });
 
       if (response.data) {
         replaceOptimisticMessageInCache(queryClient, optimisticMessage.id, response.data);
         patchConversationFromMessageInCache(queryClient, response.data);
       }
 
-      setSendNotice(
-        isSocialConversation
-          ? "Social reply sent. The latest bubble will update in the conversation summary."
-          : "Message queued for delivery. The latest bubble will update as dispatch and ack events arrive."
-      );
+      setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
     } catch (error) {
       updateMessageAckInCache(queryClient, conversation.id, optimisticMessage.id, "failed");
       setSendNotice(error instanceof Error ? error.message : "Unable to send message");
@@ -539,7 +544,7 @@ export function ChatPanel({
     }
 
     if (isSocialConversation) {
-      setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+      setSendNotice(SOCIAL_INBOX_ON_HOLD_MESSAGE);
       event.target.value = "";
       return;
     }
@@ -601,6 +606,12 @@ export function ChatPanel({
     setText((current) => {
       return buildComposerText(current, value);
     });
+    textareaRef.current?.focus();
+  }
+
+  function replaceComposerText(value: string) {
+    setSelectedQuickReplyTemplateId(null);
+    setText(value);
     textareaRef.current?.focus();
   }
 
@@ -1019,6 +1030,19 @@ export function ChatPanel({
     );
   }
 
+  function handleUseQuickReplyTemplate(templateId: string) {
+    const template = insertTemplates.find((item) => item.id === templateId);
+
+    if (template) {
+      handleSelectInsertTemplate(template);
+    }
+  }
+
+  function handleSelectAiAction(action: InsertMessageAiAction) {
+    closeInsertMessageModal();
+    setRequestedAiAction(action.id as AiInboxAssistAction);
+  }
+
   return (
     <Card className={`chat-panel-card workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[780px] max-h-[calc(100vh-4.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
@@ -1215,7 +1239,7 @@ export function ChatPanel({
               aria-label="Attach a file"
               onClick={() => {
                 if (isSocialConversation) {
-                  setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+                  setSendNotice(SOCIAL_INBOX_ON_HOLD_MESSAGE);
                   return;
                 }
                 fileInputRef.current?.click();
@@ -1259,6 +1283,20 @@ export function ChatPanel({
             </Button>
           </div>
           <div className="flex flex-col gap-3">
+            <InboxAiAssistantCard
+              organizationId={resolvedOrganizationId}
+              conversationId={conversation?.id}
+              draft={text}
+              quickReplies={quickReplies.map((reply) => ({
+                id: reply.id,
+                title: reply.title,
+                body: reply.body
+              }))}
+              requestedAction={requestedAiAction}
+              onRequestedActionHandled={() => setRequestedAiAction(null)}
+              onUseReply={replaceComposerText}
+              onUseQuickReply={handleUseQuickReplyTemplate}
+            />
             <div className="relative">
               <SlashSuggestionMenu
                 open={isSlashMenuOpen}
@@ -1294,7 +1332,7 @@ export function ChatPanel({
                 aria-label="Attach a file"
                 onClick={() => {
                   if (isSocialConversation) {
-                    setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+                    setSendNotice(SOCIAL_INBOX_ON_HOLD_MESSAGE);
                     return;
                   }
                   fileInputRef.current?.click();
@@ -1338,8 +1376,8 @@ export function ChatPanel({
                 <span className="hidden text-xs font-semibold lg:inline">Insert</span>
               </Button>
             </div>
-              <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
-              {isSending ? "Sending..." : "Send"}
+              <Button onClick={handleSend} disabled={isSocialConversation || isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
+              {isSending ? "Sending..." : isSocialConversation ? "Coming Soon" : "Send"}
               </Button>
             </div>
           </div>
@@ -1348,7 +1386,7 @@ export function ChatPanel({
           {isMobile
             ? "Tap Send to queue the message."
             : isSocialConversation
-              ? `Use Ctrl+Enter to send. ${getChannelContextLabel(conversation.channel as InboxChannelFilter)} supports text replies for this MVP.`
+              ? `${getChannelContextLabel(conversation.channel as InboxChannelFilter)} replies are coming soon. Sending is paused for now.`
               : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
         </p>
       </footer>
@@ -1358,7 +1396,7 @@ export function ChatPanel({
         onClose={closeInsertMessageModal}
         variables={insertVariables}
         templates={insertTemplates}
-        aiActions={AI_ACTIONS}
+        aiActions={composerAiActions}
         loadingTemplates={quickRepliesLoading}
         templateEmptyMessage={
           resolvedOrganizationId
@@ -1378,6 +1416,7 @@ export function ChatPanel({
         }
         onSelectVariable={insertVariable}
         onSelectTemplate={handleSelectInsertTemplate}
+        onSelectAiAction={handleSelectAiAction}
       />
       <PopupOverlay
         open={isEmojiOpen}

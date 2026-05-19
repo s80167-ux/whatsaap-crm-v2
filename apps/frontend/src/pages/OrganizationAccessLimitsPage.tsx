@@ -105,6 +105,8 @@ export function OrganizationAccessLimitsPage() {
   const maxWhatsappValue = Number(maxWhatsappAccounts) || 0;
   const aiToday = accessLimits?.usage.ai?.today;
   const aiMonth = accessLimits?.usage.ai?.month;
+  const aiTodayBySource = accessLimits?.usage.ai?.bySource?.today;
+  const aiMonthBySource = accessLimits?.usage.ai?.bySource?.month;
   const aiDailyLimit = Number(aiDailyCredits) || 0;
   const aiMonthlyLimit = Number(aiMonthlyCredits) || 0;
   const whatsappUsageTone = getUsageAlertTone(currentWhatsappUsage, maxWhatsappValue);
@@ -205,9 +207,9 @@ export function OrganizationAccessLimitsPage() {
           }
         />
         <FeatureControlCard
-          title="AI Message Assist"
+          title="AI Assist"
           category="Optional Module"
-          description="DeepSeek-backed rewrite and review tools in campaign and template composers."
+          description="Inbox AI Assist plus campaign and template writing tools. One switch controls all AI assist surfaces for this organization."
           statusLabel={localAiMessageAssistEnabled ? "Enabled" : "Disabled"}
           statusTone={localAiMessageAssistEnabled ? "success" : "muted"}
           icon={<Sparkles size={17} />}
@@ -225,6 +227,7 @@ export function OrganizationAccessLimitsPage() {
           stats={[
             { label: "Today", value: `${aiToday?.creditUnits ?? 0} / ${aiDailyLimit} credits`, tone: aiTodayUsageTone },
             { label: "This month", value: `${aiMonth?.creditUnits ?? 0} / ${aiMonthlyLimit} credits`, tone: aiMonthUsageTone },
+            { label: "Inbox month", value: `${aiMonthBySource?.inbox.creditUnits ?? 0} credits` },
             { label: "DeepSeek calls", value: String(aiMonth?.deepseekRequests ?? 0) },
             { label: "Tokens", value: formatNumber(aiMonth?.totalTokens ?? 0) }
           ]}
@@ -276,6 +279,9 @@ export function OrganizationAccessLimitsPage() {
 
         <Card elevated className="!p-4 space-y-4">
           <FeatureSectionHeader icon={<Bot size={17} />} title="AI usage limits" />
+          <div className="border border-primary/15 bg-primary/10 px-3 py-2 text-xs leading-5 text-text-muted">
+            These limits apply to Inbox AI Assist, campaign AI writing, and message template AI writing under the shared AI Message Assist module.
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <LimitField
               label="Daily AI credits"
@@ -302,6 +308,18 @@ export function OrganizationAccessLimitsPage() {
             <UsageStat label="Requests today" value={formatNumber(aiToday?.requests ?? 0)} />
             <UsageStat label="Month requests" value={formatNumber(aiMonth?.requests ?? 0)} />
             <UsageStat label="Month tokens" value={formatNumber(aiMonth?.totalTokens ?? 0)} />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <UsageStat label="Inbox AI" value={`${formatNumber(aiMonthBySource?.inbox.requests ?? 0)} req / ${formatNumber(aiMonthBySource?.inbox.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Campaign AI" value={`${formatNumber(aiMonthBySource?.campaign.requests ?? 0)} req / ${formatNumber(aiMonthBySource?.campaign.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Template AI" value={`${formatNumber(aiMonthBySource?.template.requests ?? 0)} req / ${formatNumber(aiMonthBySource?.template.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Other AI" value={`${formatNumber(aiMonthBySource?.other.requests ?? 0)} req / ${formatNumber(aiMonthBySource?.other.creditUnits ?? 0)} credits`} />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <UsageStat label="Inbox today" value={`${formatNumber(aiTodayBySource?.inbox.requests ?? 0)} req / ${formatNumber(aiTodayBySource?.inbox.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Campaign today" value={`${formatNumber(aiTodayBySource?.campaign.requests ?? 0)} req / ${formatNumber(aiTodayBySource?.campaign.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Template today" value={`${formatNumber(aiTodayBySource?.template.requests ?? 0)} req / ${formatNumber(aiTodayBySource?.template.creditUnits ?? 0)} credits`} />
+            <UsageStat label="Other today" value={`${formatNumber(aiTodayBySource?.other.requests ?? 0)} req / ${formatNumber(aiTodayBySource?.other.creditUnits ?? 0)} credits`} />
           </div>
         </Card>
       </div>

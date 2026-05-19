@@ -30,21 +30,21 @@ const CHANNELS: ChannelCard[] = [
   },
   {
     title: "Facebook Messenger",
-    status: "Ready",
-    statusTone: "ready",
-    description: "Connect a Facebook Page so Messenger conversations can appear in your CRM Inbox.",
-    actionLabel: "Connect Facebook Page",
+    status: "Coming Soon",
+    statusTone: "soon",
+    description: "Facebook Messenger integration is on hold for now while platform restrictions are cleared.",
+    actionLabel: "View coming soon",
     to: "/setup/channels/facebook",
     icon: MessageCircle,
     logo: "facebook",
-    subItems: ["Facebook login", "Choose Page", "CRM Inbox"]
+    subItems: ["Meta review", "Page permission", "CRM Inbox"]
   },
   {
     title: "Instagram DM",
-    status: "Setup Preview",
-    statusTone: "ready",
-    description: "Prepare Instagram Professional Account details for a future Instagram DM connection.",
-    actionLabel: "Open Instagram Setup",
+    status: "Coming Soon",
+    statusTone: "soon",
+    description: "Instagram DM integration is on hold for now while platform restrictions are cleared.",
+    actionLabel: "View coming soon",
     to: "/setup/channels/instagram",
     icon: Instagram,
     logo: "instagram",
@@ -191,7 +191,7 @@ export function ChannelSetupPage() {
               <Sparkles size={16} />
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">Control centre</p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-text-muted">WhatsApp is active. Facebook Messenger can be connected from its channel page.</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">WhatsApp is active. Facebook and Instagram are marked Coming Soon while integration is paused.</p>
           </div>
         </div>
       </div>

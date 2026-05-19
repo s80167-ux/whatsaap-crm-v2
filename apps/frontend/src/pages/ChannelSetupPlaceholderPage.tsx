@@ -3,7 +3,7 @@ import { ArrowRight, Clock, Mail, MessageCircle, ShoppingBag, Sparkles, type Luc
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 
-type ChannelSetupPlaceholderVariant = "social" | "tiktok" | "ecommerce" | "email";
+type ChannelSetupPlaceholderVariant = "social" | "facebook" | "instagram" | "tiktok" | "ecommerce" | "email";
 
 type SetupItem = {
   title: string;
@@ -28,9 +28,9 @@ type PlaceholderContent = {
 const CONTENT: Record<ChannelSetupPlaceholderVariant, PlaceholderContent> = {
   social: {
     eyebrow: "Social Messenger",
-    title: "Social Messenger Setup",
+    title: "Social Messenger Coming Soon",
     description:
-      "This page is prepared as a setup placeholder for Facebook Messenger, Instagram DM and TikTok DM. No connector, database migration, API sync or message ingestion has been enabled yet.",
+      "Facebook Messenger, Instagram DM and TikTok setup are on hold for now. No connector, database migration, API sync or message ingestion has been enabled yet.",
     icon: MessageCircle,
     items: [
       {
@@ -57,6 +57,48 @@ const CONTENT: Record<ChannelSetupPlaceholderVariant, PlaceholderContent> = {
       "Map external profile to CRM contact",
       "Show message thread in unified inbox",
       "Route unread conversations to sales owner"
+    ]
+  },
+  facebook: {
+    eyebrow: "Facebook Messenger",
+    title: "Facebook Messenger Coming Soon",
+    description:
+      "Facebook Messenger setup is currently on hold due to platform restrictions. OAuth, Page connection, webhook subscription and inbox sync are not enabled from this page.",
+    icon: MessageCircle,
+    items: [
+      {
+        title: "Facebook Messenger",
+        logo: "facebook",
+        details: ["On hold: Meta App review, Page access, webhook subscription and Page token activation"],
+        inbox: "/inbox/facebook"
+      }
+    ],
+    roadmap: [
+      "Clear Meta app and permission restrictions",
+      "Reconnect approved Facebook Page",
+      "Enable webhook subscription",
+      "Show Messenger conversations in CRM Inbox"
+    ]
+  },
+  instagram: {
+    eyebrow: "Instagram DM",
+    title: "Instagram DM Coming Soon",
+    description:
+      "Instagram DM setup is currently on hold due to platform restrictions. Account connection, token exchange, webhook ingestion and inbox sync are not enabled from this page.",
+    icon: MessageCircle,
+    items: [
+      {
+        title: "Instagram DM",
+        logo: "instagram",
+        details: ["On hold: Instagram Professional account, linked Facebook Page and messaging permission"],
+        inbox: "/inbox/instagram"
+      }
+    ],
+    roadmap: [
+      "Clear Meta app and Instagram messaging restrictions",
+      "Confirm Professional account and Page linkage",
+      "Enable webhook ingestion",
+      "Show Instagram DMs in CRM Inbox"
     ]
   },
   tiktok: {
@@ -223,8 +265,8 @@ export function ChannelSetupPlaceholderPage({ variant }: { variant: ChannelSetup
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{content.eyebrow}</p>
-              <h2 className="mt-2 text-xl font-semibold text-foreground">Prepared for future channel activation</h2>
-              <p className="mt-1 text-sm leading-6 text-text-muted">Use this area to review planned setup requirements before the channel is connected.</p>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Coming soon</h2>
+              <p className="mt-1 text-sm leading-6 text-text-muted">This channel is visible for planning only while setup and inbox activation remain paused.</p>
             </div>
           </div>
           <div className="inline-flex w-fit items-center gap-2 border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary">

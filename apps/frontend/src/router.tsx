@@ -38,12 +38,6 @@ const ChannelSetupPage = lazy(() => import("./pages/ChannelSetupPage").then((mod
 const ChannelSetupPlaceholderPage = lazy(() =>
   import("./pages/ChannelSetupPlaceholderPage").then((module) => ({ default: module.ChannelSetupPlaceholderPage }))
 );
-const SocialChannelSetupPage = lazy(() =>
-  import("./pages/SocialChannelSetupPage").then((module) => ({ default: module.SocialChannelSetupPage }))
-);
-const MetaOAuthCallbackPage = lazy(() =>
-  import("./pages/MetaOAuthCallbackPage").then((module) => ({ default: module.MetaOAuthCallbackPage }))
-);
 const WhatsAppAccountDashboard = lazy(() => import("./pages/WhatsAppAccountDashboard").then((module) => ({ default: module.WhatsAppAccountDashboard })));
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
@@ -119,9 +113,9 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/inbox" replace /> },
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
-          { path: "inbox/social", element: withRouteFallback(<InboxPage channel="social" />) },
-          { path: "inbox/facebook", element: withRouteFallback(<InboxPage channel="facebook" />) },
-          { path: "inbox/instagram", element: withRouteFallback(<InboxPage channel="instagram" />) },
+          { path: "inbox/social", element: withRouteFallback(<InboxChannelPlaceholderPage variant="social" />) },
+          { path: "inbox/facebook", element: withRouteFallback(<InboxChannelPlaceholderPage variant="facebook" />) },
+          { path: "inbox/instagram", element: withRouteFallback(<InboxChannelPlaceholderPage variant="instagram" />) },
           { path: "inbox/ecommerce", element: withRouteFallback(<InboxChannelPlaceholderPage variant="ecommerce" />) },
           { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
@@ -262,9 +256,9 @@ export const router = createBrowserRouter([
           { path: "setup/channels", element: withRouteFallback(<ChannelSetupPage />) },
           { path: "setup/channels/whatsapp", element: withRouteFallback(<WhatsAppAccountDashboard />) },
           { path: "setup/whatsapp-number-access", element: <Navigate to="/setup/channels/whatsapp" replace /> },
-          { path: "setup/channels/facebook", element: withRouteFallback(<SocialChannelSetupPage platform="facebook" />) },
-          { path: "setup/channels/instagram", element: withRouteFallback(<SocialChannelSetupPage platform="instagram" />) },
-          { path: "setup/channels/meta/callback", element: withRouteFallback(<MetaOAuthCallbackPage />) },
+          { path: "setup/channels/facebook", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="facebook" />) },
+          { path: "setup/channels/instagram", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="instagram" />) },
+          { path: "setup/channels/meta/callback", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="facebook" />) },
           { path: "setup/channels/tiktok", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="tiktok" />) },
           { path: "setup/channels/social", element: <Navigate to="/setup/channels/facebook" replace /> },
           { path: "setup/channels/ecommerce", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="ecommerce" />) },

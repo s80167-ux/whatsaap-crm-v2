@@ -146,6 +146,20 @@ const EMPTY_AI_USAGE_WINDOW: AiUsageWindow = {
   lastUsedAt: null
 };
 
+type AiUsageSourceBreakdown = {
+  inbox: AiUsageWindow;
+  campaign: AiUsageWindow;
+  template: AiUsageWindow;
+  other: AiUsageWindow;
+};
+
+const EMPTY_AI_USAGE_SOURCE_BREAKDOWN: AiUsageSourceBreakdown = {
+  inbox: EMPTY_AI_USAGE_WINDOW,
+  campaign: EMPTY_AI_USAGE_WINDOW,
+  template: EMPTY_AI_USAGE_WINDOW,
+  other: EMPTY_AI_USAGE_WINDOW
+};
+
 export type OrganizationModuleKey = (typeof SUPPORTED_MODULE_KEYS)[number];
 
 function getModuleLookupKeys(moduleKey: OrganizationModuleKey) {
@@ -571,6 +585,76 @@ export class AdminService {
     };
   }
 
+  private async getAiUsageSourceBreakdownWithClient(
+    client: PoolClient,
+    organizationId: string,
+    window: "day" | "month"
+  ): Promise<AiUsageSourceBreakdown> {
+    let result;
+
+    try {
+      result = await client.query<{
+        source: string | null;
+        requests: number;
+        deepseek_requests: number;
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        credit_units: number;
+        last_used_at: string | null;
+      }>(
+        `
+          select
+            coalesce(nullif(source, ''), 'other') as source,
+            count(*)::int as requests,
+            count(*) filter (where provider = 'deepseek')::int as deepseek_requests,
+            coalesce(sum(prompt_tokens), 0)::int as prompt_tokens,
+            coalesce(sum(completion_tokens), 0)::int as completion_tokens,
+            coalesce(sum(total_tokens), 0)::int as total_tokens,
+            coalesce(sum(credit_units), 0)::int as credit_units,
+            max(created_at)::text as last_used_at
+          from ai_usage_events
+          where organization_id = $1
+            and created_at >= date_trunc($2, now())
+          group by coalesce(nullif(source, ''), 'other')
+        `,
+        [organizationId, window]
+      );
+    } catch (error) {
+      if (isMissingRelationError(error)) {
+        logger.warn(
+          { organizationId, window },
+          "AI usage events table is missing; returning zero source usage until migration is applied"
+        );
+        return EMPTY_AI_USAGE_SOURCE_BREAKDOWN;
+      }
+
+      throw error;
+    }
+
+    const breakdown: AiUsageSourceBreakdown = {
+      inbox: { ...EMPTY_AI_USAGE_WINDOW },
+      campaign: { ...EMPTY_AI_USAGE_WINDOW },
+      template: { ...EMPTY_AI_USAGE_WINDOW },
+      other: { ...EMPTY_AI_USAGE_WINDOW }
+    };
+
+    for (const row of result.rows) {
+      const source = row.source === "inbox" || row.source === "campaign" || row.source === "template" ? row.source : "other";
+      breakdown[source] = {
+        requests: row.requests ?? 0,
+        deepseekRequests: row.deepseek_requests ?? 0,
+        promptTokens: row.prompt_tokens ?? 0,
+        completionTokens: row.completion_tokens ?? 0,
+        totalTokens: row.total_tokens ?? 0,
+        creditUnits: row.credit_units ?? 0,
+        lastUsedAt: row.last_used_at ?? null
+      };
+    }
+
+    return breakdown;
+  }
+
   async assertAiUsageAllowed(authUser: AuthUser, organizationId: string) {
     const client = await pool.connect();
     try {
@@ -809,6 +893,8 @@ export class AdminService {
       const whatsappAccounts = await this.whatsappRepository.countByOrganization(client, organizationId);
       const aiDailyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "day");
       const aiMonthlyUsage = await this.getAiUsageWindowWithClient(client, organizationId, "month");
+      const aiDailyUsageBySource = await this.getAiUsageSourceBreakdownWithClient(client, organizationId, "day");
+      const aiMonthlyUsageBySource = await this.getAiUsageSourceBreakdownWithClient(client, organizationId, "month");
       const campaignUsage = await this.getCampaignUsageWithClient(client, organizationId);
 
       return {
@@ -868,7 +954,11 @@ export class AdminService {
           campaign: campaignUsage,
           ai: {
             today: aiDailyUsage,
-            month: aiMonthlyUsage
+            month: aiMonthlyUsage,
+            bySource: {
+              today: aiDailyUsageBySource,
+              month: aiMonthlyUsageBySource
+            }
           }
         },
         coreFeatures: {

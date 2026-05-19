@@ -2,8 +2,9 @@ import { motion } from "framer-motion";
 import { MessageCircle, ShoppingBag, Sparkles, type LucideIcon } from "lucide-react";
 import { Card } from "../components/Card";
 import { InboxSubTabs } from "../components/InboxSubTabs";
+import { SocialChannelHeaderBlock, type SocialChannelBrand } from "../components/SocialChannelBrand";
 
-type InboxPlaceholderVariant = "social" | "ecommerce";
+type InboxPlaceholderVariant = "social" | "facebook" | "instagram" | "ecommerce";
 
 type ChannelPreview = {
   label: string;
@@ -21,10 +22,10 @@ const PLACEHOLDER_CONTENT: Record<InboxPlaceholderVariant, {
 }> = {
   social: {
     eyebrow: "Social Messenger",
-    title: "Facebook, Instagram & TikTok inbox placeholder",
+    title: "Social Messenger Coming Soon",
     description:
-      "Bring customer messages from Facebook Messenger, Instagram DM and TikTok into the same CRM workspace once connector integration is ready.",
-    badge: "Connector planned",
+      "Facebook Messenger, Instagram DM and TikTok inboxes are on hold for now. This area stays visible as a coming soon placeholder until social connector restrictions are cleared.",
+    badge: "Coming Soon",
     icon: MessageCircle,
     channels: [
       { label: "Facebook Messenger", description: "Customer enquiries from business pages and campaign replies." },
@@ -36,6 +37,40 @@ const PLACEHOLDER_CONTENT: Record<InboxPlaceholderVariant, {
       "Map external profile to CRM contact",
       "Show message thread in unified inbox",
       "Route unread conversations to sales owner"
+    ]
+  },
+  facebook: {
+    eyebrow: "Facebook Messenger",
+    title: "Facebook Messenger Coming Soon",
+    description:
+      "Facebook Messenger inbox integration is currently on hold due to platform restrictions. No Facebook messages, replies or sync jobs are enabled from this page.",
+    badge: "Coming Soon",
+    icon: MessageCircle,
+    channels: [
+      { label: "Facebook Messenger", description: "Future Page Messenger conversations and campaign replies." }
+    ],
+    roadmap: [
+      "Complete Meta app and permission review",
+      "Connect approved Facebook Page",
+      "Map Page customer profile to CRM contact",
+      "Enable focused Facebook inbox queue"
+    ]
+  },
+  instagram: {
+    eyebrow: "Instagram DM",
+    title: "Instagram DM Coming Soon",
+    description:
+      "Instagram DM inbox integration is currently on hold due to platform restrictions. No Instagram messages, replies or sync jobs are enabled from this page.",
+    badge: "Coming Soon",
+    icon: MessageCircle,
+    channels: [
+      { label: "Instagram DM", description: "Future DM follow-up from posts, reels, ads and profile visits." }
+    ],
+    roadmap: [
+      "Complete Meta app and Instagram permission review",
+      "Confirm Instagram Professional account linkage",
+      "Map Instagram profile to CRM contact",
+      "Enable focused Instagram DM queue"
     ]
   },
   ecommerce: {
@@ -61,23 +96,25 @@ const PLACEHOLDER_CONTENT: Record<InboxPlaceholderVariant, {
 export function InboxChannelPlaceholderPage({ variant }: { variant: InboxPlaceholderVariant }) {
   const content = PLACEHOLDER_CONTENT[variant];
   const Icon = content.icon;
+  const headerBrand: SocialChannelBrand | undefined = variant === "facebook" ? "facebook" : variant === "instagram" ? "instagram" : undefined;
 
   return (
     <section className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         <Card elevated className="workspace-page-header p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <h1 className="mt-2 section-title">{content.eyebrow}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">{content.description}</p>
-            </div>
+            <SocialChannelHeaderBlock
+              channel={headerBrand}
+              eyebrow="Inbox"
+              title={content.title}
+              description={content.description}
+            />
             <InboxSubTabs
               tabs={[
                 { to: "/inbox", label: "All Inbox" },
                 { to: "/inbox/whatsapp", label: "WhatsApp" },
-                { to: "/inbox/facebook", label: "FB Messenger" },
-                { to: "/inbox/instagram", label: "IG Messenger" },
+                { to: "/inbox/facebook", label: "FB Messenger (Soon)" },
+                { to: "/inbox/instagram", label: "IG Messenger (Soon)" },
                 { to: "/inbox/ecommerce", label: "E-commerce" },
                 { to: "/inbox/replies", label: "Template Library" }
               ]}

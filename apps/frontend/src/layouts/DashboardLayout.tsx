@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
@@ -40,6 +40,7 @@ import { NavLinkItem } from "../components/NavLinkItem";
 import { NotificationBell } from "../components/NotificationBell";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { RouteTransition } from "../components/RouteTransition";
+import { SocialChannelBrandLogo } from "../components/SocialChannelBrand";
 import { ThemeSwitcher } from "../components/theme-switcher";
 import {
   useCampaignEmailModuleStatus,
@@ -272,9 +273,9 @@ function SidebarContent({
           label="Inbox"
           items={[
             { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
-            { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
-            { to: "/inbox/facebook", icon: <MessageSquare size={16} />, label: "FB Messenger" },
-            { to: "/inbox/instagram", icon: <Users size={16} />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+            { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
+            { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: "FB Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+            { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
             { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
             { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
           ]}
@@ -422,9 +423,9 @@ export function DashboardLayout() {
       icon: <MessageSquare size={18} />,
       items: [
         { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
-        { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
-        { to: "/inbox/facebook", icon: <MessageSquare size={16} />, label: "FB Messenger" },
-        { to: "/inbox/instagram", icon: <Users size={16} />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+        { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
+        { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: "FB Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+        { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
         { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
         { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
       ]

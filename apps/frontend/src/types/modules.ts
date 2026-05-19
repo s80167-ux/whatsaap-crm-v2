@@ -58,6 +58,10 @@ export interface OrganizationAccessLimits {
     ai: {
       today: AiUsageWindow;
       month: AiUsageWindow;
+      bySource?: {
+        today: AiUsageSourceBreakdown;
+        month: AiUsageSourceBreakdown;
+      };
     };
   };
   coreFeatures: {
@@ -75,4 +79,11 @@ export interface AiUsageWindow {
   totalTokens: number;
   creditUnits: number;
   lastUsedAt: string | null;
+}
+
+export interface AiUsageSourceBreakdown {
+  inbox: AiUsageWindow;
+  campaign: AiUsageWindow;
+  template: AiUsageWindow;
+  other: AiUsageWindow;
 }

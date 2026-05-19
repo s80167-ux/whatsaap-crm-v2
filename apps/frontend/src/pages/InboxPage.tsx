@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import { ArrowDownAZ, ChevronLeft, Clock3, Info, Search } from "lucide-react";
 import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
@@ -10,6 +10,7 @@ import { ContactInfoPanel } from "../components/ContactInfoPanel";
 import { ConversationList } from "../components/ConversationList";
 import { InboxSubTabs } from "../components/InboxSubTabs";
 import { PopupOverlay } from "../components/PopupOverlay";
+import { SocialChannelHeaderBlock, type SocialChannelBrand } from "../components/SocialChannelBrand";
 import { useConversations } from "../hooks/useConversations";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { useMessages } from "../hooks/useMessages";
@@ -32,19 +33,6 @@ const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
 type InboxPageProps = {
   channel?: InboxChannelFilter;
 };
-
-function FacebookMessengerMark() {
-  return (
-    <span className="facebook-messenger-mark" aria-hidden="true">
-      <svg viewBox="0 0 36 36" role="img" focusable="false">
-        <path
-          fill="currentColor"
-          d="M18 2.8C9.3 2.8 2.8 8.9 2.8 17.2c0 4.4 1.8 8.2 4.8 10.8v5.2l5.2-2.8c1.6.5 3.3.8 5.2.8 8.7 0 15.2-6.1 15.2-14.4S26.7 2.8 18 2.8Zm1.5 19.1-3.8-4-7.4 4 8.1-8.7 3.9 4 7.3-4-8.1 8.7Z"
-        />
-      </svg>
-    </span>
-  );
-}
 
 function getInboxPageContent(channel: InboxChannelFilter) {
   switch (channel) {
@@ -96,6 +84,7 @@ function getConversationIdentityLabel(conversation?: Conversation) {
 export function InboxPage({ channel = "all" }: InboxPageProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
+  const location = useLocation();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
@@ -105,6 +94,19 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   const requestedOrganizationId = searchParams.get("organization_id");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const pageContent = getInboxPageContent(channel);
+  const isWhatsAppRoute = location.pathname.startsWith("/inbox/whatsapp");
+  const headingBrand: SocialChannelBrand | undefined = isWhatsAppRoute ? "whatsapp" : undefined;
+  const headingContent = isWhatsAppRoute
+    ? {
+        eyebrow: "Inbox",
+        title: "WhatsApp Inbox",
+        description: "Handle live WhatsApp replies, ownership, and sales follow-up from one workspace."
+      }
+    : {
+        eyebrow: pageContent.eyebrow,
+        title: pageContent.title,
+        description: pageContent.description
+      };
 
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
@@ -373,16 +375,13 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         <Card elevated className="workspace-page-header p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="inbox-channel-heading min-w-0">
-              {channel === "facebook" ? <FacebookMessengerMark /> : null}
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">{pageContent.eyebrow}</p>
-                <h1 className="mt-2 section-title">{pageContent.title}</h1>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
-                  {pageContent.description}
-                </p>
-              </div>
-            </div>
+            <SocialChannelHeaderBlock
+              channel={headingBrand}
+              eyebrow={headingContent.eyebrow}
+              title={headingContent.title}
+              description={headingContent.description}
+              className="inbox-channel-heading"
+            />
             <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
               <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
@@ -400,8 +399,8 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               <InboxSubTabs
                 tabs={[
                   { to: "/inbox", label: "Conversations" },
-                  { to: "/inbox/facebook", label: "FB Messenger" },
-                  { to: "/inbox/instagram", label: "IG Messenger" },
+                  { to: "/inbox/facebook", label: "FB Messenger (Soon)" },
+                  { to: "/inbox/instagram", label: "IG Messenger (Soon)" },
                   { to: "/inbox/replies", label: "Template library" }
                 ]}
               />
