@@ -73,7 +73,6 @@ function buildAccessDrafts(account: WhatsAppAccountAccessAccount, users: UserSum
   });
 }
 
-export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: boolean }) {
 export function WhatsAppNumberAccessPanel({
   showHeader = true,
   selectedAccountId,
@@ -280,7 +279,7 @@ export function WhatsAppNumberAccessPanel({
                         variant="secondary"
                         onClick={() => {
                           setNotice(null);
-                            setInternalSelectedAccount(account);
+                          setInternalSelectedAccount(account);
                         }}
                       >
                         <Users size={15} />
@@ -293,7 +292,7 @@ export function WhatsAppNumberAccessPanel({
             </table>
           </div>
         </Card>
-      )}
+      ) : null}
 
       <PopupOverlay
         open={open ?? Boolean(selectedAccount)}
