@@ -1320,6 +1320,12 @@ async function assertConnectedSender(organizationId: string, senderWhatsAppAccou
     if (error instanceof AppError) {
       throw error;
     }
+
+    throw new AppError(
+      "Unable to verify the selected WhatsApp sender with the live connector. Reconnect the sender and try again.",
+      502,
+      "sender_status_unverified"
+    );
   }
 }
 
