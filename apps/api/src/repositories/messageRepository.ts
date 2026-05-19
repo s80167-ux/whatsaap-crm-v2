@@ -68,7 +68,6 @@ export class MessageRepository {
           contact_id,
           whatsapp_account_id,
           social_channel_account_id,
-          channel,
           external_message_id,
           external_chat_id,
           reply_to_message_id,
@@ -80,7 +79,7 @@ export class MessageRepository {
           ack_status,
           sent_at
         )
-        values ($1, $2, $3, $4, $5, $6, $7, 'whatsapp', 'outgoing', $8, nullif($9, ''), $10, 'pending', $11)
+        values ($1, $2, $3, $4, null, $5, $6, $7, 'whatsapp', 'outgoing', $8, nullif($9, ''), $10, 'pending', $11)
         returning
           id,
           organization_id,

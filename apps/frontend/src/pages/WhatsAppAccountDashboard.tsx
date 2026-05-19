@@ -11,7 +11,7 @@ import { useRealtimeWhatsAppAccounts } from "../hooks/useRealtimeWhatsAppAccount
 import { getStoredUser } from "../lib/auth";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookUser, Link2, QrCode, RefreshCw, Trash2, Unplug, Zap } from "lucide-react";
+import { BookUser, Link2, QrCode, RefreshCw, Trash2, Unplug, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
@@ -351,6 +351,7 @@ export function WhatsAppAccountDashboard() {
   const [syncJobSnapshots, setSyncJobSnapshots] = useState<Record<string, WhatsAppSyncJobSummary>>({});
   const [accountActivityNotice, setAccountActivityNotice] = useState<Record<string, { title: string; detail: string; tone?: "sky" | "emerald" }>>({});
   const [statusPollingUntil, setStatusPollingUntil] = useState<number | null>(null);
+  const [accessAccountId, setAccessAccountId] = useState<string | null>(null);
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -927,6 +928,16 @@ export function WhatsAppAccountDashboard() {
                             variant="secondary"
                             size="sm"
                             className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
+                            disabled={isWorking}
+                            onClick={() => setAccessAccountId(account.id)}
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            Manage Access
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
                             disabled={isWorking || isBackfillingThisAccount}
                             onClick={() => setBackfillPopupAccount({ id: account.id, name: account.name })}
                           >
@@ -975,7 +986,13 @@ export function WhatsAppAccountDashboard() {
       </Card>
 
       <Card elevated className="workspace-block min-w-0 xl:col-span-3">
-        <WhatsAppNumberAccessPanel showHeader={false} />
+        <WhatsAppNumberAccessPanel
+          showHeader={false}
+          hideOverviewTable
+          selectedAccountId={accessAccountId}
+          open={Boolean(accessAccountId)}
+          onClose={() => setAccessAccountId(null)}
+        />
       </Card>
     </section>
   );

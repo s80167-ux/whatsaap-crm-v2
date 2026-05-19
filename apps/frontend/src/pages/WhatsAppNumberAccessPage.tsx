@@ -74,6 +74,19 @@ function buildAccessDrafts(account: WhatsAppAccountAccessAccount, users: UserSum
 }
 
 export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: boolean }) {
+export function WhatsAppNumberAccessPanel({
+  showHeader = true,
+  selectedAccountId,
+  open,
+  onClose,
+  hideOverviewTable = false
+}: {
+  showHeader?: boolean;
+  selectedAccountId?: string | null;
+  open?: boolean;
+  onClose?: () => void;
+  hideOverviewTable?: boolean;
+}) {
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const currentUser = getStoredUser();
   const isSuperAdmin = dashboardContext.isSuperAdmin;
@@ -82,15 +95,30 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
     : currentUser?.organizationId ?? null;
   const queryClient = useQueryClient();
   const { data: overview, isFetching, refetch } = useWhatsAppAccountAccess(activeOrganizationId, Boolean(activeOrganizationId));
-  const [selectedAccount, setSelectedAccount] = useState<WhatsAppAccountAccessAccount | null>(null);
+  const [internalSelectedAccount, setInternalSelectedAccount] = useState<WhatsAppAccountAccessAccount | null>(null);
   const [drafts, setDrafts] = useState<AccessDraft[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
-  const detailQuery = useWhatsAppAccountAccessDetail(selectedAccount?.id ?? null, Boolean(selectedAccount));
 
   const accounts = overview?.accounts ?? [];
   const overviewUsers = overview?.users ?? [];
+  const selectedAccount = useMemo(() => {
+    if (selectedAccountId) {
+      return accounts.find((account) => account.id === selectedAccountId) ?? internalSelectedAccount;
+    }
+
+    return internalSelectedAccount;
+  }, [accounts, internalSelectedAccount, selectedAccountId]);
+  const detailQuery = useWhatsAppAccountAccessDetail(selectedAccount?.id ?? null, Boolean(selectedAccount));
   const detailUsers = detailQuery.data?.users?.length ? detailQuery.data.users : overviewUsers;
   const activeOwnerCount = drafts.filter((draft) => draft.isActive && draft.accessRole === "owner").length;
+
+  function handleClose() {
+    setNotice(null);
+    if (!selectedAccountId) {
+      setInternalSelectedAccount(null);
+    }
+    onClose?.();
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -117,7 +145,7 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
         queryClient.invalidateQueries({ queryKey: ["whatsapp-account-access"] }),
         queryClient.invalidateQueries({ queryKey: ["whatsapp-account-access-detail", selectedAccount?.id] })
       ]);
-      setSelectedAccount(null);
+      handleClose();
     },
     onError: (error) => {
       setNotice(error instanceof Error ? error.message : "Unable to update WhatsApp Number Access.");
@@ -141,6 +169,18 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
 
     setDrafts(buildAccessDrafts(detailQuery.data.account, detailQuery.data.users, nextAccessList));
   }, [detailQuery.data, selectedAccount]);
+
+  useEffect(() => {
+    if (!selectedAccountId) {
+      return;
+    }
+
+    const matchedAccount = accounts.find((account) => account.id === selectedAccountId);
+
+    if (matchedAccount) {
+      setInternalSelectedAccount(matchedAccount);
+    }
+  }, [accounts, selectedAccountId]);
 
   const selectedAccountLabel = useMemo(() => {
     if (!selectedAccount) {
@@ -192,15 +232,15 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
 
       {notice ? <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-text-muted">{notice}</div> : null}
 
-      {!activeOrganizationId ? (
+      {!hideOverviewTable && !activeOrganizationId ? (
         <Card className="p-5">
           <p className="text-sm font-semibold text-text">Select an organization first.</p>
         </Card>
-      ) : accounts.length === 0 ? (
+      ) : !hideOverviewTable && accounts.length === 0 ? (
         <Card className="p-5">
           <p className="text-sm font-semibold text-text">No WhatsApp accounts yet.</p>
         </Card>
-      ) : (
+      ) : !hideOverviewTable ? (
         <Card className="overflow-hidden p-0">
           <div className="border-b border-border px-4 py-4 sm:px-5">
             <h2 className="text-base font-semibold text-text">WhatsApp numbers</h2>
@@ -240,7 +280,7 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
                         variant="secondary"
                         onClick={() => {
                           setNotice(null);
-                          setSelectedAccount(account);
+                            setInternalSelectedAccount(account);
                         }}
                       >
                         <Users size={15} />
@@ -256,8 +296,8 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
       )}
 
       <PopupOverlay
-        open={Boolean(selectedAccount)}
-        onClose={() => setSelectedAccount(null)}
+        open={open ?? Boolean(selectedAccount)}
+        onClose={handleClose}
         title="Assign users to this WhatsApp number"
         description={selectedAccountLabel}
         panelClassName="max-w-5xl"
@@ -347,7 +387,7 @@ export function WhatsAppNumberAccessPanel({ showHeader = true }: { showHeader?: 
           )}
         </div>
         <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
-          <Button variant="secondary" onClick={() => setSelectedAccount(null)}>
+          <Button variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button
