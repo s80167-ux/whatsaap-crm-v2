@@ -110,9 +110,12 @@ export function WhatsAppNumberAccessPanel({
   const detailQuery = useWhatsAppAccountAccessDetail(selectedAccount?.id ?? null, Boolean(selectedAccount));
   const detailUsers = detailQuery.data?.users?.length ? detailQuery.data.users : overviewUsers;
   const activeOwnerCount = drafts.filter((draft) => draft.isActive && draft.accessRole === "owner").length;
+  const showStandaloneChrome = !hideOverviewTable;
 
-  function handleClose() {
-    setNotice(null);
+  function handleClose(options?: { clearNotice?: boolean }) {
+    if (options?.clearNotice ?? true) {
+      setNotice(null);
+    }
     if (!selectedAccountId) {
       setInternalSelectedAccount(null);
     }
@@ -144,7 +147,7 @@ export function WhatsAppNumberAccessPanel({
         queryClient.invalidateQueries({ queryKey: ["whatsapp-account-access"] }),
         queryClient.invalidateQueries({ queryKey: ["whatsapp-account-access-detail", selectedAccount?.id] })
       ]);
-      handleClose();
+      handleClose({ clearNotice: false });
     },
     onError: (error) => {
       setNotice(error instanceof Error ? error.message : "Unable to update WhatsApp Number Access.");
@@ -204,7 +207,7 @@ export function WhatsAppNumberAccessPanel({
 
   return (
     <div className="space-y-6">
-      {showHeader ? (
+      {showStandaloneChrome ? (showHeader ? (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Setup</p>
@@ -227,9 +230,9 @@ export function WhatsAppNumberAccessPanel({
             {isFetching ? "Refreshing" : "Refresh"}
           </Button>
         </div>
-      )}
+      )) : null}
 
-      {notice ? <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-text-muted">{notice}</div> : null}
+      {showStandaloneChrome && notice ? <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-text-muted">{notice}</div> : null}
 
       {!hideOverviewTable && !activeOrganizationId ? (
         <Card className="p-5">
@@ -333,23 +336,41 @@ export function WhatsAppNumberAccessPanel({
                         return null;
                       }
 
+                      const userLabel = getUserLabel(user);
+                      const activeInputId = `whatsapp-access-active-${user.id}`;
+                      const roleSelectId = `whatsapp-access-role-${user.id}`;
+                      const permissionLabelByKey: Record<"canView" | "canReply" | "canCreateSales" | "canEditSales", string> = {
+                        canView: "View permission",
+                        canReply: "Reply permission",
+                        canCreateSales: "Create sales permission",
+                        canEditSales: "Edit sales permission",
+                      };
+
                       return (
                         <tr key={user.id}>
                           <td>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-text">{getUserLabel(user)}</p>
+                              <p className="truncate font-semibold text-text">{userLabel}</p>
                               <p className="text-xs text-text-muted">{user.role}</p>
                             </div>
                           </td>
                           <td>
+                            <label htmlFor={activeInputId} className="sr-only">
+                              Activate access for {userLabel}
+                            </label>
                             <input
+                              id={activeInputId}
                               type="checkbox"
                               checked={draft.isActive}
                               onChange={(event) => updateDraft(user.id, { isActive: event.target.checked })}
                             />
                           </td>
                           <td>
+                            <label htmlFor={roleSelectId} className="sr-only">
+                              Access role for {userLabel}
+                            </label>
                             <select
+                              id={roleSelectId}
                               className="min-h-9 rounded-lg border border-border bg-input px-2 text-sm text-text"
                               value={draft.accessRole}
                               onChange={(event) => updateDraft(user.id, { accessRole: event.target.value as WhatsAppAccountAccessRole })}
@@ -362,7 +383,11 @@ export function WhatsAppNumberAccessPanel({
                           </td>
                           {(["canView", "canReply", "canCreateSales", "canEditSales"] as const).map((key) => (
                             <td key={key}>
+                              <label htmlFor={`whatsapp-access-${key}-${user.id}`} className="sr-only">
+                                {permissionLabelByKey[key]} for {userLabel}
+                              </label>
                               <input
+                                id={`whatsapp-access-${key}-${user.id}`}
                                 type="checkbox"
                                 checked={draft[key]}
                                 disabled={!draft.isActive}

@@ -273,7 +273,8 @@ function SidebarContent({
           items={[
             { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
             { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
-            { to: "/inbox/social", icon: <Users size={16} />, label: "Social Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+            { to: "/inbox/facebook", icon: <MessageSquare size={16} />, label: "FB Messenger" },
+            { to: "/inbox/instagram", icon: <Users size={16} />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
             { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
             { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
           ]}
@@ -422,7 +423,8 @@ export function DashboardLayout() {
       items: [
         { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
         { to: "/inbox/whatsapp", icon: <MessageSquare size={16} />, label: "WhatsApp" },
-        { to: "/inbox/social", icon: <Users size={16} />, label: "Social Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
+        { to: "/inbox/facebook", icon: <MessageSquare size={16} />, label: "FB Messenger" },
+        { to: "/inbox/instagram", icon: <Users size={16} />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
         { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
         { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
       ]

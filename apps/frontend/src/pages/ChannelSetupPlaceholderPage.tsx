@@ -37,13 +37,13 @@ const CONTENT: Record<ChannelSetupPlaceholderVariant, PlaceholderContent> = {
         title: "Facebook Messenger",
         logo: "facebook",
         details: ["Future requirement: Meta App, Page access, webhook, page token"],
-        inbox: "/inbox/social"
+        inbox: "/inbox/facebook"
       },
       {
         title: "Instagram DM",
         logo: "instagram",
         details: ["Future requirement: Instagram Professional account linked to Facebook Page"],
-        inbox: "/inbox/social"
+        inbox: "/inbox/instagram"
       },
       {
         title: "TikTok DM",

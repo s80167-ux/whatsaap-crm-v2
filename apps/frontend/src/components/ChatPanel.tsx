@@ -23,6 +23,7 @@ import {
   Video
 } from "lucide-react";
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
+import type { InboxChannelFilter } from "../api/crm";
 import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage, sendSocialMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import {
@@ -204,12 +205,38 @@ function getConversationChannelLabel(conversation: Conversation) {
   return conversation.whatsapp_account_label ?? "WhatsApp account";
 }
 
+function getChannelContextLabel(channelContext?: InboxChannelFilter) {
+  switch (channelContext) {
+    case "facebook":
+      return "Facebook Messenger";
+    case "instagram":
+      return "Instagram DM";
+    case "social":
+      return "Social Inbox";
+    default:
+      return "WhatsApp";
+  }
+}
+
+function getSocialComposerNotice(conversation?: Conversation, channelContext?: InboxChannelFilter) {
+  if (conversation?.channel === "facebook" || channelContext === "facebook") {
+    return "Facebook Messenger text replies are enabled. Attachments will be added later.";
+  }
+
+  if (conversation?.channel === "instagram" || channelContext === "instagram") {
+    return "Instagram DM text replies are enabled. Attachments will be added later.";
+  }
+
+  return "Social Inbox supports Facebook and Instagram text replies. Attachments will be added later.";
+}
+
 export function ChatPanel({
   conversation,
   conversations,
   messages,
   historyRangeLabel,
   organizationId,
+  channelContext,
   onOpenContact
 }: {
   conversation?: Conversation;
@@ -217,6 +244,7 @@ export function ChatPanel({
   messages: Message[];
   historyRangeLabel: string;
   organizationId?: string | null;
+  channelContext?: InboxChannelFilter;
   onOpenContact?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -982,7 +1010,9 @@ export function ChatPanel({
         <div className="max-w-sm text-center">
           <p className="text-lg font-semibold text-text">Pick a conversation</p>
           <p className="mt-2 text-sm leading-6 text-text-muted">
-            Threads stay stable because each conversation is anchored to one contact and one WhatsApp account.
+            {channelContext === "facebook" || channelContext === "instagram" || channelContext === "social"
+              ? `${getChannelContextLabel(channelContext)} conversations will appear here after Meta delivers webhook events to CRM.`
+              : "Threads stay stable because each conversation is anchored to one contact and one WhatsApp account."}
           </p>
         </div>
       </Card>
@@ -990,7 +1020,7 @@ export function ChatPanel({
   }
 
   return (
-    <Card className={`workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[780px] max-h-[calc(100vh-4.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
+    <Card className={`chat-panel-card workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[780px] max-h-[calc(100vh-4.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -1143,7 +1173,7 @@ export function ChatPanel({
       <footer className="border-t border-primary/10 bg-muted/80 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {isSocialConversation ? (
           <div className="mb-3 rounded-2xl border border-primary/15 bg-primary/10 p-3 text-sm leading-6 text-text-muted">
-            Social Inbox supports Facebook and Instagram text replies. Attachments will be added later.
+            {getSocialComposerNotice(conversation, channelContext)}
           </div>
         ) : null}
         {replyDraft ? (
@@ -1318,7 +1348,7 @@ export function ChatPanel({
           {isMobile
             ? "Tap Send to queue the message."
             : isSocialConversation
-              ? "Use Ctrl+Enter to send. Social Inbox supports text replies for this MVP."
+              ? `Use Ctrl+Enter to send. ${getChannelContextLabel(conversation.channel as InboxChannelFilter)} supports text replies for this MVP.`
               : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
         </p>
       </footer>
@@ -1562,7 +1592,7 @@ function MessageBubble({
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
-        className={`max-w-[96%] rounded-2xl px-4 py-3.5 text-sm shadow-[0_10px_24px_rgba(20,32,51,0.06)] xl:max-w-[90%] 2xl:max-w-[85%] ${
+        className={`message-bubble ${message.direction === "outgoing" ? "message-bubble-outgoing" : "message-bubble-incoming"} max-w-[96%] rounded-2xl px-4 py-3.5 text-sm shadow-[0_10px_24px_rgba(20,32,51,0.06)] xl:max-w-[90%] 2xl:max-w-[85%] ${
           message.direction === "outgoing"
             ? isDeleted
               ? "ml-auto border border-border/70 bg-muted text-muted-foreground"

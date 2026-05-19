@@ -76,7 +76,8 @@ export function InboxChannelPlaceholderPage({ variant }: { variant: InboxPlaceho
               tabs={[
                 { to: "/inbox", label: "All Inbox" },
                 { to: "/inbox/whatsapp", label: "WhatsApp" },
-                { to: "/inbox/social", label: "Social" },
+                { to: "/inbox/facebook", label: "FB Messenger" },
+                { to: "/inbox/instagram", label: "IG Messenger" },
                 { to: "/inbox/ecommerce", label: "E-commerce" },
                 { to: "/inbox/replies", label: "Template Library" }
               ]}

@@ -2161,3 +2161,77 @@ canvas {
 :is(section, article, div, aside, header, footer)[class*="rounded-"]:not([class*="rounded-full"]):not(.metric-card):not(.clear-org-metric-card):not(.clear-org-stat-card):not(.clear-org-hero-stat):not(.clear-org-revenue-tile):not(.brand-badge):not(.platform-state-pill) {
   border-radius: 0 !important;
 }
+
+.inbox-channel-facebook {
+  --messenger-blue: 0 132 255;
+  --messenger-blue-strong: 0 100 224;
+  --messenger-ink: 15 23 42;
+}
+
+.inbox-channel-facebook .workspace-page-header {
+  border-color: rgb(var(--messenger-blue) / 0.18);
+  background:
+    linear-gradient(135deg, rgb(var(--messenger-blue) / 0.08), rgb(255 255 255 / 0.94) 44%, rgb(247 250 255 / 0.98)),
+    rgb(var(--card) / 0.96);
+}
+
+.inbox-channel-facebook .chat-panel-card > header {
+  border-bottom-color: rgb(var(--messenger-blue) / 0.16);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(var(--messenger-blue) / 0.045));
+}
+
+.inbox-channel-facebook .chat-panel-card > header [class*="bg-primary\\/10"],
+.inbox-channel-facebook .workspace-page-header [class*="text-primary"] {
+  color: rgb(var(--messenger-blue-strong));
+}
+
+.inbox-channel-facebook .chat-panel-card > div.min-h-0 {
+  background:
+    radial-gradient(circle at 18% 12%, rgb(var(--messenger-blue) / 0.08), transparent 28rem),
+    linear-gradient(180deg, #f7fbff 0%, #ffffff 52%, #f4f8ff 100%);
+}
+
+.inbox-channel-facebook .conversation-item {
+  border-color: rgb(var(--messenger-blue) / 0.12);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.05);
+}
+
+.inbox-channel-facebook .conversation-item:hover,
+.inbox-channel-facebook .conversation-item-active {
+  border-color: rgb(var(--messenger-blue) / 0.34);
+  background: rgb(var(--messenger-blue) / 0.08);
+}
+
+.inbox-channel-facebook .message-bubble {
+  border-radius: 8px !important;
+}
+
+.inbox-channel-facebook .message-bubble-outgoing {
+  border-color: rgb(var(--messenger-blue) / 0.2) !important;
+  background: linear-gradient(135deg, rgb(var(--messenger-blue)), rgb(72 96 255)) !important;
+  color: #ffffff !important;
+}
+
+.inbox-channel-facebook .message-bubble-outgoing :is(p, span, button) {
+  color: inherit;
+}
+
+.inbox-channel-facebook .message-bubble-outgoing [class*="text-text-soft"],
+.inbox-channel-facebook .message-bubble-outgoing [class*="text-muted"] {
+  color: rgb(255 255 255 / 0.78) !important;
+}
+
+.inbox-channel-facebook .message-bubble-incoming {
+  border-color: rgb(203 213 225 / 0.9) !important;
+  background: #ffffff !important;
+}
+
+.inbox-channel-facebook footer {
+  border-top-color: rgb(var(--messenger-blue) / 0.14);
+  background: linear-gradient(180deg, rgb(247 250 255 / 0.92), rgb(255 255 255 / 0.98));
+}
+
+.inbox-channel-facebook textarea:focus {
+  border-color: rgb(var(--messenger-blue) / 0.72);
+  box-shadow: 0 0 0 3px rgb(var(--messenger-blue) / 0.12);
+}

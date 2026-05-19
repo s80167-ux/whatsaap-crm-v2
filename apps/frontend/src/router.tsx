@@ -120,6 +120,8 @@ export const router = createBrowserRouter([
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/social", element: withRouteFallback(<InboxPage channel="social" />) },
+          { path: "inbox/facebook", element: withRouteFallback(<InboxPage channel="facebook" />) },
+          { path: "inbox/instagram", element: withRouteFallback(<InboxPage channel="instagram" />) },
           { path: "inbox/ecommerce", element: withRouteFallback(<InboxChannelPlaceholderPage variant="ecommerce" />) },
           { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },

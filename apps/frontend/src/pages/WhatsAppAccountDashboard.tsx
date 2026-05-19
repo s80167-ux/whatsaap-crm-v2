@@ -985,15 +985,13 @@ export function WhatsAppAccountDashboard() {
         />
       </Card>
 
-      <Card elevated className="workspace-block min-w-0 xl:col-span-3">
-        <WhatsAppNumberAccessPanel
-          showHeader={false}
-          hideOverviewTable
-          selectedAccountId={accessAccountId}
-          open={Boolean(accessAccountId)}
-          onClose={() => setAccessAccountId(null)}
-        />
-      </Card>
+      <WhatsAppNumberAccessPanel
+        showHeader={false}
+        hideOverviewTable
+        selectedAccountId={accessAccountId}
+        open={Boolean(accessAccountId)}
+        onClose={() => setAccessAccountId(null)}
+      />
     </section>
   );
 }

@@ -33,6 +33,39 @@ type InboxPageProps = {
   channel?: InboxChannelFilter;
 };
 
+function getInboxPageContent(channel: InboxChannelFilter) {
+  switch (channel) {
+    case "facebook":
+      return {
+        eyebrow: "Facebook Messenger",
+        title: "FB Messenger Inbox",
+        description: "Handle Page Messenger conversations in a focused Facebook-style workspace.",
+        className: "inbox-channel-facebook"
+      };
+    case "instagram":
+      return {
+        eyebrow: "Instagram DM",
+        title: "IG Messenger Inbox",
+        description: "Handle Instagram direct messages separately from Facebook Page conversations.",
+        className: "inbox-channel-instagram"
+      };
+    case "social":
+      return {
+        eyebrow: "Social Inbox",
+        title: "Social Messenger Inbox",
+        description: "View Facebook Messenger and Instagram DM conversations together when you need the combined queue.",
+        className: "inbox-channel-social"
+      };
+    default:
+      return {
+        eyebrow: "Inbox",
+        title: "Conversation cockpit",
+        description: "Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace.",
+        className: "inbox-channel-whatsapp"
+      };
+  }
+}
+
 function getConversationIdentityLabel(conversation?: Conversation) {
   if (!conversation) {
     return "Conversation";
@@ -58,7 +91,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   const requestedConversationId = searchParams.get("conversationId");
   const requestedOrganizationId = searchParams.get("organization_id");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
-  const isSocialInbox = channel === "social" || channel === "facebook" || channel === "instagram";
+  const pageContent = getInboxPageContent(channel);
 
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
@@ -323,17 +356,15 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   );
 
   return (
-    <section className="space-y-6">
+    <section className={`space-y-6 inbox-page ${pageContent.className}`}>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         <Card elevated className="workspace-page-header p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <h1 className="mt-2 section-title">{isSocialInbox ? "Social Inbox" : "Conversation cockpit"}</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">{pageContent.eyebrow}</p>
+              <h1 className="mt-2 section-title">{pageContent.title}</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
-                {isSocialInbox
-                  ? "Handle Facebook Messenger and social platform replies from the same inbox workflow."
-                  : "Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace."}
+                {pageContent.description}
               </p>
             </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
@@ -353,6 +384,8 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               <InboxSubTabs
                 tabs={[
                   { to: "/inbox", label: "Conversations" },
+                  { to: "/inbox/facebook", label: "FB Messenger" },
+                  { to: "/inbox/instagram", label: "IG Messenger" },
                   { to: "/inbox/replies", label: "Template library" }
                 ]}
               />
@@ -399,6 +432,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                 messages={messages}
                 historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
                 organizationId={activeOrganizationId}
+                channelContext={channel}
                 onOpenContact={() => setIsContactSheetOpen(true)}
               />
             </div>
@@ -416,6 +450,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               messages={messages}
               historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
               organizationId={activeOrganizationId}
+              channelContext={channel}
               onOpenContact={() => setIsContactSheetOpen(true)}
             />
           </div>
