@@ -8,6 +8,8 @@ export interface ActivityRangeFilter {
   since: string;
 }
 
+export type InboxChannelFilter = "all" | "whatsapp" | "social" | "facebook" | "instagram";
+
 export class QueryService {
   constructor(
     private readonly contactRepository = new ContactRepository(),
@@ -61,12 +63,20 @@ export class QueryService {
     }
   }
 
-  async listConversations(authUser: AuthUser, organizationId: string | null, activityRange?: ActivityRangeFilter) {
+  async listConversations(
+    authUser: AuthUser,
+    organizationId: string | null,
+    options?: {
+      activityRange?: ActivityRangeFilter;
+      channel?: InboxChannelFilter;
+    }
+  ) {
     const client = await pool.connect();
     try {
       return await this.conversationService.list(client, organizationId, {
         ...this.getScope(authUser),
-        activityRange
+        activityRange: options?.activityRange,
+        channel: options?.channel
       });
     } finally {
       client.release();

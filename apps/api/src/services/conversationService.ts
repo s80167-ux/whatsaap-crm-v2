@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { OrganizationUserRepository } from "../repositories/organizationUserRepository.js";
 import { ProjectionService } from "./projectionService.js";
+import type { InboxChannelFilter } from "./queryService.js";
 
 export class ConversationService {
   constructor(
@@ -30,6 +31,7 @@ export class ConversationService {
       activityRange?: {
         since: string;
       };
+      channel?: InboxChannelFilter;
     }
   ) {
     return this.repository.list(client, organizationId, options);

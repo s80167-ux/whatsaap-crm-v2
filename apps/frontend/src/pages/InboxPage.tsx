@@ -20,6 +20,7 @@ import { inboxQueryKeys, patchConversationInCache } from "../lib/inboxCache";
 import { DEFAULT_CHAT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
 import { getStoredUser } from "../lib/auth";
 import type { Conversation, Message } from "../types/api";
+import type { InboxChannelFilter } from "../api/crm";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
@@ -28,7 +29,25 @@ type ConversationFilterMode = "mine" | "unread" | "unassigned" | "sales" | "all"
 const OUTGOING_STATUS_POLL_INTERVAL_MS = 1000;
 const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
 
-export function InboxPage() {
+type InboxPageProps = {
+  channel?: InboxChannelFilter;
+};
+
+function getConversationIdentityLabel(conversation?: Conversation) {
+  if (!conversation) {
+    return "Conversation";
+  }
+
+  if (conversation.phone_number_normalized) {
+    return conversation.phone_number_normalized;
+  }
+
+  return conversation.channel === "facebook" || conversation.channel === "instagram"
+    ? "Messenger profile only"
+    : "No phone available";
+}
+
+export function InboxPage({ channel = "all" }: InboxPageProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
@@ -39,6 +58,7 @@ export function InboxPage() {
   const requestedConversationId = searchParams.get("conversationId");
   const requestedOrganizationId = searchParams.get("organization_id");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
+  const isSocialInbox = channel === "social" || channel === "facebook" || channel === "instagram";
 
   const chatHistoryRange = DEFAULT_CHAT_HISTORY_RANGE;
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>("latest");
@@ -51,7 +71,7 @@ export function InboxPage() {
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
     true,
-    { refetchIntervalMs: false }
+    { refetchIntervalMs: false, channel }
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
@@ -121,8 +141,8 @@ export function InboxPage() {
   const stableSelectedConversation =
     visibleConversations.find((conversation) => conversation.id === selectedConversation?.id) ?? visibleConversations[0];
   const conversationQueryKey = useMemo(
-    () => inboxQueryKeys.conversations(chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined),
-    [activeOrganizationId, chatHistoryRange, isSuperAdmin]
+    () => inboxQueryKeys.conversations(chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined, channel),
+    [activeOrganizationId, channel, chatHistoryRange, isSuperAdmin]
   );
   const messagesQueryKey = useMemo(
     () => inboxQueryKeys.messages(stableSelectedConversation?.id, chatHistoryRange, isSuperAdmin ? activeOrganizationId : undefined),
@@ -309,9 +329,11 @@ export function InboxPage() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Inbox</p>
-              <h1 className="mt-2 section-title">Conversation cockpit</h1>
+              <h1 className="mt-2 section-title">{isSocialInbox ? "Social Inbox" : "Conversation cockpit"}</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
-                Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace.
+                {isSocialInbox
+                  ? "Handle Facebook Messenger and social platform replies from the same inbox workflow."
+                  : "Prioritize live WhatsApp replies, ownership, and sales follow-up from one workspace."}
               </p>
             </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
@@ -357,7 +379,7 @@ export function InboxPage() {
                   </Button>
                   <div className="min-w-0 flex-1 text-center">
                     <p className="truncate text-sm font-semibold text-text">{stableSelectedConversation?.contact_name ?? "Conversation"}</p>
-                    <p className="truncate text-xs text-text-muted">{stableSelectedConversation?.phone_number_normalized ?? "No phone available"}</p>
+                    <p className="truncate text-xs text-text-muted">{getConversationIdentityLabel(stableSelectedConversation)}</p>
                   </div>
                   <Button
                     type="button"

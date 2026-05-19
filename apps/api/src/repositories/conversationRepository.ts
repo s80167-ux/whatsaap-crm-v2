@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import type { ConversationRecord } from "../types/domain.js";
 import { ProjectionRepository } from "./projectionRepository.js";
+import type { InboxChannelFilter } from "../services/queryService.js";
 
 export class ConversationRepository {
   private readonly projectionRepository = new ProjectionRepository();
@@ -202,6 +203,7 @@ export class ConversationRepository {
       activityRange?: {
         since: string;
       };
+      channel?: InboxChannelFilter;
     }
   ): Promise<any[]> {
     return this.projectionRepository.listConversationSummaries(client, organizationId, options);

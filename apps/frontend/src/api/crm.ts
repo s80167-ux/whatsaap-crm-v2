@@ -18,12 +18,14 @@ import type {
   SalesSummary
 } from "../types/api";
 
+export type InboxChannelFilter = "all" | "whatsapp" | "social" | "facebook" | "instagram";
+
 type ConversationApiRecord = Conversation;
 type MessageApiRecord = Message;
 type ContactApiRecord = Contact;
 type ContactDetailApiRecord = ContactDetailResponse;
 
-function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | null) {
+function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | null, channel?: InboxChannelFilter) {
   const searchParams = new URLSearchParams();
 
   if (range) {
@@ -34,11 +36,21 @@ function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | 
     searchParams.set("organization_id", organizationId);
   }
 
+  if (channel && channel !== "all") {
+    searchParams.set("channel", channel);
+  }
+
   return searchParams.size > 0 ? `?${searchParams.toString()}` : "";
 }
 
-export async function fetchConversations(range?: HistoryRange, organizationId?: string | null) {
-  const response = await apiGet<{ data: ConversationApiRecord[] }>(`/inbox/threads${buildHistoryRangeQuery(range, organizationId)}`);
+export async function fetchConversations(
+  range?: HistoryRange,
+  organizationId?: string | null,
+  channel?: InboxChannelFilter
+) {
+  const response = await apiGet<{ data: ConversationApiRecord[] }>(
+    `/inbox/threads${buildHistoryRangeQuery(range, organizationId, channel)}`
+  );
   return response.data;
 }
 
@@ -321,6 +333,18 @@ export async function forwardMessage(payload: {
   return apiPost<{ data: Message }>(`/messages/${payload.messageId}/forward`, {
     targetConversationId: payload.targetConversationId,
     organizationId: payload.organizationId ?? null
+  });
+}
+
+export async function sendSocialMessage(payload: {
+  conversationId: string;
+  organizationId?: string | null;
+  text: string;
+}) {
+  return apiPost<{ data: Message }>("/social-messages/send", {
+    conversationId: payload.conversationId,
+    organizationId: payload.organizationId,
+    text: payload.text
   });
 }
 

@@ -19,6 +19,7 @@ import { quickReplyRoutes } from "../modules/quickReplies/quickReplies.routes.js
 import { reportRoutes } from "../modules/reports/reports.routes.js";
 import { salesRoutes } from "../modules/sales/sales.routes.js";
 import { socialChannelsRoutes } from "../modules/socialChannels/socialChannels.routes.js";
+import { socialMessagesRoutes } from "../modules/socialMessages/socialMessages.routes.js";
 import { userRoutes } from "../modules/users/users.routes.js";
 import { whatsappRoutes } from "../modules/whatsapp/whatsapp.routes.js";
 import { superAdminClearDataRoutes } from "../modules/superAdmin/superAdminClearData.routes.js";
@@ -67,4 +68,5 @@ apiRouter.use("/quick-replies", quickReplyRoutes);
 apiRouter.use("/reports", reportRoutes);
 apiRouter.use("/sales", salesRoutes);
 apiRouter.use("/social-channels", socialChannelsRoutes);
+apiRouter.use("/social-messages", socialMessagesRoutes);
 apiRouter.use("/whatsapp", whatsappRoutes);

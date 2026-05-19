@@ -1,6 +1,7 @@
 import { pool, query, withTransaction } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../lib/errors.js";
+import { encryptSocialToken } from "../../lib/socialTokenCrypto.js";
 import type { AuthUser } from "../../types/auth.js";
 
 export type SocialChannelPlatform = "facebook" | "instagram";
@@ -526,7 +527,7 @@ export class SocialChannelsService {
   ) {
     const webhookStatus = await this.subscribePageToWebhook(page.id, page.accessToken);
 
-    // TODO: store encrypted Page access token before enabling live Messenger send/receive.
+    const encryptedAccessToken = encryptSocialToken(page.accessToken);
     const result = await withTransaction((client) =>
       client.query<SocialChannelAccount>(
         `
@@ -539,10 +540,13 @@ export class SocialChannelsService {
             profile_picture_url,
             connection_status,
             webhook_status,
+            access_token_encrypted,
+            token_last_verified_at,
+            token_error_message,
             last_sync_at,
             created_by
           )
-          values ($1, $2, $3, $4, $5, $6, 'connected', $7, now(), $8)
+          values ($1, $2, $3, $4, $5, $6, 'connected', $7, $8, now(), null, now(), $9)
           on conflict (organization_id, platform, external_account_id)
             where external_account_id is not null
           do update set
@@ -551,6 +555,9 @@ export class SocialChannelsService {
             profile_picture_url = excluded.profile_picture_url,
             connection_status = 'connected',
             webhook_status = excluded.webhook_status,
+            access_token_encrypted = excluded.access_token_encrypted,
+            token_last_verified_at = excluded.token_last_verified_at,
+            token_error_message = null,
             last_sync_at = now()
           returning
             id,
@@ -577,6 +584,7 @@ export class SocialChannelsService {
           page.name,
           page.pictureUrl ?? null,
           webhookStatus,
+          encryptedAccessToken,
           auth.organizationUserId
         ]
       )

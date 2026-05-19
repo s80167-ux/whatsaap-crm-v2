@@ -22,6 +22,10 @@ const historyRangeQuerySchema = z
     message: "Choose either days or months, not both"
   });
 
+const inboxChannelQuerySchema = z.object({
+  channel: z.enum(["all", "whatsapp", "social", "facebook", "instagram"]).optional()
+});
+
 function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId =
@@ -73,7 +77,11 @@ export async function getInboxThreads(request: Request, response: Response) {
   const auth = requireAuth(request);
   const organizationId = resolveReadOrganizationId(request);
   const activityRange = resolveActivityRange(request);
-  const conversations = await queryService.listConversations(auth, organizationId, activityRange);
+  const { channel } = inboxChannelQuerySchema.parse(request.query);
+  const conversations = await queryService.listConversations(auth, organizationId, {
+    activityRange,
+    channel: channel ?? "all"
+  });
   return response.json({ data: conversations });
 }
 

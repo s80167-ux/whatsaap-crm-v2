@@ -89,6 +89,7 @@ export function ContactInfoPanel({
   const displayName = activeContact?.display_name ?? conversation?.contact_name ?? null;
   const avatarUrl = activeContact?.primary_avatar_url ?? conversation?.contact_avatar_url ?? null;
   const normalizedNumber = activeContact?.primary_phone_normalized ?? conversation?.phone_number_normalized ?? null;
+  const isSocialConversation = conversation?.channel === "facebook" || conversation?.channel === "instagram";
   const e164Number = activeContact?.primary_phone_e164 ?? null;
   const dialablePhoneNumber = getDialablePhoneNumber(contactResponse ?? null, conversation);
   const showMobileSheet = mobileSheet && isMobile;
@@ -157,7 +158,9 @@ export function ContactInfoPanel({
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`truncate font-semibold text-text ${showMobileSheet ? "text-lg" : "text-base"}`}>{displayName ?? "Unknown"}</p>
-                <p className="truncate text-sm text-text-muted">{normalizedNumber ?? "No normalized number yet"}</p>
+                <p className="truncate text-sm text-text-muted">
+                  {normalizedNumber ?? (isSocialConversation ? "Messenger profile only" : "No normalized number yet")}
+                </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                     {getConversationSourceLabel(conversation)}

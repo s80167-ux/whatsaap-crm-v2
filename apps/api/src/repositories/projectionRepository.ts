@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import type { ContactRecord } from "../types/domain.js";
+import type { InboxChannelFilter } from "../services/queryService.js";
 
 export interface ConversationSummaryRow {
   id: string;
@@ -356,11 +357,13 @@ export class ProjectionRepository {
       activityRange?: {
         since: string;
       };
+      channel?: InboxChannelFilter;
     }
   ): Promise<ConversationSummaryRow[]> {
     const assignedOnly = options?.assignedOnly ?? false;
     const organizationUserId = options?.organizationUserId ?? null;
     const activitySince = options?.activityRange?.since ?? null;
+    const channel = options?.channel ?? "all";
 
     const result = await client.query<ConversationSummaryRow>(
       `
@@ -471,6 +474,11 @@ export class ProjectionRepository {
         ) sales_info on true
         where ($1::uuid is null or its.organization_id = $1)
           and (
+            $5::text = 'all'
+            or ($5::text = 'social' and coalesce(its.channel, c.channel, 'whatsapp') in ('facebook', 'instagram'))
+            or coalesce(its.channel, c.channel, 'whatsapp') = $5::text
+          )
+          and (
             $4::timestamptz is null
             or coalesce(latest_message.sent_at, its.last_message_at, c.last_message_at, c.last_incoming_at, c.last_outgoing_at) >= $4::timestamptz
           )
@@ -497,7 +505,7 @@ export class ProjectionRepository {
                  its.updated_at desc,
                  its.conversation_id desc
       `,
-      [organizationId, assignedOnly, organizationUserId, activitySince]
+      [organizationId, assignedOnly, organizationUserId, activitySince, channel]
     );
 
     return result.rows.map((row) => ({

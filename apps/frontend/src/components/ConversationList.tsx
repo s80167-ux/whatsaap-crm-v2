@@ -17,6 +17,28 @@ function getConversationSourceLabel(conversation: Conversation) {
   return conversation.whatsapp_account_label ?? conversation.whatsapp_account_id ?? "Unknown connection";
 }
 
+function getChannelBadgeLabel(conversation: Conversation) {
+  if (conversation.channel === "facebook") {
+    return "Facebook";
+  }
+
+  if (conversation.channel === "instagram") {
+    return "Instagram";
+  }
+
+  return "WhatsApp";
+}
+
+function getConversationIdentityLabel(conversation: Conversation) {
+  if (conversation.phone_number_normalized) {
+    return conversation.phone_number_normalized;
+  }
+
+  return conversation.channel === "facebook" || conversation.channel === "instagram"
+    ? "Messenger profile only"
+    : "No phone";
+}
+
 function formatConversationTimestamp(value: string | null) {
   if (!value) {
     return "--";
@@ -76,10 +98,15 @@ export function ConversationList({
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-[11px] leading-4 text-text-soft">{conversation.phone_number_normalized ?? "No phone"}</p>
-              <p className="mt-1 inline-flex max-w-full items-center rounded-full border border-border bg-background-tint px-1.5 py-0.5 text-[10px] font-medium leading-none text-text-muted">
-                <span className="truncate">{getConversationSourceLabel(conversation)}</span>
-              </p>
+              <p className="mt-0.5 text-[11px] leading-4 text-text-soft">{getConversationIdentityLabel(conversation)}</p>
+              <div className="mt-1 flex max-w-full flex-wrap gap-1">
+                <p className="inline-flex max-w-full items-center rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary">
+                  {getChannelBadgeLabel(conversation)}
+                </p>
+                <p className="inline-flex max-w-full items-center rounded-full border border-border bg-background-tint px-1.5 py-0.5 text-[10px] font-medium leading-none text-text-muted">
+                  <span className="truncate">{getConversationSourceLabel(conversation)}</span>
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="text-xs text-text-soft">

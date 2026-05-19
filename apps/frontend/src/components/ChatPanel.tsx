@@ -23,7 +23,7 @@ import {
   Video
 } from "lucide-react";
 import type { Conversation, Message, OutboundAttachmentInput, QuickReplyVariableDefinition } from "../types/api";
-import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage } from "../api/crm";
+import { deleteMessage, forwardMessage, recordQuickReplyUsage, retryOutboundMessage, sendMessage, sendSocialMessage } from "../api/crm";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import {
   markMessagesDeletedInCache,
@@ -176,6 +176,32 @@ function getContactInitials(name: string | null | undefined) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "U";
+}
+
+function getConversationIdentityLabel(conversation?: Conversation) {
+  if (!conversation) {
+    return "Conversation";
+  }
+
+  if (conversation.phone_number_normalized) {
+    return conversation.phone_number_normalized;
+  }
+
+  return conversation.channel === "facebook" || conversation.channel === "instagram"
+    ? "Messenger profile only"
+    : "No phone available";
+}
+
+function getConversationChannelLabel(conversation: Conversation) {
+  if (conversation.channel === "facebook") {
+    return conversation.whatsapp_account_label ?? "Facebook Messenger";
+  }
+
+  if (conversation.channel === "instagram") {
+    return conversation.whatsapp_account_label ?? "Instagram DM";
+  }
+
+  return conversation.whatsapp_account_label ?? "WhatsApp account";
 }
 
 export function ChatPanel({
@@ -354,14 +380,19 @@ export function ChatPanel({
       return;
     }
 
-    if (isSocialConversation) {
-      setSendNotice("Social replies are not enabled yet. This Phase 3 view is read-only until Meta send permissions are configured.");
-      return;
-    }
-
     const resolvedText = resolveComposerBody(text, conversation).trim();
 
     if (!resolvedText && !attachment) {
+      return;
+    }
+
+    if (isSocialConversation && attachment) {
+      setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+      return;
+    }
+
+    if (isSocialConversation && !resolvedText) {
+      setSendNotice("Please type a text reply for Social Inbox.");
       return;
     }
 
@@ -372,7 +403,7 @@ export function ChatPanel({
 
     const whatsappAccountId = conversation.whatsapp_account_id;
 
-    if (!whatsappAccountId) {
+    if (!isSocialConversation && !whatsappAccountId) {
       setSendNotice("This conversation does not have a WhatsApp account for outbound sending.");
       return;
     }
@@ -394,7 +425,9 @@ export function ChatPanel({
       organization_id: resolvedOrganizationId,
       conversation_id: conversation.id,
       contact_id: conversation.contact_id,
-      whatsapp_account_id: whatsappAccountId,
+      whatsapp_account_id: isSocialConversation ? null : whatsappAccountId,
+      social_channel_account_id: conversation.social_channel_account_id ?? null,
+      channel: conversation.channel,
       external_message_id: optimisticId,
       external_chat_id: conversation.external_thread_key ?? null,
       reply_to_message_id: replyDraft?.messageId ?? null,
@@ -410,22 +443,32 @@ export function ChatPanel({
     patchConversationFromMessageInCache(queryClient, optimisticMessage);
 
     try {
-      const response = await sendMessage({
-        whatsappAccountId,
-        conversationId: conversation.id,
-        organizationId: resolvedOrganizationId,
-        quickReplyTemplateId: selectedQuickReplyTemplateId,
-        replyToMessageId: replyDraft?.messageId ?? null,
-        text: resolvedText || undefined,
-        attachment
-      });
+      const response = isSocialConversation
+        ? await sendSocialMessage({
+            conversationId: conversation.id,
+            organizationId: resolvedOrganizationId,
+            text: resolvedText
+          })
+        : await sendMessage({
+            whatsappAccountId: whatsappAccountId as string,
+            conversationId: conversation.id,
+            organizationId: resolvedOrganizationId,
+            quickReplyTemplateId: selectedQuickReplyTemplateId,
+            replyToMessageId: replyDraft?.messageId ?? null,
+            text: resolvedText || undefined,
+            attachment
+          });
 
       if (response.data) {
         replaceOptimisticMessageInCache(queryClient, optimisticMessage.id, response.data);
         patchConversationFromMessageInCache(queryClient, response.data);
       }
 
-      setSendNotice("Message queued for delivery. The latest bubble will update as dispatch and ack events arrive.");
+      setSendNotice(
+        isSocialConversation
+          ? "Social reply sent. The latest bubble will update in the conversation summary."
+          : "Message queued for delivery. The latest bubble will update as dispatch and ack events arrive."
+      );
     } catch (error) {
       updateMessageAckInCache(queryClient, conversation.id, optimisticMessage.id, "failed");
       setSendNotice(error instanceof Error ? error.message : "Unable to send message");
@@ -464,6 +507,12 @@ export function ChatPanel({
 
     if (!file) {
       setAttachment(null);
+      return;
+    }
+
+    if (isSocialConversation) {
+      setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+      event.target.value = "";
       return;
     }
 
@@ -967,17 +1016,13 @@ export function ChatPanel({
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xl font-semibold text-text">{conversation.contact_name}</span>
-                <span className="mt-1 block truncate text-sm text-text-muted">{conversation.phone_number_normalized ?? "No phone available"}</span>
+                <span className="mt-1 block truncate text-sm text-text-muted">{getConversationIdentityLabel(conversation)}</span>
               </span>
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              {conversation.channel === "facebook"
-                ? conversation.whatsapp_account_label ?? "Facebook Messenger"
-                : conversation.channel === "instagram"
-                  ? conversation.whatsapp_account_label ?? "Instagram DM"
-                  : conversation.whatsapp_account_label ?? "WhatsApp account"}
+              {getConversationChannelLabel(conversation)}
             </span>
             {conversation.unread_count > 0 ? (
               <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
@@ -1098,7 +1143,7 @@ export function ChatPanel({
       <footer className="border-t border-primary/10 bg-muted/80 px-3 py-3 sm:px-4 xl:px-5 2xl:px-7">
         {isSocialConversation ? (
           <div className="mb-3 rounded-2xl border border-primary/15 bg-primary/10 p-3 text-sm leading-6 text-text-muted">
-            Social inbox is read-only in this phase. Incoming Facebook and Instagram messages can be reviewed here after the social event worker processes webhooks.
+            Social Inbox supports Facebook and Instagram text replies. Attachments will be added later.
           </div>
         ) : null}
         {replyDraft ? (
@@ -1138,7 +1183,13 @@ export function ChatPanel({
               variant="ghost"
               title="Attach a file"
               aria-label="Attach a file"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (isSocialConversation) {
+                  setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
               className="h-10 px-2 text-primary hover:bg-primary-soft/50"
             >
               <Paperclip className="h-4 w-4" />
@@ -1200,7 +1251,6 @@ export function ChatPanel({
                 }}
                 onKeyDown={handleSlashKeyDown}
                 placeholder={attachment ? "Add an optional caption..." : "Type a reply..."}
-                disabled={isSocialConversation}
                 rows={isMobile ? 2 : 3}
                 className="min-h-[72px] w-full resize-y rounded-xl border-2 border-border bg-input px-4 py-3 text-[15px] leading-6 text-foreground shadow-soft outline-none transition focus:border-primary focus:bg-card focus:ring-2 focus:ring-ring/15 sm:min-h-[92px]"
               />
@@ -1212,7 +1262,13 @@ export function ChatPanel({
                 variant="ghost"
                 title="Attach a file"
                 aria-label="Attach a file"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (isSocialConversation) {
+                    setSendNotice("Attachments for Social Inbox will be added later. Please send text only for now.");
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
                 className="h-10 px-3 text-primary hover:bg-primary-soft/50"
               >
                 <Paperclip className="h-4 w-4" />
@@ -1252,7 +1308,7 @@ export function ChatPanel({
                 <span className="hidden text-xs font-semibold lg:inline">Insert</span>
               </Button>
             </div>
-              <Button onClick={handleSend} disabled={isSocialConversation || isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
+              <Button onClick={handleSend} disabled={isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
               {isSending ? "Sending..." : "Send"}
               </Button>
             </div>
@@ -1261,7 +1317,9 @@ export function ChatPanel({
         <p className="mt-2 text-xs leading-5 text-text-soft">
           {isMobile
             ? "Tap Send to queue the message."
-            : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
+            : isSocialConversation
+              ? "Use Ctrl+Enter to send. Social Inbox supports text replies for this MVP."
+              : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
         </p>
       </footer>
       <InsertMessageModal
@@ -1404,7 +1462,7 @@ export function ChatPanel({
                   }`}
                 >
                   <span className="block text-sm font-semibold">{item.contact_name}</span>
-                  <span className="mt-1 block text-xs text-inherit">{item.phone_number_normalized ?? "No phone available"}</span>
+                  <span className="mt-1 block text-xs text-inherit">{getConversationIdentityLabel(item)}</span>
                 </button>
               ))}
             </div>

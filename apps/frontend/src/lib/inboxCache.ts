@@ -1,6 +1,7 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { HistoryRange } from "./historyRange";
 import type { Conversation, Message } from "../types/api";
+import type { InboxChannelFilter } from "../api/crm";
 import { getConversationPreview, resolveMessageType } from "./messageContent";
 
 const CURRENT_ORGANIZATION_SCOPE = "current";
@@ -8,8 +9,8 @@ const CURRENT_ORGANIZATION_SCOPE = "current";
 export const inboxQueryKeys = {
   conversationsRoot: ["conversations"] as const,
   messagesRoot: ["messages"] as const,
-  conversations: (range?: HistoryRange, organizationId?: string | null) =>
-    ["conversations", range?.unit, range?.value, organizationId ?? CURRENT_ORGANIZATION_SCOPE] as const,
+  conversations: (range?: HistoryRange, organizationId?: string | null, channel?: InboxChannelFilter) =>
+    ["conversations", range?.unit, range?.value, organizationId ?? CURRENT_ORGANIZATION_SCOPE, channel ?? "all"] as const,
   messages: (conversationId?: string, range?: HistoryRange, organizationId?: string | null) =>
     ["messages", conversationId, range?.unit, range?.value, organizationId ?? CURRENT_ORGANIZATION_SCOPE] as const,
   conversationMessagesRoot: (conversationId: string) => ["messages", conversationId] as const
