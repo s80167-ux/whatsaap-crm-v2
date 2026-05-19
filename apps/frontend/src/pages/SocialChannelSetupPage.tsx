@@ -151,6 +151,7 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const currentUser = getStoredUser();
   const activeOrganizationId = dashboardContext.isSuperAdmin ? dashboardContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
+  const isAwaitingOrganization = dashboardContext.isSuperAdmin && !activeOrganizationId;
   const canViewAdvancedAdminSettings = dashboardContext.isSuperAdmin || currentUser?.role === "super_admin";
   const [accounts, setAccounts] = useState<SocialChannelAccount[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm(content.defaultLabel));
@@ -174,12 +175,24 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
   }, [content.defaultLabel, platform]);
 
   useEffect(() => {
+    if (isAwaitingOrganization) {
+      setAccounts([]);
+      setLoading(false);
+      return;
+    }
+
     void loadAccounts();
-  }, [activeOrganizationId]);
+  }, [activeOrganizationId, isAwaitingOrganization]);
 
   useEffect(() => {
+    if (isAwaitingOrganization) {
+      setOauthReadiness(null);
+      setOauthLoading(false);
+      return;
+    }
+
     void loadOauthReadiness();
-  }, [activeOrganizationId, platform]);
+  }, [activeOrganizationId, isAwaitingOrganization, platform]);
 
   async function loadAccounts() {
     setLoading(true);
@@ -413,7 +426,12 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
           </div>
         ) : null}
 
-        {facebookState === "connected" && primaryAccount ? (
+        {isAwaitingOrganization ? (
+          <Card elevated className="p-5 text-center sm:p-6">
+            <h2 className="text-xl font-semibold text-foreground">Select an organization first</h2>
+            <p className="mt-2 text-sm leading-6 text-text-muted">Choose an organization from the sidebar before viewing or managing connected Facebook Pages.</p>
+          </Card>
+        ) : facebookState === "connected" && primaryAccount ? (
           <Card elevated className="p-5 sm:p-6">
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr),auto] lg:items-start">
               <div className="flex min-w-0 gap-4">
@@ -523,6 +541,10 @@ export function SocialChannelSetupPage({ platform }: SocialChannelSetupPageProps
   }
 
   function renderAdvancedAdminSettings() {
+    if (isAwaitingOrganization) {
+      return null;
+    }
+
     return (
       <details className="group border border-border bg-background/70">
         <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-foreground">
