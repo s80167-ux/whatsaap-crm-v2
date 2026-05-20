@@ -1,0 +1,21 @@
+
+> api@2.0.0 dev
+> tsx watch src/server.ts
+
+[08:01:33.973] [31mERROR[39m (4936): [36mFailed to start backend[39m
+    err: {
+      "type": "Error",
+      "message": "Connection terminated due to connection timeout: Connection terminated unexpectedly",
+      "stack":
+          Error: Connection terminated due to connection timeout
+              at C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\pg-pool\index.js:45:11
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async bootstrap (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\apps\api\src\server.ts:37:3)
+          caused by: Error: Connection terminated unexpectedly
+              at Connection.<anonymous> (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\pg\lib\client.js:180:73)
+              at Object.onceWrapper (node:events:622:28)
+              at Connection.emit (node:events:508:28)
+              at Socket.<anonymous> (C:\Users\SYed Mohd Hatta\whatsapp-crm-v2\node_modules\pg\lib\connection.js:61:12)
+              at Socket.emit (node:events:508:28)
+              at TCP.<anonymous> (node:net:346:12)
+    }
