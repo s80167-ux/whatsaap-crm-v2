@@ -78,5 +78,14 @@ export type CampaignRecipient = {
   failedAt?: string | null;
   nextAttemptAt?: string | null;
   errorMessage?: string | null;
+  validationStatus?: string | null;
+  validationReason?: string | null;
+  normalizedPhone?: string | null;
+  excludedAt?: string | null;
+  excludedReason?: string | null;
+  failureCode?: string | null;
+  failureReason?: string | null;
+  lastAttemptAt?: string | null;
+  safetyExclusionReason?: string | null;
   createdAt: string;
 };

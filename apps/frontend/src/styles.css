@@ -871,7 +871,6 @@ canvas {
   .sidebar-context-panel {
     max-height: calc(100dvh - 3rem);
     overflow-y: auto;
-    scrollbar-width: none;
   }
 
   .sidebar-context-panel::-webkit-scrollbar {

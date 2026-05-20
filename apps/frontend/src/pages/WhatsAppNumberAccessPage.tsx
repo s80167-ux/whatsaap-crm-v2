@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { updateWhatsAppAccountAccess } from "../api/admin";
 import { useWhatsAppAccountAccess, useWhatsAppAccountAccessDetail } from "../hooks/useAdmin";
@@ -109,6 +110,8 @@ export function WhatsAppNumberAccessPanel({
   }, [accounts, internalSelectedAccount, selectedAccountId]);
   const detailQuery = useWhatsAppAccountAccessDetail(selectedAccount?.id ?? null, Boolean(selectedAccount));
   const detailUsers = detailQuery.data?.users?.length ? detailQuery.data.users : overviewUsers;
+  const accountPagination = usePanelPagination(accounts);
+  const detailUserPagination = usePanelPagination(detailUsers);
   const activeOwnerCount = drafts.filter((draft) => draft.isActive && draft.accessRole === "owner").length;
   const showStandaloneChrome = !hideOverviewTable;
 
@@ -260,7 +263,7 @@ export function WhatsAppNumberAccessPanel({
                 </tr>
               </thead>
               <tbody>
-                {accounts.map((account) => (
+                {accountPagination.visibleItems.map((account) => (
                   <tr key={account.id}>
                     <td>
                       <div className="flex min-w-0 items-center gap-2">
@@ -294,6 +297,7 @@ export function WhatsAppNumberAccessPanel({
               </tbody>
             </table>
           </div>
+          <PanelPagination page={accountPagination.page} pageCount={accountPagination.pageCount} pageSize={accountPagination.pageSize} totalItems={accountPagination.totalItems} onPageChange={accountPagination.setPage} className="mx-4 mb-4" />
         </Card>
       ) : null}
 
@@ -329,7 +333,7 @@ export function WhatsAppNumberAccessPanel({
                     </tr>
                   </thead>
                   <tbody>
-                    {detailUsers.map((user) => {
+                    {detailUserPagination.visibleItems.map((user) => {
                       const draft = drafts.find((item) => item.organizationUserId === user.id);
 
                       if (!draft) {
@@ -401,6 +405,7 @@ export function WhatsAppNumberAccessPanel({
                   </tbody>
                 </table>
               </div>
+              <PanelPagination page={detailUserPagination.page} pageCount={detailUserPagination.pageCount} pageSize={detailUserPagination.pageSize} totalItems={detailUserPagination.totalItems} onPageChange={detailUserPagination.setPage} />
 
               {activeOwnerCount < 1 ? (
                 <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

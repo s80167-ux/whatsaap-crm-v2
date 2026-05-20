@@ -3,8 +3,11 @@ import { requireAuth, requireCsrf, requireOrganizationContext } from "../middlew
 import { adminRoutes } from "../modules/admin/admin.routes.js";
 import { aiRoutes } from "../modules/ai/ai.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
+import { campaignSafetyRoutes } from "../modules/campaignSafety/campaignSafety.routes.js";
 import { contactRoutes } from "../modules/contacts/contacts.routes.js";
+import { contactReliabilityRoutes } from "../modules/contactReliability/contactReliability.routes.js";
 import { campaignsRoutes } from "../modules/campaigns/campaigns.routes.js";
+import { emailCampaignRoutes } from "../modules/emailCampaigns/emailCampaigns.routes.js";
 import { conversationRoutes } from "../modules/conversations/conversations.routes.js";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { exportRoutes } from "../modules/exports/exports.routes.js";
@@ -20,9 +23,11 @@ import { reportRoutes } from "../modules/reports/reports.routes.js";
 import { salesRoutes } from "../modules/sales/sales.routes.js";
 import { socialChannelsRoutes } from "../modules/socialChannels/socialChannels.routes.js";
 import { socialMessagesRoutes } from "../modules/socialMessages/socialMessages.routes.js";
+import { templateGovernanceRoutes } from "../modules/templateGovernance/templateGovernance.routes.js";
 import { userRoutes } from "../modules/users/users.routes.js";
 import { whatsappRoutes } from "../modules/whatsapp/whatsapp.routes.js";
 import { superAdminClearDataRoutes } from "../modules/superAdmin/superAdminClearData.routes.js";
+import { opsCenterRoutes } from "../modules/superAdmin/opsCenter.routes.js";
 
 export const apiRouter = Router();
 
@@ -36,6 +41,7 @@ apiRouter.use(requireAuth);
 apiRouter.use(requireCsrf);
 
 // SUPER ADMIN ONLY TOOL
+apiRouter.use("/super-admin/ops-center", opsCenterRoutes);
 apiRouter.use("/super-admin", superAdminClearDataRoutes);
 
 apiRouter.use("/admin", adminRoutes);
@@ -58,8 +64,11 @@ apiRouter.use((req, res, next) => {
 apiRouter.use("/inbox", inboxRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/campaigns", campaignsRoutes);
+apiRouter.use("/email-campaigns", emailCampaignRoutes);
+apiRouter.use("/campaign-safety", campaignSafetyRoutes);
 apiRouter.use("/conversations", conversationRoutes);
 apiRouter.use("/contacts", contactRoutes);
+apiRouter.use("/contact-reliability", contactReliabilityRoutes);
 apiRouter.use("/exports", exportRoutes);
 apiRouter.use("/leads", leadRoutes);
 apiRouter.use("/messages", messagesRoutes);
@@ -69,4 +78,5 @@ apiRouter.use("/reports", reportRoutes);
 apiRouter.use("/sales", salesRoutes);
 apiRouter.use("/social-channels", socialChannelsRoutes);
 apiRouter.use("/social-messages", socialMessagesRoutes);
+apiRouter.use("/template-governance", templateGovernanceRoutes);
 apiRouter.use("/whatsapp", whatsappRoutes);

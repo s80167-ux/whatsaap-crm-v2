@@ -1,6 +1,7 @@
 import { pool, query, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { SendMessageService } from "./sendMessageService.js";
@@ -99,7 +100,9 @@ export class CampaignDispatchService {
         update campaign_recipients
         set send_status = 'pending',
             queued_at = null,
-            error_message = null
+            error_message = null,
+            failure_code = null,
+            failure_reason = null
         where send_status = 'queued'
           and message_id is null
           and queued_at < $1
@@ -195,6 +198,8 @@ export class CampaignDispatchService {
             from campaign_recipients cr
             where cr.campaign_id = $1
               and cr.send_status in ('pending', 'failed')
+              and coalesce(cr.validation_status, 'valid') = 'valid'
+              and cr.safety_exclusion_reason is null
               and cr.attempt_count < $2
               and coalesce(cr.next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
             order by coalesce(cr.next_attempt_at, cr.created_at) asc, cr.created_at asc
@@ -205,9 +210,12 @@ export class CampaignDispatchService {
           set send_status = 'queued',
               attempt_count = cr.attempt_count + 1,
               queued_at = timezone('utc', now()),
+              last_attempt_at = timezone('utc', now()),
               failed_at = null,
               next_attempt_at = null,
-              error_message = null
+              error_message = null,
+              failure_code = null,
+              failure_reason = null
           from candidate
           join campaigns c on c.id = $1
           where cr.id = candidate.id
@@ -305,7 +313,9 @@ export class CampaignDispatchService {
               sent_at = null,
               failed_at = null,
               next_attempt_at = null,
-              error_message = null
+              error_message = null,
+              failure_code = null,
+              failure_reason = null
           where organization_id = $1
             and campaign_id = $2
             and id = $3
@@ -332,7 +342,10 @@ export class CampaignDispatchService {
           set send_status = 'failed',
               failed_at = timezone('utc', now()),
               next_attempt_at = $4,
-              error_message = $5
+              error_message = $5,
+              failure_code = 'send_failed',
+              failure_reason = $5,
+              last_attempt_at = timezone('utc', now())
           where organization_id = $1
             and campaign_id = $2
             and id = $3
@@ -348,6 +361,7 @@ export class CampaignDispatchService {
 
       logger.error({ err: error, campaignId: recipient.campaign_id, campaignRecipientId: recipient.id }, "Campaign recipient dispatch failed");
     } finally {
+      await CampaignSafetyService.autoPauseCampaignIfNeeded(recipient.organization_id, recipient.campaign_id);
       await this.refreshCampaignCompletion(recipient.organization_id, recipient.campaign_id);
     }
   }

@@ -6,6 +6,8 @@ const campaignModuleTabs = {
     { label: "Overview", to: "/campaigns/whatsapp", icon: Megaphone, end: true },
     { label: "Create Broadcast", to: "/campaigns/whatsapp/create", icon: PlusCircle, end: true },
     { label: "Templates", to: "/campaigns/whatsapp/templates", icon: FileText, end: false },
+    { label: "Governance", to: "/campaigns/whatsapp/templates/governance", icon: ShieldCheck, end: true },
+    { label: "Safety", to: "/campaigns/whatsapp/safety", icon: ShieldCheck, end: true },
     { label: "Audience", to: "/campaigns/whatsapp/audience", icon: ListPlus, end: false },
     { label: "History", to: "/campaigns/whatsapp/history", icon: History, end: true }
   ],

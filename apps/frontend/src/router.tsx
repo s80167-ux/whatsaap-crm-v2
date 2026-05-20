@@ -17,6 +17,15 @@ const DashboardLayout = lazy(() =>
   import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout }))
 );
 const ContactsPage = lazy(() => import("./pages/ContactsPage").then((module) => ({ default: module.ContactsPage })));
+const ContactReliabilityPage = lazy(() =>
+  import("./pages/ContactReliabilityPage").then((module) => ({ default: module.ContactReliabilityPage }))
+);
+const TemplateGovernancePage = lazy(() =>
+  import("./pages/TemplateGovernancePage").then((module) => ({ default: module.TemplateGovernancePage }))
+);
+const CampaignSafetyPage = lazy(() =>
+  import("./pages/CampaignSafetyPage").then((module) => ({ default: module.CampaignSafetyPage }))
+);
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const DataExportPage = lazy(() => import("./pages/DataExportPage").then((module) => ({ default: module.DataExportPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((module) => ({ default: module.InboxPage })));
@@ -35,6 +44,7 @@ const ReportsPage = lazy(() => import("./pages/ReportsPage").then((module) => ({
 const SalesPage = lazy(() => import("./pages/SalesPage").then((module) => ({ default: module.SalesPage })));
 const SetupPage = lazy(() => import("./pages/SetupPage").then((module) => ({ default: module.SetupPage })));
 const ChannelSetupPage = lazy(() => import("./pages/ChannelSetupPage").then((module) => ({ default: module.ChannelSetupPage })));
+const EmailSetupPage = lazy(() => import("./pages/EmailSetupPage").then((module) => ({ default: module.EmailSetupPage })));
 const ChannelSetupPlaceholderPage = lazy(() =>
   import("./pages/ChannelSetupPlaceholderPage").then((module) => ({ default: module.ChannelSetupPlaceholderPage }))
 );
@@ -48,6 +58,9 @@ const ClearOrganizationDataPage = lazy(() =>
 );
 const SuperAdminAuditLogsPage = lazy(() =>
   import("./pages/SuperAdminAuditLogsPage").then((module) => ({ default: module.SuperAdminAuditLogsPage }))
+);
+const SuperAdminOpsCenterPage = lazy(() =>
+  import("./pages/SuperAdminOpsCenterPage").then((module) => ({ default: module.SuperAdminOpsCenterPage }))
 );
 const OrganizationAccessLimitsPage = lazy(() =>
   import("./pages/OrganizationCampaignAccessLimitsPage").then((module) => ({ default: module.OrganizationCampaignAccessLimitsPage }))
@@ -119,6 +132,7 @@ export const router = createBrowserRouter([
           { path: "inbox/ecommerce", element: withRouteFallback(<InboxChannelPlaceholderPage variant="ecommerce" />) },
           { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
           { path: "contacts", element: withRouteFallback(<ContactsPage />) },
+          { path: "contacts/reliability", element: withRouteFallback(<ContactReliabilityPage />) },
           { path: "sales", element: withRouteFallback(<SalesPage />) },
           { path: "reports", element: withRouteFallback(<ReportsPage />) },
           { path: "exports", element: withRouteFallback(<DataExportPage />) },
@@ -171,6 +185,22 @@ export const router = createBrowserRouter([
             element: withRouteFallback(
               <CampaignsRouteGuard moduleKey="campaign.whatsapp">
                 <CreateTemplatePage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/whatsapp/templates/governance",
+            element: withRouteFallback(
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
+                <TemplateGovernancePage />
+              </CampaignsRouteGuard>
+            )
+          },
+          {
+            path: "campaigns/whatsapp/safety",
+            element: withRouteFallback(
+              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
+                <CampaignSafetyPage />
               </CampaignsRouteGuard>
             )
           },
@@ -262,7 +292,7 @@ export const router = createBrowserRouter([
           { path: "setup/channels/tiktok", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="tiktok" />) },
           { path: "setup/channels/social", element: <Navigate to="/setup/channels/facebook" replace /> },
           { path: "setup/channels/ecommerce", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="ecommerce" />) },
-          { path: "setup/channels/email", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="email" />) },
+          { path: "setup/channels/email", element: withRouteFallback(<EmailSetupPage />) },
           { path: "setup/whatsapp-accounts", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "whatsapp-accounts", element: withRouteFallback(<WhatsAppAccountDashboard />) },
           { path: "super-admin-map", element: withRouteFallback(<SuperAdminMapPage />) },
@@ -270,6 +300,7 @@ export const router = createBrowserRouter([
           { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "platform", element: withRouteFallback(<PlatformPage />) },
           { path: "super-admin/access-limits", element: withRouteFallback(<OrganizationAccessLimitsPage />) },
+          { path: "super-admin/ops-center", element: withRouteFallback(<SuperAdminOpsCenterPage />) },
           { path: "super-admin/clear-organization-data", element: withRouteFallback(<ClearOrganizationDataPage />) },
           { path: "super-admin/audit-logs", element: withRouteFallback(<SuperAdminAuditLogsPage />) },
           { path: "profile", element: withRouteFallback(<ProfilePage />) }

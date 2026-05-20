@@ -5,13 +5,17 @@ import { AppError } from "../../lib/errors.js";
 import { ContactService } from "../../services/contactService.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { ConversationService } from "../../services/conversationService.js";
+import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
+import { TemplateGovernanceService } from "../../services/templateGovernanceService.js";
 import { normalizePhoneNumber } from "../../utils/phone.js";
 
 const contactService = new ContactService();
 const connectorClient = new ConnectorClient();
 const conversationService = new ConversationService();
+const campaignSafetyService = new CampaignSafetyService();
 const sendMessageService = new SendMessageService();
+const templateGovernanceService = new TemplateGovernanceService();
 
 const audienceGroupParamsSchema = z.object({
   audienceGroupId: z.string().uuid()
@@ -80,6 +84,7 @@ const createCampaignBodySchema = z.object({
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1).max(5000),
+  templateGovernanceVersionId: z.string().uuid().optional().nullable(),
   tempo: tempoSchema
 });
 
@@ -98,7 +103,8 @@ const sendTestBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   senderWhatsAppAccountId: z.string().uuid(),
   testPhoneNumber: z.string().trim().min(6),
-  messageTemplate: z.string().trim().min(1)
+  messageTemplate: z.string().trim().min(1),
+  templateGovernanceVersionId: z.string().uuid().optional().nullable()
 });
 
 const startCampaignBodySchema = z.object({
@@ -108,6 +114,7 @@ const startCampaignBodySchema = z.object({
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1),
+  templateGovernanceVersionId: z.string().uuid().optional().nullable(),
   speedPreset: z.enum(["safe", "normal", "custom"]).default("safe")
 });
 
@@ -212,6 +219,15 @@ type CampaignRecipientRecord = {
   failed_at: string | null;
   next_attempt_at: string | null;
   error_message: string | null;
+  validation_status: string | null;
+  validation_reason: string | null;
+  normalized_phone: string | null;
+  excluded_at: string | null;
+  excluded_reason: string | null;
+  failure_code: string | null;
+  failure_reason: string | null;
+  last_attempt_at: string | null;
+  safety_exclusion_reason: string | null;
   created_at: string;
   total_count: string;
 };
@@ -275,6 +291,11 @@ export async function createCampaign(request: Request, response: Response) {
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
+  const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
+    organizationId,
+    templateGovernanceVersionId: input.templateGovernanceVersionId,
+    messageTemplate: input.messageTemplate
+  });
 
   const result = await withTransaction(async (client) => {
     const inserted = await client.query<CampaignRecord>(
@@ -304,7 +325,7 @@ export async function createCampaign(request: Request, response: Response) {
         input.audienceGroupId,
         senderSelection.senderMode,
         senderSelection.primarySenderWhatsAppAccountId,
-        input.messageTemplate,
+        governedTemplate.body,
         input.tempo.speedPreset,
         input.tempo.delayPerMessageSeconds,
         input.tempo.batchSize,
@@ -460,7 +481,14 @@ export async function exportCampaignRecipients(request: Request, response: Respo
     "Product Interest",
     "Customer Type",
     "Send Status",
+    "Validation Status",
+    "Validation Reason",
+    "Failure Code",
+    "Failure Reason",
+    "Excluded At",
+    "Excluded Reason",
     "Attempt Count",
+    "Last Attempt At",
     "Queued At",
     "Sent At",
     "Failed At",
@@ -483,7 +511,14 @@ export async function exportCampaignRecipients(request: Request, response: Respo
       recipient.product_interest ?? "",
       recipient.customer_type ?? "",
       recipient.send_status,
+      recipient.validation_status ?? "",
+      recipient.validation_reason ?? "",
+      recipient.failure_code ?? "",
+      recipient.failure_reason ?? recipient.error_message ?? "",
+      recipient.excluded_at ?? "",
+      recipient.excluded_reason ?? recipient.safety_exclusion_reason ?? "",
       String(recipient.attempt_count),
+      recipient.last_attempt_at ?? "",
       recipient.queued_at ?? "",
       recipient.sent_at ?? "",
       recipient.failed_at ?? "",
@@ -620,12 +655,17 @@ export async function sendCampaignTestPreview(request: Request, response: Respon
   const input = sendTestBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
+    organizationId,
+    templateGovernanceVersionId: input.templateGovernanceVersionId,
+    messageTemplate: input.messageTemplate
+  });
   const message = await sendCampaignTestMessage({
     organizationId,
     organizationUserId: auth.organizationUserId,
     senderWhatsAppAccountId: input.senderWhatsAppAccountId,
     testPhoneNumber: input.testPhoneNumber,
-    messageTemplate: input.messageTemplate
+    messageTemplate: governedTemplate.body
   });
 
   return response.json({
@@ -644,12 +684,17 @@ export async function sendCampaignTest(request: Request, response: Response) {
   const organizationId = resolveOrganizationId(request, input.organizationId);
   await assertCampaignExists(organizationId, campaignId);
   await assertConnectedSender(organizationId, input.senderWhatsAppAccountId);
+  const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
+    organizationId,
+    templateGovernanceVersionId: input.templateGovernanceVersionId,
+    messageTemplate: input.messageTemplate
+  });
   const message = await sendCampaignTestMessage({
     organizationId,
     organizationUserId: auth.organizationUserId,
     senderWhatsAppAccountId: input.senderWhatsAppAccountId,
     testPhoneNumber: input.testPhoneNumber,
-    messageTemplate: input.messageTemplate
+    messageTemplate: governedTemplate.body
   });
 
   return response.json({
@@ -667,6 +712,11 @@ export async function startCampaignPreview(request: Request, response: Response)
   const senderSelection = resolveSenderSelection(input);
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
+  await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
+    organizationId,
+    templateGovernanceVersionId: input.templateGovernanceVersionId,
+    messageTemplate: input.messageTemplate
+  });
   return response.json({
     data: {
       ok: true,
@@ -676,6 +726,7 @@ export async function startCampaignPreview(request: Request, response: Response)
 }
 
 export async function startCampaign(request: Request, response: Response) {
+  const auth = requireAuth(request);
   const { campaignId } = campaignParamsSchema.parse(request.params);
   const input = startCampaignBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
@@ -695,6 +746,12 @@ export async function startCampaign(request: Request, response: Response) {
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
+  await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
+  const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
+    organizationId,
+    templateGovernanceVersionId: input.templateGovernanceVersionId,
+    messageTemplate: input.messageTemplate
+  });
 
   const snapshot = await snapshotCampaignRecipients({
     organizationId,
@@ -704,6 +761,10 @@ export async function startCampaign(request: Request, response: Response) {
 
   if (snapshot.length === 0) {
     throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
+  }
+  const validationSummary = await campaignSafetyService.validateCampaignRecipients(auth, { organizationId, campaignId, audit: false });
+  if (Number(validationSummary.valid ?? 0) <= 0) {
+    throw new AppError("Campaign has no recipients that passed safety validation", 400, "campaign_no_safe_recipients", validationSummary);
   }
 
   const result = await withTransaction(async (client) => {
@@ -727,7 +788,7 @@ export async function startCampaign(request: Request, response: Response) {
         senderSelection.senderMode,
         senderSelection.primarySenderWhatsAppAccountId,
         input.audienceGroupId,
-        input.messageTemplate,
+        governedTemplate.body,
         input.speedPreset
       ]
     );
@@ -1248,6 +1309,15 @@ function toCampaignRecipient(row: CampaignRecipientRecord) {
     failedAt: row.failed_at,
     nextAttemptAt: row.next_attempt_at,
     errorMessage: row.error_message,
+    validationStatus: row.validation_status,
+    validationReason: row.validation_reason,
+    normalizedPhone: row.normalized_phone ?? row.phone_normalized,
+    excludedAt: row.excluded_at,
+    excludedReason: row.excluded_reason,
+    failureCode: row.failure_code,
+    failureReason: row.failure_reason,
+    lastAttemptAt: row.last_attempt_at,
+    safetyExclusionReason: row.safety_exclusion_reason,
     createdAt: row.created_at
   };
 }

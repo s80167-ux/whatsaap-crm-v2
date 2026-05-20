@@ -10,6 +10,7 @@ import { mergeContactWithoutDowngrade, hasRecoveryMergeChanges } from "../utils/
 import { normalizeWhatsAppIdentity } from "../utils/whatsappIdentity.js";
 import { ContactEnrichmentCacheService } from "./contactEnrichmentCacheService.js";
 import { ContactRecoveryAuditService } from "./contactRecoveryAuditService.js";
+import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ContactService } from "./contactService.js";
 import { ContactRepairProposalService } from "./contactRepairProposalService.js";
 import { ConversationService } from "./conversationService.js";
@@ -46,6 +47,16 @@ function hasStoredMediaAttachment(contentJson: unknown) {
       typeof outboundMedia.mimeType === "string" &&
       typeof outboundMedia.dataBase64 === "string" &&
       outboundMedia.dataBase64.length > 0
+  );
+}
+
+function isOptOutMessage(text: string | null | undefined) {
+  const normalized = text?.trim().toUpperCase().replace(/\s+/g, " ");
+  return Boolean(
+    normalized &&
+      ["STOP", "UNSUBSCRIBE", "TAK NAK", "TAKNAK", "JANGAN HANTAR", "BERHENTI", "CANCEL"].some((keyword) =>
+        normalized === keyword || normalized.includes(keyword)
+      )
   );
 }
 
@@ -270,6 +281,45 @@ export class MessageIngestionService {
       }
 
       if (inserted && input.direction === "incoming") {
+        if (isOptOutMessage(input.textBody)) {
+          const optOutPhone = normalizeWhatsAppIdentity(input.remoteJid).phoneNumber ?? input.phoneRaw ?? contact.primary_phone_normalized;
+          if (optOutPhone) {
+            await CampaignSafetyService.ensureTables(client);
+            const optOut = await client.query(
+              `
+                insert into contact_communication_preferences (
+                  organization_id, contact_id, normalized_phone, channel, status, reason, source
+                ) values ($1, $2, $3, 'whatsapp', 'opted_out', 'Inbound opt-out keyword', 'inbound_keyword')
+                on conflict (organization_id, channel, normalized_phone)
+                do update set
+                  contact_id = coalesce(excluded.contact_id, contact_communication_preferences.contact_id),
+                  status = 'opted_out',
+                  reason = excluded.reason,
+                  source = excluded.source,
+                  updated_at = timezone('utc', now())
+                returning id
+              `,
+              [input.organizationId, contact.id, optOutPhone]
+            );
+            await client.query(
+              `
+                insert into audit_logs (organization_id, action, entity_type, entity_id, metadata)
+                values ($1, 'campaign.opt_out_created', 'contact_communication_preference', $2, $3::jsonb)
+              `,
+              [
+                input.organizationId,
+                optOut.rows[0]?.id ?? null,
+                JSON.stringify({
+                  contact_id: contact.id,
+                  normalized_phone: optOutPhone,
+                  source: "inbound_keyword",
+                  message_id: message.id
+                })
+              ]
+            );
+          }
+        }
+
         await this.quickReplyOutcomeService.markCustomerReply(client, {
           organizationId: input.organizationId,
           conversationId: conversation.id,

@@ -24,6 +24,8 @@
     "worker:message-outbox:once": "npm --workspace apps/api run worker:message-outbox:once",
     "worker:campaign-dispatch": "npm --workspace apps/api run worker:campaign-dispatch",
     "worker:campaign-dispatch:once": "npm --workspace apps/api run worker:campaign-dispatch:once",
+    "worker:email-campaign-dispatch": "npm --workspace apps/api run worker:email-campaign-dispatch",
+    "worker:email-campaign-dispatch:once": "npm --workspace apps/api run worker:email-campaign-dispatch:once",
     "worker:social-events": "npm --workspace apps/api run worker:social-events",
     "worker:social-events:once": "npm --workspace apps/api run worker:social-events:once",
     "worker:raw-events:replay": "npm --workspace apps/api run worker:raw-events:replay --",

@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { pool, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { CampaignSafetyService } from "./campaignSafetyService.js";
 import {
   MessageDispatchOutboxRepository,
   type MessageDispatchOutboxRecord,
@@ -575,7 +576,10 @@ export class MessageDispatchService {
             sent_at = $4,
             failed_at = null,
             next_attempt_at = null,
-            error_message = null
+            error_message = null,
+            failure_code = null,
+            failure_reason = null,
+            last_attempt_at = coalesce(last_attempt_at, $4)
         where organization_id = $1
           and campaign_id = $2
           and id = $3
@@ -602,7 +606,10 @@ export class MessageDispatchService {
       await client.query(
         `
           update campaign_recipients
-          set error_message = $4
+          set error_message = $4,
+              failure_code = 'send_failed',
+              failure_reason = $4,
+              last_attempt_at = timezone('utc', now())
           where organization_id = $1
             and campaign_id = $2
             and id = $3
@@ -620,7 +627,10 @@ export class MessageDispatchService {
         set send_status = 'failed',
             failed_at = timezone('utc', now()),
             next_attempt_at = null,
-            error_message = $4
+            error_message = $4,
+            failure_code = 'send_failed',
+            failure_reason = $4,
+            last_attempt_at = timezone('utc', now())
         where organization_id = $1
           and campaign_id = $2
           and id = $3
@@ -628,6 +638,7 @@ export class MessageDispatchService {
       [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
     );
 
+    await CampaignSafetyService.autoPauseCampaignIfNeeded(job.organization_id, context.campaignId);
     await this.refreshCampaignCompletion(client, job.organization_id, context.campaignId);
   }
 

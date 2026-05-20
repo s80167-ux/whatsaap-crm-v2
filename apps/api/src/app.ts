@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { requestContext } from "./middleware/requestContext.js";
+import { publicEmailRoutes } from "./modules/emailCampaigns/publicEmail.routes.js";
 import { apiRouter } from "./routes/index.js";
 import { socialWebhooksRoutes } from "./modules/socialWebhooks/socialWebhooks.routes.js";
 
@@ -95,6 +96,7 @@ app.use(express.json({
 }));
 app.use(morgan("dev"));
 
+app.use(publicEmailRoutes);
 app.use("/api/social-webhook", socialWebhooksRoutes);
 app.use("/api", apiRouter);
 app.use(notFoundHandler);

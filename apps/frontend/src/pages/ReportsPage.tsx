@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useOutletContext } from "react-router-dom";
 import { CalendarDays, Download, Filter, LayoutGrid, Printer, RotateCcw, Table2 } from "lucide-react";
 import { Card } from "../components/Card";
+import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { useDailyReport } from "../hooks/useReports";
 import { getStoredUser } from "../lib/auth";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
@@ -314,6 +315,7 @@ function DailyReportDashboard(props: {
   const compactActionClassName =
     "inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-text-muted transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
   const [hoveredDayKey, setHoveredDayKey] = useState<string | null>(null);
+  const dailyRowPagination = usePanelPagination(props.dailyRows);
 
   return (
     <div className="daily-report-dashboard space-y-4">
@@ -492,9 +494,9 @@ function DailyReportDashboard(props: {
                   </td>
                 </tr>
               ) : props.dailyRows.length > 0 ? (
-                props.dailyRows.map((row, index) => (
+                dailyRowPagination.visibleItems.map((row, index) => (
                   <tr key={`${row.userId}-${row.metric}`} className="border-t border-border hover:bg-background-tint">
-                    <td className="px-2 py-2 text-text-muted">{index + 1}</td>
+                    <td className="px-2 py-2 text-text-muted">{(dailyRowPagination.page - 1) * dailyRowPagination.pageSize + index + 1}</td>
                     <td className="px-2 py-2 font-medium text-text">{row.team}</td>
                     <td className="max-w-32 truncate px-2 py-2 font-semibold text-text" title={row.name}>{row.name}</td>
                     <td className={`px-2 py-2 text-[10px] font-bold uppercase tracking-[0.06em] ${METRIC_TONES[row.metric]}`}>
@@ -535,6 +537,14 @@ function DailyReportDashboard(props: {
             </tbody>
           </table>
         </div>
+        <PanelPagination
+          className="m-4 mt-0"
+          page={dailyRowPagination.page}
+          pageCount={dailyRowPagination.pageCount}
+          pageSize={dailyRowPagination.pageSize}
+          totalItems={dailyRowPagination.totalItems}
+          onPageChange={dailyRowPagination.setPage}
+        />
       </Card>
     </div>
   );

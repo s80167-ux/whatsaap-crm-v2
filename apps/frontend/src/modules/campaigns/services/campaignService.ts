@@ -92,6 +92,7 @@ export type CreateCampaignInput = {
   senderWhatsAppAccountId: string;
   audienceGroupId: string;
   messageTemplate: string;
+  templateGovernanceVersionId?: string | null;
   tempo: CampaignTempo;
 };
 
@@ -197,6 +198,7 @@ export async function sendCampaignTest(input: {
   senderWhatsAppAccountId: string;
   testPhoneNumber: string;
   messageTemplate: string;
+  templateGovernanceVersionId?: string | null;
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/send-test` : "/campaigns/preview/send-test";
   const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);
@@ -209,6 +211,7 @@ export async function startCampaign(input: {
   senderWhatsAppAccountId: string;
   audienceGroupId: string;
   messageTemplate: string;
+  templateGovernanceVersionId?: string | null;
   speedPreset: CampaignSpeedPreset;
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/start` : "/campaigns/preview/start";

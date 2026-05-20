@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   Building2,
   ChevronDown,
@@ -14,6 +15,7 @@ import {
   Menu,
   MessageSquare,
   ShoppingBag,
+  ShieldCheck,
   Settings2,
   ShieldAlert,
   SlidersHorizontal,
@@ -203,6 +205,7 @@ function SidebarContent({
   whatsappCampaignBadge,
   emailCampaignBadge,
   showDataExport,
+  showContactReliability,
   onNavigate,
   mobile = false
 }: {
@@ -215,6 +218,7 @@ function SidebarContent({
   whatsappCampaignBadge?: ReactNode;
   emailCampaignBadge?: ReactNode;
   showDataExport: boolean;
+  showContactReliability: boolean;
   onNavigate?: () => void;
   mobile?: boolean;
 }) {
@@ -289,6 +293,7 @@ function SidebarContent({
           label="CRM"
           items={[
             { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
+            ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: "Contact Reliability" }] : []),
             { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" },
             ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
           ]}
@@ -337,6 +342,7 @@ function SidebarContent({
             label="System Tools"
             items={[
               { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
+              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: "Ops Center" },
               { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
               { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
             ]}
@@ -392,6 +398,7 @@ export function DashboardLayout() {
       ? <ModuleBadge tone="primary">Soon</ModuleBadge>
       : <ModuleBadge>Off</ModuleBadge>;
   const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
+  const showContactReliability = user?.role === "super_admin" || user?.role === "org_admin" || user?.role === "manager";
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -442,6 +449,7 @@ export function DashboardLayout() {
       icon: <Users size={18} />,
       items: [
         { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
+        ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: "Contact Reliability" }] : []),
         { to: "/reports", icon: <FileBarChart size={16} />, label: "Reports" },
         ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
       ]
@@ -492,6 +500,7 @@ export function DashboardLayout() {
             icon: <ShieldAlert size={18} />,
             items: [
               { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
+              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: "Ops Center" },
               { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
               { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
             ]
