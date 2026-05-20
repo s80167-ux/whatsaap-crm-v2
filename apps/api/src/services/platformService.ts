@@ -1,4 +1,5 @@
 import { pool } from "../config/database.js";
+import { env } from "../config/env.js";
 import { AuditLogService } from "./auditLogService.js";
 import { MessageDispatchService } from "./messageDispatchService.js";
 import { MessageDispatchOutboxRepository } from "../repositories/messageDispatchOutboxRepository.js";
@@ -6,7 +7,40 @@ import { withTransaction } from "../config/database.js";
 import { UsageAggregationService } from "./usageAggregationService.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 
+type ServiceHealthStatus = "healthy" | "degraded" | "down" | "unknown";
+type ServiceHealthKind = "application" | "provider" | "database" | "worker";
+
+interface ServiceHealthCheck {
+  id: string;
+  label: string;
+  provider: "CRM" | "Railway" | "Vercel" | "Supabase";
+  kind: ServiceHealthKind;
+  status: ServiceHealthStatus;
+  message: string;
+  checked_at: string;
+  latency_ms: number | null;
+  target_url: string | null;
+}
+
+interface ServiceHealthSummary {
+  checked_at: string;
+  overall_status: ServiceHealthStatus;
+  services: ServiceHealthCheck[];
+}
+
+interface StatusPageSummary {
+  status?: {
+    indicator?: string;
+    description?: string;
+  };
+}
+
+const SERVICE_HEALTH_CACHE_MS = 60_000;
+const SERVICE_HEALTH_TIMEOUT_MS = 5_000;
+
 export class PlatformService {
+  private serviceHealthCache: { expiresAt: number; value: ServiceHealthSummary } | null = null;
+
   constructor(
     private readonly usageAggregationService = new UsageAggregationService(),
     private readonly auditLogService = new AuditLogService(),
@@ -81,6 +115,71 @@ export class PlatformService {
 
   async getHealthSummary() {
     return this.usageAggregationService.getConnectorDiagnostics();
+  }
+
+  async getServiceHealthSummary(): Promise<ServiceHealthSummary> {
+    const now = Date.now();
+
+    if (this.serviceHealthCache && this.serviceHealthCache.expiresAt > now) {
+      return this.serviceHealthCache.value;
+    }
+
+    const services = await Promise.all([
+      this.checkHttpService({
+        id: "crm-api",
+        label: "CRM API",
+        provider: "Railway",
+        kind: "application",
+        url: new URL("/api/health", env.API_PUBLIC_URL).toString()
+      }),
+      this.checkHttpService({
+        id: "whatsapp-connector",
+        label: "WhatsApp connector",
+        provider: "Railway",
+        kind: "application",
+        url: new URL("/health", env.CONNECTOR_BASE_URL).toString()
+      }),
+      this.checkHttpService({
+        id: "frontend",
+        label: "Vercel frontend",
+        provider: "Vercel",
+        kind: "application",
+        url: env.FRONTEND_URL
+      }),
+      this.checkDatabaseHealth(),
+      this.checkWorkerQueueHealth(),
+      this.checkStatusPage({
+        id: "railway-status",
+        label: "Railway status",
+        provider: "Railway",
+        url: "https://status.railway.com/api/v2/summary.json"
+      }),
+      this.checkStatusPage({
+        id: "vercel-status",
+        label: "Vercel status",
+        provider: "Vercel",
+        url: "https://www.vercel-status.com/api/v2/summary.json"
+      }),
+      this.checkStatusPage({
+        id: "supabase-status",
+        label: "Supabase status",
+        provider: "Supabase",
+        url: "https://status.supabase.com/api/v2/summary.json"
+      })
+    ]);
+
+    const summary = {
+      checked_at: new Date().toISOString(),
+      overall_status: this.resolveOverallServiceStatus(services),
+      services
+    };
+
+    this.serviceHealthCache = {
+      expiresAt: now + SERVICE_HEALTH_CACHE_MS,
+      value: summary
+    };
+
+    return summary;
   }
 
   async getAuditSummary(limit = 100) {
@@ -256,5 +355,278 @@ export class PlatformService {
       processed,
       outboxIds
     };
+  }
+
+  private async checkHttpService(input: {
+    id: string;
+    label: string;
+    provider: ServiceHealthCheck["provider"];
+    kind: ServiceHealthKind;
+    url: string;
+  }): Promise<ServiceHealthCheck> {
+    const startedAt = Date.now();
+    const checkedAt = new Date().toISOString();
+
+    try {
+      const response = await fetchWithTimeout(input.url, { method: "GET" }, SERVICE_HEALTH_TIMEOUT_MS);
+      const latencyMs = Date.now() - startedAt;
+
+      if (response.ok) {
+        return {
+          id: input.id,
+          label: input.label,
+          provider: input.provider,
+          kind: input.kind,
+          status: "healthy",
+          message: `Reachable with HTTP ${response.status}`,
+          checked_at: checkedAt,
+          latency_ms: latencyMs,
+          target_url: input.url
+        };
+      }
+
+      return {
+        id: input.id,
+        label: input.label,
+        provider: input.provider,
+        kind: input.kind,
+        status: response.status >= 500 ? "down" : "degraded",
+        message: `Returned HTTP ${response.status}`,
+        checked_at: checkedAt,
+        latency_ms: latencyMs,
+        target_url: input.url
+      };
+    } catch (error) {
+      return {
+        id: input.id,
+        label: input.label,
+        provider: input.provider,
+        kind: input.kind,
+        status: "down",
+        message: getErrorMessage(error),
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: input.url
+      };
+    }
+  }
+
+  private async checkStatusPage(input: {
+    id: string;
+    label: string;
+    provider: ServiceHealthCheck["provider"];
+    url: string;
+  }): Promise<ServiceHealthCheck> {
+    const startedAt = Date.now();
+    const checkedAt = new Date().toISOString();
+
+    try {
+      const response = await fetchWithTimeout(input.url, { method: "GET" }, SERVICE_HEALTH_TIMEOUT_MS);
+      const latencyMs = Date.now() - startedAt;
+
+      if (!response.ok) {
+        return {
+          id: input.id,
+          label: input.label,
+          provider: input.provider,
+          kind: "provider",
+          status: response.status >= 500 ? "down" : "unknown",
+          message: `Status page returned HTTP ${response.status}`,
+          checked_at: checkedAt,
+          latency_ms: latencyMs,
+          target_url: input.url
+        };
+      }
+
+      const payload = (await response.json()) as StatusPageSummary;
+      const indicator = payload.status?.indicator ?? "unknown";
+
+      return {
+        id: input.id,
+        label: input.label,
+        provider: input.provider,
+        kind: "provider",
+        status: mapStatusPageIndicator(indicator),
+        message: payload.status?.description ?? indicator,
+        checked_at: checkedAt,
+        latency_ms: latencyMs,
+        target_url: input.url
+      };
+    } catch (error) {
+      return {
+        id: input.id,
+        label: input.label,
+        provider: input.provider,
+        kind: "provider",
+        status: "unknown",
+        message: getErrorMessage(error),
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: input.url
+      };
+    }
+  }
+
+  private async checkDatabaseHealth(): Promise<ServiceHealthCheck> {
+    const startedAt = Date.now();
+    const checkedAt = new Date().toISOString();
+
+    try {
+      await pool.query("select 1");
+
+      return {
+        id: "supabase-db",
+        label: "Supabase database",
+        provider: "Supabase",
+        kind: "database",
+        status: "healthy",
+        message: "Database query succeeded",
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: sanitizeDatabaseTarget(env.DATABASE_URL)
+      };
+    } catch (error) {
+      return {
+        id: "supabase-db",
+        label: "Supabase database",
+        provider: "Supabase",
+        kind: "database",
+        status: "down",
+        message: getErrorMessage(error),
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: sanitizeDatabaseTarget(env.DATABASE_URL)
+      };
+    }
+  }
+
+  private async checkWorkerQueueHealth(): Promise<ServiceHealthCheck> {
+    const startedAt = Date.now();
+    const checkedAt = new Date().toISOString();
+
+    try {
+      const result = await pool.query<{
+        stale_processing: string;
+        failed: string;
+        oldest_pending_age_seconds: string | null;
+      }>(
+        `
+          with queue_state as (
+            select
+              count(*) filter (
+                where processing_status = 'processing'
+                  and coalesce(last_attempt_at, created_at) < now() - interval '10 minutes'
+              )::text as stale_processing,
+              count(*) filter (where processing_status = 'failed')::text as failed,
+              min(created_at) filter (where processing_status = 'pending') as oldest_pending_at
+            from message_dispatch_outbox
+          )
+          select
+            stale_processing,
+            failed,
+            extract(epoch from now() - oldest_pending_at)::text as oldest_pending_age_seconds
+          from queue_state
+        `
+      );
+
+      const row = result.rows[0];
+      const staleProcessing = Number(row?.stale_processing ?? 0);
+      const failed = Number(row?.failed ?? 0);
+      const oldestPendingAgeSeconds = Number(row?.oldest_pending_age_seconds ?? 0);
+      const status: ServiceHealthStatus =
+        staleProcessing > 0 || oldestPendingAgeSeconds > 600 ? "degraded" : failed > 0 ? "degraded" : "healthy";
+
+      return {
+        id: "message-outbox-worker",
+        label: "Message outbox worker",
+        provider: "Railway",
+        kind: "worker",
+        status,
+        message:
+          status === "healthy"
+            ? "Queue is moving normally"
+            : `${staleProcessing} stale processing, ${failed} failed, oldest pending ${Math.round(oldestPendingAgeSeconds)}s`,
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: null
+      };
+    } catch (error) {
+      return {
+        id: "message-outbox-worker",
+        label: "Message outbox worker",
+        provider: "Railway",
+        kind: "worker",
+        status: "unknown",
+        message: getErrorMessage(error),
+        checked_at: checkedAt,
+        latency_ms: Date.now() - startedAt,
+        target_url: null
+      };
+    }
+  }
+
+  private resolveOverallServiceStatus(services: ServiceHealthCheck[]): ServiceHealthStatus {
+    if (services.some((service) => service.status === "down")) {
+      return "down";
+    }
+
+    if (services.some((service) => service.status === "degraded")) {
+      return "degraded";
+    }
+
+    if (services.some((service) => service.status === "unknown")) {
+      return "unknown";
+    }
+
+    return "healthy";
+  }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        accept: "application/json,text/plain,*/*",
+        ...init.headers
+      }
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function mapStatusPageIndicator(indicator: string): ServiceHealthStatus {
+  switch (indicator) {
+    case "none":
+      return "healthy";
+    case "minor":
+    case "major":
+      return "degraded";
+    case "critical":
+      return "down";
+    default:
+      return "unknown";
+  }
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.name === "AbortError" ? "Timed out" : error.message;
+  }
+
+  return "Unable to check service";
+}
+
+function sanitizeDatabaseTarget(databaseUrl: string) {
+  try {
+    const parsed = new URL(databaseUrl);
+    return `${parsed.protocol}//${parsed.hostname}${parsed.port ? `:${parsed.port}` : ""}${parsed.pathname}`;
+  } catch {
+    return null;
   }
 }

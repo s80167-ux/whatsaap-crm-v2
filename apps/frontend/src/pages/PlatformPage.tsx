@@ -1,13 +1,13 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building2, CheckCircle2, Clock3, RefreshCw, RotateCcw, Send, ServerCog, ShieldAlert, WifiOff } from "lucide-react";
+import { Activity, AlertTriangle, Building2, CheckCircle2, Clock3, Cloud, Database, Globe2, RefreshCw, RotateCcw, Send, ServerCog, ShieldAlert, WifiOff } from "lucide-react";
 import { retryPlatformOutboundDispatch } from "../api/dashboard";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
-import { usePlatformAuditLogs, usePlatformHealth, usePlatformOrganizations, usePlatformOutboundDispatch, usePlatformUsage } from "../hooks/useDashboard";
-import type { PlatformHealthSummary, PlatformOrganization } from "../types/dashboard";
+import { usePlatformAuditLogs, usePlatformHealth, usePlatformOrganizations, usePlatformOutboundDispatch, usePlatformServiceHealth, usePlatformUsage } from "../hooks/useDashboard";
+import type { PlatformHealthSummary, PlatformOrganization, PlatformServiceHealthStatus, PlatformServiceHealthSummary } from "../types/dashboard";
 
 type PlatformTab = "organizations" | "outbound" | "connectors" | "audit";
 
@@ -55,6 +55,10 @@ function formatDate(value: string | null | undefined) {
   return value ? new Date(value).toLocaleDateString() : "--";
 }
 
+function formatLatency(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? `${value}ms` : "--";
+}
+
 function isConnectedStatus(status: string | null | undefined) {
   return String(status ?? "").toLowerCase() === "connected";
 }
@@ -88,11 +92,48 @@ function getOrganizationHealthLabel(organization: PlatformOrganization, accounts
   return { label: "healthy", tone: "text-success" };
 }
 
+function getStatusTone(status: PlatformServiceHealthStatus) {
+  switch (status) {
+    case "healthy":
+      return "normal";
+    case "degraded":
+      return "warning";
+    case "down":
+      return "critical";
+    case "unknown":
+    default:
+      return "unknown";
+  }
+}
+
+function getStatusTextClass(status: PlatformServiceHealthStatus) {
+  switch (status) {
+    case "healthy":
+      return "text-success";
+    case "degraded":
+      return "text-warning";
+    case "down":
+      return "text-destructive";
+    case "unknown":
+    default:
+      return "text-text-soft";
+  }
+}
+
+function getServiceIcon(service: PlatformServiceHealthSummary["services"][number]) {
+  if (service.kind === "database") return <Database size={18} />;
+  if (service.kind === "worker") return <Activity size={18} />;
+  if (service.provider === "Vercel") return <Globe2 size={18} />;
+  if (service.kind === "provider") return <Cloud size={18} />;
+  return <ServerCog size={18} />;
+}
+
 export function PlatformPage() {
   const queryClient = useQueryClient();
   const { data: organizations = [], isLoading: organizationsLoading } = usePlatformOrganizations();
   const { data: usage, isLoading: usageLoading } = usePlatformUsage();
   const { data: health, isLoading: healthLoading } = usePlatformHealth();
+  const { data: serviceHealth, isLoading: serviceHealthLoading } = usePlatformServiceHealth();
   const { data: auditLogs = [], isLoading: auditLogsLoading } = usePlatformAuditLogs();
   const { data: outboundDispatch, isLoading: outboundDispatchLoading } = usePlatformOutboundDispatch();
   const [outboundNotice, setOutboundNotice] = useState<string | null>(null);
@@ -128,6 +169,7 @@ export function PlatformPage() {
       queryClient.invalidateQueries({ queryKey: ["platform-organizations"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-usage"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-health"] }),
+      queryClient.invalidateQueries({ queryKey: ["platform-service-health"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-audit-logs"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-outbound-dispatch"] })
     ]);
@@ -140,9 +182,10 @@ export function PlatformPage() {
   const disconnectedAccounts = accounts.filter((account) => !isConnectedStatus(account.connection_status)).length;
   const staleAccounts = accounts.filter((account) => isStaleHeartbeat(account.connector_heartbeat_at)).length;
   const receiptFailures = getNumber(outboundDispatch?.receipts_totals.failed);
+  const serviceHealthIssues = (serviceHealth?.services ?? []).filter((service) => service.status === "down" || service.status === "degraded").length;
   const suspendedOrganizations = organizations.filter((organization) => organization.status === "suspended" || organization.status === "closed").length;
   const organizationsWithFailedJobs = new Set((outboundDispatch?.jobs ?? []).filter((job) => job.processing_status === "failed").map((job) => job.organization_id)).size;
-  const attentionTotal = failedOutbound + disconnectedAccounts + staleAccounts + receiptFailures + suspendedOrganizations;
+  const attentionTotal = failedOutbound + disconnectedAccounts + staleAccounts + receiptFailures + suspendedOrganizations + serviceHealthIssues;
   const platformState = attentionTotal > 0 ? (failedOutbound > 0 || disconnectedAccounts > 0 ? "Needs attention" : "Watch") : "Healthy";
 
   return (
@@ -218,6 +261,38 @@ export function PlatformPage() {
         <MetricTile icon={<Clock3 size={17} />} label="Queued" value={queuedOutbound.toLocaleString()} loading={outboundDispatchLoading} />
         <MetricTile icon={<RefreshCw size={17} />} label="Processing" value={processingOutbound.toLocaleString()} loading={outboundDispatchLoading} />
       </div>
+
+      <Card elevated className="p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeading
+            title="Service health"
+            description="Live reachability and public provider status for Railway, Vercel, and Supabase."
+          />
+          <div className={`platform-service-summary ${getStatusTextClass(serviceHealth?.overall_status ?? "unknown")}`}>
+            {serviceHealthLoading ? "Checking..." : serviceHealth?.overall_status ?? "unknown"}
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {serviceHealthLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="platform-service-tile">
+                <p className="text-sm text-text-muted">Checking service...</p>
+              </div>
+            ))
+          ) : serviceHealth?.services.length ? (
+            serviceHealth.services.map((service) => (
+              <ServiceHealthTile key={service.id} service={service} />
+            ))
+          ) : (
+            <div className="platform-service-tile md:col-span-2 xl:col-span-4">
+              <p className="text-sm text-text-muted">No service health checks are available.</p>
+            </div>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-text-soft">
+          Last checked {formatDateTime(serviceHealth?.checked_at)}. Provider API results are cached briefly to avoid noisy polling.
+        </p>
+      </Card>
 
       <Card elevated className="p-0">
         <div className="border-b border-border px-3 py-3">
@@ -602,6 +677,26 @@ function AttentionCard({
       </div>
       <p className="mt-2 text-2xl font-semibold text-text">{value}</p>
       <p className="mt-1 text-xs text-text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function ServiceHealthTile({ service }: { service: PlatformServiceHealthSummary["services"][number] }) {
+  return (
+    <div className={`platform-service-tile platform-service-tile--${getStatusTone(service.status)}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-text">{service.label}</p>
+          <p className="mt-1 text-xs uppercase tracking-[0.14em] text-text-soft">{service.provider} · {service.kind}</p>
+        </div>
+        <span className="platform-attention-icon">{getServiceIcon(service)}</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className={`text-xs font-semibold uppercase tracking-[0.14em] ${getStatusTextClass(service.status)}`}>{service.status}</span>
+        <span className="text-xs text-text-soft">{formatLatency(service.latency_ms)}</span>
+      </div>
+      <p className="mt-2 line-clamp-2 min-h-[2rem] text-xs text-text-muted">{service.message}</p>
+      <p className="mt-2 truncate text-[11px] text-text-soft">{service.target_url ?? "internal queue signal"}</p>
     </div>
   );
 }

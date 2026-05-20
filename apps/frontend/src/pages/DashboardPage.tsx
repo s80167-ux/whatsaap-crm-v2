@@ -1,9 +1,8 @@
 import { motion } from "framer-motion";
-import { AlertCircle, ChevronDown, Medal, Trophy } from "lucide-react";
+import { AlertCircle, ArrowRight, Bot, BriefcaseBusiness, ChevronDown, Medal, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
-import styles from "./dashboardPage.module.css";
 
 // Helper to map width percent to Tailwind width class
 function getWidthClass(percent: number) {
@@ -82,123 +81,29 @@ export function DashboardPage() {
 
   return (
     <section className="dashboard-main-grid dashboard-page">
-      <Card elevated className="workspace-page-header p-5 sm:p-6">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),340px] xl:items-end">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
-            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">{title}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
-              A clean operating view for conversations, pipeline progress, and daily revenue activity.
-            </p>
-          </div>
-          <div className="workspace-subtle p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Workspace focus</p>
-            <p className="mt-2 text-sm font-semibold text-text">Keep today simple: reply fast, move leads, close the next sale.</p>
-            <p className="mt-2 text-sm leading-6 text-text-muted">
-              Role-scoped metrics surface the right operating view without leaking cross-tenant data.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      <div className="metric-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {(isLoading ? Array.from({ length: 4 }, () => null as DashboardMetric | null) : data?.metrics ?? []).map((metric, index) => (
-          <motion.div key={metric?.label ?? index} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 + index * 0.04 }}>
-            <Card elevated className="metric-card min-h-[138px] p-5">
-              {metric ? (
-                <>
-                  <p className="pr-12 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{metric.label}</p>
-                  <p className="mt-4 text-3xl font-semibold tracking-tight text-text">{metric.value}</p>
-                  <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
-                </>
-              ) : (
-                <div className="h-full animate-pulse rounded-xl bg-background-tint" />
-              )}
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
       {data?.sales ? (
-        <div className="dashboard-focus-grid">
-          <CompactSection title={data.sales.title} eyebrow="Sales Overview" defaultOpen>
-            <div className="grid gap-3 md:grid-cols-3">
-              {data.sales.stats.map((metric) => (
-                metric.href ? (
-                  <div key={metric.label} className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5">
-                    <Link to={appendSalesSection(metric.href, "timeline")}>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
-                      <p className="mt-3 text-2xl font-semibold text-text">{metric.value}</p>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
-                    </Link>
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        title={`Copy timeline link for ${metric.label}`}
-                        className="text-xs font-medium text-primary/80 transition hover:text-primary"
-                        onClick={() =>
-                          void copyTimelineLink({
-                            href: metric.href,
-                            entityType: "sales_metric",
-                            entityId: metric.label,
-                            source: "dashboard_metric_card"
-                          })
-                        }
-                      >
-                        Copy timeline link
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div key={metric.label} className="workspace-subtle p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{metric.label}</p>
-                    <p className="mt-3 text-2xl font-semibold text-text">{metric.value}</p>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-text-muted">{metric.hint}</p>
-                  </div>
-                )
-              ))}
+        <SalesCommandCenter title={title} sales={data.sales} operationalMetrics={data.metrics} isLoading={isLoading} />
+      ) : (
+        <>
+          <Card elevated className="workspace-page-header p-5 sm:p-6">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
+              <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">{title}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
+                A clean operating view for conversations, pipeline progress, and daily revenue activity.
+              </p>
             </div>
-          </CompactSection>
+          </Card>
 
-          <CompactSection title="Pipeline" eyebrow={`${data.sales.pipeline.length} stages`} defaultOpen={!isMobile}>
-            <div className="space-y-2">
-              {data.sales.pipeline.map((stage) => (
-                <div
-                  key={stage.status}
-                  className="workspace-subtle block p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
-                >
-                  <Link to={appendSalesSection(stage.href ?? "/sales", "timeline")}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-text">{formatPipelineStatus(stage.status)}</p>
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getPipelineTone(stage.status)}`}>
-                        {stage.count} orders
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-text-muted">{formatCurrencyValue(stage.value)}</p>
-                  </Link>
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        title={`Copy timeline link for ${formatPipelineStatus(stage.status)}`}
-                        className="text-xs font-medium text-primary/80 transition hover:text-primary"
-                        onClick={() =>
-                          void copyTimelineLink({
-                            href: stage.href ?? "/sales",
-                          entityType: "sales_pipeline",
-                          entityId: stage.status,
-                          source: "dashboard_pipeline_card"
-                        })
-                      }
-                    >
-                      Copy timeline link
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CompactSection>
-        </div>
-      ) : null}
+          <div className="metric-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {(isLoading ? Array.from({ length: 4 }, () => null as DashboardMetric | null) : data?.metrics ?? []).map((metric, index) => (
+              <motion.div key={metric?.label ?? index} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 + index * 0.04 }}>
+                <DashboardMetricCard metric={metric} />
+              </motion.div>
+            ))}
+          </div>
+        </>
+      )}
 
       {data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
 
@@ -245,6 +150,272 @@ export function DashboardPage() {
 
       <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </section>
+  );
+}
+
+function SalesCommandCenter({
+  title,
+  sales,
+  operationalMetrics,
+  isLoading
+}: {
+  title: string;
+  sales: SalesDashboard;
+  operationalMetrics: DashboardMetric[];
+  isLoading: boolean;
+}) {
+  const trendDays = buildTrendDays(sales.trends ?? []);
+  const latestTrend = trendDays[trendDays.length - 1];
+  const previousTrend = trendDays[trendDays.length - 2];
+  const openStage = sales.pipeline.find((stage) => stage.status === "open");
+  const wonStage = sales.pipeline.find((stage) => stage.status === "closed_won");
+  const lostStage = sales.pipeline.find((stage) => stage.status === "closed_lost");
+  const pipelineTotal = sales.pipeline.reduce((total, stage) => total + stage.count, 0);
+  const openValue = parseNumericValue(openStage?.value ?? 0);
+  const wonValue = parseNumericValue(wonStage?.value ?? 0);
+  const wonCount = wonStage?.count ?? 0;
+  const conversionRate = pipelineTotal > 0 ? Math.round((wonCount / pipelineTotal) * 100) : 0;
+  const averageWon = wonCount > 0 ? wonValue / wonCount : 0;
+  const activeLeads = findMetric(operationalMetrics, "Active leads") ?? findStat(sales.stats, "Active leads");
+  const conversationMetric = findMetric(operationalMetrics, "conversation");
+  const topPerformer = sales.leaderboard?.[0];
+  const attentionCount = sales.leaderboard_attention?.length ?? 0;
+  const createdChange = (latestTrend?.createdOrders ?? 0) - (previousTrend?.createdOrders ?? 0);
+  const wonChange = (latestTrend?.wonRevenue ?? 0) - (previousTrend?.wonRevenue ?? 0);
+  const brief = buildSalesBrief({
+    openValue,
+    wonValue,
+    conversionRate,
+    activeLeadsValue: activeLeads?.value,
+    attentionCount,
+    latestCreated: latestTrend?.createdOrders ?? 0,
+    latestWon: latestTrend?.wonRevenue ?? 0,
+    topPerformerName: topPerformer?.name,
+    conversationValue: conversationMetric?.value
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card elevated className="overflow-hidden border-primary/20 p-0">
+        <div className="bg-gradient-to-r from-primary/12 via-card to-success/10 p-5 sm:p-6">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr),minmax(360px,0.75fr)]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                  <Target size={14} />
+                  Sales Command
+                </span>
+                <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                  {sales.title}
+                </span>
+              </div>
+              <h2 className="mt-4 text-[2rem] font-semibold tracking-tight text-text sm:text-4xl">Today's Sales Command Center</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
+                {title} focused on revenue, deal movement, team performance, and the next sales action.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <HeroMetricCard
+                  label="Open Pipeline"
+                  value={formatCompactCurrency(openValue)}
+                  hint={`${openStage?.count ?? 0} open orders still being worked`}
+                  tone="warning"
+                  href="/sales?status=open"
+                />
+                <HeroMetricCard
+                  label="Won Revenue"
+                  value={formatCompactCurrency(wonValue)}
+                  hint={`${wonStage?.count ?? 0} closed-won orders`}
+                  tone="success"
+                  href="/sales?status=closed_won"
+                />
+                <HeroMetricCard
+                  label="Conversion"
+                  value={`${conversionRate}%`}
+                  hint="Closed-won orders divided by all pipeline orders"
+                  tone="primary"
+                  href="/sales"
+                />
+                <HeroMetricCard
+                  label="Avg Won Order"
+                  value={formatCompactCurrency(averageWon)}
+                  hint="Revenue quality across converted orders"
+                  tone="neutral"
+                  href="/sales?status=closed_won"
+                />
+              </div>
+            </div>
+
+            <div className="workspace-block bg-card/90 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Smart sales brief</p>
+                  <h3 className="mt-2 text-lg font-semibold text-text">What matters now</h3>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                  <Bot size={13} />
+                  AI-ready
+                </span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {brief.map((item) => (
+                  <div key={item.title} className="rounded-xl border border-border bg-background-tint px-3 py-2.5">
+                    <p className="text-sm font-semibold text-text">{item.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-text-muted">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <CommandLink to="/sales" label="Pipeline" icon={<BriefcaseBusiness size={15} />} />
+                <CommandLink to="/inbox/whatsapp" label="Inbox" icon={<MessageSquare size={15} />} />
+                <CommandLink to="/reports" label="Report" icon={<Sparkles size={15} />} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
+        <Card elevated className="workspace-block p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Pipeline Health</p>
+              <h3 className="mt-1 text-lg font-semibold text-text">Deal stage pressure</h3>
+            </div>
+            <span className="rounded-full border border-border bg-background-tint px-3 py-1 text-xs font-semibold text-text-muted">
+              {pipelineTotal} orders
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {sales.pipeline
+              .slice()
+              .sort((left, right) => getPipelineOrder(left.status) - getPipelineOrder(right.status))
+              .map((stage) => {
+                const stageValue = parseNumericValue(stage.value);
+                const percent = pipelineTotal > 0 ? Math.round((stage.count / pipelineTotal) * 100) : 0;
+
+                return (
+                  <Link
+                    key={stage.status}
+                    to={appendSalesSection(stage.href ?? "/sales", "timeline")}
+                    className="workspace-subtle p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-text">
+                        <span className={`h-2.5 w-2.5 rounded-full ${getPipelineDotTone(stage.status)}`} />
+                        {formatPipelineStatus(stage.status)}
+                      </span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getPipelineTone(stage.status)}`}>
+                        {percent}%
+                      </span>
+                    </div>
+                    <p className="mt-4 text-2xl font-semibold tracking-tight text-text">{formatCompactCurrency(stageValue)}</p>
+                    <p className="mt-1 text-xs text-text-muted">{stage.count} orders</p>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-background-tint">
+                      <div className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(Math.max(percent, stage.count > 0 ? 8 : 2))}`} />
+                    </div>
+                  </Link>
+                );
+              })}
+          </div>
+        </Card>
+
+        <Card elevated className="workspace-block p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Today's Signals</p>
+          <h3 className="mt-1 text-lg font-semibold text-text">Sales momentum</h3>
+          <div className="mt-4 space-y-3">
+            <SignalRow label="Created today" value={String(latestTrend?.createdOrders ?? 0)} delta={createdChange} />
+            <SignalRow label="Won today" value={formatCompactCurrency(latestTrend?.wonRevenue ?? 0)} delta={wonChange} currency />
+            <SignalRow label="Lost orders" value={String(lostStage?.count ?? 0)} />
+            <SignalRow label="Attention list" value={String(attentionCount)} />
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {(isLoading ? Array.from({ length: 4 }, () => null as DashboardMetric | null) : operationalMetrics).slice(0, 4).map((metric, index) => (
+          <motion.div key={metric?.label ?? index} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 + index * 0.04 }}>
+            <DashboardMetricCard metric={metric} compact />
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroMetricCard({
+  label,
+  value,
+  hint,
+  tone,
+  href
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: "primary" | "success" | "warning" | "neutral";
+  href: string;
+}) {
+  const toneClass = {
+    primary: "border-primary/20 bg-primary/10 text-primary",
+    success: "border-success/20 bg-success/10 text-success",
+    warning: "border-warning/20 bg-warning/10 text-warning",
+    neutral: "border-border bg-background-tint text-text-muted"
+  }[tone];
+
+  return (
+    <Link to={appendSalesSection(href, "timeline")} className="rounded-xl border border-border bg-card/90 p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/30">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${toneClass}`}>
+          <ArrowRight size={15} />
+        </span>
+      </div>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-text">{value}</p>
+      <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">{hint}</p>
+    </Link>
+  );
+}
+
+function CommandLink({ to, label, icon }: { to: string; label: string; icon: ReactNode }) {
+  return (
+    <Link to={to} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-background-tint px-3 text-xs font-semibold text-text transition hover:border-primary/30 hover:text-primary">
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function SignalRow({ label, value, delta, currency = false }: { label: string; value: string; delta?: number; currency?: boolean }) {
+  const hasDelta = typeof delta === "number";
+  const deltaValue = hasDelta ? delta : 0;
+  const deltaLabel = !hasDelta ? null : currency ? formatCompactCurrency(Math.abs(deltaValue)) : `${Math.abs(deltaValue)}`;
+  const deltaTone = !hasDelta || deltaValue === 0 ? "text-text-muted" : deltaValue > 0 ? "text-success" : "text-destructive";
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background-tint px-3 py-2.5">
+      <span className="text-sm font-medium text-text-muted">{label}</span>
+      <span className="text-right">
+        <span className="block text-sm font-semibold text-text">{value}</span>
+        {deltaLabel ? <span className={`block text-[11px] font-semibold ${deltaTone}`}>{deltaValue > 0 ? "+" : deltaValue < 0 ? "-" : ""}{deltaLabel} vs yesterday</span> : null}
+      </span>
+    </div>
+  );
+}
+
+function DashboardMetricCard({ metric, compact = false }: { metric: DashboardMetric | null; compact?: boolean }) {
+  return (
+    <Card elevated className={`metric-card ${compact ? "min-h-[112px] p-4" : "min-h-[138px] p-5"}`}>
+      {metric ? (
+        <>
+          <p className="pr-8 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{metric.label}</p>
+          <p className={`${compact ? "mt-3 text-2xl" : "mt-4 text-3xl"} font-semibold tracking-tight text-text`}>{metric.value}</p>
+          <p className={`${compact ? "mt-2" : "mt-3"} line-clamp-2 text-sm leading-6 text-text-muted`}>{metric.hint}</p>
+        </>
+      ) : (
+        <div className="h-full animate-pulse rounded-xl bg-background-tint" />
+      )}
+    </Card>
   );
 }
 
@@ -1133,6 +1304,62 @@ function formatDecimal(value: number) {
 function formatSignedDecimal(value: number) {
   const normalized = Number.isFinite(value) ? value : 0;
   return `${normalized > 0 ? "+" : ""}${formatDecimal(normalized)}`;
+}
+
+function findMetric(metrics: DashboardMetric[], labelPart: string) {
+  const normalized = labelPart.toLowerCase();
+  return metrics.find((metric) => metric.label.toLowerCase().includes(normalized));
+}
+
+function findStat(metrics: DashboardMetric[], label: string) {
+  return metrics.find((metric) => metric.label.toLowerCase() === label.toLowerCase());
+}
+
+function buildSalesBrief(input: {
+  openValue: number;
+  wonValue: number;
+  conversionRate: number;
+  activeLeadsValue?: DashboardMetric["value"];
+  attentionCount: number;
+  latestCreated: number;
+  latestWon: number;
+  topPerformerName?: string;
+  conversationValue?: DashboardMetric["value"];
+}) {
+  const brief = [
+    {
+      title: "Revenue focus",
+      detail:
+        input.openValue > 0
+          ? `${formatCompactCurrency(input.openValue)} is still open. Prioritize the highest-value active deals before starting new outreach.`
+          : `No open pipeline value is visible yet. Start from active leads and conversations to create the next opportunity.`
+    },
+    {
+      title: "Momentum",
+      detail:
+        input.latestCreated > 0 || input.latestWon > 0
+          ? `${input.latestCreated} orders were created and ${formatCompactCurrency(input.latestWon)} was won in the latest bucket.`
+          : `No new sales movement is visible in the latest bucket, so today's first job is generating movement.`
+    },
+    {
+      title: "Team action",
+      detail:
+        input.attentionCount > 0
+          ? `${input.attentionCount} team member${input.attentionCount === 1 ? "" : "s"} sit below the current sales benchmark. Review their open deals and next follow-ups.`
+          : input.topPerformerName
+            ? `${input.topPerformerName} is leading the board. Use the same playbook across active leads.`
+            : `Team coaching signals will appear after orders are assigned and closed.`
+    }
+  ];
+
+  if (typeof input.activeLeadsValue !== "undefined" || typeof input.conversationValue !== "undefined") {
+    brief[2] = {
+      title: "Next action pool",
+      detail: `${input.activeLeadsValue ?? "No"} active leads and ${input.conversationValue ?? "no"} conversation load are visible. Work the warmest contact first.`
+    };
+  }
+
+  return brief;
 }
 
 function getInitials(name: string) {

@@ -1085,7 +1085,7 @@ export function DashboardLayout() {
 
               <div
                 className={clsx(
-                  "sidebar-context-panel min-w-0 flex-1 overflow-hidden px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
+                  "sidebar-context-panel min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
                   isDesktopNavCollapsed
                     ? "w-0 -translate-x-2 px-0 opacity-0"
                     : "w-[13rem] translate-x-0 opacity-100 xl:w-[14rem]"

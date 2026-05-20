@@ -4,6 +4,7 @@ import {
   fetchPlatformHealth,
   fetchPlatformOrganizations,
   fetchPlatformOutboundDispatch,
+  fetchPlatformServiceHealth,
   fetchPlatformUsage,
   fetchRoleDashboard
 } from "../api/dashboard";
@@ -58,6 +59,17 @@ export function usePlatformHealth() {
     queryFn: fetchPlatformHealth,
     enabled: role === "super_admin",
     refetchInterval: 15000
+  });
+}
+
+export function usePlatformServiceHealth() {
+  const role = getStoredUser()?.role;
+
+  return useQuery({
+    queryKey: ["platform-service-health"],
+    queryFn: fetchPlatformServiceHealth,
+    enabled: role === "super_admin",
+    refetchInterval: 30000
   });
 }
 

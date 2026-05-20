@@ -96,6 +96,24 @@ export interface PlatformHealthSummary {
   }>;
 }
 
+export type PlatformServiceHealthStatus = "healthy" | "degraded" | "down" | "unknown";
+
+export interface PlatformServiceHealthSummary {
+  checked_at: string;
+  overall_status: PlatformServiceHealthStatus;
+  services: Array<{
+    id: string;
+    label: string;
+    provider: "CRM" | "Railway" | "Vercel" | "Supabase";
+    kind: "application" | "provider" | "database" | "worker";
+    status: PlatformServiceHealthStatus;
+    message: string;
+    checked_at: string;
+    latency_ms: number | null;
+    target_url: string | null;
+  }>;
+}
+
 export interface PlatformAuditLog {
   id: string;
   organization_id: string | null;

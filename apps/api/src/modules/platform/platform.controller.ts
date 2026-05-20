@@ -42,6 +42,11 @@ export async function getPlatformHealth(_request: Request, response: Response) {
   return response.json({ data: health });
 }
 
+export async function getPlatformServiceHealth(_request: Request, response: Response) {
+  const health = await platformService.getServiceHealthSummary();
+  return response.json({ data: health });
+}
+
 export async function getPlatformAuditLogs(request: Request, response: Response) {
   const { limit = 100 } = platformAuditLogQuerySchema.parse(request.query);
   const logs = await platformService.getAuditSummary(limit);
