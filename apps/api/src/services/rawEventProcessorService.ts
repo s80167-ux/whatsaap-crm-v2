@@ -15,6 +15,8 @@ import {
 import type { InboundMediaAttachmentInput } from "../types/domain.js";
 import { MessageStatusSyncService } from "./messageStatusSyncService.js";
 import { MessageIngestionService } from "./messageIngestionService.js";
+import { WhatsAppContactSnapshotService } from "./whatsAppContactSnapshotService.js";
+import { WhatsAppContactRecoveryEngine } from "./whatsAppContactRecoveryEngine.js";
 import type { PoolClient } from "pg";
 
 type WhatsAppMessageEventPayload = {
@@ -50,7 +52,9 @@ export class RawEventProcessorService {
     private readonly rawEventRepository = new RawEventRepository(),
     private readonly processedEventKeyRepository = new ProcessedEventKeyRepository(),
     private readonly messageIngestionService = new MessageIngestionService(),
-    private readonly messageStatusSyncService = new MessageStatusSyncService()
+    private readonly messageStatusSyncService = new MessageStatusSyncService(),
+    private readonly contactSnapshotService = new WhatsAppContactSnapshotService(),
+    private readonly contactRecoveryEngine = new WhatsAppContactRecoveryEngine()
   ) {}
 
   private buildMessageEventKey(event: RawChannelEventRecord, payload: WhatsAppMessageEventPayload) {
@@ -111,6 +115,51 @@ export class RawEventProcessorService {
   }
 
   async processEvent(event: RawChannelEventRecord) {
+    if (event.event_type === "contact.snapshot") {
+      const payload = event.payload as {
+        organizationId: string;
+        whatsappAccountId: string;
+        chats?: unknown[];
+        contacts?: unknown[];
+        messages?: unknown[];
+        syncType?: string | null;
+      };
+
+      if (!payload?.organizationId || !payload?.whatsappAccountId) {
+        await withTransaction((client) =>
+          this.rawEventRepository.markIgnored(client, event.id, "Unsupported raw contact snapshot event payload")
+        );
+        return;
+      }
+
+      try {
+        await withTransaction(async (client) => {
+          await this.contactSnapshotService.saveSnapshotsFromHistorySync(client, {
+            organizationId: payload.organizationId,
+            whatsappAccountId: payload.whatsappAccountId,
+            chats: payload.chats ?? [],
+            contacts: payload.contacts ?? [],
+            messages: payload.messages ?? [],
+            syncType: payload.syncType ?? "contact.snapshot"
+          });
+          await this.rawEventRepository.markProcessed(client, event.id);
+        });
+        void this.contactRecoveryEngine.scanAndRecoverIncompleteContacts({
+          organizationId: payload.organizationId,
+          whatsappAccountId: payload.whatsappAccountId,
+          limit: 25,
+          dryRun: false
+        }).catch((error) => {
+          logger.warn({ err: error, rawEventId: event.id }, "Failed to run contact recovery after history snapshot");
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to process raw contact snapshot event";
+        await withTransaction((client) => this.rawEventRepository.markFailed(client, event.id, message));
+        logger.error({ err: error, rawEventId: event.id }, "Failed to process raw contact snapshot event");
+      }
+      return;
+    }
+
     if (event.event_type === "message.status") {
       const payload = event.payload as WhatsAppMessageStatusEventPayload;
 

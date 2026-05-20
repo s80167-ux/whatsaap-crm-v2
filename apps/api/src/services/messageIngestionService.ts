@@ -6,9 +6,14 @@ import { MessageRepository } from "../repositories/messageRepository.js";
 import type { InboundMessageInput } from "../types/domain.js";
 import { normalizeMessageType } from "../utils/message.js";
 import { isWeakDisplayName } from "../utils/contactIdentity.js";
+import { mergeContactWithoutDowngrade, hasRecoveryMergeChanges } from "../utils/contactRecoveryMerge.js";
+import { normalizeWhatsAppIdentity } from "../utils/whatsappIdentity.js";
+import { ContactEnrichmentCacheService } from "./contactEnrichmentCacheService.js";
+import { ContactRecoveryAuditService } from "./contactRecoveryAuditService.js";
 import { ContactService } from "./contactService.js";
 import { ContactRepairProposalService } from "./contactRepairProposalService.js";
 import { ConversationService } from "./conversationService.js";
+import { ProfilePictureRecoveryService } from "./profilePictureRecoveryService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
 
@@ -52,7 +57,10 @@ export class MessageIngestionService {
     private readonly messageRepository = new MessageRepository(),
     private readonly projectionService = new ProjectionService(),
     private readonly quickReplyOutcomeService = new QuickReplyOutcomeService(),
-    private readonly notificationsService = new NotificationsService()
+    private readonly notificationsService = new NotificationsService(),
+    private readonly enrichmentCacheService = new ContactEnrichmentCacheService(),
+    private readonly recoveryAuditService = new ContactRecoveryAuditService(),
+    private readonly profilePictureRecoveryService = new ProfilePictureRecoveryService()
   ) {}
 
   async ingest(input: InboundMessageInput) {
@@ -66,6 +74,88 @@ export class MessageIngestionService {
         profilePushName: input.profilePushName ?? null,
         profileAvatarUrl: input.profileAvatarUrl ?? null
       });
+
+      const normalizedIdentity = normalizeWhatsAppIdentity(input.remoteJid);
+      await this.enrichmentCacheService.updateLastKnownGood(client, {
+        organizationId: input.organizationId,
+        whatsappAccountId: input.whatsappAccountId,
+        contactId: contact.id,
+        rawJid: input.remoteJid,
+        normalizedJid: normalizedIdentity.normalizedJid,
+        lid: normalizedIdentity.lid,
+        phoneNumber: input.phoneRaw ?? normalizedIdentity.phoneNumber,
+        displayName: input.profileName ?? input.profilePushName ?? null,
+        pushName: input.profilePushName ?? null,
+        verifiedName: input.profileName ?? null,
+        profilePicUrl: input.profileAvatarUrl ?? null,
+        source: "live_message",
+        rawPayload: input.rawPayload
+      });
+
+      if (!contact.primary_phone_normalized || !contact.primary_avatar_url || isWeakDisplayName(contact.display_name)) {
+        const restored = await this.enrichmentCacheService.restoreFromLastKnownGood(client, {
+          organizationId: input.organizationId,
+          whatsappAccountId: input.whatsappAccountId,
+          contactId: contact.id,
+          normalizedJid: normalizedIdentity.normalizedJid,
+          phoneNumber: input.phoneRaw ?? normalizedIdentity.phoneNumber,
+          lid: normalizedIdentity.lid
+        });
+
+        if (restored) {
+          const merged = mergeContactWithoutDowngrade(contact, {
+            displayName: restored.best_display_name ?? restored.best_verified_name ?? restored.best_push_name ?? restored.best_notify_name ?? null,
+            phoneNumber: restored.phone_number ?? null,
+            profilePicUrl: restored.best_profile_pic_url ?? null
+          });
+
+          if (hasRecoveryMergeChanges(contact, merged)) {
+            await client.query(
+              `
+                update contacts
+                set display_name = $3,
+                    primary_phone_e164 = $4,
+                    primary_phone_normalized = $5,
+                    primary_avatar_url = $6,
+                    company_name = $7,
+                    updated_at = timezone('utc', now())
+                where id = $1
+                  and organization_id = $2
+              `,
+              [
+                contact.id,
+                input.organizationId,
+                merged.display_name,
+                merged.primary_phone_e164,
+                merged.primary_phone_normalized,
+                merged.primary_avatar_url,
+                merged.company_name
+              ]
+            );
+
+            await this.recoveryAuditService.record(client, {
+              organizationId: input.organizationId,
+              whatsappAccountId: input.whatsappAccountId,
+              contactId: contact.id,
+              action: "restored_from_cache",
+              source: "last_known_good_cache",
+              confidenceScore: restored.confidence_score ?? null,
+              beforeData: contact,
+              afterData: merged,
+              reason: "Incoming WhatsApp payload was incomplete; restored safe fields from last known good cache"
+            });
+          }
+        }
+      }
+
+      if (!contact.primary_avatar_url && normalizedIdentity.normalizedJid) {
+        await this.profilePictureRecoveryService.queueProfilePictureFetch(client, {
+          organizationId: input.organizationId,
+          whatsappAccountId: input.whatsappAccountId,
+          contactId: contact.id,
+          jid: normalizedIdentity.normalizedJid
+        });
+      }
 
       const conversation = await this.conversationService.findOrCreateConversation(client, {
         organizationId: input.organizationId,

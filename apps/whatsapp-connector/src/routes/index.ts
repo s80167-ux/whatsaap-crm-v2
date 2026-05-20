@@ -10,6 +10,8 @@ import {
   listAccountContacts,
   syncAccountContacts,
   sendAccountMessage,
+  verifyPhoneOnWhatsApp,
+  fetchProfilePicture,
   terminateAccountSession
 } from "../controllers/connectorController.js";
 import { requireInternalSecret } from "../middleware/internalAuth.js";
@@ -25,5 +27,7 @@ router.post("/internal/accounts/:accountId/backfill", asyncHandler(backfillAccou
 router.get("/internal/accounts/:accountId/status", asyncHandler(getAccountSessionStatus));
 router.get("/internal/accounts/:accountId/contacts", asyncHandler(listAccountContacts));
 router.post("/internal/accounts/:accountId/contacts/sync", asyncHandler(syncAccountContacts));
+router.post("/internal/accounts/:accountId/on-whatsapp", asyncHandler(verifyPhoneOnWhatsApp));
+router.post("/internal/accounts/:accountId/profile-picture", asyncHandler(fetchProfilePicture));
 router.delete("/internal/accounts/:accountId/session", asyncHandler(terminateAccountSession));
 router.post("/internal/messages/send", asyncHandler(sendAccountMessage));

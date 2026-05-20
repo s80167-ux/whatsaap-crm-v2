@@ -10,7 +10,9 @@ import {
   listRawEvents,
   listOrganizationUsers,
   listWhatsAppAccounts,
+  listWhatsAppContactRecoveryAudit,
   replayRawEvents,
+  recoverWhatsAppContacts,
   reconnectWhatsAppAccount
 } from "../controllers/adminController.js";
 import { backfillWhatsAppAccount } from "../controllers/adminBackfillController.js";
@@ -39,6 +41,8 @@ adminRoutes.get("/whatsapp-accounts", requirePermission("org.manage_whatsapp_acc
 adminRoutes.post("/whatsapp-accounts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(createWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(reconnectWhatsAppAccount));
 adminRoutes.post("/whatsapp-accounts/:accountId/backfill", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(backfillWhatsAppAccount));
+adminRoutes.post("/whatsapp/:accountId/recover-contacts", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(recoverWhatsAppContacts));
+adminRoutes.get("/whatsapp/:accountId/recovery-audit", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listWhatsAppContactRecoveryAudit));
 adminRoutes.delete("/whatsapp-accounts/:accountId", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(deleteWhatsAppAccount));
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));

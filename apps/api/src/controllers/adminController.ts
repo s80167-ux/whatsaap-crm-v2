@@ -3,9 +3,16 @@ import { z } from "zod";
 import { getRequestAuditContext } from "../lib/requestAudit.js";
 import { AdminService } from "../services/adminService.js";
 import { AuditLogService } from "../services/auditLogService.js";
+import { withTransaction } from "../config/database.js";
+import { WhatsAppAdminRepository } from "../repositories/whatsAppAdminRepository.js";
+import { ContactRecoveryAuditService } from "../services/contactRecoveryAuditService.js";
+import { WhatsAppContactRecoveryEngine } from "../services/whatsAppContactRecoveryEngine.js";
 
 const adminService = new AdminService();
 const auditLogService = new AuditLogService();
+const whatsappRepository = new WhatsAppAdminRepository();
+const contactRecoveryEngine = new WhatsAppContactRecoveryEngine();
+const contactRecoveryAuditService = new ContactRecoveryAuditService();
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2),
@@ -35,6 +42,10 @@ const replayRawEventsSchema = z.object({
   statuses: z.array(rawEventStatusSchema).optional(),
   limit: z.number().int().positive().max(500).optional(),
   processNow: z.boolean().optional()
+});
+const recoverContactsSchema = z.object({
+  limit: z.number().int().positive().max(500).optional(),
+  dryRun: z.boolean().optional()
 });
 
 function mapWhatsAppAccount(account: {
@@ -289,4 +300,72 @@ export async function deleteWhatsAppAccount(req: Request, res: Response) {
     request: getRequestAuditContext(req)
   });
   return res.json({ ok: true });
+}
+
+export async function recoverWhatsAppContacts(req: Request, res: Response) {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const accountId = z.string().uuid().parse(req.params.accountId);
+  const input = recoverContactsSchema.parse(req.body ?? {});
+  const account = await withTransaction((client) => whatsappRepository.findById(client, accountId));
+
+  if (!account) {
+    return res.status(404).json({ error: "WhatsApp account not found" });
+  }
+
+  const summary = await contactRecoveryEngine.scanAndRecoverIncompleteContacts({
+    authUser: req.auth,
+    organizationId: account.organization_id,
+    whatsappAccountId: account.id,
+    limit: input.limit ?? 50,
+    dryRun: input.dryRun ?? false
+  });
+
+  await auditLogService.record(req.auth, {
+    organizationId: account.organization_id,
+    action: "whatsapp_contact_recovery.started",
+    entityType: "whatsapp_account",
+    entityId: account.id,
+    metadata: {
+      dry_run: input.dryRun ?? false,
+      summary
+    },
+    request: getRequestAuditContext(req)
+  });
+
+  return res.json({
+    success: true,
+    dryRun: input.dryRun ?? false,
+    summary
+  });
+}
+
+export async function listWhatsAppContactRecoveryAudit(req: Request, res: Response) {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const accountId = z.string().uuid().parse(req.params.accountId);
+  const limit = typeof req.query.limit === "string" ? z.coerce.number().int().positive().max(500).parse(req.query.limit) : 100;
+  const account = await withTransaction((client) => whatsappRepository.findById(client, accountId));
+
+  if (!account) {
+    return res.status(404).json({ error: "WhatsApp account not found" });
+  }
+
+  if (req.auth.role !== "super_admin" && req.auth.organizationId !== account.organization_id) {
+    return res.status(403).json({ error: "Insufficient permissions" });
+  }
+
+  const rows = await withTransaction((client) =>
+    contactRecoveryAuditService.listRecent(client, {
+      organizationId: account.organization_id,
+      whatsappAccountId: account.id,
+      limit
+    })
+  );
+
+  return res.json({ data: rows });
 }

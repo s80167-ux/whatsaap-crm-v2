@@ -22,6 +22,7 @@ import { detectMessageType, extractInboundMediaAttachment, extractTextContent } 
 import {
   bestPhoneFromWhatsAppMessageKey,
   extractAllWhatsAppJidCandidates,
+  getWhatsAppJidType,
   isWhatsAppDirectChatJid,
   jidToPhone,
   normalizePhoneNumber,
@@ -585,14 +586,31 @@ export class WhatsAppSessionManager {
         }
       });
 
+      const enqueueContactSnapshot = async (input: { contacts?: unknown[]; chats?: unknown[]; messages?: unknown[]; syncType: string }) => {
+        try {
+          await this.rawEventIngestionService.enqueueContactSnapshotEvent({
+            organizationId: account.organization_id,
+            whatsappAccountId: account.id,
+            contacts: input.contacts ?? [],
+            chats: input.chats ?? [],
+            messages: input.messages ?? [],
+            syncType: input.syncType
+          });
+        } catch (error) {
+          logger.warn({ error, accountId: account.id, syncType: input.syncType }, "Failed to enqueue WhatsApp contact snapshot event");
+        }
+      };
+
       socket.ev.on("contacts.upsert", (contacts) => {
         logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.upsert event received");
         this.storeContactSnapshots(account.id, contacts);
+        void enqueueContactSnapshot({ contacts, syncType: "contacts.upsert" });
       });
 
       socket.ev.on("contacts.update", (contacts) => {
         logger.info({ count: contacts.length, sample: contacts.slice(0, 3) }, "contacts.update event received");
         this.storeContactSnapshots(account.id, contacts);
+        void enqueueContactSnapshot({ contacts, syncType: "contacts.update" });
       });
 
       const handleWhatsAppMessage = async (message: WAMessage) => {
@@ -600,8 +618,23 @@ export class WhatsAppSessionManager {
           return;
         }
 
-        if (!isWhatsAppDirectChatJid(message.key.remoteJid)) {
-          logger.debug({ accountId: account.id, remoteJid: message.key.remoteJid }, "Skipping unsupported WhatsApp chat target");
+        const messageKey = message.key as Record<string, unknown>;
+        const participantJid =
+          typeof messageKey.participant === "string"
+            ? messageKey.participant
+            : typeof messageKey.participantPn === "string"
+              ? messageKey.participantPn
+              : typeof messageKey.participantAlt === "string"
+                ? messageKey.participantAlt
+                : null;
+        const remoteJidType = getWhatsAppJidType(message.key.remoteJid);
+        const customerJid =
+          remoteJidType === "group"
+            ? participantJid
+            : message.key.remoteJid;
+
+        if (!customerJid || !isWhatsAppDirectChatJid(customerJid)) {
+          logger.debug({ accountId: account.id, remoteJid: message.key.remoteJid, participantJid }, "Skipping unsupported WhatsApp customer identity");
           return;
         }
 
@@ -616,14 +649,13 @@ export class WhatsAppSessionManager {
           return;
         }
 
-        const messageKey = message.key as Record<string, unknown>;
         const phoneRaw =
           bestPhoneFromWhatsAppMessageKey(messageKey) ??
-          this.lookupPhoneFromLid(account.id, message.key.remoteJid) ??
-          jidToPhone(message.key.remoteJid);
+          this.lookupPhoneFromLid(account.id, customerJid) ??
+          jidToPhone(customerJid);
         const profileName = this.resolveCanonicalProfileName(account.id, message);
         const profilePushName = this.resolvePushProfileName(account.id, message);
-        const profileAvatarUrl = await this.resolveProfileAvatarUrl(account.id, socket, message.key.remoteJid, messageKey);
+        const profileAvatarUrl = await this.resolveProfileAvatarUrl(account.id, socket, customerJid, messageKey);
         const mediaAttachment =
           direction === "incoming"
             ? await downloadInboundMedia(socket, message).catch((error) => {
@@ -637,7 +669,7 @@ export class WhatsAppSessionManager {
             organizationId: account.organization_id,
             whatsappAccountId: account.id,
             externalMessageId: message.key.id,
-            remoteJid: message.key.remoteJid,
+            remoteJid: customerJid,
             phoneRaw,
             profileName,
             profilePushName,
@@ -664,14 +696,20 @@ export class WhatsAppSessionManager {
         }
       });
 
-      socket.ev.on("messaging-history.set", async ({ messages, contacts }) => {
+      socket.ev.on("messaging-history.set", async ({ messages, contacts, chats, syncType }) => {
         logger.info(
-          { messageCount: messages.length, contactCount: contacts.length, sample: messages.slice(0, 3) },
+          { messageCount: messages.length, contactCount: contacts.length, chatCount: chats?.length ?? 0, syncType, sample: messages.slice(0, 3) },
           "messaging-history.set event received"
         );
         if (contacts.length > 0) {
           this.storeContactSnapshots(account.id, contacts);
         }
+        void enqueueContactSnapshot({
+          contacts,
+          chats: chats ?? [],
+          messages,
+          syncType: syncType ? `messaging-history.set:${syncType}` : "messaging-history.set"
+        });
         for (const message of messages) {
           await handleWhatsAppMessage(message);
         }
@@ -791,6 +829,38 @@ export class WhatsAppSessionManager {
     }
 
     return result;
+  }
+
+  async verifyPhoneOnWhatsApp(accountId: string, phoneNumber: string) {
+    const socket = await this.ensureConnectedForSend(accountId);
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    const digits = normalizedPhone?.replace(/\D/g, "") ?? "";
+
+    if (!digits) {
+      return { exists: false, jid: null };
+    }
+
+    const result = (await socket.onWhatsApp(digits)) ?? [];
+    const match = result.find((entry) => entry.exists && entry.jid);
+    return {
+      exists: Boolean(match?.exists),
+      jid: match?.jid ?? null
+    };
+  }
+
+  async fetchProfilePicture(accountId: string, jid: string) {
+    const socket = await this.ensureConnectedForSend(accountId);
+    const normalizedJid = normalizeWhatsAppJid(jid) ?? jid;
+    const profilePicUrl = await socket.profilePictureUrl(normalizedJid, "preview").catch((error) => {
+      logger.debug({ error, accountId, jid: normalizedJid }, "Unable to fetch WhatsApp profile picture during recovery");
+      return null;
+    });
+
+    if (profilePicUrl) {
+      this.avatarUrlByJid.set(this.scopedContactKey(accountId, normalizedJid), profilePicUrl);
+    }
+
+    return { jid: normalizedJid, profilePicUrl };
   }
 
   async terminateSession(accountId: string) {

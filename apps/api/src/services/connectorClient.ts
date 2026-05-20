@@ -82,6 +82,26 @@ export class ConnectorClient {
     });
   }
 
+  async verifyPhoneOnWhatsApp(accountId: string, phoneNumber: string) {
+    return this.request<{
+      exists: boolean;
+      jid?: string | null;
+    }>(`/internal/accounts/${accountId}/on-whatsapp`, {
+      method: "POST",
+      body: JSON.stringify({ phoneNumber })
+    });
+  }
+
+  async fetchProfilePicture(accountId: string, jid: string) {
+    return this.request<{
+      jid: string;
+      profilePicUrl: string | null;
+    }>(`/internal/accounts/${accountId}/profile-picture`, {
+      method: "POST",
+      body: JSON.stringify({ jid })
+    });
+  }
+
   async terminateAccount(accountId: string) {
     return this.request(`/internal/accounts/${accountId}/session`, {
       method: "DELETE"

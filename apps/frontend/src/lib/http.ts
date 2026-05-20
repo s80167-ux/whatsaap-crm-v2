@@ -3,7 +3,15 @@ import { clearAuthSession, getCsrfToken, storeCsrfToken } from "./auth";
 
 function getNetworkErrorMessage() {
   if (config.apiBaseUrl.includes("localhost")) {
-    return "Unable to reach the login API. Set VITE_API_BASE_URL to your live backend URL before deploying the frontend.";
+    const isLocalFrontend =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+    if (isLocalFrontend) {
+      return "Unable to reach the local API at http://localhost:4000. Start the backend dev server and check its database connection.";
+    }
+
+    return "Unable to reach the login API because this frontend is configured to use localhost. Set VITE_API_BASE_URL to your live backend URL before deploying the frontend.";
   }
 
   return "Unable to reach the server. Check that the backend is running and that its CORS FRONTEND_URL matches this site URL.";

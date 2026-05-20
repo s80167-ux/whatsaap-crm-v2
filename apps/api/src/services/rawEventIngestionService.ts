@@ -95,4 +95,40 @@ export class RawEventIngestionService {
 
     return rawEvent;
   }
+
+  async enqueueContactSnapshotEvent(input: {
+    organizationId: string;
+    whatsappAccountId: string;
+    chats?: unknown[];
+    contacts?: unknown[];
+    messages?: unknown[];
+    syncType?: string | null;
+    eventAt?: Date;
+  }) {
+    const eventAt = input.eventAt ?? new Date();
+    const rawEvent = await withTransaction((client) =>
+      this.rawEventRepository.enqueue(client, {
+        organizationId: input.organizationId,
+        whatsappAccountId: input.whatsappAccountId,
+        source: "whatsapp",
+        eventType: "contact.snapshot",
+        externalEventId: `${input.whatsappAccountId}:${eventAt.getTime()}:contact.snapshot`,
+        eventTimestamp: eventAt,
+        payload: {
+          organizationId: input.organizationId,
+          whatsappAccountId: input.whatsappAccountId,
+          chats: input.chats ?? [],
+          contacts: input.contacts ?? [],
+          messages: input.messages ?? [],
+          syncType: input.syncType ?? "baileys_snapshot"
+        }
+      })
+    );
+
+    void this.rawEventProcessorService.processEventById(rawEvent.id).catch((error) => {
+      logger.error({ error, rawEventId: rawEvent.id }, "Failed to process raw contact snapshot event asynchronously");
+    });
+
+    return rawEvent;
+  }
 }

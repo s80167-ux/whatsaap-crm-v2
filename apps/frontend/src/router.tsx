@@ -110,7 +110,7 @@ export const router = createBrowserRouter([
         errorElement: <GlobalErrorElement />, // Dashboard-level error boundary
         children: [
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
-          { index: true, element: <Navigate to="/inbox" replace /> },
+          { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: "inbox", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
           { path: "inbox/social", element: withRouteFallback(<InboxChannelPlaceholderPage variant="social" />) },

@@ -489,6 +489,69 @@ export class ContactRepairProposalService {
     });
   }
 
+  static async createRecoveryProposal(
+    client: any,
+    input: {
+      organizationId: string;
+      contactId: string;
+      reason: string;
+      confidenceScore: number;
+      proposedAction: string;
+      beforeSnapshot: Record<string, unknown>;
+      proposedAfterSnapshot: Record<string, unknown>;
+      repairPlan: Record<string, unknown>;
+    }
+  ) {
+    await this.ensureTableOnClient(client);
+
+    const existing = await client.query(
+      `
+        select id
+        from contact_repair_proposals
+        where organization_id = $1
+          and contact_id = $2
+          and status = 'pending'
+          and proposed_action = $3
+        limit 1
+      `,
+      [input.organizationId, input.contactId, input.proposedAction]
+    );
+
+    if (existing.rows[0]) {
+      return { created: false, proposalId: existing.rows[0].id };
+    }
+
+    const confidence = input.confidenceScore >= 85 ? "high" : input.confidenceScore >= 60 ? "medium" : "low";
+    const result = await client.query(
+      `
+        insert into contact_repair_proposals (
+          organization_id,
+          contact_id,
+          status,
+          reason,
+          confidence,
+          proposed_action,
+          before_snapshot,
+          proposed_after_snapshot,
+          repair_plan
+        ) values ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
+        returning id
+      `,
+      [
+        input.organizationId,
+        input.contactId,
+        input.reason,
+        confidence,
+        input.proposedAction,
+        input.beforeSnapshot,
+        input.proposedAfterSnapshot,
+        input.repairPlan
+      ]
+    );
+
+    return { created: true, proposalId: result.rows[0]?.id ?? null };
+  }
+
   static async detectWeakIdentityForContact(
     client: any,
     input: { organizationId: string; contactId: string }

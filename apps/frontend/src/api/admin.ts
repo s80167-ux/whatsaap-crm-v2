@@ -421,6 +421,24 @@ export async function syncWhatsAppContacts(accountId: string) {
   return response.data;
 }
 
+export type WhatsAppContactRecoverySummary = {
+  scanned: number;
+  recovered: number;
+  sentToRepairQueue: number;
+  profilePictureJobsQueued: number;
+  skipped: number;
+  errors: number;
+};
+
+export async function recoverWhatsAppContacts(accountId: string, payload: { limit?: number; dryRun?: boolean } = {}) {
+  const response = await apiPost<{
+    success: boolean;
+    dryRun: boolean;
+    summary: WhatsAppContactRecoverySummary;
+  }>(`/admin/whatsapp/${accountId}/recover-contacts`, payload);
+  return response;
+}
+
 export async function disconnectWhatsAppAccount(accountId: string) {
   const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/admin/whatsapp-accounts/${accountId}/disconnect`, {});
   return mapWhatsAppAccount(response.data);

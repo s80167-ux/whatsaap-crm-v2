@@ -82,6 +82,16 @@ export class ConnectorCommandService {
     return this.sessionManager.sendMessage(input.accountId, input.recipientJid, input.text ?? null, input.attachment ?? null);
   }
 
+  async verifyPhoneOnWhatsApp(accountId: string, phoneNumber: string) {
+    await this.getAccount(accountId);
+    return this.sessionManager.verifyPhoneOnWhatsApp(accountId, phoneNumber);
+  }
+
+  async fetchProfilePicture(accountId: string, jid: string) {
+    await this.getAccount(accountId);
+    return this.sessionManager.fetchProfilePicture(accountId, jid);
+  }
+
   private async getAccount(accountId: string) {
     const client = await pool.connect();
     try {

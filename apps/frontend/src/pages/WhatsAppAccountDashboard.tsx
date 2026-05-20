@@ -20,11 +20,13 @@ import {
   disconnectWhatsAppAccount,
   deleteWhatsAppAccount,
   fetchLatestWhatsAppSyncJob,
+  recoverWhatsAppContacts,
   reconnectWhatsAppAccount,
   resetWhatsAppPairing,
   syncWhatsAppContacts,
   updateWhatsAppAccount
 } from "../api/admin";
+import type { WhatsAppContactRecoverySummary } from "../api/admin";
 import type { WhatsAppSyncJobStatus, WhatsAppSyncJobSummary } from "../types/admin";
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
@@ -320,6 +322,11 @@ export function WhatsAppAccountDashboard() {
     id: string;
     name: string;
   } | null>(null);
+  const [recoveryPopupAccount, setRecoveryPopupAccount] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [recoverySummary, setRecoverySummary] = useState<WhatsAppContactRecoverySummary | null>(null);
   const queryClient = useQueryClient();
   const { data: organizations = [] } = useOrganizations();
   const selectedOrganizationId = isSuperAdmin
@@ -347,6 +354,7 @@ export function WhatsAppAccountDashboard() {
   const [backfillSelections, setBackfillSelections] = useState<Record<string, WhatsAppBackfillDays>>({});
   const [backfillingAccountId, setBackfillingAccountId] = useState<string | null>(null);
   const [syncingContactsAccountId, setSyncingContactsAccountId] = useState<string | null>(null);
+  const [recoveringContactsAccountId, setRecoveringContactsAccountId] = useState<string | null>(null);
   const [syncJobRefreshKeys, setSyncJobRefreshKeys] = useState<Record<string, number>>({});
   const [syncJobSnapshots, setSyncJobSnapshots] = useState<Record<string, WhatsAppSyncJobSummary>>({});
   const [accountActivityNotice, setAccountActivityNotice] = useState<Record<string, { title: string; detail: string; tone?: "sky" | "emerald" }>>({});
@@ -567,6 +575,30 @@ export function WhatsAppAccountDashboard() {
     }
   }
 
+  async function handleRecoverContacts(accountId: string, label: string) {
+    setRecoveringContactsAccountId(accountId);
+    setRecoverySummary(null);
+    setNotice(null);
+
+    try {
+      const result = await recoverWhatsAppContacts(accountId, { limit: 100, dryRun: false });
+      setRecoverySummary(result.summary);
+      setAccountActivityNotice((current) => ({
+        ...current,
+        [accountId]: {
+          title: "Contact Recovery",
+          detail: `${result.summary.recovered} restored, ${result.summary.profilePictureJobsQueued} profile jobs queued, ${result.summary.sentToRepairQueue} sent to repair queue.`,
+          tone: "emerald"
+        }
+      }));
+      setNotice(`Contact recovery complete for "${label}".`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to recover WhatsApp contacts");
+    } finally {
+      setRecoveringContactsAccountId(null);
+    }
+  }
+
   async function handleDisconnectAccount(accountId: string, label: string) {
     if (!window.confirm(`Disconnect WhatsApp account "${label}"?`)) {
       return;
@@ -715,6 +747,50 @@ export function WhatsAppAccountDashboard() {
       </PopupOverlay>
 
       <PopupOverlay
+        open={Boolean(recoveryPopupAccount)}
+        onClose={() => {
+          setRecoveryPopupAccount(null);
+          setRecoverySummary(null);
+        }}
+        title="Recover WhatsApp Contacts"
+        panelClassName="max-w-md"
+      >
+        {recoveryPopupAccount ? (
+          <div className="workspace-form-panel space-y-4 p-4">
+            <p className="text-sm leading-6 text-text-soft">
+              This will scan incomplete WhatsApp contacts, restore last known names/numbers, use Baileys snapshots/history sync, verify known numbers, and queue profile picture recovery.
+            </p>
+
+            {recoverySummary ? (
+              <div className="grid gap-2 text-sm text-text sm:grid-cols-2">
+                <p>Contacts scanned: <strong>{recoverySummary.scanned}</strong></p>
+                <p>Names/numbers restored: <strong>{recoverySummary.recovered}</strong></p>
+                <p>Profile picture jobs queued: <strong>{recoverySummary.profilePictureJobsQueued}</strong></p>
+                <p>Sent to repair queue: <strong>{recoverySummary.sentToRepairQueue}</strong></p>
+                <p>Skipped/errors: <strong>{recoverySummary.skipped}/{recoverySummary.errors}</strong></p>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                disabled={recoveringContactsAccountId === recoveryPopupAccount.id}
+                onClick={() => setRecoveryPopupAccount(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={recoveringContactsAccountId === recoveryPopupAccount.id}
+                onClick={() => handleRecoverContacts(recoveryPopupAccount.id, recoveryPopupAccount.name)}
+              >
+                {recoveringContactsAccountId === recoveryPopupAccount.id ? "Recovering..." : "Start Recovery"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </PopupOverlay>
+
+      <PopupOverlay
         open={Boolean(editingAccount)}
         onClose={() => setEditingAccountId(null)}
         title="Edit WhatsApp account"
@@ -835,6 +911,7 @@ export function WhatsAppAccountDashboard() {
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
               const isBackfillingThisAccount = backfillingAccountId === account.id;
               const isSyncingContactsThisAccount = syncingContactsAccountId === account.id;
+              const isRecoveringThisAccount = recoveringContactsAccountId === account.id;
               const hasSyncJobStatus = Boolean(syncJobSnapshots[account.id] || syncJobRefreshKeys[account.id]);
               return (
                 <div key={account.id} className="grid gap-4 px-4 py-4 text-text lg:grid-cols-[minmax(120px,1fr)_minmax(112px,0.85fr)_minmax(138px,0.95fr)_minmax(230px,1.4fr)_minmax(240px,1.45fr)] lg:items-center lg:gap-3">
@@ -953,6 +1030,19 @@ export function WhatsAppAccountDashboard() {
                           >
                             <BookUser className="h-3.5 w-3.5" />
                             {isSyncingContactsThisAccount ? "Syncing contacts..." : "Sync Contacts"}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
+                            disabled={isWorking || isRecoveringThisAccount}
+                            onClick={() => {
+                              setRecoverySummary(null);
+                              setRecoveryPopupAccount({ id: account.id, name: account.name });
+                            }}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            {isRecoveringThisAccount ? "Recovering..." : "Recover WhatsApp Contacts"}
                           </Button>
                           <Button variant="secondary" size="sm" className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"} disabled={isWorking} onClick={() => beginEditAccount(account)}>
                             <RefreshCw className="h-3.5 w-3.5" />
