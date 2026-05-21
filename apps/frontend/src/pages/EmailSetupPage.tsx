@@ -39,6 +39,11 @@ type Notice = {
   message: string;
 };
 
+type RowFeedback = {
+  tone: "success" | "error" | "info";
+  message: string;
+};
+
 function buildDefaultForm(senderType: EmailSenderType): SenderSetupForm {
   if (senderType === "gmail") {
     return {
@@ -264,6 +269,7 @@ export function EmailSetupPage() {
   const isEmailAccessEnabled = outletContext.isSuperAdmin ? true : emailModuleStatus.data?.isEnabled === true;
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [rowFeedback, setRowFeedback] = useState<Record<string, RowFeedback>>({});
   const [forms, setForms] = useState<Record<EmailSenderType, SenderSetupForm>>({
     microsoft365: buildDefaultForm("microsoft365"),
     gmail: buildDefaultForm("gmail"),
@@ -338,6 +344,13 @@ export function EmailSetupPage() {
       testEmailSender({ senderId: input.senderId, organizationId, to_email: input.toEmail }),
     onSuccess: (result, variables) => {
       setNotice({ tone: "success", message: result.result.message || "Test email sent successfully." });
+      setRowFeedback((current) => ({
+        ...current,
+        [variables.senderId]: {
+          tone: "success",
+          message: "Test sent. Sender is verified and ready to use."
+        }
+      }));
       setForms((current) => ({
         ...current,
         [variables.senderType]: {
@@ -347,8 +360,16 @@ export function EmailSetupPage() {
       }));
       void queryClient.invalidateQueries({ queryKey: ["email-campaigns", "senders", organizationId] });
     },
-    onError: (error) => {
-      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Unable to test sender." });
+    onError: (error, variables) => {
+      const message = error instanceof Error ? error.message : "Unable to test sender.";
+      setNotice({ tone: "error", message });
+      setRowFeedback((current) => ({
+        ...current,
+        [variables.senderId]: {
+          tone: "error",
+          message
+        }
+      }));
     }
   });
 
@@ -391,11 +412,26 @@ export function EmailSetupPage() {
     const toEmail = quickTestEmails[sender.id]?.trim() || forms[sender.sender_type].testEmail.trim();
 
     if (!toEmail) {
-      setNotice({ tone: "error", message: "Enter a test email before running sender test." });
+      const message = "Enter a recipient email in Quick Test first.";
+      setNotice({ tone: "error", message });
+      setRowFeedback((current) => ({
+        ...current,
+        [sender.id]: {
+          tone: "error",
+          message
+        }
+      }));
       return;
     }
 
     loadSender(sender);
+    setRowFeedback((current) => ({
+      ...current,
+      [sender.id]: {
+        tone: "info",
+        message: "Sending test email..."
+      }
+    }));
     testSenderMutation.mutate({ senderType: sender.sender_type, senderId: sender.id, toEmail });
   }
 
@@ -494,7 +530,7 @@ export function EmailSetupPage() {
 
       <Card elevated className="space-y-4 p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <SectionIntro eyebrow="Sender Inventory" title="Configured Senders" description="Each row stays organization-scoped, shows only masked configuration, and supports edit, test, and disable actions." />
+          <SectionIntro eyebrow="Sender Inventory" title="Configured Senders" description="Each row stays organization-scoped, shows only masked configuration, and supports edit, test, and disable actions. Run a successful test to verify or re-enable a sender." />
           <div className="inline-flex items-center gap-2 border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
             <MailCheck size={14} />
             {verifiedSenders.length} Verified
@@ -521,11 +557,23 @@ export function EmailSetupPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sendersPagination.visibleItems.map((sender) => (
+                  {sendersPagination.visibleItems.map((sender) => {
+                    const feedback = rowFeedback[sender.id];
+                    const isTestingThisSender = testSenderMutation.isPending && testSenderMutation.variables?.senderId === sender.id;
+                    const quickTestEmail = quickTestEmails[sender.id] ?? "";
+                    const feedbackClass =
+                      feedback?.tone === "success"
+                        ? "text-success"
+                        : feedback?.tone === "error"
+                          ? "text-destructive"
+                          : "text-text-muted";
+
+                    return (
                     <tr key={sender.id}>
                       <td>
                         <div>
                           <p className="font-semibold text-text">{sender.display_name}</p>
+                          {sender.status === "disabled" ? <p className="mt-1 text-xs text-warning">Run a successful test to enable this sender again.</p> : null}
                           <p className="text-xs text-text-muted">{sender.from_name} · {sender.smtp_username_masked ?? "Username hidden"}</p>
                         </div>
                       </td>
@@ -539,23 +587,37 @@ export function EmailSetupPage() {
                         </div>
                       </td>
                       <td>
-                        <Input
-                          value={quickTestEmails[sender.id] ?? ""}
-                          onChange={(event) => setQuickTestEmails((current) => ({ ...current, [sender.id]: event.target.value }))}
-                          placeholder="qa@example.com"
-                        />
+                        <div className="space-y-2">
+                          <Input
+                            value={quickTestEmail}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setQuickTestEmails((current) => ({ ...current, [sender.id]: value }));
+                              setRowFeedback((current) => {
+                                const next = { ...current };
+                                delete next[sender.id];
+                                return next;
+                              });
+                            }}
+                            placeholder="qa@example.com"
+                          />
+                          {feedback ? <p className={`text-xs leading-5 ${feedbackClass}`}>{feedback.message}</p> : null}
+                        </div>
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="secondary" onClick={() => loadSender(sender)}>Edit</Button>
-                          <Button size="sm" variant="secondary" onClick={() => handleRowTest(sender)} disabled={testSenderMutation.isPending}>Test</Button>
+                          <Button size="sm" variant="secondary" onClick={() => handleRowTest(sender)} disabled={testSenderMutation.isPending}>
+                            {isTestingThisSender ? "Testing..." : sender.status === "disabled" ? "Test & Enable" : "Test"}
+                          </Button>
                           <Button size="sm" variant="danger" onClick={() => disableSenderMutation.mutate(sender.id)} disabled={disableSenderMutation.isPending || sender.status === "disabled"}>
                             <Ban size={14} /> Disable
                           </Button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
