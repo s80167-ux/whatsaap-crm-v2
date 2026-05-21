@@ -8,6 +8,7 @@ import { contactRoutes } from "../modules/contacts/contacts.routes.js";
 import { contactReliabilityRoutes } from "../modules/contactReliability/contactReliability.routes.js";
 import { campaignsRoutes } from "../modules/campaigns/campaigns.routes.js";
 import { emailCampaignRoutes } from "../modules/emailCampaigns/emailCampaigns.routes.js";
+import { microsoftEmailRoutes } from "../modules/emailCampaigns/microsoftEmail.routes.js";
 import { conversationRoutes } from "../modules/conversations/conversations.routes.js";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { exportRoutes } from "../modules/exports/exports.routes.js";
@@ -64,6 +65,7 @@ apiRouter.use((req, res, next) => {
 apiRouter.use("/inbox", inboxRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/campaigns", campaignsRoutes);
+apiRouter.use("/email", microsoftEmailRoutes);
 apiRouter.use("/email-campaigns", emailCampaignRoutes);
 apiRouter.use("/campaign-safety", campaignSafetyRoutes);
 apiRouter.use("/conversations", conversationRoutes);

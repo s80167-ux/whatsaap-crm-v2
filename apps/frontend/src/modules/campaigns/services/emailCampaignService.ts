@@ -1,7 +1,7 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
 
 export type EmailSenderType = "smtp" | "gmail" | "microsoft365";
-export type EmailSenderStatus = "draft" | "verified" | "failed" | "disabled";
+export type EmailSenderStatus = "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required";
 export type EmailCampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused" | "failed" | "cancelled";
 export type EmailRecipientStatus = "pending" | "skipped" | "sending" | "sent" | "failed" | "unsubscribed" | "bounced";
 export type EmailSuppressionReason = "unsubscribed" | "bounced" | "complaint" | "manual";
@@ -18,6 +18,11 @@ export type EmailSender = {
   smtp_port: number | null;
   smtp_secure: boolean;
   oauth_provider: string | null;
+  oauth_provider_user_id: string | null;
+  oauth_tenant_id: string | null;
+  oauth_token_expires_at: string | null;
+  oauth_scopes: string[] | null;
+  oauth_connected_at: string | null;
   status: EmailSenderStatus;
   last_test_status: string | null;
   last_test_error: string | null;
@@ -134,6 +139,19 @@ export type SaveEmailCampaignInput = {
   recipients?: Array<{ email: string; name?: string | null; contact_id?: string | null }>;
 };
 
+export type MicrosoftEmailStatus = {
+  connected: boolean;
+  account: {
+    id: string;
+    email: string;
+    display_name: string | null;
+    status: EmailSenderStatus;
+    connected_at: string | null;
+    token_expires_at: string | null;
+    last_error: string | null;
+  } | null;
+};
+
 function withOrgParams(path: string, organizationId?: string | null) {
   if (!organizationId) {
     return path;
@@ -165,6 +183,39 @@ export async function testEmailSender(input: { senderId: string; organizationId?
 
 export async function disableEmailSender(input: { senderId: string; organizationId?: string | null }) {
   const response = await apiDelete<{ data: EmailSender }>(withOrgParams(`/email-campaigns/senders/${input.senderId}`, input.organizationId));
+  return response.data;
+}
+
+export async function fetchMicrosoftEmailStatus(organizationId?: string | null) {
+  const response = await apiGet<{ data: MicrosoftEmailStatus }>(withOrgParams("/email/microsoft/status", organizationId));
+  return response.data;
+}
+
+export async function fetchMicrosoftAuthUrl(input: { organizationId?: string | null; redirectTo?: string | null }) {
+  const params = new URLSearchParams();
+  if (input.organizationId) params.set("organization_id", input.organizationId);
+  if (input.redirectTo) params.set("redirect_to", input.redirectTo);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiGet<{ url: string }>(`/email/microsoft/auth-url${suffix}`);
+}
+
+export async function disconnectMicrosoftEmail(input: { organizationId?: string | null; senderId?: string | null }) {
+  const response = await apiPost<{ data: MicrosoftEmailStatus["account"] }>("/email/microsoft/disconnect", {
+    organizationId: input.organizationId,
+    sender_id: input.senderId ?? null
+  });
+  return response.data;
+}
+
+export async function sendProviderTestEmail(input: { senderId: string; organizationId?: string | null; provider?: "microsoft" | "smtp" | "gmail" | "custom_smtp"; to_email: string; subject?: string | null; message?: string | null }) {
+  const response = await apiPost<{ data: { sender: EmailSender; result: { ok: boolean; message: string } } }>("/email/send-test", {
+    sender_id: input.senderId,
+    organizationId: input.organizationId,
+    provider: input.provider,
+    to_email: input.to_email,
+    subject: input.subject ?? null,
+    message: input.message ?? null
+  });
   return response.data;
 }
 

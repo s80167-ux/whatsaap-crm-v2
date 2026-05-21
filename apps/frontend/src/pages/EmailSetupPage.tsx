@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Ban, CheckCircle2, Mail, MailCheck, RefreshCw, Send, ShieldCheck } from "lucide-react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
@@ -11,9 +11,13 @@ import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { getStoredUser } from "../lib/auth";
 import {
   disableEmailSender,
+  disconnectMicrosoftEmail,
   fetchEmailSenders,
   fetchEmailSuppressionList,
+  fetchMicrosoftAuthUrl,
+  fetchMicrosoftEmailStatus,
   saveEmailSender,
+  sendProviderTestEmail,
   testEmailSender,
   type EmailSender,
   type EmailSenderStatus,
@@ -95,6 +99,7 @@ function buildDefaultForm(senderType: EmailSenderType): SenderSetupForm {
 function statusTone(status: EmailSenderStatus): "default" | "muted" | "success" | "warning" | "danger" {
   if (status === "verified") return "success";
   if (status === "failed") return "danger";
+  if (status === "expired" || status === "reconnect_required") return "danger";
   if (status === "disabled") return "warning";
   if (status === "draft") return "muted";
   return "default";
@@ -261,8 +266,83 @@ function SenderConfigCard(props: {
   );
 }
 
+function MicrosoftConfigCard(props: {
+  form: SenderSetupForm;
+  sender: EmailSender | null;
+  pending: boolean;
+  onChange: (next: SenderSetupForm) => void;
+  onConnect: () => void;
+  onTest: () => void;
+  onDisconnect: () => void;
+}) {
+  const isConnected = props.sender?.status === "verified" && props.sender.oauth_tokens_configured;
+  const requiresReconnect = props.sender?.status === "expired" || props.sender?.status === "reconnect_required" || (props.sender && !props.sender.oauth_tokens_configured);
+
+  return (
+    <Card elevated className="space-y-4 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <SectionIntro
+          eyebrow="Sender Setup"
+          title="Microsoft Outlook / Microsoft 365"
+          description="Connect Outlook.com or Microsoft 365 using Microsoft OAuth and Microsoft Graph sendMail."
+        />
+        <SenderStatusBadge status={props.sender?.status ?? "draft"} />
+      </div>
+      <div className="rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-sm leading-6 text-text-muted">
+        Microsoft no longer supports basic username/password SMTP for many Outlook and Microsoft 365 accounts. Please connect your Microsoft account securely using OAuth.
+      </div>
+
+      {isConnected ? (
+        <div className="rounded-lg border border-success/20 bg-success/5 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-success">Connected</p>
+              <p className="mt-2 text-sm font-semibold text-text">Connected as: {props.sender?.from_email}</p>
+              <p className="mt-1 text-sm text-text-muted">{props.sender?.display_name}</p>
+              <p className="mt-1 text-xs text-text-muted">Token expires: {formatDate(props.sender?.oauth_token_expires_at)}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={props.onConnect} disabled={props.pending}>
+                <RefreshCw size={16} /> Reconnect
+              </Button>
+              <Button variant="danger" onClick={props.onDisconnect} disabled={props.pending}>
+                <Ban size={16} /> Disconnect
+              </Button>
+            </div>
+          </div>
+          {props.sender?.last_test_error ? <p className="mt-3 text-xs text-destructive">{props.sender.last_test_error}</p> : null}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-background-tint p-4">
+          <p className="text-sm font-semibold text-text">{requiresReconnect ? "Reconnect Microsoft Account" : "No Microsoft account connected"}</p>
+          <p className="mt-1 text-sm leading-6 text-text-muted">
+            OAuth is required before a Microsoft sender can be saved as an active campaign sender. SMTP password fields are intentionally hidden for Microsoft.
+          </p>
+          <Button className="mt-3" onClick={props.onConnect} disabled={props.pending}>
+            <MailCheck size={16} /> {requiresReconnect ? "Reconnect Microsoft Account" : "Connect Microsoft Account"}
+          </Button>
+        </div>
+      )}
+
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <label>
+          <span className="workspace-label">Test Email</span>
+          <Input value={props.form.testEmail} onChange={(event) => props.onChange({ ...props.form, testEmail: event.target.value })} placeholder="qa@example.com" />
+        </label>
+        <Button variant="secondary" onClick={props.onTest} disabled={props.pending || !isConnected || !props.form.testEmail.trim()}>
+          <Send size={16} /> Send Test Email
+        </Button>
+      </div>
+      <p className="text-xs leading-5 text-text-muted">
+        Microsoft Graph sends as the connected mailbox. The CRM will not set a custom From address unless that mailbox grants send-as permission in a future phase.
+      </p>
+    </Card>
+  );
+}
+
 export function EmailSetupPage() {
   const outletContext = useOutletContext<DashboardOutletContext>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = getStoredUser();
   const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const emailModuleStatus = useCampaignEmailModuleStatus(null, !outletContext.isSuperAdmin);
@@ -287,6 +367,11 @@ export function EmailSetupPage() {
     queryFn: () => fetchEmailSuppressionList({ organizationId, limit: 1, offset: 0 }),
     enabled: Boolean(organizationId) && isEmailAccessEnabled
   });
+  const microsoftStatusQuery = useQuery({
+    queryKey: ["email-campaigns", "microsoft-status", organizationId],
+    queryFn: () => fetchMicrosoftEmailStatus(organizationId),
+    enabled: Boolean(organizationId) && isEmailAccessEnabled
+  });
 
   const senders = sendersQuery.data ?? [];
   const sendersPagination = usePanelPagination(senders);
@@ -298,6 +383,27 @@ export function EmailSetupPage() {
     };
   }, [senders]);
   const verifiedSenders = senders.filter((sender) => sender.status === "verified");
+
+  useEffect(() => {
+    const microsoftResult = searchParams.get("microsoft");
+    if (!microsoftResult) {
+      return;
+    }
+
+    if (microsoftResult === "connected") {
+      const email = searchParams.get("email");
+      setNotice({ tone: "success", message: email ? `Microsoft account connected as ${email}.` : "Microsoft account connected." });
+      void queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+    } else if (microsoftResult === "error") {
+      setNotice({ tone: "error", message: searchParams.get("message") || "Unable to connect Microsoft account." });
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("microsoft");
+    nextParams.delete("email");
+    nextParams.delete("message");
+    setSearchParams(nextParams, { replace: true });
+  }, [queryClient, searchParams, setSearchParams]);
 
   const saveSenderMutation = useMutation({
     mutationFn: (input: { senderType: EmailSenderType; form: SenderSetupForm }) =>
@@ -370,6 +476,51 @@ export function EmailSetupPage() {
           message
         }
       }));
+    }
+  });
+
+  const microsoftConnectMutation = useMutation({
+    mutationFn: () => fetchMicrosoftAuthUrl({ organizationId, redirectTo: "/setup/channels/email" }),
+    onSuccess: (result) => {
+      window.location.assign(result.url);
+    },
+    onError: (error) => {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Unable to start Microsoft connection." });
+    }
+  });
+
+  const microsoftDisconnectMutation = useMutation({
+    mutationFn: () => disconnectMicrosoftEmail({ organizationId, senderId: latestSenderByType.microsoft365?.id ?? microsoftStatusQuery.data?.account?.id ?? null }),
+    onSuccess: () => {
+      setNotice({ tone: "success", message: "Microsoft account disconnected." });
+      void queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+    },
+    onError: (error) => {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Unable to disconnect Microsoft account." });
+    }
+  });
+
+  const microsoftTestMutation = useMutation({
+    mutationFn: () => {
+      const senderId = latestSenderByType.microsoft365?.id ?? microsoftStatusQuery.data?.account?.id;
+      if (!senderId) {
+        throw new Error("Connect Microsoft account before sending a test email.");
+      }
+
+      return sendProviderTestEmail({
+        senderId,
+        organizationId,
+        provider: "microsoft",
+        to_email: forms.microsoft365.testEmail.trim(),
+        message: "This is a Microsoft Graph sender verification email from the CRM."
+      });
+    },
+    onSuccess: (result) => {
+      setNotice({ tone: "success", message: result.result.message || "Microsoft test email sent successfully." });
+      void queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+    },
+    onError: (error) => {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Unable to send Microsoft test email." });
     }
   });
 
@@ -458,14 +609,14 @@ export function EmailSetupPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Omni-Channel Setup</p>
             <h1 className="mt-3 section-title">Email Setup</h1>
-            <p className="section-copy mt-2 max-w-3xl">Configure organization-owned senders for Gmail, Microsoft 365, or custom SMTP. Send a test email first, then use verified senders from the email campaign flow.</p>
+            <p className="section-copy mt-2 max-w-3xl">Configure organization-owned senders for Microsoft Graph, Gmail SMTP, or custom SMTP. Send a test email first, then use verified senders from the email campaign flow.</p>
           </div>
           <div className="workspace-subtle p-4">
             <div className="flex items-center gap-2 text-primary">
               <ShieldCheck size={16} />
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">Sender configuration live</p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-text-muted">Passwords remain encrypted at rest and are never returned to the frontend.</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">SMTP passwords and OAuth tokens remain encrypted at rest and are never returned to the frontend.</p>
           </div>
         </div>
       </div>
@@ -477,18 +628,14 @@ export function EmailSetupPage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SenderConfigCard
-          title="Microsoft 365 / Corporate Email"
-          description="Use SMTP AUTH for Microsoft 365 or Outlook accounts in this MVP. OAuth and Graph transport are intentionally deferred."
-          helper="Corporate tenants may block SMTP AUTH. Your Microsoft 365 admin may need to enable authenticated SMTP for the sender account."
-          senderType="microsoft365"
+        <MicrosoftConfigCard
           form={forms.microsoft365}
           sender={latestSenderByType.microsoft365}
-          pending={saveSenderMutation.isPending || testSenderMutation.isPending}
+          pending={microsoftConnectMutation.isPending || microsoftDisconnectMutation.isPending || microsoftTestMutation.isPending || microsoftStatusQuery.isLoading}
           onChange={(next) => updateForm("microsoft365", next)}
-          onSave={() => saveSenderMutation.mutate({ senderType: "microsoft365", form: forms.microsoft365 })}
-          onTest={() => testSenderMutation.mutate({ senderType: "microsoft365", senderId: forms.microsoft365.senderId, toEmail: forms.microsoft365.testEmail.trim() })}
-          onReset={() => resetForm("microsoft365")}
+          onConnect={() => microsoftConnectMutation.mutate()}
+          onTest={() => microsoftTestMutation.mutate()}
+          onDisconnect={() => microsoftDisconnectMutation.mutate()}
         />
         <SenderConfigCard
           title="Gmail"
@@ -574,7 +721,7 @@ export function EmailSetupPage() {
                         <div>
                           <p className="font-semibold text-text">{sender.display_name}</p>
                           {sender.status === "disabled" ? <p className="mt-1 text-xs text-warning">Run a successful test to enable this sender again.</p> : null}
-                          <p className="text-xs text-text-muted">{sender.from_name} · {sender.smtp_username_masked ?? "Username hidden"}</p>
+                          <p className="text-xs text-text-muted">{sender.from_name} · {sender.sender_type === "microsoft365" ? "Microsoft OAuth" : sender.smtp_username_masked ?? "Username hidden"}</p>
                         </div>
                       </td>
                       <td>{senderTypeLabel(sender.sender_type)}</td>

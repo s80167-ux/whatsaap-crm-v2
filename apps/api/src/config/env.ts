@@ -70,7 +70,12 @@ const envSchema = z.object({
   META_REDIRECT_URI: z.string().url().optional(),
   META_GRAPH_API_VERSION: z.string().min(1).default("v20.0"),
   SOCIAL_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+  TOKEN_ENCRYPTION_SECRET: z.string().min(1).optional(),
   EMAIL_SECRET_KEY: z.string().min(1).optional(),
+  MICROSOFT_CLIENT_ID: z.string().min(1).optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().min(1).optional(),
+  MICROSOFT_REDIRECT_URI: z.string().url().optional(),
+  MICROSOFT_TENANT: z.string().min(1).default("common"),
   SOCIAL_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
   SOCIAL_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()

@@ -4,6 +4,7 @@ import { AppError } from "../lib/errors.js";
 import { decryptEmailSecret, encryptEmailSecret } from "../lib/emailSecretCrypto.js";
 import type { AuthUser } from "../types/auth.js";
 import { AuditLogService } from "./auditLogService.js";
+import { MicrosoftEmailService } from "./microsoftEmailService.js";
 
 type EmailSenderRow = {
   id: string;
@@ -20,9 +21,14 @@ type EmailSenderRow = {
   smtp_password_encrypted: string | null;
   oauth_provider: string | null;
   oauth_account_email: string | null;
+  oauth_provider_user_id: string | null;
+  oauth_tenant_id: string | null;
   oauth_access_token_encrypted: string | null;
   oauth_refresh_token_encrypted: string | null;
-  status: "draft" | "verified" | "failed" | "disabled";
+  oauth_token_expires_at: string | null;
+  oauth_scopes: string[] | null;
+  oauth_connected_at: string | null;
+  status: "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required";
   last_test_status: string | null;
   last_test_error: string | null;
   last_test_at: string | null;
@@ -140,8 +146,8 @@ function normalizeSenderInput(input: Partial<CreateEmailSenderInput>) {
 
   if (senderType === "microsoft365") {
     return {
-      smtpHost: input.smtpHost?.trim() || "smtp.office365.com",
-      smtpPort: input.smtpPort ?? 587,
+      smtpHost: null,
+      smtpPort: null,
       smtpSecure: input.smtpSecure ?? false
     };
   }
@@ -173,7 +179,10 @@ function sanitizeProviderError(error: unknown) {
 }
 
 export class EmailSenderService {
-  constructor(private readonly auditLogService = new AuditLogService()) {}
+  constructor(
+    private readonly auditLogService = new AuditLogService(),
+    private readonly microsoftEmailService = new MicrosoftEmailService()
+  ) {}
 
   async listSenders(user: AuthUser, input?: { organizationId?: string | null }) {
     ensureReadAccess(user);
@@ -218,6 +227,14 @@ export class EmailSenderService {
     const normalized = normalizeSenderInput(input);
     const fromEmail = validateEmailAddress(input.fromEmail, "from_email");
     const replyToEmail = input.replyToEmail ? validateEmailAddress(input.replyToEmail, "reply_to_email") : null;
+
+    if (input.senderType === "microsoft365") {
+      throw new AppError(
+        "Microsoft senders must be connected with Microsoft OAuth. Click Connect Microsoft Account instead.",
+        400,
+        "microsoft_oauth_required"
+      );
+    }
 
     if (!input.displayName.trim()) {
       throw new AppError("display_name is required", 400, "email_sender_display_name_required");
@@ -304,6 +321,21 @@ export class EmailSenderService {
     const organizationId = resolveOrganizationId(user, input.organizationId);
     const existing = await this.getSenderForUse({ organizationId, senderId: input.senderId });
     const senderType = input.senderType ?? existing.sender_type;
+
+    if (senderType === "microsoft365") {
+      if (!existing.oauth_refresh_token_encrypted) {
+        throw new AppError(
+          "Microsoft senders must be connected with Microsoft OAuth. Click Connect Microsoft Account instead.",
+          400,
+          "microsoft_oauth_required"
+        );
+      }
+
+      if (input.smtpPassword || input.smtpUsername || input.smtpHost || input.smtpPort) {
+        throw new AppError("Microsoft sender settings cannot use SMTP username or password.", 400, "microsoft_smtp_not_supported");
+      }
+    }
+
     const normalized = normalizeSenderInput({ ...input, senderType });
     const fromEmail = input.fromEmail ? validateEmailAddress(input.fromEmail, "from_email") : existing.from_email;
     const replyToEmail =
@@ -509,6 +541,11 @@ export class EmailSenderService {
       smtp_port: row.smtp_port,
       smtp_secure: row.smtp_secure,
       oauth_provider: row.oauth_provider,
+      oauth_provider_user_id: row.oauth_provider_user_id,
+      oauth_tenant_id: row.oauth_tenant_id,
+      oauth_token_expires_at: row.oauth_token_expires_at,
+      oauth_scopes: row.oauth_scopes,
+      oauth_connected_at: row.oauth_connected_at,
       status: row.status,
       last_test_status: row.last_test_status,
       last_test_error: row.last_test_error,
@@ -531,6 +568,21 @@ export class EmailSenderService {
     text: string;
     replyTo?: string | null;
   }) {
+    if (input.sender.sender_type === "microsoft365") {
+      if (!input.sender.oauth_provider || !input.sender.oauth_refresh_token_encrypted) {
+        throw new AppError("Microsoft account needs to be reconnected.", 400, "microsoft_reconnect_required");
+      }
+
+      return this.microsoftEmailService.sendMicrosoftGraphEmail({
+        connectionId: input.sender.id,
+        to: [input.to],
+        subject: input.subject,
+        htmlBody: input.html,
+        textBody: input.text,
+        replyTo: input.replyTo ?? input.sender.reply_to_email ?? undefined
+      });
+    }
+
     const transport = this.buildTransport(input.sender);
 
     return transport.sendMail({
