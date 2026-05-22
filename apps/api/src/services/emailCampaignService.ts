@@ -5,6 +5,7 @@ import { query, withTransaction } from "../config/database.js";
 import { AppError } from "../lib/errors.js";
 import type { AuthUser } from "../types/auth.js";
 import { AuditLogService } from "./auditLogService.js";
+import { mapFriendlySmtpError } from "./emailSmtpErrorMapper.js";
 import { EmailSenderService } from "./emailSenderService.js";
 
 type EmailCampaignRow = {
@@ -143,11 +144,7 @@ function stripHtml(value: string) {
 }
 
 function sanitizeProviderError(error: unknown) {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
-  }
-
-  return "Unable to send email.";
+  return mapFriendlySmtpError(error);
 }
 
 function buildUnsubscribeFooter(unsubscribeLink: string) {
@@ -971,21 +968,21 @@ export class EmailCampaignService {
         await this.refreshCampaignCompletion(client, recipient.organization_id, recipient.campaign_id);
       });
     } catch (error) {
-      const errorMessage = sanitizeProviderError(error);
+      const mappedError = sanitizeProviderError(error);
 
       await withTransaction(async (client) => {
         await client.query(
           `
             update email_campaign_recipients
             set status = 'failed',
-                failure_code = 'provider_error',
+                failure_code = $6,
                 failure_reason = $4,
                 unsubscribe_token_id = $5
             where organization_id = $1
               and campaign_id = $2
               and id = $3
           `,
-          [recipient.organization_id, recipient.campaign_id, recipient.id, errorMessage, unsubscribeToken.id]
+          [recipient.organization_id, recipient.campaign_id, recipient.id, mappedError.friendlyMessage, unsubscribeToken.id, mappedError.errorCode]
         );
 
         await client.query(
@@ -1000,7 +997,7 @@ export class EmailCampaignService {
               error_message
             ) values ($1, $2, $3, $4, 'failed', null, $5)
           `,
-          [recipient.organization_id, recipient.campaign_id, recipient.id, sender.id, errorMessage]
+          [recipient.organization_id, recipient.campaign_id, recipient.id, sender.id, mappedError.friendlyMessage]
         );
 
         await this.refreshCampaignCompletion(client, recipient.organization_id, recipient.campaign_id);

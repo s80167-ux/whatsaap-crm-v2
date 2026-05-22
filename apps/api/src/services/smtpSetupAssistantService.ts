@@ -1,6 +1,7 @@
 import { promises as dns } from "node:dns";
 import nodemailer from "nodemailer";
 import { AppError } from "../lib/errors.js";
+import { mapFriendlySmtpError, normalizeGmailAppPassword } from "./emailSmtpErrorMapper.js";
 
 type SmtpSecurity = "STARTTLS" | "SSL" | "NONE";
 
@@ -23,6 +24,7 @@ type DetectionResult = {
 };
 
 type TestConfigInput = SmtpConfigSuggestion & {
+  provider?: "gmail_app_password" | "custom_smtp";
   smtpPassword: string;
   fromEmail: string;
   fromName: string;
@@ -32,7 +34,7 @@ type TestConfigInput = SmtpConfigSuggestion & {
 };
 
 const MICROSOFT_UNSUPPORTED_MESSAGE =
-  "Microsoft Outlook / Microsoft 365 is not supported in this MVP. Please use Gmail App Password or a Custom SMTP provider.";
+  "Microsoft Outlook / Microsoft 365 is not supported in this MVP. Please use Gmail App Password or another SMTP provider.";
 
 function validateEmailAddress(email: string, fieldName: string) {
   const trimmed = email.trim().toLowerCase();
@@ -145,39 +147,29 @@ function detectFromMx(input: { email: string; domain: string; mxHosts: string[] 
     };
   }
 
+  if (hasAny(mxText, ["secureserver.net", "emailsrvr.com", "mailchannels.net", "websitewelcome.com", "cpanel"])) {
+    return {
+      domain: input.domain,
+      detectedProvider: "cpanel_generic",
+      providerLabel: "cPanel / Generic Hosting",
+      confidence: 0.7,
+      suggestedConfig: fallback[0],
+      alternativeConfigs: fallback.slice(1),
+      notes: ["This looks like hosting email. If one setting fails, try the alternatives from your hosting control panel."],
+      unsupported: false
+    };
+  }
+
   return {
     domain: input.domain,
     detectedProvider: "generic_smtp",
-    providerLabel: "Custom SMTP",
+    providerLabel: "Unknown Provider",
     confidence: input.mxHosts.length > 0 ? 0.45 : 0.25,
     suggestedConfig: fallback[0],
     alternativeConfigs: fallback.slice(1),
     notes: ["Provider could not be identified from MX records. Try the suggestions below or use Advanced Manual Setup."],
     unsupported: false
   };
-}
-
-function mapSmtpError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  const lower = message.toLowerCase();
-
-  if (lower.includes("auth") || lower.includes("invalid login") || lower.includes("username") || lower.includes("password")) {
-    return { code: "AUTH_FAILED", message: "Authentication failed. Check the SMTP username and app password." };
-  }
-
-  if (lower.includes("certificate") || lower.includes("tls") || lower.includes("ssl")) {
-    return { code: "TLS_FAILED", message: "TLS/SSL negotiation failed. Check the selected security mode and port." };
-  }
-
-  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) {
-    return { code: "TIMEOUT", message: "SMTP connection timed out. Check the host, port, or firewall." };
-  }
-
-  if (lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("econnreset") || lower.includes("network")) {
-    return { code: "CONNECTION_FAILED", message: "Could not connect to the SMTP server. Check host and port." };
-  }
-
-  return { code: "UNKNOWN_ERROR", message: "Unable to verify SMTP settings. Check the provider settings and try again." };
 }
 
 export class SmtpSetupAssistantService {
@@ -196,7 +188,7 @@ export class SmtpSetupAssistantService {
       return {
         domain,
         detectedProvider: "generic_smtp",
-        providerLabel: "Custom SMTP",
+        providerLabel: "Unknown Provider",
         confidence: 0.2,
         suggestedConfig: alternatives[0],
         alternativeConfigs: alternatives.slice(1),
@@ -210,7 +202,9 @@ export class SmtpSetupAssistantService {
     const fromEmail = validateEmailAddress(input.fromEmail, "from_email");
     const toEmail = validateEmailAddress(input.toEmail, "to_email");
 
-    if (!input.smtpPassword.trim()) {
+    const smtpPassword = input.provider === "gmail_app_password" ? normalizeGmailAppPassword(input.smtpPassword) : input.smtpPassword.trim();
+
+    if (!smtpPassword) {
       throw new AppError("SMTP password or app password is required", 400, "smtp_password_required");
     }
 
@@ -222,7 +216,7 @@ export class SmtpSetupAssistantService {
       ignoreTLS: input.security === "NONE",
       auth: {
         user: input.smtpUsername.trim(),
-        pass: input.smtpPassword
+        pass: smtpPassword
       }
     });
 
@@ -240,10 +234,21 @@ export class SmtpSetupAssistantService {
         });
       }
 
-      return { ok: true, message: `SMTP settings verified${input.sendEmail === false ? "." : ` and test email sent to ${toEmail}.`}` };
+      return {
+        ok: true,
+        errorCode: null,
+        friendlyMessage: null,
+        message: input.sendEmail === false ? "SMTP settings verified." : `Test email sent successfully to ${toEmail}.`
+      };
     } catch (error) {
-      const mapped = mapSmtpError(error);
-      throw new AppError(mapped.message, 400, mapped.code);
+      const mapped = mapFriendlySmtpError(error);
+      throw new AppError(mapped.friendlyMessage, 400, mapped.errorCode, {
+        errorCode: mapped.errorCode,
+        friendlyMessage: mapped.friendlyMessage,
+        title: mapped.title,
+        explanation: mapped.explanation,
+        nextActions: mapped.nextActions
+      });
     }
   }
 }

@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type ToastProps = {
   message: string | null;
@@ -7,6 +8,8 @@ type ToastProps = {
 };
 
 export function Toast({ message, onClose, variant = "success" }: ToastProps) {
+  const { t } = useTranslation();
+
   if (!message) {
     return null;
   }
@@ -25,7 +28,7 @@ export function Toast({ message, onClose, variant = "success" }: ToastProps) {
         <button
           type="button"
           className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-current opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
-          aria-label="Close notification"
+          aria-label={t("common.closeNotification")}
           onClick={onClose}
         >
           <X size={14} aria-hidden="true" />

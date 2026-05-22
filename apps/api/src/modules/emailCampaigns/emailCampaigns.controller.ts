@@ -26,7 +26,7 @@ const tokenParamsSchema = z.object({ token: z.string().min(8) });
 
 const senderBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
-  sender_type: z.enum(["custom_smtp", "gmail_app_password", "smtp", "gmail", "microsoft365", "microsoft"]),
+  sender_type: z.enum(["custom_smtp", "gmail_app_password", "smtp", "gmail", "microsoft365", "microsoft", "outlook", "office365"]),
   display_name: z.string().trim().min(1).max(160),
   from_name: z.string().trim().min(1).max(160),
   from_email: z.string().trim().email().max(254),
@@ -189,6 +189,14 @@ export async function disableSender(request: Request, response: Response) {
   const { senderId } = senderParamsSchema.parse(request.params);
   const queryInput = organizationQuerySchema.parse(request.query);
   const data = await senderService.disableSender(auth, { senderId, organizationId: queryInput.organization_id ?? null }, getRequestAuditContext(request));
+  return response.json({ data });
+}
+
+export async function deleteSender(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { senderId } = senderParamsSchema.parse(request.params);
+  const queryInput = organizationQuerySchema.parse(request.query);
+  const data = await senderService.deleteSender(auth, { senderId, organizationId: queryInput.organization_id ?? null }, getRequestAuditContext(request));
   return response.json({ data });
 }
 

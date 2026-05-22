@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownAZ, Clock3, Search, Wrench, ChevronDown, MessageCircle, Phone, X } from "lucide-react";
@@ -334,6 +335,7 @@ function CompactRepairTools({
 }
 
 export function ContactsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobileViewport();
@@ -674,7 +676,7 @@ export function ContactsPage() {
       <Card elevated className="workspace-block min-w-0">
         <div className={isMobile ? "space-y-3" : "workspace-page-header"}>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Contacts</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{t("contacts.title")}</p>
             <h2 className={isMobile ? "mt-2 text-[1.7rem] font-semibold tracking-tight text-text" : "mt-3 section-title"}>
               Canonical customer records
             </h2>
@@ -699,7 +701,7 @@ export function ContactsPage() {
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-0 w-full sm:min-w-[300px] sm:w-auto">
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Search contact</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{t("contacts.searchContact")}</p>
               <div className="flex h-10 items-stretch border border-border bg-background-tint">
                 <div className="flex items-center px-3 text-text-soft">
                   <Search size={15} aria-hidden="true" />
@@ -707,7 +709,7 @@ export function ContactsPage() {
                 <Input
                   value={contactSearch}
                   onChange={(event) => setContactSearch(event.target.value)}
-                  placeholder="Name or phone"
+                  placeholder={t("contacts.nameOrPhone")}
                   className="h-full border-0 bg-transparent px-0 py-0 text-sm focus:ring-0"
                 />
               </div>
@@ -730,7 +732,7 @@ export function ContactsPage() {
             </div>
 
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Sort</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{t("inbox.sort")}</p>
               <div className="grid h-10 grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/80 shadow-soft">
                 <button
                   type="button"
@@ -762,22 +764,22 @@ export function ContactsPage() {
             </div>
           </div>
 
-          <p className="text-sm text-text-muted">{visibleContacts.length} of {contacts.length} contacts</p>
+          <p className="text-sm text-text-muted">{t("contacts.count", { visible: visibleContacts.length, total: contacts.length })}</p>
         </div>
 
         {isMobile ? (
           <div className="mt-6 space-y-3">
             {isLoading ? (
               <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
-                Loading contacts...
+                {t("contacts.loading")}
               </div>
             ) : contactsIsError ? (
               <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-8 text-sm text-destructive">
-                {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
+                {contactsError instanceof Error ? contactsError.message : t("contacts.unableLoad")}
               </div>
             ) : visibleContacts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
-                {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
+                {contactSearch.trim() ? t("contacts.noMatch") : t("contacts.empty")}
               </div>
             ) : (
               contactsPagination.visibleItems.map((contact) => {
@@ -949,19 +951,19 @@ export function ContactsPage() {
                 {isLoading ? (
                   <tr>
                     <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 6 : 5}>
-                      Loading contacts...
+                      {t("contacts.loading")}
                     </td>
                   </tr>
                 ) : contactsIsError ? (
                   <tr>
                     <td className="text-sm text-destructive" colSpan={canAssignContacts ? 6 : 5}>
-                      {contactsError instanceof Error ? contactsError.message : "Unable to load contacts."}
+                      {contactsError instanceof Error ? contactsError.message : t("contacts.unableLoad")}
                     </td>
                   </tr>
                 ) : visibleContacts.length === 0 ? (
                   <tr>
                     <td className="text-sm text-text-muted" colSpan={canAssignContacts ? 6 : 5}>
-                      {contactSearch.trim() ? "No contacts match your search." : "No contacts found."}
+                      {contactSearch.trim() ? t("contacts.noMatch") : t("contacts.empty")}
                     </td>
                   </tr>
                 ) : (
@@ -1194,7 +1196,7 @@ export function ContactsPage() {
                 disabled={!canSendMessages || !canOpenWhatsAppComposer(activeContact, whatsappAccounts)}
               >
                 <MessageCircle size={16} aria-hidden="true" />
-                Send WhatsApp
+                {t("contacts.sendWhatsApp")}
               </Button>
             </div>
             <CompactRepairTools
@@ -1233,7 +1235,7 @@ export function ContactsPage() {
                   onClick={() => void handleSaveContactProfile()}
                   disabled={!canRepairContacts || isSavingContact}
                 >
-                  {isSavingContact ? "Saving..." : "Save profile"}
+                  {isSavingContact ? t("common.loading") : t("profile.saveProfile")}
                 </Button>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1335,7 +1337,7 @@ export function ContactsPage() {
           <div className="workspace-block w-full max-w-lg p-5 shadow-panel">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Send WhatsApp</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">{t("contacts.sendWhatsApp")}</p>
                 <p className="mt-2 truncate text-lg font-semibold text-text">
                   {composeContact.display_name ?? composeContact.primary_phone_normalized ?? "Unknown"}
                 </p>
@@ -1386,14 +1388,14 @@ export function ContactsPage() {
 
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <Button variant="ghost" onClick={closeCompose} disabled={isSendingContactMessage}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={() => void handleSendContactMessage()}
                 disabled={isSendingContactMessage || !composeAccountId || !composeText.trim()}
               >
                 <MessageCircle size={16} aria-hidden="true" />
-                {isSendingContactMessage ? "Sending..." : "Send message"}
+                {isSendingContactMessage ? t("common.loading") : t("contacts.sendMessage")}
               </Button>
             </div>
           </div>

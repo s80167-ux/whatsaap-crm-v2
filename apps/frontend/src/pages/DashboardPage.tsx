@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowRight, Bot, BriefcaseBusiness, ChevronDown, Medal, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
 
@@ -35,6 +36,7 @@ type TrendDay = {
 };
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const user = getStoredUser();
   const isMobile = useIsMobileViewport();
   const { data, isLoading } = useRoleDashboard();
@@ -43,10 +45,10 @@ export function DashboardPage() {
 
   const title =
     user?.role === "super_admin"
-      ? "Platform dashboard"
+      ? t("dashboard.platform")
       : user?.role === "org_admin" || user?.role === "manager"
-        ? "Organization dashboard"
-        : "My dashboard";
+        ? t("dashboard.organization")
+        : t("dashboard.mine");
 
   async function copyTimelineLink(input: {
     href?: string;
@@ -87,10 +89,10 @@ export function DashboardPage() {
         <>
           <Card elevated className="workspace-page-header p-5 sm:p-6">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">{t("dashboard.title")}</p>
               <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">{title}</h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
-                A clean operating view for conversations, pipeline progress, and daily revenue activity.
+                {t("dashboard.description")}
               </p>
             </div>
           </Card>
@@ -108,7 +110,7 @@ export function DashboardPage() {
       {data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
 
       {data?.sales?.trends?.length ? (
-        <CompactSection title="Recent daily buckets" eyebrow="Trend Drill-Down" summary="Click a bucket to open matching orders" defaultOpen={!isMobile}>
+        <CompactSection title={t("dashboard.recentDailyBuckets")} eyebrow={t("dashboard.trendDrillDown")} summary={t("dashboard.openMatchingOrders")} defaultOpen={!isMobile}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {data.sales.trends.map((point) => (
               <div
@@ -117,7 +119,7 @@ export function DashboardPage() {
               >
                 <Link to={appendSalesSection(point.href ?? "/sales", "timeline")}>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft">
-                    {point.metric === "won_revenue" ? "Won revenue" : "Created orders"}
+                    {point.metric === "won_revenue" ? t("dashboard.wonRevenue") : t("dashboard.createdOrders")}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-text">{point.label}</p>
                   <p className="mt-1 text-base font-semibold text-text">{String(point.value)}</p>
@@ -139,7 +141,7 @@ export function DashboardPage() {
                       })
                     }
                   >
-                    Copy link
+                    {t("dashboard.copyLink")}
                   </button>
                 </div>
               </div>
@@ -164,6 +166,7 @@ function SalesCommandCenter({
   operationalMetrics: DashboardMetric[];
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   const trendDays = buildTrendDays(sales.trends ?? []);
   const latestTrend = trendDays[trendDays.length - 1];
   const previousTrend = trendDays[trendDays.length - 2];
@@ -203,41 +206,41 @@ function SalesCommandCenter({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
                   <Target size={14} />
-                  Sales Command
+                  {t("dashboard.salesCommand")}
                 </span>
                 <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
                   {sales.title}
                 </span>
               </div>
-              <h2 className="mt-4 text-[2rem] font-semibold tracking-tight text-text sm:text-4xl">Today's Sales Command Center</h2>
+              <h2 className="mt-4 text-[2rem] font-semibold tracking-tight text-text sm:text-4xl">{t("dashboard.todaySalesCommand")}</h2>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
-                {title} focused on revenue, deal movement, team performance, and the next sales action.
+                {t("dashboard.salesCommandDescription", { title })}
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <HeroMetricCard
-                  label="Open Pipeline"
+                  label={t("dashboard.openPipeline")}
                   value={formatCompactCurrency(openValue)}
                   hint={`${openStage?.count ?? 0} open orders still being worked`}
                   tone="warning"
                   href="/sales?status=open"
                 />
                 <HeroMetricCard
-                  label="Won Revenue"
+                  label={t("dashboard.wonRevenue")}
                   value={formatCompactCurrency(wonValue)}
                   hint={`${wonStage?.count ?? 0} closed-won orders`}
                   tone="success"
                   href="/sales?status=closed_won"
                 />
                 <HeroMetricCard
-                  label="Conversion"
+                  label={t("dashboard.conversion")}
                   value={`${conversionRate}%`}
                   hint="Closed-won orders divided by all pipeline orders"
                   tone="primary"
                   href="/sales"
                 />
                 <HeroMetricCard
-                  label="Avg Won Order"
+                  label={t("dashboard.avgWonOrder")}
                   value={formatCompactCurrency(averageWon)}
                   hint="Revenue quality across converted orders"
                   tone="neutral"
@@ -249,12 +252,12 @@ function SalesCommandCenter({
             <div className="workspace-block bg-card/90 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Smart sales brief</p>
-                  <h3 className="mt-2 text-lg font-semibold text-text">What matters now</h3>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{t("dashboard.smartSalesBrief")}</p>
+                  <h3 className="mt-2 text-lg font-semibold text-text">{t("dashboard.whatMattersNow")}</h3>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                   <Bot size={13} />
-                  AI-ready
+                  {t("dashboard.aiReady")}
                 </span>
               </div>
               <div className="mt-4 space-y-3">
@@ -266,9 +269,9 @@ function SalesCommandCenter({
                 ))}
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <CommandLink to="/sales" label="Pipeline" icon={<BriefcaseBusiness size={15} />} />
-                <CommandLink to="/inbox/whatsapp" label="Inbox" icon={<MessageSquare size={15} />} />
-                <CommandLink to="/reports" label="Report" icon={<Sparkles size={15} />} />
+                <CommandLink to="/sales" label={t("dashboard.pipeline")} icon={<BriefcaseBusiness size={15} />} />
+                <CommandLink to="/inbox/whatsapp" label={t("nav.inbox")} icon={<MessageSquare size={15} />} />
+                <CommandLink to="/reports" label={t("dashboard.report")} icon={<Sparkles size={15} />} />
               </div>
             </div>
           </div>
@@ -279,11 +282,11 @@ function SalesCommandCenter({
         <Card elevated className="workspace-block p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Pipeline Health</p>
-              <h3 className="mt-1 text-lg font-semibold text-text">Deal stage pressure</h3>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">{t("dashboard.pipelineHealth")}</p>
+              <h3 className="mt-1 text-lg font-semibold text-text">{t("dashboard.dealStagePressure")}</h3>
             </div>
             <span className="rounded-full border border-border bg-background-tint px-3 py-1 text-xs font-semibold text-text-muted">
-              {pipelineTotal} orders
+              {t("dashboard.orders", { count: pipelineTotal })}
             </span>
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
@@ -321,13 +324,13 @@ function SalesCommandCenter({
         </Card>
 
         <Card elevated className="workspace-block p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Today's Signals</p>
-          <h3 className="mt-1 text-lg font-semibold text-text">Sales momentum</h3>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">{t("dashboard.todaysSignals")}</p>
+          <h3 className="mt-1 text-lg font-semibold text-text">{t("dashboard.salesMomentum")}</h3>
           <div className="mt-4 space-y-3">
-            <SignalRow label="Created today" value={String(latestTrend?.createdOrders ?? 0)} delta={createdChange} />
-            <SignalRow label="Won today" value={formatCompactCurrency(latestTrend?.wonRevenue ?? 0)} delta={wonChange} currency />
-            <SignalRow label="Lost orders" value={String(lostStage?.count ?? 0)} />
-            <SignalRow label="Attention list" value={String(attentionCount)} />
+            <SignalRow label={t("dashboard.createdToday")} value={String(latestTrend?.createdOrders ?? 0)} delta={createdChange} />
+            <SignalRow label={t("dashboard.wonToday")} value={formatCompactCurrency(latestTrend?.wonRevenue ?? 0)} delta={wonChange} currency />
+            <SignalRow label={t("dashboard.lostOrders")} value={String(lostStage?.count ?? 0)} />
+            <SignalRow label={t("dashboard.attentionList")} value={String(attentionCount)} />
           </div>
         </Card>
       </div>

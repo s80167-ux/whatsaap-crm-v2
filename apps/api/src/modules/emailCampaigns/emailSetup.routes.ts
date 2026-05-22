@@ -3,6 +3,7 @@ import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requireRole } from "../../middleware/authMiddleware.js";
 import {
   createSender,
+  deleteSender,
   disableSender,
   listSenders,
   testSender,
@@ -19,5 +20,6 @@ emailSetupRoutes.post("/smtp/test-config", asyncHandler(testSmtpConfig));
 emailSetupRoutes.get("/senders", asyncHandler(listSenders));
 emailSetupRoutes.post("/senders", asyncHandler(createSender));
 emailSetupRoutes.patch("/senders/:senderId", asyncHandler(updateSender));
+emailSetupRoutes.patch("/senders/:senderId/disable", asyncHandler(disableSender));
 emailSetupRoutes.post("/senders/:senderId/test", asyncHandler(testSender));
-emailSetupRoutes.delete("/senders/:senderId", asyncHandler(disableSender));
+emailSetupRoutes.delete("/senders/:senderId", asyncHandler(deleteSender));

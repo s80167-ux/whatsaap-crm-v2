@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
@@ -30,6 +31,7 @@ const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all
 const campaignListPageSize = 5;
 
 export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overview" | "create" | "history" }) {
+  const { t } = useTranslation();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const navigate = useNavigate();
   const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : null;
@@ -158,15 +160,14 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
       <Card elevated className="workspace-page-header p-5 sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Campaigns</p>
-            <h2 className="mt-3 section-title">WhatsApp Campaign</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{t("nav.campaigns")}</p>
+            <h2 className="mt-3 section-title">{t("campaign.whatsapp.title")}</h2>
             <p className="mt-2 max-w-2xl section-copy">
               Manage WhatsApp broadcasts, templates, audiences, and campaign history.
             </p>
           </div>
           <Button className="shrink-0 px-3 sm:px-5" onClick={() => navigate("/campaigns/whatsapp/create")}>
-            Create
-            <span className="hidden sm:inline"> Broadcast</span>
+            {t("campaign.create")}
           </Button>
         </div>
       </Card>
@@ -265,7 +266,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   <Input
                     value={campaignQuery}
                     onChange={(event) => setCampaignQuery(event.target.value)}
-                    placeholder="Search campaigns or audience"
+                    placeholder={t("campaign.searchPlaceholder")}
                     className="pl-9"
                   />
                 </label>
@@ -277,7 +278,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Campaign history</p>
                     <p className="mt-2 text-sm text-text-muted">Live campaign progress from paced dispatch.</p>
                   </div>
-                  <p className="shrink-0 text-xs font-semibold text-text-muted">{filteredCampaigns.length} shown</p>
+                  <p className="shrink-0 text-xs font-semibold text-text-muted">{t("campaign.shown", { count: filteredCampaigns.length })}</p>
                 </div>
                 <CampaignListTable
                   campaigns={visibleCampaigns}

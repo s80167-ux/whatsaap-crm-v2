@@ -10,6 +10,7 @@ const detectBodySchema = z.object({
 });
 
 const testConfigBodySchema = z.object({
+  provider: z.enum(["gmail_app_password", "custom_smtp"]).optional(),
   smtpHost: z.string().trim().min(1).max(255),
   smtpPort: z.coerce.number().int().positive().max(65535),
   security: z.enum(["STARTTLS", "SSL", "NONE"]),
@@ -44,6 +45,7 @@ export async function testSmtpConfig(request: Request, response: Response) {
     smtpHost: body.smtpHost,
     smtpPort: body.smtpPort,
     security: body.security,
+    provider: body.provider,
     smtpUsername: body.smtpUsername,
     smtpPassword: body.smtpPassword,
     fromEmail: body.fromEmail,

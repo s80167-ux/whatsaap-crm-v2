@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   AudioLines,
   Check,
@@ -258,6 +259,7 @@ export function ChatPanel({
   channelContext?: InboxChannelFilter;
   onOpenContact?: () => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const currentUser = getStoredUser();
@@ -1377,14 +1379,14 @@ export function ChatPanel({
               </Button>
             </div>
               <Button onClick={handleSend} disabled={isSocialConversation || isSending || (!text.trim() && !attachment)} className="h-11 w-full rounded-xl px-6 sm:min-w-[112px] sm:w-auto">
-              {isSending ? "Sending..." : isSocialConversation ? "Coming Soon" : "Send"}
+              {isSending ? t("common.loading") : isSocialConversation ? t("common.soon") : t("inbox.send")}
               </Button>
             </div>
           </div>
         </div>
         <p className="mt-2 text-xs leading-5 text-text-soft">
           {isMobile
-            ? "Tap Send to queue the message."
+            ? t("inbox.tapSend")
             : isSocialConversation
               ? `${getChannelContextLabel(conversation.channel as InboxChannelFilter)} replies are coming soon. Sending is paused for now.`
               : "Use Ctrl+Enter to send. Current outbound media path supports one attachment up to 4 MB through the live queue and connector flow."}
@@ -1484,7 +1486,7 @@ export function ChatPanel({
               ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => setTemplatePreview(null)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   className="px-3 py-2 text-xs"

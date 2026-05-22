@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
 import { Button } from "../../../components/Button";
@@ -69,6 +70,7 @@ export function CreateCampaignDrawer({
   organizationId?: string | null;
   onCampaignChanged?: () => void;
 }) {
+  const { t } = useTranslation();
   const [campaignName, setCampaignName] = useState("");
   const [senderWhatsAppAccountId, setSenderWhatsAppAccountId] = useState("");
   const [audienceGroupId, setAudienceGroupId] = useState("");
@@ -344,7 +346,7 @@ export function CreateCampaignDrawer({
     <PopupOverlay
       open={open}
       onClose={onClose}
-      title="Create Campaign"
+      title={t("campaign.create")}
       description="Set sender, audience, message template and sending tempo before launching the campaign."
       panelClassName="max-w-6xl"
     >
@@ -556,16 +558,16 @@ export function CreateCampaignDrawer({
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
-                {isSavingDraft ? "Saving..." : "Save Draft"}
+                {isSavingDraft ? t("common.loading") : t("campaign.saveDraft")}
               </Button>
               <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
-                {isSendingTest ? "Sending..." : "Send Test"}
+                {isSendingTest ? t("common.loading") : t("campaign.sendTest")}
               </Button>
               <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>
-                Schedule Later
+                {t("campaign.scheduleLater")}
               </Button>
               <Button disabled={startDisabled} onClick={() => void handleStartCampaign("Start Campaign")}>
-                {isStartingCampaign ? "Starting..." : "Start Campaign"}
+                {isStartingCampaign ? t("common.loading") : t("campaign.startCampaign")}
               </Button>
             </div>
           </section>

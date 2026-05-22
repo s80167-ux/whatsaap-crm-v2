@@ -1,7 +1,7 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
 
 export type EmailSenderType = "custom_smtp" | "gmail_app_password";
-export type EmailSenderStatus = "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required";
+export type EmailSenderStatus = "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required" | "deleted";
 export type SmtpSecurity = "STARTTLS" | "SSL" | "NONE";
 export type EmailCampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused" | "failed" | "cancelled";
 export type EmailRecipientStatus = "pending" | "skipped" | "sending" | "sent" | "failed" | "unsubscribed" | "bounced";
@@ -180,6 +180,11 @@ export async function testEmailSender(input: { senderId: string; organizationId?
 }
 
 export async function disableEmailSender(input: { senderId: string; organizationId?: string | null }) {
+  const response = await apiPatch<{ data: EmailSender }>(withOrgParams(`/email/senders/${input.senderId}/disable`, input.organizationId), {});
+  return response.data;
+}
+
+export async function deleteEmailSender(input: { senderId: string; organizationId?: string | null }) {
   const response = await apiDelete<{ data: EmailSender }>(withOrgParams(`/email/senders/${input.senderId}`, input.organizationId));
   return response.data;
 }
@@ -190,6 +195,7 @@ export async function detectSmtpSettings(input: { email: string }) {
 }
 
 export async function testSmtpConfig(input: {
+  provider?: EmailSenderType;
   smtpHost: string;
   smtpPort: number;
   security: SmtpSecurity;
@@ -201,7 +207,7 @@ export async function testSmtpConfig(input: {
   toEmail: string;
   sendEmail?: boolean;
 }) {
-  const response = await apiPost<{ data: { ok: boolean; message: string } }>("/email/smtp/test-config", input);
+  const response = await apiPost<{ data: { ok: boolean; message: string; errorCode: string | null; friendlyMessage: string | null } }>("/email/smtp/test-config", input);
   return response.data;
 }
 

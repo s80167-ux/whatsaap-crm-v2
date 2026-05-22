@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowDownAZ, ChevronLeft, Clock3, Info, Search } from "lucide-react";
 import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
@@ -82,6 +83,7 @@ function getConversationIdentityLabel(conversation?: Conversation) {
 }
 
 export function InboxPage({ channel = "all" }: InboxPageProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
   const location = useLocation();
@@ -222,7 +224,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
 
   useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);
 
-  const conversationCountLabel = `${visibleConversations.length} conversation${visibleConversations.length === 1 ? "" : "s"}`;
+  const conversationCountLabel = t("inbox.visibleConversations", { count: visibleConversations.length });
 
   useEffect(() => {
     if (isSuperAdmin && requestedOrganizationId && requestedOrganizationId !== selectedOrganizationId) {
@@ -279,11 +281,11 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
       <Card className="workspace-block grid h-[calc(100dvh-4.5rem)] min-h-[780px] grid-rows-[auto,minmax(0,1fr)] overflow-hidden max-h-[calc(100vh-4.5rem)]" elevated>
         <header className="pb-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">Queue</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary">{t("inbox.queue")}</p>
           <div className="mt-2 flex items-end justify-between gap-4">
             <div>
-              <h2 className="section-title">Work queue</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">{conversationCountLabel} visible</p>
+              <h2 className="section-title">{t("inbox.workQueue")}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{conversationCountLabel}</p>
             </div>
           </div>
           <div className="mt-3 space-y-2">
@@ -292,18 +294,18 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               <input
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Search contact, number, account, or message..."
+                placeholder={t("inbox.searchPlaceholderLong")}
                 className="input-base h-10 py-2 pl-10"
-                aria-label="Search conversations"
+                aria-label={t("inbox.searchAria")}
               />
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { key: "mine", label: "Mine", count: queueCounts.mine },
-                { key: "unread", label: "Unread", count: queueCounts.unread },
-                { key: "unassigned", label: "Unassigned", count: queueCounts.unassigned },
-                { key: "sales", label: "Sales", count: queueCounts.sales },
-                { key: "all", label: "All", count: queueCounts.all }
+                { key: "mine", label: t("inbox.mine"), count: queueCounts.mine },
+                { key: "unread", label: t("inbox.unread"), count: queueCounts.unread },
+                { key: "unassigned", label: t("inbox.unassigned"), count: queueCounts.unassigned },
+                { key: "sales", label: t("nav.sales"), count: queueCounts.sales },
+                { key: "all", label: t("inbox.all"), count: queueCounts.all }
               ].map((item) => (
                 <button
                   key={item.key}
@@ -320,7 +322,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                 </button>
               ))}
             </div>
-            <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sort</p>
+            <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("inbox.sort")}</p>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -346,17 +348,17 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                 onClick={() => setConversationSortMode("latest")}
               >
                 <Clock3 size={16} aria-hidden="true" />
-                Latest
+                {t("inbox.latest")}
               </button>
             </div>
           </div>
         </header>
         <div className="min-h-0 overflow-y-auto">
           {isLoading ? (
-            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">Loading conversations...</div>
+            <div className="flex min-h-[220px] items-center justify-center text-sm text-text-muted">{t("inbox.loadingConversations")}</div>
           ) : conversationsIsError ? (
             <div className="flex min-h-[220px] items-center justify-center px-6 text-center text-sm text-destructive">
-              {conversationsError instanceof Error ? conversationsError.message : "Unable to load conversations."}
+              {conversationsError instanceof Error ? conversationsError.message : t("inbox.unableLoad")}
             </div>
           ) : (
             <ConversationList

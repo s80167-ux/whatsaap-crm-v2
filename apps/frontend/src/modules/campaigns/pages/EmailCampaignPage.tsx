@@ -14,6 +14,7 @@ import {
   Sparkles,
   Upload,
   UserCheck,
+  Users,
   UserX,
   XCircle
 } from "lucide-react";
@@ -135,10 +136,54 @@ type CampaignFormState = {
   senderId: string;
   audienceGroupId: string;
   subject: string;
+  previewText: string;
   bodyHtml: string;
   bodyText: string;
   recipientsText: string;
   testEmail: string;
+};
+
+type EmailNextActionKey = "connect_sender" | "create_audience" | "create_email" | "run_compliance" | "create_campaign";
+
+type EmailDraftObjective = "promotion" | "announcement" | "follow_up" | "reminder" | "re_engagement";
+type EmailDraftTone = "professional" | "friendly" | "direct";
+
+type EmailDraftState = {
+  campaignName?: string;
+  subject?: string;
+  previewText?: string;
+  body?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  objective?: EmailDraftObjective;
+  tone?: EmailDraftTone;
+  businessName?: string;
+  offerDetails?: string;
+};
+
+type ComplianceCheckStatus = "pass" | "warning" | "fail" | "not_checked";
+
+type ComplianceCheck = {
+  key: string;
+  label: string;
+  description: string;
+  status: ComplianceCheckStatus;
+  fixAction?: string;
+};
+
+type EmailReadinessState = {
+  senderReady: boolean;
+  audienceReady: boolean;
+  draftReady: boolean;
+  complianceReady: boolean;
+  sendReady: boolean;
+  draftSubject?: string;
+  complianceChecks: ComplianceCheck[];
+  nextAction: {
+    key: EmailNextActionKey;
+    label: string;
+    description: string;
+  };
 };
 
 const defaultSenderForm: SenderFormState = {
@@ -156,12 +201,17 @@ const defaultSenderForm: SenderFormState = {
   testEmail: ""
 };
 
+const EMAIL_ONBOARDING_DISMISSED_KEY = "email_campaign_onboarding_dismissed";
+const EMAIL_ONBOARDING_COMPLETED_KEY = "email_campaign_onboarding_completed";
+const EMAIL_ONBOARDING_STARTED_SESSION_KEY = "email_campaign_onboarding_started_session";
+
 const defaultCampaignForm: CampaignFormState = {
   campaignId: "",
   name: "",
   senderId: "",
   audienceGroupId: "",
   subject: "",
+  previewText: "",
   bodyHtml: "",
   bodyText: "",
   recipientsText: "",
@@ -185,6 +235,16 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
   const [selectedReportCampaignId, setSelectedReportCampaignId] = useState("");
   const [recipientSearch, setRecipientSearch] = useState("");
   const [recipientStatusFilter, setRecipientStatusFilter] = useState("all");
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
+    typeof window === "undefined" ? false : window.localStorage.getItem(EMAIL_ONBOARDING_DISMISSED_KEY) === "true"
+  );
+  const [onboardingCompleted, setOnboardingCompleted] = useState(() =>
+    typeof window === "undefined" ? false : window.localStorage.getItem(EMAIL_ONBOARDING_COMPLETED_KEY) === "true"
+  );
+  const [onboardingStarted, setOnboardingStarted] = useState(() =>
+    typeof window === "undefined" ? false : window.sessionStorage.getItem(EMAIL_ONBOARDING_STARTED_SESSION_KEY) === "true"
+  );
 
   const isReady = Boolean(organizationId) && isEmailAccessEnabled;
 
@@ -254,7 +314,7 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
 
     return {
       totalCampaigns: campaigns.length,
-      activeCampaigns: campaigns.filter((campaign) => campaign.status === "sending" || campaign.status === "paused").length,
+      activeCampaigns: campaigns.filter((campaign) => ["draft", "scheduled", "sending"].includes(campaign.status)).length,
       verifiedSenders: senders.filter((sender) => sender.status === "verified").length,
       suppressedEmails: suppressionEntries.length,
       recipients: totals.recipients,
@@ -270,6 +330,22 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
     () => audienceGroups.filter((group) => group.status === "imported" && group.valid_count > 0),
     [audienceGroups]
   );
+  const complianceChecks = useMemo(
+    () =>
+      runEmailComplianceChecks({
+        campaignForm,
+        campaigns,
+        readyAudienceGroups,
+        selectedComposerCampaign,
+        senders,
+        suppressionLoaded: suppressionQuery.isSuccess
+      }),
+    [campaignForm, campaigns, readyAudienceGroups, selectedComposerCampaign, senders, suppressionQuery.isSuccess]
+  );
+  const readiness = useMemo(
+    () => computeEmailReadiness({ campaignForm, campaigns, complianceChecks, readyAudienceGroups, senders }),
+    [campaignForm, campaigns, complianceChecks, readyAudienceGroups, senders]
+  );
 
   useEffect(() => {
     if (!selectedReportCampaignId && campaigns.length > 0) {
@@ -277,12 +353,69 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
     }
   }, [campaigns, selectedReportCampaignId]);
 
+  useEffect(() => {
+    if (!isReady || onboardingDismissed || onboardingCompleted || onboardingStarted || readiness.sendReady) {
+      return;
+    }
+
+    setIsOnboardingOpen(true);
+  }, [isReady, onboardingCompleted, onboardingDismissed, onboardingStarted, readiness.sendReady]);
+
+  useEffect(() => {
+    if (!readiness.sendReady || onboardingCompleted || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(EMAIL_ONBOARDING_COMPLETED_KEY, "true");
+    setOnboardingCompleted(true);
+  }, [onboardingCompleted, readiness.sendReady]);
+
   function showNotice(type: Notice["type"], message: string) {
     setNotice({ type, message });
   }
 
   async function refreshAll() {
     await queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+  }
+
+  function handleNextAction(actionKey = readiness.nextAction.key) {
+    setIsOnboardingOpen(false);
+
+    if (actionKey === "connect_sender") {
+      navigate("/setup/channels/email");
+      return;
+    }
+
+    if (actionKey === "create_audience") {
+      navigate("/campaigns/email/audience");
+      return;
+    }
+
+    if (actionKey === "run_compliance") {
+      navigate("/campaigns/email/compliance");
+      return;
+    }
+
+    navigate("/campaigns/email/create");
+  }
+
+  function dismissOnboarding() {
+    if (typeof window !== "undefined") {
+      // TODO: migrate this local preference to user_onboarding_states with module_key = email_campaign.
+      window.localStorage.setItem(EMAIL_ONBOARDING_DISMISSED_KEY, "true");
+    }
+
+    setOnboardingDismissed(true);
+    setIsOnboardingOpen(false);
+  }
+
+  function startOnboardingSetup() {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(EMAIL_ONBOARDING_STARTED_SESSION_KEY, "true");
+    }
+
+    setOnboardingStarted(true);
+    handleNextAction();
   }
 
   const senderSaveMutation = useMutation({
@@ -431,15 +564,20 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <h2 className="section-title">Email Campaign</h2>
               <StatusBadge tone={isEmailAccessEnabled ? "success" : "muted"}>{isEmailAccessEnabled ? "MVP Live" : "Access Disabled"}</StatusBadge>
-              <StatusBadge tone="muted">Sender Setup + Draft + Reports</StatusBadge>
+              <StatusBadge tone="muted">Command Center</StatusBadge>
             </div>
             <p className="mt-2 max-w-3xl section-copy">
-              Reuses the existing campaign shell for SMTP sender setup, draft creation, suppression management, compliance checks, send reports, and audit history without duplicating the WhatsApp campaign flow.
+              Send newsletters, promotions and follow-ups using your own verified email address. Complete the setup once, then create and track campaigns easily.
             </p>
           </div>
-          <Button className="w-full shrink-0 px-3 sm:w-auto sm:px-5" variant="secondary" onClick={() => setNotice(null)} disabled={!isReady}>
-            <RefreshCw size={16} /> Refresh Workspace
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button className="w-full shrink-0 px-3 sm:w-auto sm:px-5" onClick={() => handleNextAction()} disabled={!isReady}>
+              {readiness.nextAction.label}
+            </Button>
+            <Button className="w-full shrink-0 px-3 sm:w-auto sm:px-5" variant="secondary" onClick={() => void refreshAll()} disabled={!isReady}>
+              <RefreshCw size={16} /> Refresh Workspace
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -459,8 +597,10 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
         <DisabledNotice isEmailAccessEnabled={isEmailAccessEnabled} />
       ) : (
         <>
+          <EmailReadinessPanel readiness={readiness} onAction={handleNextAction} onShowGuide={() => setIsOnboardingOpen(true)} />
           {renderActiveTab({
             activeTab,
+            readiness,
             stats,
             senders,
             campaigns,
@@ -532,6 +672,7 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
                 senderId: campaign.sender_id,
                 audienceGroupId: campaign.audience_group_id ?? "",
                 subject: campaign.subject,
+                previewText: "",
                 bodyHtml: campaign.body_html,
                 bodyText: campaign.body_text ?? "",
                 recipientsText: "",
@@ -546,9 +687,20 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
             },
             onGoToSetup() {
               navigate("/setup/channels/email");
+            },
+            onNextAction(actionKey) {
+              handleNextAction(actionKey);
             }
           })}
           <PlannedFlowCard />
+          <EmailOnboardingWizard
+            isOpen={isOnboardingOpen}
+            readiness={readiness}
+            onStart={startOnboardingSetup}
+            onSkip={dismissOnboarding}
+            onDontShowAgain={dismissOnboarding}
+            onClose={() => setIsOnboardingOpen(false)}
+          />
         </>
       )}
     </section>
@@ -557,6 +709,7 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
 
 function renderActiveTab(props: {
   activeTab: EmailCampaignTab;
+  readiness: EmailReadinessState;
   stats: { totalCampaigns: number; activeCampaigns: number; verifiedSenders: number; suppressedEmails: number; recipients: number; sent: number; failed: number; pending: number };
   senders: EmailSender[];
   campaigns: EmailCampaign[];
@@ -602,6 +755,7 @@ function renderActiveTab(props: {
   onResetCampaign: () => void;
   onRefresh: () => void;
   onGoToSetup: () => void;
+  onNextAction: (actionKey?: EmailNextActionKey) => void;
 }) {
   switch (props.activeTab) {
     case "create":
@@ -625,15 +779,212 @@ function renderActiveTab(props: {
   }
 }
 
-function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mutations, onGoToSetup }: Pick<Parameters<typeof renderActiveTab>[0], "stats" | "campaigns" | "senders" | "loading" | "onLoadCampaign" | "mutations" | "onGoToSetup">) {
+function EmailReadinessPanel({ readiness, onAction, onShowGuide }: { readiness: EmailReadinessState; onAction: (actionKey?: EmailNextActionKey) => void; onShowGuide: () => void }) {
+  const steps = [
+    {
+      key: "sender" as const,
+      icon: Mail,
+      title: "Sender",
+      done: readiness.senderReady,
+      status: readiness.senderReady ? "Verified" : "Not started",
+      helper: readiness.senderReady ? "At least one sender email is verified." : "Connect and verify the email address customers will see.",
+      action: "connect_sender" as EmailNextActionKey
+    },
+    {
+      key: "audience" as const,
+      icon: Users,
+      title: "Audience",
+      done: readiness.audienceReady,
+      status: readiness.audienceReady ? "Ready" : readiness.senderReady ? "Pending" : "Locked",
+      helper: readiness.audienceReady ? "An email audience is available." : "Create or import the people you want to email.",
+      action: "create_audience" as EmailNextActionKey
+    },
+    {
+      key: "draft" as const,
+      icon: FileText,
+      title: "Email Draft",
+      done: readiness.draftReady,
+      status: readiness.draftReady ? "Ready" : readiness.audienceReady ? "Pending" : "Locked",
+      helper: readiness.draftReady
+        ? readiness.draftSubject
+          ? `Draft ready: ${readiness.draftSubject}`
+          : "A draft or campaign already exists."
+        : "Write your first email campaign draft or use the draft helper to prepare a starter email.",
+      action: "create_email" as EmailNextActionKey,
+      extra: "Draft helper available"
+    },
+    {
+      key: "compliance" as const,
+      icon: ShieldCheck,
+      title: "Compliance",
+      done: readiness.complianceReady,
+      status: readiness.complianceReady
+        ? "Ready"
+        : !readiness.draftReady
+          ? "Locked"
+          : readiness.complianceChecks.some((check) => check.status === "fail" || check.status === "not_checked")
+            ? "Needs attention"
+            : "Warning",
+      helper: readiness.complianceReady ? "Sender, audience, unsubscribe footer and suppression rules are ready." : "Check sender, audience, unsubscribe footer and suppression rules before sending.",
+      action: "run_compliance" as EmailNextActionKey,
+      extra: "Rule-based check available"
+    },
+    {
+      key: "send" as const,
+      icon: Send,
+      title: "Send / Schedule",
+      done: readiness.sendReady,
+      status: readiness.sendReady ? "Ready" : "Locked",
+      helper: readiness.sendReady ? "You can send a test, start or schedule a campaign." : "Unlocked after sender, audience, draft and compliance are ready.",
+      action: "create_campaign" as EmailNextActionKey
+    }
+  ];
+
+  return (
+    <Card elevated className="space-y-4 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <SectionIntro
+          eyebrow="Email Command Center"
+          title="Setup Progress"
+          description="Follow the steps once, then use this workspace to create, send and track email campaigns."
+        />
+        <Button size="sm" variant="secondary" onClick={onShowGuide}>Show setup guide</Button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          const tone = step.done ? "success" : step.status === "Locked" ? "muted" : step.status === "Needs attention" || step.status === "Warning" ? "warning" : "default";
+
+          return (
+            <div key={step.key} className={`border p-3 ${step.done ? "border-success/20 bg-success/5" : "border-border bg-background-tint"}`}>
+              <div className="flex items-start justify-between gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/15 bg-card text-primary">
+                  <Icon size={17} />
+                </span>
+                <StatusBadge tone={tone}>{step.status}</StatusBadge>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-text">{step.title}</p>
+              <p className="mt-1 min-h-[44px] text-xs leading-5 text-text-muted">{step.helper}</p>
+              {step.extra ? <p className="mt-2 text-xs font-semibold text-primary">{step.extra}</p> : null}
+              {!step.done && step.status !== "Locked" ? (
+                <Button className="mt-3 w-full" size="sm" variant="secondary" onClick={() => onAction(step.action)}>
+                  {step.action === "connect_sender" ? "Connect Sender" : step.action === "create_audience" ? "Create Audience" : step.action === "run_compliance" ? "Run Check" : step.action === "create_email" ? "Create Draft" : "Start"}
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-col gap-3 border border-primary/15 bg-primary/5 p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-text">Next best action</p>
+          <p className="mt-1 text-sm leading-5 text-text-muted">{readiness.nextAction.description}</p>
+        </div>
+        <Button className="shrink-0" onClick={() => onAction(readiness.nextAction.key)}>{readiness.nextAction.label}</Button>
+      </div>
+    </Card>
+  );
+}
+
+function EmailOnboardingWizard({
+  isOpen,
+  readiness,
+  onClose,
+  onDontShowAgain,
+  onSkip,
+  onStart
+}: {
+  isOpen: boolean;
+  readiness: EmailReadinessState;
+  onClose: () => void;
+  onDontShowAgain: () => void;
+  onSkip: () => void;
+  onStart: () => void;
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  const steps = [
+    { title: "Connect Sender", helper: "Connect the email address your customers will see as the sender.", checked: readiness.senderReady },
+    { title: "Add Audience", helper: "Import contacts or select an existing customer segment.", checked: readiness.audienceReady },
+    { title: "Create Email", helper: "Write from scratch, use a template, or generate a starter draft with the helper.", checked: readiness.draftReady },
+    { title: "Run Compliance Check", helper: "Check unsubscribe link, sender identity and suppression list before sending.", checked: readiness.complianceReady },
+    { title: "Send Test / Schedule", helper: "Preview your email, send a test, then schedule or send.", checked: readiness.sendReady }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+      <div className="w-full max-w-2xl border border-border bg-card p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Setup Guide</p>
+            <h2 className="mt-2 text-xl font-semibold text-text">Welcome to Email Campaign</h2>
+            <p className="mt-2 text-sm leading-6 text-text-muted">Complete these steps once to start sending email campaigns safely.</p>
+          </div>
+          <Button size="icon" variant="ghost" aria-label="Close setup guide" onClick={onClose}><XCircle size={18} /></Button>
+        </div>
+        <div className="mt-5 grid gap-2">
+          {steps.map((step, index) => (
+            <div key={step.title} className="flex gap-3 border border-border bg-background-tint p-3">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${step.checked ? "border-success/30 bg-success/10 text-success" : "border-primary/20 bg-card text-primary"}`}>
+                {step.checked ? <CheckCircle2 size={15} /> : index + 1}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-text">{step.title}</p>
+                <p className="mt-1 text-xs leading-5 text-text-muted">{step.helper}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onDontShowAgain}>Don't show again</Button>
+          <Button variant="secondary" onClick={onSkip}>Skip for now</Button>
+          <Button onClick={onStart}>Start Setup</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmailCampaignEmptyState({ readiness, onAction }: { readiness: EmailReadinessState; onAction: (actionKey?: EmailNextActionKey) => void }) {
+  return (
+    <div className="border border-primary/15 bg-primary/5 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-text">No email campaigns yet</h3>
+          <p className="mt-2 text-sm leading-6 text-text-muted">Start by connecting your sender email, then create your first campaign.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <ReadinessMiniStatus label="Sender" ready={readiness.senderReady} readyText="Verified" notReadyText="Not ready" />
+            <ReadinessMiniStatus label="Audience" ready={readiness.audienceReady} readyText="Ready" notReadyText="Not ready" />
+            <ReadinessMiniStatus label="Compliance" ready={readiness.complianceReady} readyText="Ready" notReadyText="Pending" />
+          </div>
+        </div>
+        <Button className="shrink-0" onClick={() => onAction(readiness.nextAction.key)}>{readiness.nextAction.label}</Button>
+      </div>
+    </div>
+  );
+}
+
+function ReadinessMiniStatus({ label, notReadyText, ready, readyText }: { label: string; notReadyText: string; ready: boolean; readyText: string }) {
+  return (
+    <div className="border border-border bg-card p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">{label}</p>
+      <p className={`mt-1 text-sm font-semibold ${ready ? "text-success" : "text-warning"}`}>{ready ? readyText : notReadyText}</p>
+    </div>
+  );
+}
+
+function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mutations, onGoToSetup, readiness, onNextAction }: Pick<Parameters<typeof renderActiveTab>[0], "stats" | "campaigns" | "senders" | "loading" | "onLoadCampaign" | "mutations" | "onGoToSetup" | "readiness" | "onNextAction">) {
   const campaignPagination = usePanelPagination(campaigns);
   const verifiedSenders = senders.filter((sender) => sender.status === "verified");
   const overviewItems = [
-    { label: "Total Campaigns", value: String(stats.totalCampaigns) },
-    { label: "Active Campaigns", value: String(stats.activeCampaigns) },
-    { label: "Verified Senders", value: String(stats.verifiedSenders) },
-    { label: "Sent / Failed", value: `${stats.sent} / ${stats.failed}` }
+    { label: "Total Campaigns", value: String(stats.totalCampaigns), helper: "All email campaigns created" },
+    { label: "Active Campaigns", value: String(stats.activeCampaigns), helper: "Draft, scheduled or currently sending" },
+    { label: "Verified Senders", value: String(stats.verifiedSenders), helper: "Email addresses ready to send" },
+    { label: "Sent / Failed", value: `${stats.sent} / ${stats.failed}`, helper: "Delivery activity from completed sends" }
   ];
+  const allZero = overviewItems.every((item) => item.value === "0" || item.value === "0 / 0");
 
   return (
     <div className="space-y-4">
@@ -651,12 +1002,13 @@ function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mut
           <Card key={item.label} className="min-h-[88px] p-3 sm:min-h-[112px] sm:p-4" elevated>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft sm:text-[11px]">{item.label}</p>
             <p className="mt-2 text-xl font-semibold tracking-tight text-text sm:mt-3 sm:text-2xl">{item.value}</p>
-            <p className="mt-1 text-xs text-text-muted">Email module metric</p>
+            <p className="mt-1 text-xs text-text-muted">{item.helper}</p>
           </Card>
         ))}
       </div>
+      {allZero ? <p className="text-sm text-text-muted">Your email workspace is ready to be set up.</p> : null}
 
-      <Card elevated className="space-y-4 p-4 sm:p-5">
+      <Card elevated className="hidden">
         <SectionIntro
           eyebrow="Setup Progress"
           title="Email Campaign Setup Progress"
@@ -677,6 +1029,7 @@ function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mut
           </Button>
         </div>
         {loading.campaigns ? <EmptyState title="Loading campaigns" description="Fetching email campaign summary." /> : null}
+        {!loading.campaigns && campaigns.length === 0 ? <EmailCampaignEmptyState readiness={readiness} onAction={onNextAction} /> : null}
         <div className="workspace-table-wrap">
           <table className="workspace-table">
             <thead>
@@ -693,7 +1046,7 @@ function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mut
             <tbody>
               {campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={7}><EmptyTableCell title="No email campaigns yet" description="Create a sender first, then save an email draft." /></td>
+                  <td colSpan={7}><EmptyTableCell title="No email campaigns yet" description="Start from the guided setup card above, then your campaign drafts and sends will appear here." /></td>
                 </tr>
               ) : (
                 campaignPagination.visibleItems.map((campaign) => (
@@ -713,7 +1066,7 @@ function OverviewPanel({ stats, campaigns, senders, loading, onLoadCampaign, mut
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="secondary" onClick={() => onLoadCampaign(campaign)}>Edit</Button>
                         {campaign.status === "draft" || campaign.status === "paused" ? (
-                          <Button size="sm" onClick={() => mutations.startCampaign.mutate(campaign.id)} disabled={mutations.startCampaign.isPending}>
+                          <Button size="sm" onClick={() => mutations.startCampaign.mutate(campaign.id)} disabled={mutations.startCampaign.isPending || !readiness.sendReady}>
                             <Play size={14} /> Start
                           </Button>
                         ) : null}
@@ -795,9 +1148,17 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
   );
 }
 
-function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienceGroups, campaigns, selectedComposerCampaign, mutations, onLoadCampaign, onResetCampaign, onGoToSetup }: Pick<Parameters<typeof renderActiveTab>[0], "campaignForm" | "setCampaignForm" | "senders" | "readyAudienceGroups" | "campaigns" | "selectedComposerCampaign" | "mutations" | "onLoadCampaign" | "onResetCampaign" | "onGoToSetup">) {
+function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienceGroups, campaigns, selectedComposerCampaign, mutations, onLoadCampaign, onResetCampaign, onGoToSetup, readiness }: Pick<Parameters<typeof renderActiveTab>[0], "campaignForm" | "setCampaignForm" | "senders" | "readyAudienceGroups" | "campaigns" | "selectedComposerCampaign" | "mutations" | "onLoadCampaign" | "onResetCampaign" | "onGoToSetup" | "readiness">) {
   const verifiedSenders = senders.filter((sender) => sender.status === "verified");
   const draftCampaigns = campaigns.filter((campaign) => campaign.status === "draft");
+  const [draftAssistant, setDraftAssistant] = useState<EmailDraftState>({
+    objective: "promotion",
+    tone: "friendly",
+    businessName: "",
+    offerDetails: "",
+    ctaLabel: "Learn More",
+    ctaUrl: ""
+  });
 
   if (verifiedSenders.length === 0) {
     return (
@@ -816,6 +1177,71 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
         <div className="flex flex-wrap items-start justify-between gap-3">
           <SectionIntro eyebrow="Campaign Wizard" title="Create Email Campaign" description="Save a draft first, then send a test and start delivery when the sender is verified and the audience is ready." />
           <Button variant="secondary" onClick={onResetCampaign}>New Draft</Button>
+        </div>
+        <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-text">Draft Assistant</p>
+                <StatusBadge tone="default">Smart helper</StatusBadge>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-text-muted">Generate a simple starter email from your objective and offer details. No external AI is used, and the text stays editable.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const generatedDraft = generateSimpleEmailDraft(draftAssistant);
+                setCampaignForm((current) => ({
+                  ...current,
+                  name: current.name || generatedDraft.campaignName || "",
+                  subject: generatedDraft.subject || current.subject,
+                  previewText: generatedDraft.previewText || current.previewText,
+                  bodyHtml: generatedDraft.body || current.bodyHtml,
+                  bodyText: generatedDraft.body || current.bodyText
+                }));
+                setDraftAssistant((current) => ({ ...current, ctaLabel: generatedDraft.ctaLabel || current.ctaLabel }));
+              }}
+            >
+              <Sparkles size={15} /> Generate simple draft
+            </Button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <label>
+              <span className="workspace-label">Campaign objective</span>
+              <Select value={draftAssistant.objective ?? "promotion"} onChange={(event) => setDraftAssistant((current) => ({ ...current, objective: event.target.value as EmailDraftObjective }))}>
+                <option value="promotion">Promotion</option>
+                <option value="announcement">Announcement</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="reminder">Reminder</option>
+                <option value="re_engagement">Re-engagement</option>
+              </Select>
+            </label>
+            <label>
+              <span className="workspace-label">Tone</span>
+              <Select value={draftAssistant.tone ?? "friendly"} onChange={(event) => setDraftAssistant((current) => ({ ...current, tone: event.target.value as EmailDraftTone }))}>
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="direct">Direct</option>
+              </Select>
+            </label>
+            <label>
+              <span className="workspace-label">Business / Product Name</span>
+              <Input value={draftAssistant.businessName ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, businessName: event.target.value }))} placeholder="Rezeki CRM" />
+            </label>
+            <label>
+              <span className="workspace-label">CTA Label</span>
+              <Input value={draftAssistant.ctaLabel ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, ctaLabel: event.target.value }))} placeholder="Learn More" />
+            </label>
+            <label className="md:col-span-2">
+              <span className="workspace-label">Offer Details</span>
+              <textarea className="input-base min-h-20 w-full" value={draftAssistant.offerDetails ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, offerDetails: event.target.value }))} placeholder="Share the update, promotion, reminder or follow-up details." />
+            </label>
+            <label className="md:col-span-2">
+              <span className="workspace-label">CTA URL Optional</span>
+              <Input value={draftAssistant.ctaUrl ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="https://example.com/offer" />
+            </label>
+          </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <label>
@@ -855,6 +1281,10 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
             <Input value={campaignForm.subject} onChange={(event) => setCampaignForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Important update from our team" />
           </label>
           <label className="md:col-span-2">
+            <span className="workspace-label">Preview Text / Preheader</span>
+            <Input value={campaignForm.previewText} onChange={(event) => setCampaignForm((current) => ({ ...current, previewText: event.target.value }))} placeholder="Short inbox preview text. This is not sent yet if the backend does not support it." />
+          </label>
+          <label className="md:col-span-2">
             <span className="workspace-label">Body HTML or plain text</span>
             <textarea className="input-base min-h-48 w-full" value={campaignForm.bodyHtml} onChange={(event) => setCampaignForm((current) => ({ ...current, bodyHtml: event.target.value }))} placeholder="Write your email body. Plain text will be converted into simple paragraphs." />
           </label>
@@ -885,6 +1315,7 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
           <p><span className="font-semibold text-text">Draft:</span> {(selectedComposerCampaign?.name ?? campaignForm.name) || "Unsaved draft"}</p>
           <p><span className="font-semibold text-text">Sender:</span> {senders.find((sender) => sender.id === campaignForm.senderId)?.display_name ?? "No sender selected"}</p>
           <p><span className="font-semibold text-text">Audience:</span> {readyAudienceGroups.find((group) => group.id === campaignForm.audienceGroupId)?.name ?? "Manual recipients only"}</p>
+          <p><span className="font-semibold text-text">Compliance:</span> {readiness.complianceReady ? "Ready" : "Run the rule-based check before sending"}</p>
           <p><span className="font-semibold text-text">Manual recipients:</span> {parseRecipients(campaignForm.recipientsText).length}</p>
           <p><span className="font-semibold text-text">Unsubscribe footer:</span> {hasUnsubscribeCopy(campaignForm.bodyHtml) ? "present" : "backend will append it automatically"}</p>
         </div>
@@ -892,15 +1323,17 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
           <p className="font-semibold text-text">Preview</p>
           <div className="mt-3 rounded-lg border border-border bg-card p-4 text-sm leading-6 text-text">
             {campaignForm.subject ? <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">{campaignForm.subject}</p> : null}
+            {campaignForm.previewText ? <p className="mt-2 text-sm text-text-muted">{campaignForm.previewText}</p> : null}
             <div className="mt-3 whitespace-pre-wrap">{stripHtml(campaignForm.bodyText || campaignForm.bodyHtml) || "Compose a subject and message body to preview the plain-text fallback here."}</div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {campaignForm.campaignId ? (
-            <Button onClick={() => mutations.startCampaign.mutate(campaignForm.campaignId)} disabled={mutations.startCampaign.isPending}>
+            <Button onClick={() => mutations.startCampaign.mutate(campaignForm.campaignId)} disabled={mutations.startCampaign.isPending || !readiness.sendReady}>
               <Play size={16} /> Start Campaign
             </Button>
           ) : null}
+          {campaignForm.campaignId && !readiness.sendReady ? <p className="text-xs text-text-muted">Complete sender, audience, draft and compliance checks before starting.</p> : null}
           {selectedComposerCampaign?.status === "sending" ? (
             <Button variant="secondary" onClick={() => mutations.pauseCampaign.mutate(selectedComposerCampaign.id)} disabled={mutations.pauseCampaign.isPending}>
               <PauseCircle size={16} /> Pause
@@ -1078,28 +1511,28 @@ function SuppressionPanel({ suppressionEmail, setSuppressionEmail, suppressionRe
   );
 }
 
-function CompliancePanel({ campaignForm, senders, suppressionEntries, selectedComposerCampaign, campaigns }: Pick<Parameters<typeof renderActiveTab>[0], "campaignForm" | "senders" | "suppressionEntries" | "selectedComposerCampaign" | "campaigns">) {
-  const selectedSender = senders.find((sender) => sender.id === campaignForm.senderId) ?? null;
-  const complianceItems = [
-    { label: "Sender verified", checked: selectedSender?.status === "verified" },
-    { label: "Reply-to email configured", checked: Boolean(selectedSender?.reply_to_email || selectedSender?.from_email) },
-    { label: "Email body present", checked: Boolean(campaignForm.bodyHtml.trim()) },
-    { label: "Unsubscribe copy present", checked: hasUnsubscribeCopy(campaignForm.bodyHtml) || Boolean(selectedComposerCampaign) },
-    { label: "Suppression list checked", checked: suppressionEntries.length >= 0 },
-    { label: "Campaign draft saved", checked: Boolean(selectedComposerCampaign?.id) },
-    { label: "At least one recipient source", checked: Boolean(campaignForm.audienceGroupId || parseRecipients(campaignForm.recipientsText).length > 0) }
-  ];
+function CompliancePanel({ campaigns, readiness, senders, suppressionEntries }: Pick<Parameters<typeof renderActiveTab>[0], "campaigns" | "readiness" | "senders" | "suppressionEntries">) {
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const passCount = readiness.complianceChecks.filter((item) => item.status === "pass").length;
+  const warningCount = readiness.complianceChecks.filter((item) => item.status === "warning").length;
+  const failCount = readiness.complianceChecks.filter((item) => item.status === "fail" || item.status === "not_checked").length;
 
   return (
     <Card elevated className="space-y-4 p-4 sm:p-5">
-      <SectionIntro
-        eyebrow="Compliance"
-        title="Compliance and Safety Check"
-        description="This MVP keeps a narrow compliance view: verified sender, unsubscribe handling, suppression use, and draft readiness without changing the Sprint 4 WhatsApp safety flow."
-      />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {complianceItems.map((item) => (
-          <DisabledChecklistItem key={item.label} checked={item.checked} label={item.label} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <SectionIntro
+          eyebrow="Compliance"
+          title="Compliance and Safety Check"
+          description="Run a deterministic checklist before sending. It checks sender, audience, draft content, unsubscribe handling and suppression rules without external AI calls."
+        />
+        <Button variant="secondary" onClick={() => setCheckedAt(new Date().toISOString())}>
+          <ClipboardCheck size={16} /> Run Check
+        </Button>
+      </div>
+      {checkedAt ? <p className="text-xs text-text-muted">Last checked: {formatDate(checkedAt)}</p> : <p className="text-xs text-text-muted">Click Run Check after updating your draft details. The checklist below also updates as you edit.</p>}
+      <div className="grid gap-2">
+        {readiness.complianceChecks.map((item) => (
+          <ComplianceCheckItem key={item.key} item={item} />
         ))}
       </div>
       <InfoNotice icon={<ShieldCheck size={18} />} title="Safety guard">
@@ -1109,13 +1542,13 @@ function CompliancePanel({ campaignForm, senders, suppressionEntries, selectedCo
         <MetricCard label="Drafts" value={campaigns.filter((campaign) => campaign.status === "draft").length} />
         <MetricCard label="Verified Senders" value={senders.filter((sender) => sender.status === "verified").length} />
         <MetricCard label="Suppressed Emails" value={suppressionEntries.length} />
-        <MetricCard label="Ready Checks Passed" value={complianceItems.filter((item) => item.checked).length} />
+        <MetricCard label="Checks" value={`${passCount} pass / ${warningCount} warn / ${failCount} fix`} />
       </div>
     </Card>
   );
 }
 
-function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCampaignId, selectedReportCampaign, report, recipientRows, recipientSearch, setRecipientSearch, recipientStatusFilter, setRecipientStatusFilter, loading, mutations }: Pick<Parameters<typeof renderActiveTab>[0], "campaigns" | "selectedReportCampaignId" | "setSelectedReportCampaignId" | "selectedReportCampaign" | "report" | "recipientRows" | "recipientSearch" | "setRecipientSearch" | "recipientStatusFilter" | "setRecipientStatusFilter" | "loading" | "mutations">) {
+function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCampaignId, selectedReportCampaign, report, recipientRows, recipientSearch, setRecipientSearch, recipientStatusFilter, setRecipientStatusFilter, loading, mutations, readiness }: Pick<Parameters<typeof renderActiveTab>[0], "campaigns" | "selectedReportCampaignId" | "setSelectedReportCampaignId" | "selectedReportCampaign" | "report" | "recipientRows" | "recipientSearch" | "setRecipientSearch" | "recipientStatusFilter" | "setRecipientStatusFilter" | "loading" | "mutations" | "readiness">) {
   const recipientPagination = usePanelPagination(recipientRows);
 
   return (
@@ -1152,7 +1585,7 @@ function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCa
       {selectedReportCampaign ? (
         <div className="flex flex-wrap gap-2">
           {(selectedReportCampaign.status === "draft" || selectedReportCampaign.status === "paused") ? (
-            <Button onClick={() => mutations.startCampaign.mutate(selectedReportCampaign.id)} disabled={mutations.startCampaign.isPending}><Play size={16} /> Start</Button>
+            <Button onClick={() => mutations.startCampaign.mutate(selectedReportCampaign.id)} disabled={mutations.startCampaign.isPending || !readiness.sendReady}><Play size={16} /> Start</Button>
           ) : null}
           {selectedReportCampaign.status === "sending" ? (
             <Button variant="secondary" onClick={() => mutations.pauseCampaign.mutate(selectedReportCampaign.id)} disabled={mutations.pauseCampaign.isPending}><PauseCircle size={16} /> Pause</Button>
@@ -1306,6 +1739,28 @@ function DisabledChecklistItem({ label, checked = false }: { label: string; chec
   );
 }
 
+function ComplianceCheckItem({ item }: { item: ComplianceCheck }) {
+  const tone: "success" | "warning" | "danger" | "muted" =
+    item.status === "pass" ? "success" : item.status === "warning" ? "warning" : item.status === "not_checked" ? "muted" : "danger";
+  const Icon = item.status === "pass" ? CheckCircle2 : item.status === "warning" ? AlertCircle : XCircle;
+
+  return (
+    <div className="flex gap-3 border border-border bg-background-tint p-3">
+      <span className={`mt-0.5 ${item.status === "pass" ? "text-success" : item.status === "warning" ? "text-warning" : item.status === "not_checked" ? "text-text-soft" : "text-destructive"}`}>
+        <Icon size={18} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-text">{item.label}</p>
+          <StatusBadge tone={tone}>{item.status === "not_checked" ? "Not checked" : item.status}</StatusBadge>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-text-muted">{item.description}</p>
+        {item.fixAction ? <p className="mt-2 text-xs font-semibold text-primary">{item.fixAction}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 function InfoNotice({ children, icon, title }: { children: ReactNode; icon: ReactNode; title: string }) {
   return (
     <div className="flex items-start gap-3 border border-primary/15 bg-primary/5 p-4 text-sm">
@@ -1364,6 +1819,211 @@ function EmptyTableCell({ title, description }: { title: string; description: st
       <p className="text-xs text-text-muted">{description}</p>
     </div>
   );
+}
+
+function generateSimpleEmailDraft(input: EmailDraftState): EmailDraftState {
+  const businessName = input.businessName?.trim() || "our team";
+  const offerDetails = input.offerDetails?.trim() || "an important update prepared for you";
+  const ctaLabel = input.ctaLabel?.trim() || "Learn More";
+  const tone = input.tone ?? "friendly";
+  const objective = input.objective ?? "promotion";
+  const subjectByObjective: Record<EmailDraftObjective, string> = {
+    promotion: `Special update from ${businessName}`,
+    announcement: `Important announcement from ${businessName}`,
+    follow_up: `Following up from ${businessName}`,
+    reminder: `A quick reminder from ${businessName}`,
+    re_engagement: `We would like to reconnect with you`
+  };
+  const previewByTone: Record<EmailDraftTone, string> = {
+    professional: "Here is an important update prepared for you.",
+    friendly: "We thought this update may be useful for you.",
+    direct: "Here is the key update you need to know."
+  };
+  const toneLine =
+    tone === "direct"
+      ? "This may help you make a faster decision for your business."
+      : tone === "professional"
+        ? "This may be useful if you are looking for a simple and reliable solution for your business."
+        : "It may be a helpful next step if you are exploring a simple and reliable solution for your business.";
+  const objectiveLine =
+    objective === "reminder"
+      ? `We would like to remind you about ${offerDetails}.`
+      : objective === "follow_up"
+        ? `We would like to follow up and share ${offerDetails}.`
+        : objective === "re_engagement"
+          ? `We would like to reconnect and share ${offerDetails}.`
+          : `We would like to share ${offerDetails}.`;
+  const ctaUrlLine = input.ctaUrl?.trim() ? `\n\nLink: ${input.ctaUrl.trim()}` : "";
+
+  return {
+    campaignName: `${businessName} ${humanize(objective)} draft`,
+    subject: subjectByObjective[objective],
+    previewText: previewByTone[tone],
+    body: `Hi {{first_name || "there"}},\n\n${objectiveLine}\n\n${toneLine}\n\nClick the button below to learn more or contact us.\n\n${ctaLabel}${ctaUrlLine}\n\nThank you.\n\nUnsubscribe: {{unsubscribe_url}}`,
+    ctaLabel
+  };
+}
+
+function runEmailComplianceChecks(context: {
+  campaignForm: CampaignFormState;
+  campaigns?: EmailCampaign[];
+  readyAudienceGroups?: AudienceGroup[];
+  selectedComposerCampaign?: EmailCampaign | null;
+  senders?: EmailSender[];
+  suppressionLoaded?: boolean;
+}): ComplianceCheck[] {
+  const senders = context.senders ?? [];
+  const campaigns = context.campaigns ?? [];
+  const readyAudienceGroups = context.readyAudienceGroups ?? [];
+  const selectedSender = senders.find((sender) => sender.id === context.campaignForm.senderId) ?? senders.find((sender) => sender.status === "verified") ?? null;
+  const manualRecipients = parseRecipients(context.campaignForm.recipientsText);
+  const hasAudience = Boolean(context.campaignForm.audienceGroupId) || readyAudienceGroups.length > 0 || manualRecipients.length > 0 || campaigns.some((campaign) => Boolean(campaign.audience_group_id) || campaign.recipients > 0);
+  const body = context.campaignForm.bodyHtml || context.campaignForm.bodyText || context.selectedComposerCampaign?.body_html || "";
+  const subject = context.campaignForm.subject || context.selectedComposerCampaign?.subject || "";
+  const senderIdentity = selectedSender?.display_name || selectedSender?.from_name || selectedSender?.from_email;
+  const hasSavedDraft = Boolean(context.selectedComposerCampaign?.id || context.campaignForm.campaignId || campaigns.length > 0);
+  const systemFooterAvailable = true;
+
+  return [
+    {
+      key: "sender_verified",
+      label: "Sender verified",
+      description: selectedSender?.status === "verified" ? `${selectedSender.display_name} is verified for sending.` : "A verified sender is required before an email campaign can send.",
+      status: selectedSender?.status === "verified" ? "pass" : "fail",
+      fixAction: selectedSender?.status === "verified" ? undefined : "Connect and verify a sender email first."
+    },
+    {
+      key: "audience_selected",
+      label: "Audience selected",
+      description: hasAudience ? "An audience group or recipient source is available." : "Unable to verify yet. Complete draft details first.",
+      status: hasAudience ? "pass" : "fail",
+      fixAction: hasAudience ? undefined : "Create or import an audience, or add manual recipients."
+    },
+    {
+      key: "subject_present",
+      label: "Subject line is not empty",
+      description: subject.trim() ? "The draft has a subject line." : "Unable to verify yet. Complete draft details first.",
+      status: subject.trim() ? "pass" : "fail",
+      fixAction: subject.trim() ? undefined : "Add a clear subject line."
+    },
+    {
+      key: "body_present",
+      label: "Email body is not empty",
+      description: stripHtml(body).trim() ? "The draft body has content." : "Unable to verify yet. Complete draft details first.",
+      status: stripHtml(body).trim() ? "pass" : "fail",
+      fixAction: stripHtml(body).trim() ? undefined : "Write or generate the email body."
+    },
+    {
+      key: "unsubscribe_available",
+      label: "Unsubscribe footer exists",
+      description: hasUnsubscribeCopy(body) ? "The draft includes unsubscribe text or a marker." : "The backend appends the default unsubscribe footer during dispatch.",
+      status: hasUnsubscribeCopy(body) || systemFooterAvailable ? "pass" : "fail",
+      fixAction: hasUnsubscribeCopy(body) || systemFooterAvailable ? undefined : "Add an unsubscribe link or footer marker."
+    },
+    {
+      key: "suppression_applied",
+      label: "Suppression list will be applied",
+      description: context.suppressionLoaded ? "Suppression records are loaded and will be applied before send." : "Suppression data has not loaded yet.",
+      status: context.suppressionLoaded ? "pass" : "warning",
+      fixAction: context.suppressionLoaded ? undefined : "Refresh the workspace and run the check again."
+    },
+    {
+      key: "sender_identity",
+      label: "Sender identity is present",
+      description: senderIdentity ? "Sender display name or sender email is present." : "Sender identity is missing.",
+      status: senderIdentity ? "pass" : "fail",
+      fixAction: senderIdentity ? undefined : "Add a sender display name or from email."
+    },
+    {
+      key: "test_email_recommended",
+      label: "Test email recommended before sending",
+      description: hasSavedDraft ? "Send a test email from the draft screen before starting the campaign." : "Save the draft before sending a test email.",
+      status: "warning",
+      fixAction: hasSavedDraft ? "Use Send Test in the Create Email screen." : "Save the draft first, then send a test email."
+    }
+  ];
+}
+
+function getEmailNextAction(readiness: Pick<EmailReadinessState, "senderReady" | "audienceReady" | "draftReady" | "complianceReady">): EmailReadinessState["nextAction"] {
+  if (!readiness.senderReady) {
+    return {
+      key: "connect_sender",
+      label: "Connect Sender",
+      description: "Connect and verify your sender email first."
+    };
+  }
+
+  if (!readiness.audienceReady) {
+    return {
+      key: "create_audience",
+      label: "Create Audience",
+      description: "Create or import your audience list."
+    };
+  }
+
+  if (!readiness.draftReady) {
+    return {
+      key: "create_email",
+      label: "Create Email Campaign",
+      description: "Create your first email campaign."
+    };
+  }
+
+  if (!readiness.complianceReady) {
+    return {
+      key: "run_compliance",
+      label: "Run Compliance Check",
+      description: "Run compliance check before sending."
+    };
+  }
+
+  return {
+    key: "create_campaign",
+    label: "Create Campaign",
+    description: "You are ready to send or schedule a campaign."
+  };
+}
+
+function computeEmailReadiness(input: {
+  senders?: EmailSender[];
+  campaigns?: EmailCampaign[];
+  readyAudienceGroups?: AudienceGroup[];
+  campaignForm?: CampaignFormState;
+  complianceChecks?: ComplianceCheck[];
+}): EmailReadinessState {
+  const senders = input.senders ?? [];
+  const campaigns = input.campaigns ?? [];
+  const readyAudienceGroups = input.readyAudienceGroups ?? [];
+  const campaignForm = input.campaignForm ?? defaultCampaignForm;
+  const complianceChecks = input.complianceChecks ?? [];
+  const senderReady = senders.some((sender) => sender?.status === "verified");
+  const audienceReady =
+    Boolean(campaignForm.audienceGroupId) ||
+    parseRecipients(campaignForm.recipientsText).length > 0 ||
+    readyAudienceGroups.length > 0 ||
+    campaigns.some((campaign) => Boolean(campaign?.audience_group_id) || (campaign?.recipients ?? 0) > 0);
+  const currentDraftSubject = campaignForm.subject.trim() || campaigns.find((campaign) => Boolean(campaign?.subject))?.subject || "";
+  const currentDraftBody = stripHtml(campaignForm.bodyHtml || campaignForm.bodyText).trim();
+  const draftReady = Boolean(campaignForm.campaignId || campaignForm.name.trim() || currentDraftSubject || currentDraftBody || campaigns.some((campaign) => Boolean(campaign?.id)));
+  const blockingComplianceItems = complianceChecks.filter((check) => check.key !== "test_email_recommended");
+  const complianceReady =
+    senderReady &&
+    audienceReady &&
+    draftReady &&
+    blockingComplianceItems.length > 0 &&
+    blockingComplianceItems.every((check) => check.status === "pass" || check.status === "warning");
+  const sendReady = senderReady && audienceReady && draftReady && complianceReady;
+
+  return {
+    senderReady,
+    audienceReady,
+    draftReady,
+    complianceReady,
+    sendReady,
+    draftSubject: currentDraftSubject || undefined,
+    complianceChecks,
+    nextAction: getEmailNextAction({ senderReady, audienceReady, draftReady, complianceReady })
+  };
 }
 
 function computeSetupStatus(item: string, senders: EmailSender[], campaigns: EmailCampaign[]) {

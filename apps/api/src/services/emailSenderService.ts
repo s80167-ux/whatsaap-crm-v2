@@ -4,12 +4,13 @@ import { AppError } from "../lib/errors.js";
 import { decryptEmailSecret, encryptEmailSecret } from "../lib/emailSecretCrypto.js";
 import type { AuthUser } from "../types/auth.js";
 import { AuditLogService } from "./auditLogService.js";
+import { mapFriendlySmtpError, normalizeGmailAppPassword } from "./emailSmtpErrorMapper.js";
 
 const MICROSOFT_UNSUPPORTED_MESSAGE =
   "Microsoft email provider is no longer supported in this MVP. Please use Custom SMTP or Gmail App Password.";
 
 type SupportedEmailSenderType = "custom_smtp" | "gmail_app_password";
-type EmailSenderType = SupportedEmailSenderType | "smtp" | "gmail" | "microsoft365" | "microsoft";
+type EmailSenderType = SupportedEmailSenderType | "smtp" | "gmail" | "microsoft365" | "microsoft" | "outlook" | "office365";
 
 type EmailSenderRow = {
   id: string;
@@ -33,10 +34,12 @@ type EmailSenderRow = {
   oauth_token_expires_at: string | null;
   oauth_scopes: string[] | null;
   oauth_connected_at: string | null;
-  status: "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required";
+  status: "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required" | "deleted";
   last_test_status: string | null;
   last_test_error: string | null;
   last_test_at: string | null;
+  is_active: boolean;
+  deleted_at: string | null;
   created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -87,6 +90,13 @@ export type TestEmailSenderInput = {
   subject?: string | null;
   message?: string | null;
 };
+
+type EmailSenderColumnSupport = {
+  deleted_at: boolean;
+  is_active: boolean;
+};
+
+let emailSenderColumnSupportCache: EmailSenderColumnSupport | null = null;
 
 function ensureReadAccess(user: AuthUser) {
   if (["super_admin", "org_admin", "manager"].includes(user.role)) {
@@ -167,7 +177,7 @@ function normalizeSenderInput(input: Partial<CreateEmailSenderInput>) {
 }
 
 function normalizeSenderType(senderType: EmailSenderType): SupportedEmailSenderType {
-  if (senderType === "microsoft" || senderType === "microsoft365") {
+  if (senderType === "microsoft" || senderType === "microsoft365" || senderType === "outlook" || senderType === "office365") {
     throw new AppError(MICROSOFT_UNSUPPORTED_MESSAGE, 400, "email_provider_microsoft_unsupported");
   }
 
@@ -213,15 +223,57 @@ function mapSenderWriteError(error: unknown): never {
     );
   }
 
+  if (code === "23514" && constraint === "email_senders_status_check") {
+    throw new AppError(
+      "Email sender table is not ready for sender deletion. Run migration 044_email_sender_soft_delete.sql, then try again.",
+      409,
+      "email_sender_soft_delete_migration_required"
+    );
+  }
+
   throw error;
 }
 
 function sanitizeProviderError(error: unknown) {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
+  return mapFriendlySmtpError(error);
+}
+
+async function getEmailSenderColumnSupport(): Promise<EmailSenderColumnSupport> {
+  if (emailSenderColumnSupportCache) {
+    return emailSenderColumnSupportCache;
   }
 
-  return "Unable to complete email request.";
+  const result = await query<{ column_name: string }>(
+    `
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'email_senders'
+        and column_name in ('deleted_at', 'is_active')
+    `
+  );
+  const names = new Set(result.rows.map((row) => row.column_name));
+  emailSenderColumnSupportCache = {
+    deleted_at: names.has("deleted_at"),
+    is_active: names.has("is_active")
+  };
+
+  return emailSenderColumnSupportCache;
+}
+
+function activeSenderSql(columns: EmailSenderColumnSupport, alias = "email_senders") {
+  const filters: string[] = [];
+
+  if (columns.deleted_at) {
+    filters.push(`${alias}.deleted_at is null`);
+  }
+
+  if (columns.is_active) {
+    filters.push(`coalesce(${alias}.is_active, true) = true`);
+  }
+
+  filters.push(`${alias}.status <> 'deleted'`);
+  return filters.join(" and ");
 }
 
 export class EmailSenderService {
@@ -230,12 +282,14 @@ export class EmailSenderService {
   async listSenders(user: AuthUser, input?: { organizationId?: string | null }) {
     ensureReadAccess(user);
     const organizationId = resolveOrganizationId(user, input?.organizationId);
+    const columns = await getEmailSenderColumnSupport();
     const result = await query<EmailSenderRow>(
       `
         select *
         from email_senders
         where organization_id = $1
           and sender_type in ('custom_smtp', 'gmail_app_password', 'smtp', 'gmail')
+          and ${activeSenderSql(columns)}
         order by created_at desc, display_name asc
       `,
       [organizationId]
@@ -245,12 +299,14 @@ export class EmailSenderService {
   }
 
   async getSenderForUse(input: { organizationId: string; senderId: string }) {
+    const columns = await getEmailSenderColumnSupport();
     const result = await query<EmailSenderRow>(
       `
         select *
         from email_senders
         where organization_id = $1
           and id = $2
+          and ${activeSenderSql(columns)}
         limit 1
       `,
       [input.organizationId, input.senderId]
@@ -330,7 +386,7 @@ export class EmailSenderService {
           normalized.smtpPort,
           normalized.smtpSecure,
           smtpUsername,
-          encryptEmailSecret(input.smtpPassword!.trim()),
+          encryptEmailSecret(senderType === "gmail_app_password" ? normalizeGmailAppPassword(input.smtpPassword!) : input.smtpPassword!.trim()),
           user.organizationUserId
         ]
       );
@@ -375,7 +431,7 @@ export class EmailSenderService {
       input.smtpPassword === undefined
         ? existing.smtp_password_encrypted
         : input.smtpPassword
-          ? encryptEmailSecret(input.smtpPassword.trim())
+          ? encryptEmailSecret(senderType === "gmail_app_password" ? normalizeGmailAppPassword(input.smtpPassword) : input.smtpPassword.trim())
           : null;
     const nextSmtpUsername =
       senderType === "gmail_app_password"
@@ -494,7 +550,7 @@ export class EmailSenderService {
         }
       };
     } catch (error) {
-      const errorMessage = sanitizeProviderError(error);
+      const mappedError = sanitizeProviderError(error);
 
       const updated = await query<EmailSenderRow>(
         `
@@ -507,7 +563,7 @@ export class EmailSenderService {
             and id = $2
           returning *
         `,
-        [organizationId, input.senderId, errorMessage]
+        [organizationId, input.senderId, mappedError.friendlyMessage]
       );
 
       await this.auditLogService.record(user, {
@@ -519,13 +575,19 @@ export class EmailSenderService {
           to_email: toEmail,
           outcome: "failed",
           from_email: sender.from_email,
-          failure_reason: errorMessage
+          failure_code: mappedError.errorCode,
+          failure_reason: mappedError.friendlyMessage
         },
         request
       });
 
-      throw new AppError(errorMessage, 400, "email_sender_test_failed", {
-        sender: this.maskSenderSecrets(updated.rows[0])
+      throw new AppError(mappedError.friendlyMessage, 400, mappedError.errorCode, {
+        sender: this.maskSenderSecrets(updated.rows[0]),
+        errorCode: mappedError.errorCode,
+        friendlyMessage: mappedError.friendlyMessage,
+        title: mappedError.title,
+        explanation: mappedError.explanation,
+        nextActions: mappedError.nextActions
       });
     }
   }
@@ -560,6 +622,48 @@ export class EmailSenderService {
     return this.maskSenderSecrets(updated.rows[0]);
   }
 
+  async deleteSender(user: AuthUser, input: { organizationId?: string | null; senderId: string }, request?: { ip?: string | null; userAgent?: string | null }) {
+    ensureSenderSetupAccess(user);
+    const organizationId = resolveOrganizationId(user, input.organizationId);
+    const sender = await this.getSenderForUse({ organizationId, senderId: input.senderId });
+    const columns = await getEmailSenderColumnSupport();
+    const assignments = ["status = 'deleted'", "last_test_status = 'deleted'", "last_test_error = null"];
+
+    if (columns.deleted_at) {
+      assignments.push("deleted_at = timezone('utc', now())");
+    }
+
+    if (columns.is_active) {
+      assignments.push("is_active = false");
+    }
+
+    const updated = await query<EmailSenderRow>(
+      `
+        update email_senders
+        set ${assignments.join(", ")}
+        where organization_id = $1
+          and id = $2
+        returning *
+      `,
+      [organizationId, input.senderId]
+    ).catch(mapSenderWriteError);
+
+    await this.auditLogService.record(user, {
+      organizationId,
+      action: "email_sender.deleted",
+      entityType: "email_sender",
+      entityId: input.senderId,
+      metadata: {
+        display_name: sender.display_name,
+        from_email: sender.from_email,
+        sender_type: normalizeSenderType(sender.sender_type)
+      },
+      request
+    });
+
+    return this.maskSenderSecrets(updated.rows[0]);
+  }
+
   maskSenderSecrets(row: EmailSenderRow): EmailSenderView {
     return {
       id: row.id,
@@ -576,6 +680,8 @@ export class EmailSenderService {
       last_test_status: row.last_test_status,
       last_test_error: row.last_test_error,
       last_test_at: row.last_test_at,
+      is_active: row.is_active ?? true,
+      deleted_at: row.deleted_at ?? null,
       created_by_user_id: row.created_by_user_id,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -655,6 +761,8 @@ export class EmailSenderService {
       host: sender.smtp_host,
       port: sender.smtp_port,
       secure: sender.smtp_secure,
+      requireTLS: !sender.smtp_secure && sender.smtp_port !== 25,
+      ignoreTLS: !sender.smtp_secure && sender.smtp_port === 25,
       auth: {
         user: sender.smtp_username,
         pass: decryptEmailSecret(sender.smtp_password_encrypted)

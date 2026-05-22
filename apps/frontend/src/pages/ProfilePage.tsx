@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchMe, updateMyProfile, updateMyPassword } from '../api/auth';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Toast } from '../components/Toast';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 
 const ProfilePage: React.FC = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<{ fullName: string; email: string; avatarUrl: string | null; phone: string; address: string }>({ fullName: '', email: '', avatarUrl: null, phone: '', address: '' });
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,7 +30,7 @@ const ProfilePage: React.FC = () => {
         phone: data.phone || '',
         address: data.address || ''
       }))
-      .catch(() => setToast({ type: 'error', message: 'Failed to load profile.' }))
+      .catch(() => setToast({ type: 'error', message: t('profile.profileLoadFailed') }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -39,10 +42,10 @@ const ProfilePage: React.FC = () => {
         phone: profile.phone,
         address: profile.address
       });
-      setToast({ type: 'success', message: 'Profile updated successfully.' });
+      setToast({ type: 'success', message: t('profile.profileUpdatedSuccess') });
       setEditMode(false);
     } catch {
-      setToast({ type: 'error', message: 'Failed to update profile.' });
+      setToast({ type: 'error', message: t('profile.profileSaveFailed') });
     } finally {
       setLoading(false);
     }
@@ -50,18 +53,18 @@ const ProfilePage: React.FC = () => {
 
   const handlePasswordUpdate = async () => {
     if (newPassword !== confirmPassword) {
-      setToast({ type: 'error', message: 'Passwords do not match.' });
+      setToast({ type: 'error', message: t('profile.passwordMismatch') });
       return;
     }
     setPasswordLoading(true);
     try {
       await updateMyPassword({ password: newPassword });
-      setToast({ type: 'success', message: 'Password updated successfully.' });
+      setToast({ type: 'success', message: t('profile.passwordUpdatedSuccess') });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch {
-      setToast({ type: 'error', message: 'Failed to update password.' });
+      setToast({ type: 'error', message: t('profile.passwordUpdateFailed') });
     } finally {
       setPasswordLoading(false);
     }
@@ -69,7 +72,10 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="workspace-block mx-auto mt-10 max-w-2xl p-6 shadow-soft">
-      <h2 className="mb-6 text-2xl font-bold text-text">My Profile</h2>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold text-text">{t('profile.myProfile')}</h2>
+        <LanguageSwitcher />
+      </div>
       {toast && <Toast message={toast.message} variant={toast.type} />}
       <div className="flex flex-col gap-8 md:flex-row">
         {/* Personal Information */}
@@ -89,33 +95,33 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="workspace-subtle mb-4 p-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-semibold text-text">Personal Information</span>
+              <span className="font-semibold text-text">{t('profile.personalInformation')}</span>
               {!editMode && (
                 <Button onClick={() => setEditMode(true)}>
-                  Edit Profile
+                  {t('profile.editProfile')}
                 </Button>
               )}
             </div>
             <div className="space-y-3">
               <Input
-                placeholder="Full Name"
+                placeholder={t('common.fullName')}
                 value={profile.fullName}
                 onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                 disabled={!editMode}
               />
               <Input
-                placeholder="Email Address"
+                placeholder={t('profile.emailAddress')}
                 value={profile.email}
                 disabled
               />
               <Input
-                placeholder="Phone Number"
+                placeholder={t('common.phoneNumber')}
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                 disabled={!editMode}
               />
               <Input
-                placeholder="Address"
+                placeholder={t('common.address')}
                 value={profile.address}
                 onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                 disabled={!editMode}
@@ -124,10 +130,10 @@ const ProfilePage: React.FC = () => {
             {editMode && (
               <div className="mt-4 flex gap-2">
                 <Button onClick={handleProfileSave} disabled={loading}>
-                  Save Changes
+                  {t('common.saveChanges')}
                 </Button>
                 <Button variant="secondary" onClick={() => setEditMode(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             )}
@@ -136,23 +142,23 @@ const ProfilePage: React.FC = () => {
         {/* Security & Password */}
         <div className="flex-1">
           <div className="workspace-subtle p-4">
-            <div className="mb-2 font-semibold text-text">Security & Password</div>
+            <div className="mb-2 font-semibold text-text">{t('profile.securityPassword')}</div>
             {/* Current password is not required for self password update in this API */}
             <Input
-              placeholder="New Password"
+              placeholder={t('profile.newPassword')}
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <Input
-              placeholder="Confirm New Password"
+              placeholder={t('profile.confirmNewPassword')}
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
             <div className="mt-4 flex gap-2">
               <Button onClick={handlePasswordUpdate} disabled={passwordLoading}>
-                Update Password
+                {t('profile.updatePassword')}
               </Button>
             </div>
           </div>

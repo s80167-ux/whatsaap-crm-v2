@@ -30,6 +30,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { FormEvent, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
@@ -38,6 +39,7 @@ import { fetchMe, logout, updateMyPassword, updateMyProfile } from "../api/auth"
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { NavLinkItem } from "../components/NavLinkItem";
 import { NotificationBell } from "../components/NotificationBell";
 import { PopupOverlay } from "../components/PopupOverlay";
@@ -222,6 +224,8 @@ function SidebarContent({
   onNavigate?: () => void;
   mobile?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <>
       <div className={mobile ? "space-y-3" : ""}>
@@ -233,7 +237,7 @@ function SidebarContent({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Rezeki CRM</p>
-                <p className="text-[11px] leading-4 text-sidebar-foreground/55 break-words">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
+                <p className="text-[11px] leading-4 text-sidebar-foreground/55 break-words">{selectedOrganizationName ?? t("layout.whatsappWorkspace")}</p>
               </div>
             </div>
           </div>
@@ -248,7 +252,7 @@ function SidebarContent({
             </div>
             <div className="mt-4">
               <p className="brand-badge">Rezeki Dashboard</p>
-              <p className="sidebar-hero-copy">WhatsApp CRM untuk PMKS with multi-account inbox, canonical contacts, and realtime operations.</p>
+              <p className="sidebar-hero-copy">{t("layout.sidebarCopy")}</p>
             </div>
           </div>
         )}
@@ -257,45 +261,45 @@ function SidebarContent({
       {isSuperAdmin ? (
         <div className={mobile ? "mt-3" : "mt-5"}>
           <label className="block">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{mobile ? "Current org" : "Viewing org"}</span>
-            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 ${mobile ? "h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" : "h-9 px-0 py-0 text-sm font-medium"}`} aria-label="Choose organization to view">
-              <option value="">Choose organization</option>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{mobile ? t("layout.currentOrg") : t("layout.viewingOrg")}</span>
+            <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className={`sidebar-org-select mt-1.5 ${mobile ? "h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" : "h-9 px-0 py-0 text-sm font-medium"}`} aria-label={t("layout.chooseOrganizationToView")}>
+              <option value="">{t("layout.chooseOrganization")}</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>{organization.name}</option>
               ))}
             </Select>
           </label>
-          {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
+          {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
         </div>
       ) : null}
 
       <nav className={`space-y-1.5 ${mobile ? "mt-4" : "mt-8"}`}>
-        {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Primary</p> : null}
-        <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" onClick={onNavigate} compact={mobile} />
+        {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.primary")}</p> : null}
+        <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label={t("nav.dashboard")} onClick={onNavigate} compact={mobile} />
         <SidebarNavGroup
           icon={<MessageSquare size={18} />}
-          label="Inbox"
+          label={t("nav.inbox")}
           items={[
-            { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
+            { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
             { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
-            { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: "FB Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-            { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-            { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
+            { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+            { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+            { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
           ]}
           onNavigate={onNavigate}
           compact={mobile}
         />
-        <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label="Sales" onClick={onNavigate} compact={mobile} />
-        {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Workspace</p> : null}
+        <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label={t("nav.sales")} onClick={onNavigate} compact={mobile} />
+        {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.workspace")}</p> : null}
         <SidebarNavGroup
           icon={<Users size={18} />}
           label="CRM"
           items={[
-            { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-            ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: "Contact Reliability" }] : []),
-            { to: "/reports", icon: <FileBarChart size={16} />, label: "Report" },
-            ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
+            { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
+            ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
+            { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.report") },
+            ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
           ]}
           onNavigate={onNavigate}
           compact={mobile}
@@ -303,7 +307,7 @@ function SidebarContent({
         {showCampaigns ? (
           <SidebarNavGroup
             icon={<Megaphone size={18} />}
-            label="Campaign"
+            label={t("nav.campaign")}
             items={[
               { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
               { to: "/campaigns/email", icon: <Mail size={16} />, label: "Email", badge: emailCampaignBadge, end: false }
@@ -314,37 +318,37 @@ function SidebarContent({
         ) : null}
         <SidebarNavGroup
           icon={<Settings2 size={18} />}
-          label="Setup"
+          label={t("nav.setup")}
           items={[
-            { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
-            { to: "/setup/channels", icon: <PlugZap size={16} />, label: "Channels" }
+            { to: "/setup", icon: <Settings2 size={16} />, label: t("nav.general") },
+            { to: "/setup/channels", icon: <PlugZap size={16} />, label: t("nav.channels") }
           ]}
           onNavigate={onNavigate}
           compact={mobile}
         />
         {isSuperAdmin ? (
           <>
-            {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Admin</p> : null}
+            {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.admin")}</p> : null}
           <SidebarNavGroup
             icon={<Workflow size={18} />}
-            label="Super Admin Map"
+            label={t("nav.superAdminMap")}
             items={[
-              { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
-              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
-              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
+              { to: "/super-admin-map", icon: <Workflow size={16} />, label: t("nav.platformWorkflow") },
+              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: t("nav.dataStructure") },
+              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: t("nav.orgUserStructure") }
             ]}
             onNavigate={onNavigate}
             compact={mobile}
           />
-            <NavLinkItem to="/platform" icon={<Building2 size={18} />} label="Platform" onClick={onNavigate} compact={mobile} />
+            <NavLinkItem to="/platform" icon={<Building2 size={18} />} label={t("nav.platform")} onClick={onNavigate} compact={mobile} />
           <SidebarNavGroup
             icon={<ShieldAlert size={18} />}
-            label="System Tools"
+            label={t("nav.systemTools")}
             items={[
-              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
-              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: "Ops Center" },
-              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
-              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
+              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: t("nav.accessLimits") },
+              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: t("nav.opsCenter") },
+              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: t("nav.clearOrgData") },
+              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: t("nav.auditLogs") }
             ]}
             onNavigate={onNavigate}
             compact={mobile}
@@ -357,6 +361,7 @@ function SidebarContent({
 }
 
 export function DashboardLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobileViewport();
@@ -391,12 +396,12 @@ export function DashboardLayout() {
     ? null
     : isSuperAdmin || campaignWhatsAppModuleStatus?.isEnabled === true
       ? null
-      : <ModuleBadge>Off</ModuleBadge>;
+      : <ModuleBadge>{t("common.off")}</ModuleBadge>;
   const emailCampaignBadge = !showCampaigns
     ? null
     : campaignEmailModuleStatus?.isEnabled === true
-      ? <ModuleBadge tone="primary">Soon</ModuleBadge>
-      : <ModuleBadge>Off</ModuleBadge>;
+      ? <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge>
+      : <ModuleBadge>{t("common.off")}</ModuleBadge>;
   const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
   const showContactReliability = user?.role === "super_admin" || user?.role === "org_admin" || user?.role === "manager";
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
@@ -420,89 +425,89 @@ export function DashboardLayout() {
   const navSections: SidebarSection[] = [
     {
       id: "dashboard",
-      label: "Dashboard",
+      label: t("nav.dashboard"),
       icon: <BarChart3 size={18} />,
-      items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: "Overview" }]
+      items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: t("nav.overview") }]
     },
     {
       id: "inbox",
-      label: "Inbox",
+      label: t("nav.inbox"),
       icon: <MessageSquare size={18} />,
       items: [
-        { to: "/inbox", icon: <MessageSquare size={16} />, label: "All Inbox" },
+        { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
         { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
-        { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: "FB Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-        { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: "IG Messenger", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-        { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: "E-commerce DM", badge: <ModuleBadge tone="primary">Soon</ModuleBadge> },
-        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: "Template Library" }
+        { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+        { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+        { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
       ]
     },
     {
       id: "sales",
-      label: "Sales",
+      label: t("nav.sales"),
       icon: <TrendingUp size={18} />,
-      items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: "Sales pipeline" }]
+      items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }]
     },
     {
       id: "crm",
       label: "CRM",
       icon: <Users size={18} />,
       items: [
-        { to: "/contacts", icon: <Users size={16} />, label: "Contacts" },
-        ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: "Contact Reliability" }] : []),
-        { to: "/reports", icon: <FileBarChart size={16} />, label: "Reports" },
-        ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: "Data Export" }] : [])
+        { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
+        ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
+        { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") },
+        ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
       ]
     },
     ...(showCampaigns
       ? [
           {
             id: "campaigns",
-            label: "Campaign",
+            label: t("nav.campaign"),
             icon: <Megaphone size={18} />,
             items: [
               { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
-              { to: "/campaigns/email", icon: <Mail size={16} />, label: "Email", badge: emailCampaignBadge, end: false }
+              { to: "/campaigns/email", icon: <Mail size={16} />, label: t("nav.email"), badge: emailCampaignBadge, end: false }
             ]
           }
         ]
       : []),
     {
       id: "setup",
-      label: "Setup",
+      label: t("nav.setup"),
       icon: <Settings2 size={18} />,
       items: [
-        { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
-        { to: "/setup/channels", icon: <PlugZap size={16} />, label: "Channels" }
+        { to: "/setup", icon: <Settings2 size={16} />, label: t("nav.general") },
+        { to: "/setup/channels", icon: <PlugZap size={16} />, label: t("nav.channels") }
       ]
     },
     ...(isSuperAdmin
       ? [
           {
             id: "admin-map",
-            label: "Admin Map",
+            label: t("nav.superAdminMap"),
             icon: <Workflow size={18} />,
             items: [
-              { to: "/super-admin-map", icon: <Workflow size={16} />, label: "Platform workflow" },
-              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: "Data structure" },
-              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: "Org user structure" }
+              { to: "/super-admin-map", icon: <Workflow size={16} />, label: t("nav.platformWorkflow") },
+              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: t("nav.dataStructure") },
+              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: t("nav.orgUserStructure") }
             ]
           },
           {
             id: "platform",
-            label: "Platform",
+            label: t("nav.platform"),
             icon: <Building2 size={18} />,
             items: [{ to: "/platform", icon: <Building2 size={16} />, label: "Organizations" }]
           },
           {
             id: "system",
-            label: "System",
+            label: t("nav.systemTools"),
             icon: <ShieldAlert size={18} />,
             items: [
-              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: "Access & Limits" },
-              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: "Ops Center" },
-              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: "Clear Org Data" },
-              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: "Audit Logs" }
+              { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: t("nav.accessLimits") },
+              { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: t("nav.opsCenter") },
+              { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: t("nav.clearOrgData") },
+              { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: t("nav.auditLogs") }
             ]
           }
         ]
@@ -647,7 +652,7 @@ export function DashboardLayout() {
     setPasswordNotice(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordNotice("Passwords do not match.");
+      setPasswordNotice(t("profile.passwordMismatch"));
       return;
     }
 
@@ -658,9 +663,9 @@ export function DashboardLayout() {
       setNewPassword("");
       setConfirmPassword("");
       setIsPasswordFormOpen(false);
-      setPasswordNotice("Password updated.");
+      setPasswordNotice(t("profile.passwordUpdated"));
     } catch (error) {
-      setPasswordNotice(error instanceof Error ? error.message : "Unable to update password");
+      setPasswordNotice(error instanceof Error ? error.message : t("profile.passwordUpdateFailed"));
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -674,13 +679,13 @@ export function DashboardLayout() {
     }
 
     if (!PROFILE_PICTURE_TYPES.has(file.type)) {
-      setProfileNotice("Profile picture must be a JPG, PNG, WebP, or GIF image.");
+      setProfileNotice(t("profile.imageTypeError"));
       event.target.value = "";
       return;
     }
 
     if (file.size > MAX_PROFILE_PICTURE_BYTES) {
-      setProfileNotice("Profile picture is too large. Please choose an image under 512 KB.");
+      setProfileNotice(t("profile.imageSizeError"));
       event.target.value = "";
       return;
     }
@@ -689,7 +694,7 @@ export function DashboardLayout() {
       setProfileAvatarUrl(await readProfilePicture(file));
       setProfileNotice(null);
     } catch (error) {
-      setProfileNotice(error instanceof Error ? error.message : "Unable to read selected image");
+      setProfileNotice(error instanceof Error ? error.message : t("profile.imageReadError"));
     } finally {
       event.target.value = "";
     }
@@ -710,9 +715,9 @@ export function DashboardLayout() {
 
       updateStoredUser(() => updatedProfile);
       setIsProfileFormOpen(false);
-      setProfileNotice("Profile updated.");
+      setProfileNotice(t("profile.profileUpdated"));
     } catch (error) {
-      setProfileNotice(error instanceof Error ? error.message : "Unable to update profile");
+      setProfileNotice(error instanceof Error ? error.message : t("profile.profileUpdateFailed"));
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -727,7 +732,7 @@ export function DashboardLayout() {
               type="button"
               ref={mobileNavTriggerRef}
               className="topbar-profile-trigger inline-flex h-8 w-8 items-center justify-center rounded-lg border px-0 md:hidden"
-              aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-label={isMobileNavOpen ? t("layout.closeNavigation") : t("layout.openNavigation")}
               aria-expanded={isMobileNavOpen}
               onClick={() => setIsMobileNavOpen((isOpen) => !isOpen)}
             >
@@ -740,6 +745,7 @@ export function DashboardLayout() {
 
           <div className="flex shrink-0 items-center gap-2">
             <ThemeSwitcher />
+            <LanguageSwitcher compact />
             <NotificationBell />
             <button
               type="button"
@@ -749,7 +755,7 @@ export function DashboardLayout() {
               onClick={() => setIsProfilePanelOpen((isOpen) => !isOpen)}
             >
               <UserAvatar src={user?.avatarUrl} name={user?.fullName ?? user?.email ?? null} />
-              <span className="hidden min-w-0 truncate sm:inline">{user?.fullName ?? user?.email ?? "Profile"}</span>
+              <span className="hidden min-w-0 truncate sm:inline">{user?.fullName ?? user?.email ?? t("profile.title")}</span>
             </button>
           </div>
         </div>
@@ -833,13 +839,13 @@ export function DashboardLayout() {
                 <div className="flex items-start justify-between gap-3 border-b border-sidebar-foreground/10 pb-3">
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{mobileNavSection.label}</p>
-                    <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</h2>
-                    <p className="mt-1 truncate text-[11px] text-sidebar-foreground/45">{mobileNavSection.items.length === 1 ? mobileNavSection.items[0]?.label : `${mobileNavSection.items.length} destinations`}</p>
+                    <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</h2>
+                    <p className="mt-1 truncate text-[11px] text-sidebar-foreground/45">{mobileNavSection.items.length === 1 ? mobileNavSection.items[0]?.label : t("layout.destinations", { count: mobileNavSection.items.length })}</p>
                   </div>
                   <button
                     type="button"
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sidebar-foreground/10 bg-sidebar-foreground/5 text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                    aria-label="Hide navigation details"
+                    aria-label={t("layout.hideNavigationDetails")}
                     onClick={() => setIsMobileSecondTierVisible(false)}
                   >
                     <ChevronsLeft size={15} />
@@ -848,24 +854,24 @@ export function DashboardLayout() {
 
                 {!isSuperAdmin ? (
                   <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">Workspace</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "WhatsApp operations workspace"}</p>
-                    <p className="mt-1 text-[11px] text-sidebar-foreground/48">Switch modules from the rail and choose a destination here.</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">{t("common.workspace")}</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.whatsappWorkspace")}</p>
+                    <p className="mt-1 text-[11px] text-sidebar-foreground/48">{t("layout.switchModules")}</p>
                   </div>
                 ) : null}
 
                 {isSuperAdmin ? (
                   <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
                     <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">Current org</span>
-                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" aria-label="Choose organization to view">
-                        <option value="">Choose organization</option>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{t("layout.currentOrg")}</span>
+                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" aria-label={t("layout.chooseOrganizationToView")}>
+                        <option value="">{t("layout.chooseOrganization")}</option>
                         {organizations.map((organization) => (
                           <option key={organization.id} value={organization.id}>{organization.name}</option>
                         ))}
                       </Select>
                     </label>
-                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
+                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
                   </div>
                 ) : null}
 
@@ -893,15 +899,15 @@ export function DashboardLayout() {
       <PopupOverlay
         open={isProfilePanelOpen}
         onClose={() => setIsProfilePanelOpen(false)}
-        title="Profile"
-        description="Manage your profile, password, and session without leaving the dashboard."
+        title={t("profile.title")}
+        description={t("profile.description")}
         panelClassName="max-w-[min(36rem,calc(100vw-2rem))]"
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <UserAvatar src={user?.avatarUrl} name={user?.fullName ?? user?.email ?? null} size="md" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? "Authenticated user"}</p>
+              <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? user?.email ?? t("profile.authenticatedUser")}</p>
               <p className="mt-0.5 truncate text-xs text-text-muted">{user?.email ?? user?.role ?? "user"}</p>
               {user?.organizationName ? (
                 <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
@@ -921,7 +927,7 @@ export function DashboardLayout() {
             <Button
               variant="ghost"
               className="col-span-2 border border-border bg-muted px-3 py-2 text-foreground hover:bg-card hover:text-foreground"
-              aria-label="Edit my profile"
+              aria-label={t("profile.editMyProfile")}
               disabled={isUpdatingProfile}
               onClick={() => {
                 setIsProfileFormOpen((isOpen) => !isOpen);
@@ -930,12 +936,12 @@ export function DashboardLayout() {
               }}
             >
               <UserCircle size={15} />
-              <span className="ml-2">Edit profile</span>
+              <span className="ml-2">{t("profile.editProfile")}</span>
             </Button>
             <Button
               variant="ghost"
               className="border border-border bg-muted px-3 py-2 text-foreground hover:bg-card hover:text-foreground"
-              aria-label="Reset my password"
+              aria-label={t("profile.resetMyPassword")}
               disabled={isUpdatingPassword}
               onClick={() => {
                 setIsPasswordFormOpen((isOpen) => !isOpen);
@@ -945,7 +951,7 @@ export function DashboardLayout() {
               }}
             >
               <KeyRound size={15} />
-              <span className="ml-2">Password</span>
+              <span className="ml-2">{t("common.password")}</span>
             </Button>
             <Button
               onClick={async () => {
@@ -958,10 +964,10 @@ export function DashboardLayout() {
               }}
               variant="secondary"
               className="border-border bg-card px-3 py-2 text-foreground hover:bg-muted"
-              aria-label="Sign out"
+              aria-label={t("common.signOut")}
             >
               <LogOut size={15} />
-              <span className="ml-2">Sign out</span>
+              <span className="ml-2">{t("common.signOut")}</span>
             </Button>
           </div>
 
@@ -970,10 +976,10 @@ export function DashboardLayout() {
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-3">
                 <UserAvatar src={profileAvatarUrl} name={profileFullName || user?.email || null} size="md" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Profile picture</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("profile.profilePicture")}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted">
-                      Upload
+                      {t("common.upload")}
                       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={handleProfilePictureChange} />
                     </label>
                     {profileAvatarUrl ? (
@@ -983,17 +989,17 @@ export function DashboardLayout() {
                         disabled={isUpdatingProfile}
                         onClick={() => setProfileAvatarUrl(null)}
                       >
-                        Remove
+                        {t("common.remove")}
                       </Button>
                     ) : null}
                   </div>
                 </div>
               </div>
-              <Input value={profileFullName} onChange={(event) => setProfileFullName(event.target.value)} placeholder="Full name" aria-label="Full name" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
-              <Input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} placeholder="Phone number" aria-label="Phone number" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
-              <Input value={profileAddress} onChange={(event) => setProfileAddress(event.target.value)} placeholder="Address" aria-label="Address" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
+              <Input value={profileFullName} onChange={(event) => setProfileFullName(event.target.value)} placeholder={t("common.fullName")} aria-label={t("common.fullName")} className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
+              <Input value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} placeholder={t("common.phoneNumber")} aria-label={t("common.phoneNumber")} className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
+              <Input value={profileAddress} onChange={(event) => setProfileAddress(event.target.value)} placeholder={t("common.address")} aria-label={t("common.address")} className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" />
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>Save profile</Button>
+                <Button type="submit" className="flex-1 px-3 py-2" disabled={isUpdatingProfile}>{t("profile.saveProfile")}</Button>
                 <Button
                   variant="secondary"
                   className="flex-1 px-3 py-2"
@@ -1007,7 +1013,7 @@ export function DashboardLayout() {
                     setProfileNotice(null);
                   }}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </form>
@@ -1016,14 +1022,14 @@ export function DashboardLayout() {
 
           {isPasswordFormOpen ? (
             <form className="space-y-2" onSubmit={handleUpdatePassword}>
-              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="New password" aria-label="New password" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
-              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" aria-label="Confirm new password" className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
+              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder={t("profile.newPassword")} aria-label={t("profile.newPassword")} className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
+              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder={t("profile.confirmPassword")} aria-label={t("profile.confirmNewPassword")} className="border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground" minLength={8} required />
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1 px-3 py-2" aria-label="Save password" disabled={isUpdatingPassword}><Check size={16} /></Button>
+                <Button type="submit" className="flex-1 px-3 py-2" aria-label={t("profile.savePassword")} disabled={isUpdatingPassword}><Check size={16} /></Button>
                 <Button
                   variant="secondary"
                   className="flex-1 px-3 py-2"
-                  aria-label="Cancel password reset"
+                  aria-label={t("profile.cancelPasswordReset")}
                   disabled={isUpdatingPassword}
                   onClick={() => {
                     setIsPasswordFormOpen(false);
@@ -1084,8 +1090,8 @@ export function DashboardLayout() {
               <button
                 type="button"
                 className="mt-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                aria-label={isDesktopNavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={isDesktopNavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={isDesktopNavCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}
+                title={isDesktopNavCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}
                 onClick={() => setIsDesktopNavCollapsed((current) => !current)}
               >
                 {isDesktopNavCollapsed ? <ChevronsRight size={17} /> : <ChevronsLeft size={17} />}
@@ -1108,7 +1114,7 @@ export function DashboardLayout() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
-                      <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? "Operations workspace"}</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</p>
                     </div>
                   </div>
                 </div>
@@ -1116,28 +1122,28 @@ export function DashboardLayout() {
                 {isSuperAdmin ? (
                   <div className="mt-4">
                     <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">Viewing org</span>
-                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label="Choose organization to view">
-                        <option value="">Choose organization</option>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{t("layout.viewingOrg")}</span>
+                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label={t("layout.chooseOrganizationToView")}>
+                        <option value="">{t("layout.chooseOrganization")}</option>
                         {organizations.map((organization) => (
                           <option key={organization.id} value={organization.id}>{organization.name}</option>
                         ))}
                       </Select>
                     </label>
-                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">Scoped to {selectedOrganizationName}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">Required for organization views</p>}
+                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
                   </div>
                 ) : null}
 
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-3 px-1">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">Module</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.module")}</p>
                       <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{activeNavSection.label}</h2>
                     </div>
                     <button
                       type="button"
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/58 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                      aria-label="Collapse sidebar"
+                      aria-label={t("layout.collapseSidebar")}
                       onClick={() => setIsDesktopNavCollapsed(true)}
                     >
                       <ChevronsLeft size={16} />
