@@ -7,15 +7,15 @@ const IV_LENGTH_BYTES = 12;
 let warnedAboutDevFallback = false;
 
 function getEncryptionKey() {
-  const configuredSecret = env.TOKEN_ENCRYPTION_SECRET ?? env.EMAIL_SECRET_KEY ?? env.SOCIAL_TOKEN_ENCRYPTION_KEY;
+  const configuredSecret = env.EMAIL_SECRET_KEY ?? env.TOKEN_ENCRYPTION_SECRET ?? env.SOCIAL_TOKEN_ENCRYPTION_KEY;
 
   if (!configuredSecret && env.NODE_ENV === "production") {
-    throw new Error("TOKEN_ENCRYPTION_SECRET or EMAIL_SECRET_KEY is required in production for email sender secrets");
+    throw new Error("EMAIL_SECRET_KEY is required in production for email sender secrets");
   }
 
   if (!configuredSecret && !warnedAboutDevFallback) {
     warnedAboutDevFallback = true;
-    logger.warn("TOKEN_ENCRYPTION_SECRET is missing; using development-only fallback for email sender secrets");
+    logger.warn("EMAIL_SECRET_KEY is missing; using development-only fallback for email sender secrets");
   }
 
   return crypto

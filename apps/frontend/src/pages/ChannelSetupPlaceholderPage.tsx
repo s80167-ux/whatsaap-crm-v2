@@ -154,16 +154,12 @@ const CONTENT: Record<ChannelSetupPlaceholderVariant, PlaceholderContent> = {
     icon: Mail,
     items: [
       {
-        title: "Microsoft 365 / Corporate Email",
-        details: ["Use case: company sender account", "Future requirement: secure auth / SMTP or OAuth flow"]
-      },
-      {
-        title: "Gmail",
-        details: ["Use case: small business sender account", "Future requirement: app password or OAuth flow"]
+        title: "Gmail App Password",
+        details: ["Use case: small business sender account", "Requirement: Gmail address and app password"]
       },
       {
         title: "Custom SMTP",
-        details: ["Use case: domain-based sender", "Future requirement: SMTP host, port, username, password, sender identity"]
+        details: ["Use case: domain-based sender", "Requirement: SMTP host, port, username, password, sender identity"]
       },
       {
         title: "Compliance",

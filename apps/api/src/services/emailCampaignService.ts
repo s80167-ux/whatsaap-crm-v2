@@ -33,6 +33,8 @@ type EmailCampaignRecipientRow = {
   contact_id: string | null;
   email: string;
   name: string | null;
+  company: string | null;
+  phone: string | null;
   status: "pending" | "skipped" | "sending" | "sent" | "failed" | "unsubscribed" | "bounced";
   failure_code: string | null;
   failure_reason: string | null;
@@ -82,6 +84,8 @@ type RecipientCandidate = {
   email: string | null;
   name: string | null;
   contactId: string | null;
+  company: string | null;
+  phone: string | null;
 };
 
 function ensureReadAccess(user: AuthUser) {
@@ -156,6 +160,22 @@ function appendUnsubscribeFooter(bodyHtml: string, unsubscribeLink: string) {
   }
 
   return `${bodyHtml}${buildUnsubscribeFooter(unsubscribeLink)}`;
+}
+
+function firstNameFromName(name: string | null) {
+  return name?.trim().split(/\s+/)[0] ?? "";
+}
+
+function renderMailMergeTemplate(value: string, recipient: Pick<EmailCampaignRecipientRow, "name" | "company" | "phone" | "email">) {
+  const variables: Record<string, string> = {
+    name: recipient.name ?? "",
+    first_name: firstNameFromName(recipient.name),
+    company: recipient.company ?? "",
+    phone: recipient.phone ?? "",
+    email: recipient.email
+  };
+
+  return value.replace(/\{\{\s*(name|first_name|company|phone|email)\s*\}\}/gi, (_match, key: string) => variables[key.toLowerCase()] ?? "");
 }
 
 function buildRecipientFailure(code: string, reason: string) {
@@ -905,14 +925,15 @@ export class EmailCampaignService {
       email: recipient.email
     });
     const unsubscribeLink = `${env.API_PUBLIC_URL}/unsubscribe/email/${unsubscribeToken.token}`;
-    const html = appendUnsubscribeFooter(recipient.campaign_body_html, unsubscribeLink);
-    const text = stripHtml(recipient.campaign_body_text || recipient.campaign_body_html);
+    const subject = renderMailMergeTemplate(recipient.campaign_subject, recipient);
+    const html = appendUnsubscribeFooter(renderMailMergeTemplate(recipient.campaign_body_html, recipient), unsubscribeLink);
+    const text = stripHtml(renderMailMergeTemplate(recipient.campaign_body_text || recipient.campaign_body_html, recipient));
 
     try {
       const response = await this.senderService.sendMail({
         sender,
         to: recipient.email,
-        subject: recipient.campaign_subject,
+        subject,
         html,
         text
       });
@@ -1102,16 +1123,20 @@ export class EmailCampaignService {
     const recipients: RecipientCandidate[] = directRecipients.map((recipient) => ({
       email: recipient.email,
       name: recipient.name ?? null,
-      contactId: recipient.contactId ?? null
+      contactId: recipient.contactId ?? null,
+      company: null,
+      phone: null
     }));
 
     if (audienceGroupId) {
-      const audienceRows = await query<{ crm_contact_id: string | null; contact_email: string | null; audience_name: string | null }>(
+      const audienceRows = await query<{ crm_contact_id: string | null; contact_email: string | null; audience_name: string | null; company_name: string | null; primary_phone_e164: string | null }>(
         `
           select
             cac.crm_contact_id,
             c.email as contact_email,
-            coalesce(c.display_name, cac.name) as audience_name
+            coalesce(c.display_name, cac.name) as audience_name,
+            c.company_name,
+            c.primary_phone_e164
           from campaign_audience_contacts cac
           left join contacts c on c.id = cac.crm_contact_id and c.organization_id = cac.organization_id
           where cac.organization_id = $1
@@ -1126,7 +1151,9 @@ export class EmailCampaignService {
         recipients.push({
           email: row.contact_email,
           name: row.audience_name,
-          contactId: row.crm_contact_id
+          contactId: row.crm_contact_id,
+          company: row.company_name,
+          phone: row.primary_phone_e164
         });
       }
     }
@@ -1137,7 +1164,7 @@ export class EmailCampaignService {
   private async prepareRecipients(organizationId: string, candidates: RecipientCandidate[]) {
     const suppressedSet = await this.getSuppressedEmailSet(organizationId);
     const seen = new Set<string>();
-    const rows: Array<{ email: string; name: string | null; contactId: string | null; status: EmailCampaignRecipientRow["status"]; failureCode: string | null; failureReason: string | null }> = [];
+    const rows: Array<{ email: string; name: string | null; contactId: string | null; company: string | null; phone: string | null; status: EmailCampaignRecipientRow["status"]; failureCode: string | null; failureReason: string | null }> = [];
     let invalidCount = 0;
     let suppressedCount = 0;
     let duplicateCount = 0;
@@ -1152,6 +1179,8 @@ export class EmailCampaignService {
           email: normalizedEmail || `invalid-${crypto.randomUUID()}@invalid.local`,
           name: candidate.name,
           contactId: candidate.contactId,
+          company: candidate.company,
+          phone: candidate.phone,
           status: "skipped",
           ...buildRecipientFailure("invalid_email", candidate.email ? "Invalid email address" : "Contact has no email address")
         });
@@ -1171,6 +1200,8 @@ export class EmailCampaignService {
           email: normalizedEmail,
           name: candidate.name,
           contactId: candidate.contactId,
+          company: candidate.company,
+          phone: candidate.phone,
           status: "skipped",
           ...buildRecipientFailure("suppressed", "Recipient is on the suppression list")
         });
@@ -1182,6 +1213,8 @@ export class EmailCampaignService {
         email: normalizedEmail,
         name: candidate.name,
         contactId: candidate.contactId,
+        company: candidate.company,
+        phone: candidate.phone,
         status: "pending",
         failureCode: null,
         failureReason: null
@@ -1205,7 +1238,7 @@ export class EmailCampaignService {
     organizationId: string,
     campaignId: string,
     prepared: {
-      rows: Array<{ email: string; name: string | null; contactId: string | null; status: EmailCampaignRecipientRow["status"]; failureCode: string | null; failureReason: string | null }>;
+      rows: Array<{ email: string; name: string | null; contactId: string | null; company: string | null; phone: string | null; status: EmailCampaignRecipientRow["status"]; failureCode: string | null; failureReason: string | null }>;
     }
   ) {
     for (const row of prepared.rows) {
@@ -1217,12 +1250,14 @@ export class EmailCampaignService {
             contact_id,
             email,
             name,
+            company,
+            phone,
             status,
             failure_code,
             failure_reason
-          ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+          ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
-        [organizationId, campaignId, row.contactId, row.email, row.name, row.status, row.failureCode, row.failureReason]
+        [organizationId, campaignId, row.contactId, row.email, row.name, row.company, row.phone, row.status, row.failureCode, row.failureReason]
       );
     }
   }

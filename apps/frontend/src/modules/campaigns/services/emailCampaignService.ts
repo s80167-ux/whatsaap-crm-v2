@@ -1,7 +1,8 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
 
-export type EmailSenderType = "smtp" | "gmail" | "microsoft365";
+export type EmailSenderType = "custom_smtp" | "gmail_app_password";
 export type EmailSenderStatus = "draft" | "verified" | "failed" | "disabled" | "expired" | "reconnect_required";
+export type SmtpSecurity = "STARTTLS" | "SSL" | "NONE";
 export type EmailCampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused" | "failed" | "cancelled";
 export type EmailRecipientStatus = "pending" | "skipped" | "sending" | "sent" | "failed" | "unsubscribed" | "bounced";
 export type EmailSuppressionReason = "unsubscribed" | "bounced" | "complaint" | "manual";
@@ -17,12 +18,6 @@ export type EmailSender = {
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_secure: boolean;
-  oauth_provider: string | null;
-  oauth_provider_user_id: string | null;
-  oauth_tenant_id: string | null;
-  oauth_token_expires_at: string | null;
-  oauth_scopes: string[] | null;
-  oauth_connected_at: string | null;
   status: EmailSenderStatus;
   last_test_status: string | null;
   last_test_error: string | null;
@@ -31,9 +26,7 @@ export type EmailSender = {
   created_at: string;
   updated_at: string;
   smtp_username_masked: string | null;
-  oauth_account_email_masked: string | null;
   smtp_password_configured: boolean;
-  oauth_tokens_configured: boolean;
 };
 
 export type EmailCampaign = {
@@ -139,17 +132,22 @@ export type SaveEmailCampaignInput = {
   recipients?: Array<{ email: string; name?: string | null; contact_id?: string | null }>;
 };
 
-export type MicrosoftEmailStatus = {
-  connected: boolean;
-  account: {
-    id: string;
-    email: string;
-    display_name: string | null;
-    status: EmailSenderStatus;
-    connected_at: string | null;
-    token_expires_at: string | null;
-    last_error: string | null;
-  } | null;
+export type SmtpConfigSuggestion = {
+  smtpHost: string;
+  smtpPort: number;
+  security: SmtpSecurity;
+  smtpUsername: string;
+};
+
+export type SmtpDetectionResult = {
+  domain: string;
+  detectedProvider: string;
+  providerLabel: string;
+  confidence: number;
+  suggestedConfig: SmtpConfigSuggestion | null;
+  alternativeConfigs: SmtpConfigSuggestion[];
+  notes: string[];
+  unsupported: boolean;
 };
 
 function withOrgParams(path: string, organizationId?: string | null) {
@@ -162,60 +160,48 @@ function withOrgParams(path: string, organizationId?: string | null) {
 }
 
 export async function fetchEmailSenders(organizationId?: string | null) {
-  const response = await apiGet<{ data: EmailSender[] }>(withOrgParams("/email-campaigns/senders", organizationId));
+  const response = await apiGet<{ data: EmailSender[] }>(withOrgParams("/email/senders", organizationId));
   return response.data;
 }
 
 export async function saveEmailSender(input: SaveEmailSenderInput) {
   if (input.senderId) {
-    const response = await apiPatch<{ data: EmailSender }>(`/email-campaigns/senders/${input.senderId}`, input);
+    const response = await apiPatch<{ data: EmailSender }>(`/email/senders/${input.senderId}`, input);
     return response.data;
   }
 
-  const response = await apiPost<{ data: EmailSender }>("/email-campaigns/senders", input);
+  const response = await apiPost<{ data: EmailSender }>("/email/senders", input);
   return response.data;
 }
 
 export async function testEmailSender(input: { senderId: string; organizationId?: string | null; to_email: string; subject?: string | null; message?: string | null }) {
-  const response = await apiPost<{ data: { sender: EmailSender; result: { ok: boolean; message: string } } }>(`/email-campaigns/senders/${input.senderId}/test`, input);
+  const response = await apiPost<{ data: { sender: EmailSender; result: { ok: boolean; message: string } } }>(`/email/senders/${input.senderId}/test`, input);
   return response.data;
 }
 
 export async function disableEmailSender(input: { senderId: string; organizationId?: string | null }) {
-  const response = await apiDelete<{ data: EmailSender }>(withOrgParams(`/email-campaigns/senders/${input.senderId}`, input.organizationId));
+  const response = await apiDelete<{ data: EmailSender }>(withOrgParams(`/email/senders/${input.senderId}`, input.organizationId));
   return response.data;
 }
 
-export async function fetchMicrosoftEmailStatus(organizationId?: string | null) {
-  const response = await apiGet<{ data: MicrosoftEmailStatus }>(withOrgParams("/email/microsoft/status", organizationId));
+export async function detectSmtpSettings(input: { email: string }) {
+  const response = await apiPost<{ data: SmtpDetectionResult }>("/email/smtp/detect", input);
   return response.data;
 }
 
-export async function fetchMicrosoftAuthUrl(input: { organizationId?: string | null; redirectTo?: string | null }) {
-  const params = new URLSearchParams();
-  if (input.organizationId) params.set("organization_id", input.organizationId);
-  if (input.redirectTo) params.set("redirect_to", input.redirectTo);
-  const suffix = params.toString() ? `?${params.toString()}` : "";
-  return apiGet<{ url: string }>(`/email/microsoft/auth-url${suffix}`);
-}
-
-export async function disconnectMicrosoftEmail(input: { organizationId?: string | null; senderId?: string | null }) {
-  const response = await apiPost<{ data: MicrosoftEmailStatus["account"] }>("/email/microsoft/disconnect", {
-    organizationId: input.organizationId,
-    sender_id: input.senderId ?? null
-  });
-  return response.data;
-}
-
-export async function sendProviderTestEmail(input: { senderId: string; organizationId?: string | null; provider?: "microsoft" | "smtp" | "gmail" | "custom_smtp"; to_email: string; subject?: string | null; message?: string | null }) {
-  const response = await apiPost<{ data: { sender: EmailSender; result: { ok: boolean; message: string } } }>("/email/send-test", {
-    sender_id: input.senderId,
-    organizationId: input.organizationId,
-    provider: input.provider,
-    to_email: input.to_email,
-    subject: input.subject ?? null,
-    message: input.message ?? null
-  });
+export async function testSmtpConfig(input: {
+  smtpHost: string;
+  smtpPort: number;
+  security: SmtpSecurity;
+  smtpUsername: string;
+  smtpPassword: string;
+  fromEmail: string;
+  fromName: string;
+  replyTo?: string | null;
+  toEmail: string;
+  sendEmail?: boolean;
+}) {
+  const response = await apiPost<{ data: { ok: boolean; message: string } }>("/email/smtp/test-config", input);
   return response.data;
 }
 

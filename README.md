@@ -135,6 +135,16 @@ npm run worker:usage-daily -- --days 7
 - `MESSAGE_OUTBOX_WORKER_POLL_INTERVAL_MS`: outbound worker poll interval
 - `MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS`: when a stuck `processing` outbox job is returned to `pending`
 - `MESSAGE_OUTBOX_WORKER_MAX_RETRIES`: cap for automatic retries of failed outbound jobs
+- `EMAIL_SECRET_KEY`: encryption key for saved email sender SMTP passwords. Use a long random value in production.
+
+### Email Campaign MVP
+
+Email campaign sender setup is SMTP-only for this MVP:
+
+- Custom SMTP: host, port, security mode, username, password or app password, sender name, from email, and optional reply-to.
+- Gmail App Password: Gmail address plus an App Password. This maps internally to `smtp.gmail.com`, port `587`, STARTTLS, the Gmail address as username, and the App Password as the SMTP password.
+
+Microsoft Outlook, Microsoft 365, Microsoft OAuth, Microsoft Graph, Azure App Registration, Entra ID, and Graph `Mail.Send` are not part of the MVP email sender flow.
 
 ### WhatsApp Connector
 

@@ -4,12 +4,17 @@ import { AppError } from "../lib/errors.js";
 import { decryptEmailSecret, encryptEmailSecret } from "../lib/emailSecretCrypto.js";
 import type { AuthUser } from "../types/auth.js";
 import { AuditLogService } from "./auditLogService.js";
-import { MicrosoftEmailService } from "./microsoftEmailService.js";
+
+const MICROSOFT_UNSUPPORTED_MESSAGE =
+  "Microsoft email provider is no longer supported in this MVP. Please use Custom SMTP or Gmail App Password.";
+
+type SupportedEmailSenderType = "custom_smtp" | "gmail_app_password";
+type EmailSenderType = SupportedEmailSenderType | "smtp" | "gmail" | "microsoft365" | "microsoft";
 
 type EmailSenderRow = {
   id: string;
   organization_id: string;
-  sender_type: "smtp" | "gmail" | "microsoft365";
+  sender_type: EmailSenderType;
   display_name: string;
   from_name: string;
   from_email: string;
@@ -39,17 +44,27 @@ type EmailSenderRow = {
 
 export type EmailSenderView = Omit<
   EmailSenderRow,
-  "smtp_password_encrypted" | "oauth_access_token_encrypted" | "oauth_refresh_token_encrypted" | "smtp_username" | "oauth_account_email"
+  | "smtp_password_encrypted"
+  | "sender_type"
+  | "oauth_provider"
+  | "oauth_account_email"
+  | "oauth_provider_user_id"
+  | "oauth_tenant_id"
+  | "oauth_access_token_encrypted"
+  | "oauth_refresh_token_encrypted"
+  | "oauth_token_expires_at"
+  | "oauth_scopes"
+  | "oauth_connected_at"
+  | "smtp_username"
 > & {
+  sender_type: SupportedEmailSenderType;
   smtp_username_masked: string | null;
-  oauth_account_email_masked: string | null;
   smtp_password_configured: boolean;
-  oauth_tokens_configured: boolean;
 };
 
 export type CreateEmailSenderInput = {
   organizationId?: string | null;
-  senderType: "smtp" | "gmail" | "microsoft365";
+  senderType: EmailSenderType;
   displayName: string;
   fromName: string;
   fromEmail: string;
@@ -134,21 +149,13 @@ function maskValue(value: string | null) {
 }
 
 function normalizeSenderInput(input: Partial<CreateEmailSenderInput>) {
-  const senderType = input.senderType ?? "smtp";
+  const senderType = normalizeSenderType(input.senderType ?? "custom_smtp");
 
-  if (senderType === "gmail") {
+  if (senderType === "gmail_app_password") {
     return {
-      smtpHost: input.smtpHost?.trim() || "smtp.gmail.com",
-      smtpPort: input.smtpPort ?? 465,
-      smtpSecure: input.smtpSecure ?? true
-    };
-  }
-
-  if (senderType === "microsoft365") {
-    return {
-      smtpHost: null,
-      smtpPort: null,
-      smtpSecure: input.smtpSecure ?? false
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 587,
+      smtpSecure: false
     };
   }
 
@@ -157,6 +164,22 @@ function normalizeSenderInput(input: Partial<CreateEmailSenderInput>) {
     smtpPort: input.smtpPort ?? null,
     smtpSecure: input.smtpSecure ?? true
   };
+}
+
+function normalizeSenderType(senderType: EmailSenderType): SupportedEmailSenderType {
+  if (senderType === "microsoft" || senderType === "microsoft365") {
+    throw new AppError(MICROSOFT_UNSUPPORTED_MESSAGE, 400, "email_provider_microsoft_unsupported");
+  }
+
+  if (senderType === "gmail") {
+    return "gmail_app_password";
+  }
+
+  if (senderType === "smtp") {
+    return "custom_smtp";
+  }
+
+  return senderType;
 }
 
 function validateEmailAddress(email: string, fieldName: string) {
@@ -170,6 +193,29 @@ function validateEmailAddress(email: string, fieldName: string) {
   return trimmed;
 }
 
+function getDatabaseErrorCode(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : null;
+}
+
+function getDatabaseConstraint(error: unknown) {
+  return typeof error === "object" && error !== null && "constraint" in error && typeof error.constraint === "string" ? error.constraint : null;
+}
+
+function mapSenderWriteError(error: unknown): never {
+  const code = getDatabaseErrorCode(error);
+  const constraint = getDatabaseConstraint(error);
+
+  if (code === "23514" && constraint === "email_senders_sender_type_check") {
+    throw new AppError(
+      "Email sender table is not ready for the SMTP-only MVP. Run migration 043_email_campaign_smtp_only_mvp.sql, then try saving again.",
+      409,
+      "email_sender_schema_migration_required"
+    );
+  }
+
+  throw error;
+}
+
 function sanitizeProviderError(error: unknown) {
   if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
@@ -179,10 +225,7 @@ function sanitizeProviderError(error: unknown) {
 }
 
 export class EmailSenderService {
-  constructor(
-    private readonly auditLogService = new AuditLogService(),
-    private readonly microsoftEmailService = new MicrosoftEmailService()
-  ) {}
+  constructor(private readonly auditLogService = new AuditLogService()) {}
 
   async listSenders(user: AuthUser, input?: { organizationId?: string | null }) {
     ensureReadAccess(user);
@@ -192,6 +235,7 @@ export class EmailSenderService {
         select *
         from email_senders
         where organization_id = $1
+          and sender_type in ('custom_smtp', 'gmail_app_password', 'smtp', 'gmail')
         order by created_at desc, display_name asc
       `,
       [organizationId]
@@ -218,23 +262,19 @@ export class EmailSenderService {
       throw new AppError("Email sender not found", 404, "email_sender_not_found");
     }
 
+    normalizeSenderType(sender.sender_type);
+
     return sender;
   }
 
   async createSender(user: AuthUser, input: CreateEmailSenderInput, request?: { ip?: string | null; userAgent?: string | null }) {
     ensureSenderSetupAccess(user);
     const organizationId = resolveOrganizationId(user, input.organizationId);
+    const senderType = normalizeSenderType(input.senderType);
     const normalized = normalizeSenderInput(input);
     const fromEmail = validateEmailAddress(input.fromEmail, "from_email");
     const replyToEmail = input.replyToEmail ? validateEmailAddress(input.replyToEmail, "reply_to_email") : null;
-
-    if (input.senderType === "microsoft365") {
-      throw new AppError(
-        "Microsoft senders must be connected with Microsoft OAuth. Click Connect Microsoft Account instead.",
-        400,
-        "microsoft_oauth_required"
-      );
-    }
+    const smtpUsername = senderType === "gmail_app_password" ? fromEmail : input.smtpUsername?.trim() ?? null;
 
     if (!input.displayName.trim()) {
       throw new AppError("display_name is required", 400, "email_sender_display_name_required");
@@ -252,7 +292,7 @@ export class EmailSenderService {
       throw new AppError("smtp_port is required", 400, "email_sender_port_required");
     }
 
-    if ((input.smtpUsername ?? "").trim().length === 0) {
+    if (!smtpUsername) {
       throw new AppError("smtp_username is required", 400, "email_sender_username_required");
     }
 
@@ -281,7 +321,7 @@ export class EmailSenderService {
         `,
         [
           organizationId,
-          input.senderType,
+          senderType,
           input.displayName.trim(),
           input.fromName.trim(),
           fromEmail,
@@ -289,14 +329,14 @@ export class EmailSenderService {
           normalized.smtpHost,
           normalized.smtpPort,
           normalized.smtpSecure,
-          input.smtpUsername?.trim() ?? null,
+          smtpUsername,
           encryptEmailSecret(input.smtpPassword!.trim()),
           user.organizationUserId
         ]
       );
 
       return inserted.rows[0];
-    });
+    }).catch(mapSenderWriteError);
 
     await this.auditLogService.record(user, {
       organizationId,
@@ -320,21 +360,7 @@ export class EmailSenderService {
     ensureSenderSetupAccess(user);
     const organizationId = resolveOrganizationId(user, input.organizationId);
     const existing = await this.getSenderForUse({ organizationId, senderId: input.senderId });
-    const senderType = input.senderType ?? existing.sender_type;
-
-    if (senderType === "microsoft365") {
-      if (!existing.oauth_refresh_token_encrypted) {
-        throw new AppError(
-          "Microsoft senders must be connected with Microsoft OAuth. Click Connect Microsoft Account instead.",
-          400,
-          "microsoft_oauth_required"
-        );
-      }
-
-      if (input.smtpPassword || input.smtpUsername || input.smtpHost || input.smtpPort) {
-        throw new AppError("Microsoft sender settings cannot use SMTP username or password.", 400, "microsoft_smtp_not_supported");
-      }
-    }
+    const senderType = normalizeSenderType(input.senderType ?? existing.sender_type);
 
     const normalized = normalizeSenderInput({ ...input, senderType });
     const fromEmail = input.fromEmail ? validateEmailAddress(input.fromEmail, "from_email") : existing.from_email;
@@ -351,6 +377,12 @@ export class EmailSenderService {
         : input.smtpPassword
           ? encryptEmailSecret(input.smtpPassword.trim())
           : null;
+    const nextSmtpUsername =
+      senderType === "gmail_app_password"
+        ? fromEmail
+        : input.smtpUsername === undefined
+          ? existing.smtp_username
+          : input.smtpUsername?.trim() ?? null;
 
     const result = await withTransaction(async (client) => {
       const updated = await client.query<EmailSenderRow>(
@@ -385,13 +417,13 @@ export class EmailSenderService {
           normalized.smtpHost,
           normalized.smtpPort,
           normalized.smtpSecure,
-          input.smtpUsername === undefined ? existing.smtp_username : input.smtpUsername?.trim() ?? null,
+          nextSmtpUsername,
           nextPasswordEncrypted
         ]
       );
 
       return updated.rows[0];
-    });
+    }).catch(mapSenderWriteError);
 
     await this.auditLogService.record(user, {
       organizationId,
@@ -532,7 +564,7 @@ export class EmailSenderService {
     return {
       id: row.id,
       organization_id: row.organization_id,
-      sender_type: row.sender_type,
+      sender_type: normalizeSenderType(row.sender_type),
       display_name: row.display_name,
       from_name: row.from_name,
       from_email: row.from_email,
@@ -540,12 +572,6 @@ export class EmailSenderService {
       smtp_host: row.smtp_host,
       smtp_port: row.smtp_port,
       smtp_secure: row.smtp_secure,
-      oauth_provider: row.oauth_provider,
-      oauth_provider_user_id: row.oauth_provider_user_id,
-      oauth_tenant_id: row.oauth_tenant_id,
-      oauth_token_expires_at: row.oauth_token_expires_at,
-      oauth_scopes: row.oauth_scopes,
-      oauth_connected_at: row.oauth_connected_at,
       status: row.status,
       last_test_status: row.last_test_status,
       last_test_error: row.last_test_error,
@@ -554,9 +580,7 @@ export class EmailSenderService {
       created_at: row.created_at,
       updated_at: row.updated_at,
       smtp_username_masked: maskValue(row.smtp_username),
-      oauth_account_email_masked: maskValue(row.oauth_account_email),
-      smtp_password_configured: Boolean(row.smtp_password_encrypted),
-      oauth_tokens_configured: Boolean(row.oauth_access_token_encrypted || row.oauth_refresh_token_encrypted)
+      smtp_password_configured: Boolean(row.smtp_password_encrypted)
     };
   }
 
@@ -568,34 +592,61 @@ export class EmailSenderService {
     text: string;
     replyTo?: string | null;
   }) {
-    if (input.sender.sender_type === "microsoft365") {
-      if (!input.sender.oauth_provider || !input.sender.oauth_refresh_token_encrypted) {
-        throw new AppError("Microsoft account needs to be reconnected.", 400, "microsoft_reconnect_required");
-      }
+    normalizeSenderType(input.sender.sender_type);
 
-      return this.microsoftEmailService.sendMicrosoftGraphEmail({
-        connectionId: input.sender.id,
-        to: [input.to],
-        subject: input.subject,
-        htmlBody: input.html,
-        textBody: input.text,
-        replyTo: input.replyTo ?? input.sender.reply_to_email ?? undefined
-      });
-    }
-
-    const transport = this.buildTransport(input.sender);
-
-    return transport.sendMail({
-      from: `${input.sender.from_name} <${input.sender.from_email}>`,
+    return this.sendSmtpEmail({
+      smtpHost: input.sender.smtp_host,
+      smtpPort: input.sender.smtp_port,
+      smtpSecure: input.sender.smtp_secure,
+      smtpUsername: input.sender.smtp_username,
+      smtpPasswordEncrypted: input.sender.smtp_password_encrypted,
+      fromName: input.sender.from_name,
+      fromEmail: input.sender.from_email,
+      replyTo: input.replyTo ?? input.sender.reply_to_email ?? undefined,
       to: input.to,
       subject: input.subject,
-      html: input.html,
-      text: input.text,
-      replyTo: input.replyTo ?? input.sender.reply_to_email ?? undefined
+      htmlBody: input.html,
+      textBody: input.text
     });
   }
 
-  buildTransport(sender: EmailSenderRow) {
+  async sendSmtpEmail(input: {
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpSecure: boolean;
+    smtpUsername: string | null;
+    smtpPasswordEncrypted: string | null;
+    fromName: string;
+    fromEmail: string;
+    replyTo?: string | null;
+    to: string;
+    cc?: string;
+    bcc?: string;
+    subject: string;
+    htmlBody: string;
+    textBody: string;
+  }) {
+    const transport = this.buildTransport({
+      smtp_host: input.smtpHost,
+      smtp_port: input.smtpPort,
+      smtp_secure: input.smtpSecure,
+      smtp_username: input.smtpUsername,
+      smtp_password_encrypted: input.smtpPasswordEncrypted
+    });
+
+    return transport.sendMail({
+      from: `${input.fromName} <${input.fromEmail}>`,
+      to: input.to,
+      cc: input.cc,
+      bcc: input.bcc,
+      subject: input.subject,
+      html: input.htmlBody,
+      text: input.textBody,
+      replyTo: input.replyTo ?? undefined
+    });
+  }
+
+  buildTransport(sender: Pick<EmailSenderRow, "smtp_host" | "smtp_port" | "smtp_secure" | "smtp_username" | "smtp_password_encrypted">) {
     if (!sender.smtp_host || !sender.smtp_port || !sender.smtp_username || !sender.smtp_password_encrypted) {
       throw new AppError("Sender transport is incomplete", 400, "email_sender_transport_incomplete");
     }

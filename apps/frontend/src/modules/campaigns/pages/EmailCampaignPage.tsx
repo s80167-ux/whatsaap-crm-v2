@@ -6,7 +6,6 @@ import {
   FileCheck2,
   FileText,
   Mail,
-  MailCheck,
   PauseCircle,
   Play,
   RefreshCw,
@@ -16,7 +15,6 @@ import {
   Upload,
   UserCheck,
   UserX,
-  WalletCards,
   XCircle
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -86,32 +84,12 @@ const setupProgressItems = [
 
 const senderTypes = [
   {
-    title: "Microsoft / Outlook",
-    lines: ["Corporate Microsoft 365", "Outlook / Hotmail personal"],
-    icon: MailCheck
-  },
-  {
-    title: "Google / Gmail",
-    lines: ["Google Workspace", "Gmail personal"],
+    title: "Gmail App Password",
+    lines: ["Gmail SMTP", "Google Workspace SMTP"],
     icon: Mail
   },
   {
-    title: "Yahoo Mail",
-    lines: ["For personal or legacy email accounts"],
-    icon: Mail
-  },
-  {
-    title: "iCloud Mail",
-    lines: ["For Apple iCloud email users"],
-    icon: Mail
-  },
-  {
-    title: "Zoho Mail",
-    lines: ["For SME business email"],
-    icon: WalletCards
-  },
-  {
-    title: "Custom Domain Email",
+    title: "Custom SMTP",
     lines: ["For cPanel, hosting email, Exabytes, GB Network, Hostinger or other SMTP email"],
     icon: ShieldCheck
   }
@@ -165,7 +143,7 @@ type CampaignFormState = {
 
 const defaultSenderForm: SenderFormState = {
   senderId: "",
-  senderType: "smtp",
+  senderType: "custom_smtp",
   displayName: "",
   fromName: "",
   fromEmail: "",
@@ -760,11 +738,11 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
       <Card elevated className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <SectionIntro eyebrow="Sender Setup" title="Email sender setup now lives in Setup" description="Campaigns → Email only references configured senders. Full Gmail, Microsoft 365, and custom SMTP setup is owned by Setup → Channels → Email." />
+          <SectionIntro eyebrow="Sender Setup" title="Email sender setup now lives in Setup" description="Campaigns Email only references configured senders. Gmail App Password and Custom SMTP setup is owned by Setup Channels Email." />
           <Button variant="secondary" onClick={onGoToSetup}>Go to Email Setup</Button>
         </div>
         <div className="rounded-lg border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
-          Use Setup → Channels → Email to create or edit Gmail, Microsoft 365, and custom SMTP senders. Password entry, provider presets, and sender verification are intentionally centralized there.
+          Use Setup Channels Email to create or edit Gmail App Password and Custom SMTP senders. Password entry, provider presets, and sender verification are intentionally centralized there.
         </div>
         <div className="rounded-lg border border-primary/15 bg-primary/5 p-4 text-sm leading-6 text-text-muted">
           This campaign tab stays read-only so the campaign workflow does not duplicate sender configuration. Verified senders become available automatically in the create tab after a successful setup test.
@@ -785,7 +763,7 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
             <EmptyState title="No senders configured" description="No verified email sender found. Set up your sender first." />
           ) : (
             senders.map((sender) => {
-              const SenderIcon = senderTypes.find((item) => item.title.toLowerCase().includes(sender.sender_type === "gmail" ? "google" : sender.sender_type === "microsoft365" ? "microsoft" : "custom"))?.icon ?? Mail;
+              const SenderIcon = senderTypes.find((item) => item.title.toLowerCase().includes(sender.sender_type === "gmail_app_password" ? "gmail" : "custom"))?.icon ?? Mail;
               return (
                 <div key={sender.id} className="border border-border bg-background-tint p-4">
                   <div className="flex items-start justify-between gap-3">

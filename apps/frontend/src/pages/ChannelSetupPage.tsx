@@ -75,7 +75,7 @@ const CHANNELS: ChannelCard[] = [
     title: "Email",
     status: "Campaign Ready / Setup Required",
     statusTone: "ready",
-    description: "Prepare sender accounts for email campaign workflows using Microsoft 365, Gmail or custom SMTP.",
+    description: "Prepare sender accounts for email campaign workflows using Gmail App Password or custom SMTP.",
     actionLabel: "Open Email Setup",
     to: "/setup/channels/email",
     icon: Mail,
