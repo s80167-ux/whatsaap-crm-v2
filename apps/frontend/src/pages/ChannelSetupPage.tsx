@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CheckCircle, Clock, Instagram, Mail, MessageCircle, PlugZap, ShoppingBag, Sparkles, type LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 
@@ -173,31 +174,99 @@ function ChannelLogo({ channel, Icon }: { channel: ChannelCard; Icon: LucideIcon
 }
 
 export function ChannelSetupPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const channels: ChannelCard[] = [
+    {
+      title: t("channelSetup.channels.whatsapp.title"),
+      status: t("channelSetup.status.active"),
+      statusTone: "active",
+      description: t("channelSetup.channels.whatsapp.description"),
+      actionLabel: t("channelSetup.channels.whatsapp.action"),
+      to: "/setup/channels/whatsapp",
+      icon: PlugZap,
+      logo: "whatsapp",
+      note: t("channelSetup.channels.whatsapp.note")
+    },
+    {
+      title: t("channelSetup.channels.facebook.title"),
+      status: t("channelSetup.status.comingSoon"),
+      statusTone: "soon",
+      description: t("channelSetup.channels.facebook.description"),
+      actionLabel: t("channelSetup.actions.viewComingSoon"),
+      to: "/setup/channels/facebook",
+      icon: MessageCircle,
+      logo: "facebook",
+      subItems: [t("channelSetup.channels.facebook.items.review"), t("channelSetup.channels.facebook.items.permission"), t("channelSetup.channels.facebook.items.inbox")]
+    },
+    {
+      title: t("channelSetup.channels.instagram.title"),
+      status: t("channelSetup.status.comingSoon"),
+      statusTone: "soon",
+      description: t("channelSetup.channels.instagram.description"),
+      actionLabel: t("channelSetup.actions.viewComingSoon"),
+      to: "/setup/channels/instagram",
+      icon: Instagram,
+      logo: "instagram",
+      subItems: [t("channelSetup.channels.instagram.items.account"), t("channelSetup.channels.instagram.items.page"), t("channelSetup.channels.instagram.items.permission")]
+    },
+    {
+      title: t("channelSetup.channels.tiktok.title"),
+      status: t("channelSetup.status.comingSoon"),
+      statusTone: "soon",
+      description: t("channelSetup.channels.tiktok.description"),
+      actionLabel: t("channelSetup.actions.viewPlaceholder"),
+      to: "/setup/channels/tiktok",
+      icon: MessageCircle,
+      logo: "tiktok",
+      subItems: [t("channelSetup.channels.tiktok.items.business"), t("channelSetup.channels.tiktok.items.review")]
+    },
+    {
+      title: t("channelSetup.channels.marketplace.title"),
+      status: t("channelSetup.status.comingSoon"),
+      statusTone: "soon",
+      description: t("channelSetup.channels.marketplace.description"),
+      actionLabel: t("channelSetup.actions.viewPlaceholder"),
+      to: "/setup/channels/ecommerce",
+      icon: ShoppingBag,
+      subItems: [t("channelSetup.channels.marketplace.items.shopee"), t("channelSetup.channels.marketplace.items.lazada")]
+    },
+    {
+      title: t("channelSetup.channels.email.title"),
+      status: t("channelSetup.status.ready"),
+      statusTone: "ready",
+      description: t("channelSetup.channels.email.description"),
+      actionLabel: t("channelSetup.channels.email.action"),
+      to: "/setup/channels/email",
+      icon: Mail,
+      note: t("channelSetup.channels.email.note")
+    }
+  ];
 
   return (
     <section className="space-y-6">
       <div className="workspace-page-header p-5 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),18rem] xl:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Omni-Channel Setup</p>
-            <h1 className="mt-3 section-title">Channel Setup</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{t("channelSetup.badge")}</p>
+            <h1 className="mt-3 section-title">{t("channelSetup.title")}</h1>
             <p className="section-copy mt-2 max-w-3xl">
-              Connect and prepare customer conversation channels for WhatsApp, social messenger, marketplace DM and email workflows.
+              {t("channelSetup.description")}
             </p>
           </div>
           <div className="workspace-subtle p-4">
             <div className="flex items-center gap-2 text-primary">
               <Sparkles size={16} />
-              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Control centre</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">{t("channelSetup.controlCenter")}</p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-text-muted">WhatsApp is active. Facebook and Instagram are marked Coming Soon while integration is paused.</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">{t("channelSetup.summary")}</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {CHANNELS.map((channel) => {
+        {channels.map((channel) => {
           const Icon = channel.icon;
 
           return (
@@ -207,7 +276,7 @@ export function ChannelSetupPage() {
                   <ChannelLogo channel={channel} Icon={Icon} />
                   <div className="min-w-0">
                     <h2 className="channel-card-title text-lg font-semibold text-foreground">{channel.title}</h2>
-                    <p className="channel-card-note mt-1 text-xs font-medium text-text-soft">{channel.note ?? "Connector not enabled yet"}</p>
+                    <p className="channel-card-note mt-1 text-xs font-medium text-text-soft">{channel.note ?? t("channelSetup.connectorNotEnabled")}</p>
                   </div>
                 </div>
                 <span className={`channel-status inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusClasses[channel.statusTone]}`}>
@@ -235,7 +304,7 @@ export function ChannelSetupPage() {
                 </Button>
                 {channel.title === "Email" ? (
                   <Link className="channel-link text-xs font-semibold text-primary hover:text-primary-hover" to="/campaigns/email/sender-setup">
-                    Campaign sender setup
+                    {t("channelSetup.emailSenderSetup")}
                   </Link>
                 ) : null}
               </div>

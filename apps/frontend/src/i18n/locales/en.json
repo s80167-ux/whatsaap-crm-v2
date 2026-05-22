@@ -17,6 +17,7 @@
     "areYouSure": "Are you sure?",
     "cannotUndo": "This action cannot be undone",
     "closeNotification": "Close notification",
+    "closePopup": "Close popup",
     "soon": "Soon",
     "off": "Off",
     "upload": "Upload",
@@ -32,7 +33,12 @@
     "workspace": "Workspace",
     "module": "Module",
     "primary": "Primary",
-    "admin": "Admin"
+    "admin": "Admin",
+    "loadingPage": "Loading page...",
+    "showingRange": "Showing {{first}}-{{last}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{total}}"
   },
   "settings": {
     "language": "Language",
@@ -63,7 +69,8 @@
     "unableSignIn": "Unable to sign in",
     "featureInbox": "Realtime chats",
     "featureSales": "Clear pipeline",
-    "featureAccess": "Role-based"
+    "featureAccess": "Role-based",
+    "checkingSession": "Checking session..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -100,7 +107,8 @@
     "clearOrgData": "Clear Org Data",
     "auditLogs": "Audit Logs",
     "primaryNavigation": "Primary navigation",
-    "mobilePrimaryNavigation": "Mobile primary navigation"
+    "mobilePrimaryNavigation": "Mobile primary navigation",
+    "organizations": "Organizations"
   },
   "layout": {
     "operationsWorkspace": "Operations workspace",
@@ -118,7 +126,20 @@
     "openNavigation": "Open navigation menu",
     "closeNavigation": "Close navigation menu",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "openProfilePanel": "Open profile panel"
+  },
+  "router": {
+    "errorTitle": "Something went wrong",
+    "errorMessage": "The page you are looking for does not exist or an unexpected error occurred.",
+    "goToDashboard": "Go to Dashboard"
+  },
+  "onboarding": {
+    "language": {
+      "badge": "Choose language",
+      "title": "Pick the language you are most comfortable using in the CRM",
+      "description": "You can change this again anytime from your profile or the top bar language switcher."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -224,6 +245,297 @@
     "count": "{{visible}} of {{total}} contacts",
     "sendWhatsApp": "Send WhatsApp",
     "sendMessage": "Send message"
+  },
+  "contactReliability": {
+    "title": "Contact Reliability",
+    "subtitle": "Detect unknown contacts, duplicate identities and risky profiles before they break your inbox.",
+    "noAccess": "You do not have access to the reliability dashboard.",
+    "chooseOrganization": "Choose an organization from the sidebar to review contact reliability.",
+    "recalculate": "Recalculate",
+    "searchPlaceholder": "Search name, phone, or JID",
+    "noActivity": "No activity",
+    "assigned": "Assigned",
+    "unassigned": "Unassigned",
+    "timeline": "Timeline",
+    "ignore": "Ignore",
+    "applyName": "Apply name",
+    "previewMerge": "Preview merge",
+    "pasteContactId": "Paste contact ID",
+    "loadingTimeline": "Loading timeline...",
+    "unknownContact": "Unknown contact",
+    "missing": "Missing",
+    "needsReview": "Needs review",
+    "whatsappIdentity": "WhatsApp identity",
+    "reviewManually": "Review manually",
+    "recommendedTarget": "Recommended target: {{target}}",
+    "confidence": "{{confidence}} confidence",
+    "sourceWithValue": "Source: {{source}}",
+    "identityConversationCount": "{{identities}} identities - {{conversations}} conversations",
+    "stats": {
+      "totalContacts": "Total Contacts",
+      "verified": "Verified",
+      "partial": "Partial",
+      "weakBroken": "Weak/Broken",
+      "unknownNames": "Unknown Names",
+      "missingPhones": "Missing Phones",
+      "duplicateGroups": "Duplicate Groups",
+      "identityConflicts": "Identity Conflicts"
+    },
+    "tabs": {
+      "risky": "Risky Contacts",
+      "unknown": "Unknown Contacts",
+      "duplicates": "Duplicate Candidates",
+      "timeline": "Timeline / Lookup"
+    },
+    "table": {
+      "contact": "Contact",
+      "phone": "Phone",
+      "score": "Score",
+      "riskFlags": "Risk Flags",
+      "lastActivity": "Last Activity",
+      "owner": "Owner",
+      "action": "Action",
+      "currentName": "Current Name",
+      "suggestedName": "Suggested Name",
+      "phoneJid": "Phone/JID",
+      "source": "Source",
+      "suggestedAction": "Suggested Action"
+    },
+    "status": {
+      "verified": "Verified",
+      "strong": "Verified",
+      "partial": "Partial",
+      "weak": "Weak",
+      "broken": "Broken",
+      "unknown": "Unknown"
+    },
+    "riskFlags": {
+      "identity_conflict": "Identity conflict",
+      "verified": "Verified",
+      "partial": "Partial",
+      "weak": "Weak",
+      "broken": "Broken",
+      "unknown": "Unknown",
+      "unknown_name": "Unknown name",
+      "missing_phone": "Missing phone",
+      "duplicate": "Duplicate",
+      "duplicate_phone": "Duplicate phone",
+      "needs_manual_review": "Needs manual review",
+      "merge_blocked": "Merge blocked",
+      "merge_warning": "Merge warning"
+    },
+    "suggestedActions": {
+      "update_name": "Update name",
+      "ignore_flag": "Ignore flag",
+      "merge_contact": "Merge contact",
+      "needs_manual_review": "Needs manual review"
+    },
+    "empty": {
+      "noDuplicateGroups": "No duplicate phone groups found.",
+      "searchContactTimeline": "Search a contact to view available source events."
+    },
+    "mergePreview": {
+      "title": "Merge preview",
+      "description": "Review what will move before confirming the merge.",
+      "building": "Building merge preview...",
+      "target": "Target",
+      "identities": "Identities",
+      "conversations": "Conversations",
+      "messages": "Messages",
+      "confirmText": "I understand this will merge source contact into target contact.",
+      "merging": "Merging...",
+      "confirmMerge": "Confirm merge"
+    },
+    "notices": {
+      "repairApplied": "Repair action applied.",
+      "applyRepairFailed": "Unable to apply repair action.",
+      "mergePreviewFailed": "Unable to create merge preview.",
+      "contactsMerged": "Contacts merged safely.",
+      "mergeFailed": "Unable to merge contacts.",
+      "summaryRefreshed": "Reliability summary refreshed.",
+      "recalculateFailed": "Unable to recalculate reliability."
+    }
+  },
+  "channelSetup": {
+    "badge": "Omni-Channel Setup",
+    "title": "Channel Setup",
+    "description": "Connect and prepare customer conversation channels for WhatsApp, social messenger, marketplace DM and email workflows.",
+    "controlCenter": "Control centre",
+    "summary": "WhatsApp is active. Facebook and Instagram are marked Soon while integration is paused.",
+    "connectorNotEnabled": "Connector not enabled yet",
+    "emailSenderSetup": "Campaign sender setup",
+    "actions": {
+      "viewComingSoon": "View soon status",
+      "viewPlaceholder": "View setup placeholder"
+    },
+    "status": {
+      "active": "Active",
+      "comingSoon": "Coming Soon",
+      "ready": "Campaign Ready / Setup Required"
+    },
+    "channels": {
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Manage paired WhatsApp accounts, QR connection, reconnect, contact sync and history sync.",
+        "action": "Manage WhatsApp",
+        "note": "Live connector enabled"
+      },
+      "facebook": {
+        "title": "Facebook Messenger",
+        "description": "Facebook Messenger integration is on hold for now while platform restrictions are cleared.",
+        "items": {
+          "review": "Meta review",
+          "permission": "Page permission",
+          "inbox": "CRM Inbox"
+        }
+      },
+      "instagram": {
+        "title": "Instagram DM",
+        "description": "Instagram DM integration is on hold for now while platform restrictions are cleared.",
+        "items": {
+          "account": "Professional Account",
+          "page": "Linked Facebook Page",
+          "permission": "Messaging permission"
+        }
+      },
+      "tiktok": {
+        "title": "TikTok DM",
+        "description": "Prepare TikTok Business/API access review for a future TikTok DM workflow.",
+        "items": {
+          "business": "TikTok Business",
+          "review": "API access review"
+        }
+      },
+      "marketplace": {
+        "title": "Marketplace DM",
+        "description": "Prepare Shopee and Lazada buyer messages for future marketplace conversation workflows.",
+        "items": {
+          "shopee": "Shopee Chat",
+          "lazada": "Lazada Chat"
+        }
+      },
+      "email": {
+        "title": "Email",
+        "description": "Prepare sender accounts for email campaign workflows using Gmail App Password or custom SMTP.",
+        "action": "Open Email Setup",
+        "note": "Campaign sender setup available"
+      }
+    }
+  },
+  "reports": {
+    "title": "Analytics & Reports",
+    "description": "Comprehensive insights into sales performance and pipeline health.",
+    "loading": "Loading report data...",
+    "empty": "No team members found for these filters.",
+    "dateRange": "Date Range",
+    "tabs": {
+      "sales": "Sales",
+      "pipeline": "Pipeline",
+      "activity": "Activity",
+      "sources": "Sources",
+      "daily": "Daily Report"
+    },
+    "stats": {
+      "salesValue": "Sales Value",
+      "newLeads": "New Leads",
+      "workingDays": "Working Days"
+    },
+    "filters": {
+      "title": "Team & Product Filters",
+      "year": "Year",
+      "month": "Month",
+      "week": "Week (ISO)",
+      "specificDay": "Specific Day",
+      "productType": "Product Type",
+      "team": "Team",
+      "salesRep": "Sales Rep",
+      "metric": "Metric",
+      "allWeeks": "All Weeks",
+      "weekNumber": "Week {{week}}",
+      "allDays": "All Days",
+      "allProducts": "All Products",
+      "allTeams": "All Teams",
+      "allMembers": "All Members",
+      "allMetrics": "All Metrics"
+    },
+    "actions": {
+      "resetDates": "Reset Dates",
+      "resetTeamFilters": "Reset Team Filters",
+      "print": "Print",
+      "exportCsv": "Export CSV"
+    },
+    "placeholder": {
+      "title": "Report module placeholder",
+      "description": "This tab is ready for the next report item. Daily Report is available now with backend-powered export and print actions."
+    },
+    "dailyReport": {
+      "title": "Daily Sales & Contact Report"
+    },
+    "table": {
+      "number": "No.",
+      "team": "Team",
+      "name": "Name",
+      "metric": "Metric",
+      "total": "Total"
+    },
+    "months": {
+      "january": { "full": "January", "short": "Jan" },
+      "february": { "full": "February", "short": "Feb" },
+      "march": { "full": "March", "short": "Mar" },
+      "april": { "full": "April", "short": "Apr" },
+      "may": { "full": "May", "short": "May" },
+      "june": { "full": "June", "short": "Jun" },
+      "july": { "full": "July", "short": "Jul" },
+      "august": { "full": "August", "short": "Aug" },
+      "september": { "full": "September", "short": "Sep" },
+      "october": { "full": "October", "short": "Oct" },
+      "november": { "full": "November", "short": "Nov" },
+      "december": { "full": "December", "short": "Dec" }
+    }
+  },
+  "displayLabels": {
+    "status": {
+      "open": "Open",
+      "closed_won": "Closed won",
+      "closed_lost": "Closed lost",
+      "verified": "Verified",
+      "strong": "Verified",
+      "partial": "Partial",
+      "weak": "Weak",
+      "broken": "Broken"
+    },
+    "riskFlag": {
+      "identity_conflict": "Identity conflict",
+      "unknown_name": "Unknown name",
+      "missing_phone": "Missing phone",
+      "duplicate": "Duplicate",
+      "duplicate_phone": "Duplicate phone",
+      "needs_manual_review": "Needs manual review",
+      "merge_blocked": "Merge blocked",
+      "merge_warning": "Merge warning"
+    },
+    "campaignStatus": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "sending": "Sending",
+      "sent": "Sent",
+      "paused": "Paused",
+      "failed": "Failed"
+    },
+    "role": {
+      "super_admin": "Super admin",
+      "org_admin": "Org admin",
+      "manager": "Manager",
+      "agent": "Agent",
+      "user": "User"
+    },
+    "channel": {
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "facebook": "Facebook Messenger",
+      "instagram": "Instagram DM",
+      "ecommerce": "Marketplace DM"
+    }
   },
   "campaign": {
     "create": "Create Campaign",

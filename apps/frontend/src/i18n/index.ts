@@ -11,13 +11,17 @@ export const availableLanguages = [
 
 export type CrmLanguage = (typeof availableLanguages)[number]["value"];
 
+export function isCrmLanguage(value: string | null | undefined): value is CrmLanguage {
+  return value === "en" || value === "ms";
+}
+
 function getInitialLanguage(): CrmLanguage {
   if (typeof window === "undefined") {
     return "en";
   }
 
   const savedLanguage = window.localStorage.getItem(CRM_LANGUAGE_STORAGE_KEY);
-  return savedLanguage === "ms" || savedLanguage === "en" ? savedLanguage : "en";
+  return isCrmLanguage(savedLanguage) ? savedLanguage : "en";
 }
 
 void i18n.use(initReactI18next).init({
@@ -27,9 +31,11 @@ void i18n.use(initReactI18next).init({
   },
   lng: getInitialLanguage(),
   fallbackLng: "en",
+  supportedLngs: ["en", "ms"],
   interpolation: {
     escapeValue: false
-  }
+  },
+  returnNull: false
 });
 
 export default i18n;

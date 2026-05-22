@@ -1046,7 +1046,7 @@ export function ChatPanel({
   }
 
   return (
-    <Card className={`chat-panel-card workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[780px] max-h-[calc(100vh-4.5rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
+    <Card className={`chat-panel-card workspace-block min-w-0 overflow-hidden p-0 ${isMobile ? "flex flex-col" : "grid min-h-[920px] max-h-[calc(100vh-2rem)] grid-rows-[auto,1fr,auto]"}`} elevated>
       <header className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5 xl:px-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

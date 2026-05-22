@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 
 export const PANEL_PAGE_SIZE = 5;
@@ -42,6 +43,8 @@ export function PanelPagination({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
+  const { t } = useTranslation();
+
   if (totalItems <= pageSize) {
     return null;
   }
@@ -52,7 +55,7 @@ export function PanelPagination({
   return (
     <div className={`app-card flex flex-col gap-3 rounded-2xl px-3 py-3 text-xs text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-4 ${className}`}>
       <p className="text-xs font-medium text-text-muted">
-        Showing {firstItem}-{lastItem} of {totalItems}
+        {t("common.showingRange", { first: firstItem, last: lastItem, total: totalItems })}
       </p>
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <Button
@@ -61,10 +64,10 @@ export function PanelPagination({
           disabled={page <= 1}
           onClick={() => onPageChange(Math.max(1, page - 1))}
         >
-          Previous
+          {t("common.previous")}
         </Button>
         <span className="inline-flex min-h-[2.2rem] items-center rounded-xl border border-border bg-muted px-3 text-xs font-semibold text-text-soft">
-          Page {page} of {pageCount}
+          {t("common.pageOf", { page, total: pageCount })}
         </span>
         <Button
           variant="secondary"
@@ -72,7 +75,7 @@ export function PanelPagination({
           disabled={page >= pageCount}
           onClick={() => onPageChange(Math.min(pageCount, page + 1))}
         >
-          Next
+          {t("common.next")}
         </Button>
       </div>
     </div>

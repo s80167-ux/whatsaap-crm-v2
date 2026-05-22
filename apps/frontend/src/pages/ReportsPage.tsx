@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useOutletContext } from "react-router-dom";
 import { CalendarDays, Download, Filter, LayoutGrid, Printer, RotateCcw, Table2 } from "lucide-react";
 import { Card } from "../components/Card";
@@ -11,13 +12,7 @@ import type { DailyReportDay, DailyReportMetric, DailyReportRow, DailyReportSale
 
 type ReportTab = "sales" | "pipeline" | "activity" | "sources" | "daily";
 
-const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
-  { id: "sales", label: "Sales" },
-  { id: "pipeline", label: "Pipeline" },
-  { id: "activity", label: "Activity" },
-  { id: "sources", label: "Sources" },
-  { id: "daily", label: "Daily Report" }
-];
+const REPORT_TABS: ReportTab[] = ["sales", "pipeline", "activity", "sources", "daily"];
 
 const METRIC_TONES: Record<DailyReportMetric, string> = {
   sales_count: "text-success",
@@ -30,20 +25,7 @@ const METRIC_TONES: Record<DailyReportMetric, string> = {
 
 const DAILY_REPORT_METRIC_ORDER: DailyReportMetric[] = ["sales_count", "sales_value", "contacted", "leads", "won_count", "won_value"];
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
+const MONTH_KEYS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"] as const;
 
 const currentDate = new Date();
 const currentYear = currentDate.getFullYear();
@@ -56,10 +38,11 @@ function formatDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatMonthRange(year: number, monthIndex: number) {
-  const month = MONTHS[monthIndex];
+function formatMonthRange(year: number, monthIndex: number, getMonthLabel: (monthIndex: number, short?: boolean) => string) {
+  const month = getMonthLabel(monthIndex);
+  const shortMonth = getMonthLabel(monthIndex, true);
   const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-  return `${month} ${year} (${month.slice(0, 3)} 1 - ${month.slice(0, 3)} ${lastDay})`;
+  return `${month} ${year} (${shortMonth} 1 - ${shortMonth} ${lastDay})`;
 }
 
 function createCsv(rows: string[][]) {
@@ -95,7 +78,12 @@ function isWeekendDay(day: DailyReportDay) {
 }
 
 export function ReportsPage() {
+  const { t, i18n } = useTranslation();
   const currentUser = getStoredUser();
+    const locale = i18n.language === "ms" ? "ms-MY" : "en-MY";
+    const getMonthLabel = (monthIndex: number, short = false) =>
+      t(`reports.months.${MONTH_KEYS[monthIndex]}.${short ? "short" : "full"}`);
+
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
   const selectedOrganizationId = dashboardContext.selectedOrganizationId;
@@ -176,7 +164,7 @@ export function ReportsPage() {
   }
 
   function exportDailyReport() {
-    const headers = ["No.", "Team", "Name", "Metric", ...reportDays.map((day) => String(day.day).padStart(2, "0")), "Total"];
+    const headers = [t("reports.table.number"), t("reports.table.team"), t("reports.table.name"), t("reports.table.metric"), ...reportDays.map((day) => String(day.day).padStart(2, "0")), t("reports.table.total")];
     const rows = filteredDailyRows.map((row, index) => [
       String(index + 1),
       row.team,
@@ -185,7 +173,7 @@ export function ReportsPage() {
       ...row.values.map((value) => formatReportValue(value, row.valueType)),
       formatReportValue(row.total, row.valueType)
     ]);
-    const csv = createCsv([["Daily Sales & Contact Report"], [`Date Range: ${formatMonthRange(year, monthIndex)}`], [], headers, ...rows]);
+    const csv = createCsv([[t("reports.dailyReport.title")], [`${t("reports.dateRange")}: ${formatMonthRange(year, monthIndex, getMonthLabel)}`], [], headers, ...rows]);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -200,28 +188,28 @@ export function ReportsPage() {
       <section className="workspace-page-header reports-hero p-5 sm:p-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Reports</p>
-          <h1 className="mt-3 section-title">Analytics &amp; Reports</h1>
-          <p className="section-copy mt-2 max-w-2xl">Comprehensive insights into sales performance and pipeline health.</p>
+          <h1 className="mt-3 section-title">{t("reports.title")}</h1>
+          <p className="section-copy mt-2 max-w-2xl">{t("reports.description")}</p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <ReportStat label="Sales Value" value={`RM ${totalSales.toLocaleString("en-MY")}`} />
-          <ReportStat label="New Leads" value={String(totalLeads)} />
-          <ReportStat label="Working Days" value={String(workingDays)} />
+          <ReportStat label={t("reports.stats.salesValue")} value={`RM ${totalSales.toLocaleString(locale)}`} />
+          <ReportStat label={t("reports.stats.newLeads")} value={String(totalLeads)} />
+          <ReportStat label={t("reports.stats.workingDays")} value={String(workingDays)} />
         </div>
       </section>
 
       <div className="reports-tabs workspace-subtle grid gap-2 p-1.5 shadow-soft md:grid-cols-5">
         {REPORT_TABS.map((tab) => (
           <button
-            key={tab.id}
+            key={tab}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActiveTab(tab)}
             className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold transition ${
-              activeTab === tab.id ? "bg-card text-primary shadow-soft" : "text-text-muted hover:bg-card hover:text-text"
+              activeTab === tab ? "bg-card text-primary shadow-soft" : "text-text-muted hover:bg-card hover:text-text"
             }`}
           >
-            {tab.id === "daily" ? <Table2 size={16} /> : <LayoutGrid size={16} />}
-            {tab.label}
+            {tab === "daily" ? <Table2 size={16} /> : <LayoutGrid size={16} />}
+            {t(`reports.tabs.${tab}`)}
           </button>
         ))}
       </div>
@@ -241,6 +229,7 @@ export function ReportsPage() {
           reportDays={reportDays}
           salesRep={salesRep}
           salesReps={salesReps}
+          locale={locale}
           selectedMonth={selectedMonth}
           selectedWeek={selectedWeek}
           selectedYear={selectedYear}
@@ -268,10 +257,10 @@ export function ReportsPage() {
         />
       ) : (
         <Card className="workspace-block">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{REPORT_TABS.find((tab) => tab.id === activeTab)?.label}</p>
-          <h2 className="mt-3 text-xl font-semibold text-text">Report module placeholder</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{t(`reports.tabs.${activeTab}`)}</p>
+          <h2 className="mt-3 text-xl font-semibold text-text">{t("reports.placeholder.title")}</h2>
           <p className="section-copy mt-2">
-            This tab is ready for the next report item. Daily Report is available now with backend-powered export and print actions.
+            {t("reports.placeholder.description")}
           </p>
         </Card>
       )}
@@ -293,6 +282,7 @@ function DailyReportDashboard(props: {
   reportDays: DailyReportDay[];
   salesRep: string;
   salesReps: DailyReportSalesRep[];
+  locale: string;
   selectedMonth: string;
   selectedWeek: string;
   selectedYear: string;
@@ -312,6 +302,9 @@ function DailyReportDashboard(props: {
   onWeekChange: (value: string) => void;
   onYearChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
+  const getMonthLabel = (monthIndex: number, short = false) =>
+    t(`reports.months.${MONTH_KEYS[monthIndex]}.${short ? "short" : "full"}`);
   const compactActionClassName =
     "inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-text-muted transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
   const [hoveredDayKey, setHoveredDayKey] = useState<string | null>(null);
@@ -323,7 +316,7 @@ function DailyReportDashboard(props: {
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <CalendarDays size={16} />
-            Date Range: {formatMonthRange(Number(props.selectedYear), Number(props.selectedMonth))}
+            {t("reports.dateRange")}: {formatMonthRange(Number(props.selectedYear), Number(props.selectedMonth), getMonthLabel)}
           </div>
           <button
             type="button"
@@ -331,37 +324,37 @@ function DailyReportDashboard(props: {
             className={compactActionClassName}
           >
             <RotateCcw size={13} />
-            Reset Dates
+            {t("reports.actions.resetDates")}
           </button>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <ReportSelect label="Year" value={props.selectedYear} onChange={props.onYearChange}>
+          <ReportSelect label={t("reports.filters.year")} value={props.selectedYear} onChange={props.onYearChange}>
             {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
               <option key={year} value={year}>
                 {year}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Month" value={props.selectedMonth} onChange={props.onMonthChange}>
-            {MONTHS.map((month, index) => (
-              <option key={month} value={index}>
-                {month}
+          <ReportSelect label={t("reports.filters.month")} value={props.selectedMonth} onChange={props.onMonthChange}>
+            {MONTH_KEYS.map((monthKey, index) => (
+              <option key={monthKey} value={index}>
+                {t(`reports.months.${monthKey}.full`)}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Week (ISO)" value={props.selectedWeek} onChange={props.onWeekChange}>
-            <option value="all">All Weeks</option>
+          <ReportSelect label={t("reports.filters.week")} value={props.selectedWeek} onChange={props.onWeekChange}>
+            <option value="all">{t("reports.filters.allWeeks")}</option>
             {[1, 2, 3, 4, 5].map((week) => (
               <option key={week} value={week}>
-                Week {week}
+                {t("reports.filters.weekNumber", { week })}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Specific Day" value={props.specificDay} onChange={props.onSpecificDayChange}>
-            <option value="all">All Days</option>
+          <ReportSelect label={t("reports.filters.specificDay")} value={props.specificDay} onChange={props.onSpecificDayChange}>
+            <option value="all">{t("reports.filters.allDays")}</option>
             {props.dayOptions.map((day) => (
               <option key={formatDateKey(day)} value={formatDateKey(day)}>
-                {day.toLocaleDateString("en-MY", { day: "2-digit", month: "short" })}
+                {day.toLocaleDateString(props.locale, { day: "2-digit", month: "short" })}
               </option>
             ))}
           </ReportSelect>
@@ -371,35 +364,35 @@ function DailyReportDashboard(props: {
       <Card className="workspace-block report-no-print !px-5 !py-4 !shadow-none hover:!translate-y-0 hover:!shadow-soft">
         <div className="flex items-center gap-2 text-sm font-semibold text-text">
           <Filter size={16} className="text-primary" />
-          Team &amp; Product Filters
+          {t("reports.filters.title")}
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <ReportSelect label="Product Type" value={props.productType} onChange={props.onProductTypeChange}>
-            <option value="all">All Products</option>
+          <ReportSelect label={t("reports.filters.productType")} value={props.productType} onChange={props.onProductTypeChange}>
+            <option value="all">{t("reports.filters.allProducts")}</option>
             {props.productTypes.map((productType) => (
               <option key={productType} value={productType}>
                 {productType}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Team" value={props.team} onChange={props.onTeamChange}>
-            <option value="all">All Teams</option>
+          <ReportSelect label={t("reports.filters.team")} value={props.team} onChange={props.onTeamChange}>
+            <option value="all">{t("reports.filters.allTeams")}</option>
             {props.availableTeams.map((team) => (
               <option key={team} value={team}>
                 {team}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Sales Rep" value={props.salesRep} onChange={props.onSalesRepChange}>
-            <option value="all">All Members</option>
+          <ReportSelect label={t("reports.filters.salesRep")} value={props.salesRep} onChange={props.onSalesRepChange}>
+            <option value="all">{t("reports.filters.allMembers")}</option>
             {props.salesReps.map((rep) => (
               <option key={rep.id} value={rep.id}>
                 {rep.name}
               </option>
             ))}
           </ReportSelect>
-          <ReportSelect label="Metric" value={props.metricFilter} onChange={props.onMetricFilterChange}>
-            <option value="all">All Metrics</option>
+          <ReportSelect label={t("reports.filters.metric")} value={props.metricFilter} onChange={props.onMetricFilterChange}>
+            <option value="all">{t("reports.filters.allMetrics")}</option>
             {props.metricOptions.map((metric) => (
               <option key={metric.value} value={metric.value}>
                 {metric.label}
@@ -410,7 +403,7 @@ function DailyReportDashboard(props: {
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button type="button" onClick={props.onResetTeamFilters} className={compactActionClassName}>
             <RotateCcw size={13} />
-            Reset Team Filters
+            {t("reports.actions.resetTeamFilters")}
           </button>
           <div className="flex flex-wrap gap-4">
             <button
@@ -420,7 +413,7 @@ function DailyReportDashboard(props: {
               className={compactActionClassName}
             >
               <Printer size={14} />
-              Print
+              {t("reports.actions.print")}
             </button>
             <button
               type="button"
@@ -429,7 +422,7 @@ function DailyReportDashboard(props: {
               className={compactActionClassName}
             >
               <Download size={14} />
-              Export CSV
+              {t("reports.actions.exportCsv")}
             </button>
           </div>
         </div>
@@ -438,21 +431,21 @@ function DailyReportDashboard(props: {
       <Card className="report-print-area overflow-hidden p-0">
         <div className="flex items-center justify-between bg-topbar px-5 py-4 text-topbar-foreground">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-[0.08em]">Daily Sales &amp; Contact Report</h2>
+            <h2 className="text-sm font-bold uppercase tracking-[0.08em]">{t("reports.dailyReport.title")}</h2>
             <p className="mt-1 text-xs font-semibold text-topbar-foreground/70">
-              {MONTHS[Number(props.selectedMonth)]} {props.selectedYear}
+              {getMonthLabel(Number(props.selectedMonth))} {props.selectedYear}
             </p>
           </div>
-          <p className="text-sm font-semibold text-topbar-foreground/80">Working Days: {props.workingDays}</p>
+          <p className="text-sm font-semibold text-topbar-foreground/80">{t("reports.stats.workingDays")}: {props.workingDays}</p>
         </div>
         <div className="workspace-table-wrap report-table-wrap">
           <table className="workspace-table workspace-table-compact daily-report-table text-[11px]">
             <thead>
               <tr className="bg-topbar text-[11px] uppercase tracking-[0.04em] text-topbar-foreground">
-                <th className="w-8 px-2 py-2">No.</th>
-                <th className="w-24 px-2 py-2">Team</th>
-                <th className="w-32 px-2 py-2">Name</th>
-                <th className="w-24 px-2 py-2">Metric</th>
+                <th className="w-8 px-2 py-2">{t("reports.table.number")}</th>
+                <th className="w-24 px-2 py-2">{t("reports.table.team")}</th>
+                <th className="w-32 px-2 py-2">{t("reports.table.name")}</th>
+                <th className="w-24 px-2 py-2">{t("reports.table.metric")}</th>
                 {props.reportDays.map((day) => {
                   const isWeekend = isWeekendDay(day);
                   const isHovered = hoveredDayKey === day.key;
@@ -477,7 +470,7 @@ function DailyReportDashboard(props: {
                     </th>
                   );
                 })}
-                <th className="px-2 py-2 text-center">Total</th>
+                <th className="px-2 py-2 text-center">{t("reports.table.total")}</th>
               </tr>
             </thead>
             <tbody>
@@ -490,7 +483,7 @@ function DailyReportDashboard(props: {
               ) : props.isLoading ? (
                 <tr>
                   <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-text-muted">
-                    Loading report data...
+                    {t("reports.loading")}
                   </td>
                 </tr>
               ) : props.dailyRows.length > 0 ? (
@@ -530,7 +523,7 @@ function DailyReportDashboard(props: {
               ) : (
                 <tr>
                   <td colSpan={props.reportDays.length + 5} className="px-5 py-8 text-center text-text-muted">
-                    No team members found for these filters.
+                    {t("reports.empty")}
                   </td>
                 </tr>
               )}

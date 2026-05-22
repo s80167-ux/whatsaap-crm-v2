@@ -15,8 +15,9 @@
     "no": "Tidak",
     "confirm": "Sahkan",
     "areYouSure": "Betul nak teruskan?",
-    "cannotUndo": "Tindakan ini tidak boleh dibatalkan",
+    "cannotUndo": "Tindakan ini tak boleh dibatalkan",
     "closeNotification": "Tutup notifikasi",
+    "closePopup": "Tutup popup",
     "soon": "Akan datang",
     "off": "Tutup",
     "upload": "Muat naik",
@@ -32,7 +33,12 @@
     "workspace": "Ruang kerja",
     "module": "Modul",
     "primary": "Utama",
-    "admin": "Admin"
+    "admin": "Admin",
+    "loadingPage": "Sedang dimuatkan...",
+    "showingRange": "Tunjuk {{first}}-{{last}} daripada {{total}}",
+    "previous": "Sebelumnya",
+    "next": "Seterusnya",
+    "pageOf": "Halaman {{page}} daripada {{total}}"
   },
   "settings": {
     "language": "Bahasa",
@@ -47,7 +53,7 @@
   "auth": {
     "brandBadge": "WhatsApp CRM untuk PMKS",
     "heroTitle": "Urus perbualan pelanggan, jualan, dan kawalan pasukan dalam satu ruang kerja.",
-    "signInTitle": "Log masuk ke ruang kerja anda",
+    "signInTitle": "Log masuk ke ruang kerja awak",
     "signInDescription": "Urus perbualan WhatsApp, aktiviti pelanggan, dan akses pasukan dalam satu CRM yang selamat untuk PMKS.",
     "emailLabel": "Emel",
     "passwordLabel": "Kata laluan",
@@ -58,12 +64,13 @@
     "requestGoogle": "Minta akses dengan Google",
     "secureNote": "Akses selamat untuk pengguna yang dibenarkan. Akaun Google mesti disambungkan kepada ruang kerja CRM yang aktif.",
     "googleSignupPending": "Permintaan daftar masuk Google anda sudah dihantar dan sedang menunggu kelulusan.",
-    "googleAccountNotLinked": "Akaun Google ini belum disambungkan kepada ruang kerja CRM yang aktif. Sila hubungi admin anda.",
+    "googleAccountNotLinked": "Akaun Google ini belum disambungkan kepada ruang kerja CRM yang aktif. Hubungi admin awak.",
     "googleLoginFailed": "Log masuk Google gagal. Sila cuba lagi atau guna emel/kata laluan.",
     "unableSignIn": "Tak dapat log masuk",
     "featureInbox": "Chat masa nyata",
     "featureSales": "Pipeline yang jelas",
-    "featureAccess": "Ikut peranan"
+    "featureAccess": "Ikut peranan",
+    "checkingSession": "Sedang semak sesi..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -100,7 +107,8 @@
     "clearOrgData": "Kosongkan Data Org",
     "auditLogs": "Log Audit",
     "primaryNavigation": "Navigasi utama",
-    "mobilePrimaryNavigation": "Navigasi utama mudah alih"
+    "mobilePrimaryNavigation": "Navigasi utama mudah alih",
+    "organizations": "Organisasi"
   },
   "layout": {
     "operationsWorkspace": "Ruang kerja operasi",
@@ -118,7 +126,20 @@
     "openNavigation": "Buka menu navigasi",
     "closeNavigation": "Tutup menu navigasi",
     "expandSidebar": "Besarkan sidebar",
-    "collapseSidebar": "Kecilkan sidebar"
+    "collapseSidebar": "Kecilkan sidebar",
+    "openProfilePanel": "Buka panel profil"
+  },
+  "router": {
+    "errorTitle": "Ada ralat berlaku",
+    "errorMessage": "Halaman yang awak cari tak wujud atau ada ralat yang tak dijangka.",
+    "goToDashboard": "Pergi ke Dashboard"
+  },
+  "onboarding": {
+    "language": {
+      "badge": "Pilih bahasa",
+      "title": "Pilih bahasa yang awak selesa guna dalam CRM",
+      "description": "Awak boleh tukar semula bila-bila masa dari profil atau penukar bahasa di bahagian atas."
+    }
   },
   "profile": {
     "title": "Profil",
@@ -224,6 +245,297 @@
     "count": "{{visible}} daripada {{total}} kontak",
     "sendWhatsApp": "Hantar WhatsApp",
     "sendMessage": "Hantar mesej"
+  },
+  "contactReliability": {
+    "title": "Kebolehpercayaan Kontak",
+    "subtitle": "Kesan kenalan tidak dikenali, identiti berganda dan profil berisiko sebelum ia mengganggu inbox awak.",
+    "noAccess": "Awak tiada akses ke dashboard kebolehpercayaan ini.",
+    "chooseOrganization": "Pilih organisasi dari sidebar untuk semak kebolehpercayaan kontak.",
+    "recalculate": "Kira Semula",
+    "searchPlaceholder": "Cari nama, nombor telefon, atau JID",
+    "noActivity": "Tiada aktiviti",
+    "assigned": "Ditugaskan",
+    "unassigned": "Belum Ditugaskan",
+    "timeline": "Garis Masa",
+    "ignore": "Abaikan",
+    "applyName": "Guna nama",
+    "previewMerge": "Pratonton gabungan",
+    "pasteContactId": "Tampal ID kontak",
+    "loadingTimeline": "Sedang memuat garis masa...",
+    "unknownContact": "Kenalan tidak dikenali",
+    "missing": "Tiada",
+    "needsReview": "Perlu semakan",
+    "whatsappIdentity": "Identiti WhatsApp",
+    "reviewManually": "Semak manual",
+    "recommendedTarget": "Sasaran disyorkan: {{target}}",
+    "confidence": "{{confidence}} keyakinan",
+    "sourceWithValue": "Sumber: {{source}}",
+    "identityConversationCount": "{{identities}} identiti - {{conversations}} perbualan",
+    "stats": {
+      "totalContacts": "Jumlah Kenalan",
+      "verified": "Disahkan",
+      "partial": "Separa Lengkap",
+      "weakBroken": "Lemah / Bermasalah",
+      "unknownNames": "Nama Tidak Dikenali",
+      "missingPhones": "Tiada Nombor Telefon",
+      "duplicateGroups": "Kumpulan Duplikasi",
+      "identityConflicts": "Konflik Identiti"
+    },
+    "tabs": {
+      "risky": "Kenalan Berisiko",
+      "unknown": "Kenalan Tidak Dikenali",
+      "duplicates": "Calon Duplikasi",
+      "timeline": "Garis Masa / Semakan"
+    },
+    "table": {
+      "contact": "Kenalan",
+      "phone": "Telefon",
+      "score": "Skor",
+      "riskFlags": "Tanda Risiko",
+      "lastActivity": "Aktiviti Terakhir",
+      "owner": "Pemilik",
+      "action": "Tindakan",
+      "currentName": "Nama Semasa",
+      "suggestedName": "Nama Dicadangkan",
+      "phoneJid": "Telefon/JID",
+      "source": "Sumber",
+      "suggestedAction": "Tindakan Dicadangkan"
+    },
+    "status": {
+      "verified": "Disahkan",
+      "strong": "Disahkan",
+      "partial": "Separa lengkap",
+      "weak": "Lemah",
+      "broken": "Bermasalah",
+      "unknown": "Tidak dikenali"
+    },
+    "riskFlags": {
+      "identity_conflict": "Konflik identiti",
+      "verified": "Disahkan",
+      "partial": "Separa lengkap",
+      "weak": "Lemah",
+      "broken": "Bermasalah",
+      "unknown": "Tidak dikenali",
+      "unknown_name": "Nama tidak dikenali",
+      "missing_phone": "Tiada nombor telefon",
+      "duplicate": "Duplikasi",
+      "duplicate_phone": "Telefon duplikasi",
+      "needs_manual_review": "Perlu semakan manual",
+      "merge_blocked": "Gabungan disekat",
+      "merge_warning": "Amaran gabungan"
+    },
+    "suggestedActions": {
+      "update_name": "Kemaskini nama",
+      "ignore_flag": "Abaikan tanda",
+      "merge_contact": "Gabung kontak",
+      "needs_manual_review": "Perlu semakan manual"
+    },
+    "empty": {
+      "noDuplicateGroups": "Tiada kumpulan nombor telefon duplikasi dijumpai.",
+      "searchContactTimeline": "Cari kontak untuk lihat event sumber yang tersedia."
+    },
+    "mergePreview": {
+      "title": "Pratonton gabungan",
+      "description": "Semak apa yang akan dipindahkan sebelum sahkan gabungan.",
+      "building": "Sedang bina pratonton gabungan...",
+      "target": "Sasaran",
+      "identities": "Identiti",
+      "conversations": "Perbualan",
+      "messages": "Mesej",
+      "confirmText": "Saya faham kontak sumber akan digabungkan ke kontak sasaran.",
+      "merging": "Sedang gabung...",
+      "confirmMerge": "Sahkan gabungan"
+    },
+    "notices": {
+      "repairApplied": "Tindakan pembaikan berjaya dibuat.",
+      "applyRepairFailed": "Tak dapat buat tindakan pembaikan.",
+      "mergePreviewFailed": "Tak dapat cipta pratonton gabungan.",
+      "contactsMerged": "Kontak berjaya digabungkan dengan selamat.",
+      "mergeFailed": "Tak dapat gabungkan kontak.",
+      "summaryRefreshed": "Ringkasan kebolehpercayaan dikemaskini.",
+      "recalculateFailed": "Tak dapat kira semula kebolehpercayaan."
+    }
+  },
+  "channelSetup": {
+    "badge": "Tetapan Omni-Channel",
+    "title": "Tetapan Saluran",
+    "description": "Sambung dan sediakan saluran perbualan pelanggan untuk WhatsApp, social messenger, marketplace DM, dan aliran kerja emel.",
+    "controlCenter": "Pusat kawalan",
+    "summary": "WhatsApp sedang aktif. Facebook dan Instagram ditanda Akan Datang sementara integrasi masih dijeda.",
+    "connectorNotEnabled": "Connector belum diaktifkan lagi",
+    "emailSenderSetup": "Tetapan penghantar kempen",
+    "actions": {
+      "viewComingSoon": "Lihat status akan datang",
+      "viewPlaceholder": "Lihat paparan setup"
+    },
+    "status": {
+      "active": "Aktif",
+      "comingSoon": "Akan Datang",
+      "ready": "Kempen Sedia / Setup Diperlukan"
+    },
+    "channels": {
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Urus akaun WhatsApp yang dah dipautkan, sambungan QR, sambung semula, sync kontak, dan sync sejarah.",
+        "action": "Urus WhatsApp",
+        "note": "Connector live dah aktif"
+      },
+      "facebook": {
+        "title": "Facebook Messenger",
+        "description": "Integrasi Facebook Messenger ditangguhkan dulu sementara sekatan platform diselesaikan.",
+        "items": {
+          "review": "Semakan Meta",
+          "permission": "Kebenaran halaman",
+          "inbox": "CRM Inbox"
+        }
+      },
+      "instagram": {
+        "title": "Instagram DM",
+        "description": "Integrasi Instagram DM ditangguhkan dulu sementara sekatan platform diselesaikan.",
+        "items": {
+          "account": "Akaun Profesional",
+          "page": "Halaman Facebook Dipautkan",
+          "permission": "Kebenaran mesej"
+        }
+      },
+      "tiktok": {
+        "title": "TikTok DM",
+        "description": "Sediakan semakan akses TikTok Business/API untuk aliran kerja TikTok DM akan datang.",
+        "items": {
+          "business": "TikTok Business",
+          "review": "Semakan akses API"
+        }
+      },
+      "marketplace": {
+        "title": "Marketplace DM",
+        "description": "Sediakan mesej pembeli Shopee dan Lazada untuk aliran kerja perbualan marketplace pada masa akan datang.",
+        "items": {
+          "shopee": "Chat Shopee",
+          "lazada": "Chat Lazada"
+        }
+      },
+      "email": {
+        "title": "Emel",
+        "description": "Sediakan akaun penghantar untuk aliran kerja kempen emel menggunakan Gmail App Password atau SMTP sendiri.",
+        "action": "Buka Tetapan Emel",
+        "note": "Tetapan penghantar kempen tersedia"
+      }
+    }
+  },
+  "reports": {
+    "title": "Analitik & Laporan",
+    "description": "Lihat prestasi jualan dan kesihatan pipeline dengan lebih jelas.",
+    "loading": "Sedang memuat data laporan...",
+    "empty": "Tiada ahli pasukan dijumpai untuk penapis ini.",
+    "dateRange": "Julat Tarikh",
+    "tabs": {
+      "sales": "Jualan",
+      "pipeline": "Pipeline",
+      "activity": "Aktiviti",
+      "sources": "Sumber",
+      "daily": "Laporan Harian"
+    },
+    "stats": {
+      "salesValue": "Nilai Jualan",
+      "newLeads": "Lead Baru",
+      "workingDays": "Hari Bekerja"
+    },
+    "filters": {
+      "title": "Penapis Pasukan & Produk",
+      "year": "Tahun",
+      "month": "Bulan",
+      "week": "Minggu (ISO)",
+      "specificDay": "Hari Tertentu",
+      "productType": "Jenis Produk",
+      "team": "Pasukan",
+      "salesRep": "Wakil Jualan",
+      "metric": "Metrik",
+      "allWeeks": "Semua Minggu",
+      "weekNumber": "Minggu {{week}}",
+      "allDays": "Semua Hari",
+      "allProducts": "Semua Produk",
+      "allTeams": "Semua Pasukan",
+      "allMembers": "Semua Ahli",
+      "allMetrics": "Semua Metrik"
+    },
+    "actions": {
+      "resetDates": "Reset Tarikh",
+      "resetTeamFilters": "Reset Penapis Pasukan",
+      "print": "Cetak",
+      "exportCsv": "Eksport CSV"
+    },
+    "placeholder": {
+      "title": "Paparan modul laporan",
+      "description": "Tab ini dah sedia untuk laporan seterusnya. Laporan Harian dah boleh digunakan sekarang dengan tindakan cetak dan eksport."
+    },
+    "dailyReport": {
+      "title": "Laporan Harian Jualan & Kontak"
+    },
+    "table": {
+      "number": "No.",
+      "team": "Pasukan",
+      "name": "Nama",
+      "metric": "Metrik",
+      "total": "Jumlah"
+    },
+    "months": {
+      "january": { "full": "Januari", "short": "Jan" },
+      "february": { "full": "Februari", "short": "Feb" },
+      "march": { "full": "Mac", "short": "Mac" },
+      "april": { "full": "April", "short": "Apr" },
+      "may": { "full": "Mei", "short": "Mei" },
+      "june": { "full": "Jun", "short": "Jun" },
+      "july": { "full": "Julai", "short": "Jul" },
+      "august": { "full": "Ogos", "short": "Ogo" },
+      "september": { "full": "September", "short": "Sep" },
+      "october": { "full": "Oktober", "short": "Okt" },
+      "november": { "full": "November", "short": "Nov" },
+      "december": { "full": "Disember", "short": "Dis" }
+    }
+  },
+  "displayLabels": {
+    "status": {
+      "open": "Terbuka",
+      "closed_won": "Berjaya ditutup",
+      "closed_lost": "Gagal ditutup",
+      "verified": "Disahkan",
+      "strong": "Disahkan",
+      "partial": "Separa Lengkap",
+      "weak": "Lemah",
+      "broken": "Bermasalah"
+    },
+    "riskFlag": {
+      "identity_conflict": "Konflik identiti",
+      "unknown_name": "Nama tidak dikenali",
+      "missing_phone": "Tiada nombor telefon",
+      "duplicate": "Duplikasi",
+      "duplicate_phone": "Telefon duplikasi",
+      "needs_manual_review": "Perlu semakan manual",
+      "merge_blocked": "Gabungan disekat",
+      "merge_warning": "Amaran gabungan"
+    },
+    "campaignStatus": {
+      "draft": "Draf",
+      "scheduled": "Dijadualkan",
+      "sending": "Sedang dihantar",
+      "sent": "Dihantar",
+      "paused": "Dijeda",
+      "failed": "Gagal"
+    },
+    "role": {
+      "super_admin": "Super admin",
+      "org_admin": "Admin org",
+      "manager": "Pengurus",
+      "agent": "Ejen",
+      "user": "Pengguna"
+    },
+    "channel": {
+      "whatsapp": "WhatsApp",
+      "email": "Emel",
+      "facebook": "Facebook Messenger",
+      "instagram": "Instagram DM",
+      "ecommerce": "Marketplace DM"
+    }
   },
   "campaign": {
     "create": "Cipta Kempen",

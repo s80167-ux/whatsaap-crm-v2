@@ -13,12 +13,12 @@ export function LanguageSwitcher({ className = "", compact = false }: LanguageSw
   const { currentLanguage, setLanguage, availableLanguages } = useLanguage();
 
   return (
-    <label className={`inline-flex items-center gap-2 ${className}`}>
+    <label className={`inline-flex shrink-0 items-center gap-2 ${className}`}>
       {!compact ? <span className="text-xs font-semibold text-text-muted">{t("settings.language")}</span> : null}
       <Select
         value={currentLanguage}
         aria-label={t("settings.language")}
-        className={compact ? "h-9 w-[8.75rem] max-w-[38vw] px-2 pr-7 text-xs" : "h-10 min-w-[10rem] px-3 pr-8 text-sm"}
+        className={compact ? "h-9 w-[10rem] max-w-[44vw] px-2.5 pr-8 text-xs" : "h-10 min-w-[10rem] px-3 pr-8 text-sm"}
         onChange={(event) => setLanguage(event.target.value as CrmLanguage)}
       >
         {availableLanguages.map((language) => (

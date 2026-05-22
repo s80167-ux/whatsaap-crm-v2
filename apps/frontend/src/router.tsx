@@ -1,12 +1,15 @@
 import { lazy, Suspense, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
 function GlobalErrorElement() {
+  const { t } = useTranslation();
+
   return (
     <div className="global-error-element">
-      <h1 className="global-error-title">Something went wrong</h1>
-      <p className="global-error-message">The page you are looking for does not exist or an unexpected error occurred.</p>
-      <a href="/" className="global-error-link">Go to Dashboard</a>
+      <h1 className="global-error-title">{t("router.errorTitle")}</h1>
+      <p className="global-error-message">{t("router.errorMessage")}</p>
+      <a href="/" className="global-error-link">{t("router.goToDashboard")}</a>
     </div>
   );
 }
@@ -85,15 +88,27 @@ const CampaignsRouteGuard = lazy(() =>
 );
 
 function withRouteFallback(page: ReactElement) {
+  const Fallback = () => {
+    const { t } = useTranslation();
+
+    return <div className="p-6 text-sm text-text-muted">{t("common.loadingPage")}</div>;
+  };
+
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading page...</div>}>
+    <Suspense fallback={<Fallback />}>
       <RouteTransition>{page}</RouteTransition>
     </Suspense>
   );
 }
 
 function withSuspense(page: ReactElement) {
-  return <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading page...</div>}>{page}</Suspense>;
+  const Fallback = () => {
+    const { t } = useTranslation();
+
+    return <div className="p-6 text-sm text-text-muted">{t("common.loadingPage")}</div>;
+  };
+
+  return <Suspense fallback={<Fallback />}>{page}</Suspense>;
 }
 
 export const router = createBrowserRouter([

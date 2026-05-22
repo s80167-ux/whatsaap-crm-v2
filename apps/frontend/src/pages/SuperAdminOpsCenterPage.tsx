@@ -15,6 +15,7 @@ import {
   replayOpsRawEvents,
   retryOpsOutboxJob,
   retryOpsRawEvent,
+  type OpsConnector,
   type OpsHealthStatus,
   type OutboxStatus,
   type RawEventStatus
@@ -52,6 +53,7 @@ export function SuperAdminOpsCenterPage() {
   const [conversationId, setConversationId] = useState("");
   const [contactId, setContactId] = useState("");
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [selectedConnector, setSelectedConnector] = useState<OpsConnector | null>(null);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   const summaryQuery = useQuery({ queryKey: ["ops-center", "summary"], queryFn: fetchOpsCenterSummary, enabled: isSuperAdmin });
@@ -181,7 +183,11 @@ export function SuperAdminOpsCenterPage() {
             <td>{formatDateTime(connector.last_inbound_at)}</td>
             <td>{formatDateTime(connector.last_outbound_at)}</td>
             <td><HealthBadge status={connector.health_status} compact /></td>
-            <td><Button size="sm" variant="secondary" disabled>View Details</Button></td>
+            <td>
+              <Button size="sm" variant="secondary" onClick={() => setSelectedConnector(connector)}>
+                View Details
+              </Button>
+            </td>
           </tr>
         ))}
       />
@@ -300,6 +306,34 @@ export function SuperAdminOpsCenterPage() {
         </div>
       </PopupOverlay>
 
+      <PopupOverlay
+        open={Boolean(selectedConnector)}
+        onClose={() => setSelectedConnector(null)}
+        title={selectedConnector ? getConnectorDisplayName(selectedConnector) : "Connector details"}
+        description="Live connector metadata from the ops center snapshot."
+        panelClassName="max-w-[min(42rem,calc(100vw-2rem))]"
+      >
+        {selectedConnector ? (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <HealthBadge status={selectedConnector.health_status} compact />
+              <StatusPill label={selectedConnector.connection_status} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ConnectorDetailItem label="Organization" value={selectedConnector.organization_name} />
+              <ConnectorDetailItem label="Owner" value={selectedConnector.connector_owner_id} />
+              <ConnectorDetailItem label="WhatsApp account ID" value={selectedConnector.whatsapp_account_id} />
+              <ConnectorDetailItem label="Phone number" value={selectedConnector.phone_number} />
+              <ConnectorDetailItem label="Display name" value={selectedConnector.display_name} />
+              <ConnectorDetailItem label="Account label" value={selectedConnector.label} />
+              <ConnectorDetailItem label="Last heartbeat" value={formatDateTime(selectedConnector.connector_heartbeat_at)} />
+              <ConnectorDetailItem label="Last inbound" value={formatDateTime(selectedConnector.last_inbound_at)} />
+              <ConnectorDetailItem label="Last outbound" value={formatDateTime(selectedConnector.last_outbound_at)} />
+            </div>
+          </div>
+        ) : null}
+      </PopupOverlay>
+
       <Toast message={toast?.message ?? null} variant={toast?.variant ?? "success"} onClose={() => setToast(null)} />
     </section>
   );
@@ -388,6 +422,19 @@ function HealthBadge({ compact = false, status }: { compact?: boolean; status: O
 
 function StatusPill({ label }: { label: string }) {
   return <span className="inline-flex min-h-[1.5rem] items-center border border-border bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">{label}</span>;
+}
+
+function ConnectorDetailItem({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-text-soft">{label}</p>
+      <p className="mt-1 text-sm text-text">{value && value.trim() ? value : "-"}</p>
+    </div>
+  );
+}
+
+function getConnectorDisplayName(connector: OpsConnector) {
+  return connector.display_name ?? connector.label ?? connector.phone_number ?? connector.whatsapp_account_id;
 }
 
 function formatDateTime(value?: string | null) {

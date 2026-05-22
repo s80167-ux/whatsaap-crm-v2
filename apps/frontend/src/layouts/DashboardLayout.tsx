@@ -281,7 +281,7 @@ function SidebarContent({
           label={t("nav.inbox")}
           items={[
             { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
-            { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
+            { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
             { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
             { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
             { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
@@ -294,7 +294,7 @@ function SidebarContent({
         {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.workspace")}</p> : null}
         <SidebarNavGroup
           icon={<Users size={18} />}
-          label="CRM"
+          label={t("nav.crm")}
           items={[
             { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
             ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
@@ -309,8 +309,8 @@ function SidebarContent({
             icon={<Megaphone size={18} />}
             label={t("nav.campaign")}
             items={[
-              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
-              { to: "/campaigns/email", icon: <Mail size={16} />, label: "Email", badge: emailCampaignBadge, end: false }
+              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: t("nav.whatsapp"), badge: whatsappCampaignBadge, end: false },
+              { to: "/campaigns/email", icon: <Mail size={16} />, label: t("nav.email"), badge: emailCampaignBadge, end: false }
             ]}
             onNavigate={onNavigate}
             compact={mobile}
@@ -435,7 +435,7 @@ export function DashboardLayout() {
       icon: <MessageSquare size={18} />,
       items: [
         { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
-        { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp" },
+        { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
         { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
         { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
         { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
@@ -450,7 +450,7 @@ export function DashboardLayout() {
     },
     {
       id: "crm",
-      label: "CRM",
+      label: t("nav.crm"),
       icon: <Users size={18} />,
       items: [
         { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
@@ -466,7 +466,7 @@ export function DashboardLayout() {
             label: t("nav.campaign"),
             icon: <Megaphone size={18} />,
             items: [
-              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: "WhatsApp", badge: whatsappCampaignBadge, end: false },
+              { to: "/campaigns/whatsapp", icon: <Megaphone size={16} />, label: t("nav.whatsapp"), badge: whatsappCampaignBadge, end: false },
               { to: "/campaigns/email", icon: <Mail size={16} />, label: t("nav.email"), badge: emailCampaignBadge, end: false }
             ]
           }
@@ -497,7 +497,7 @@ export function DashboardLayout() {
             id: "platform",
             label: t("nav.platform"),
             icon: <Building2 size={18} />,
-            items: [{ to: "/platform", icon: <Building2 size={16} />, label: "Organizations" }]
+            items: [{ to: "/platform", icon: <Building2 size={16} />, label: t("nav.organizations") }]
           },
           {
             id: "system",
@@ -750,7 +750,7 @@ export function DashboardLayout() {
             <button
               type="button"
               className="topbar-profile-trigger inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-xl border px-2.5 text-xs font-semibold transition duration-200"
-              aria-label="Open profile panel"
+              aria-label={t("layout.openProfilePanel")}
               aria-expanded={isProfilePanelOpen}
               onClick={() => setIsProfilePanelOpen((isOpen) => !isOpen)}
             >
@@ -766,7 +766,7 @@ export function DashboardLayout() {
           <button
             type="button"
             className="absolute inset-0 bg-background/40 backdrop-blur-md backdrop-saturate-150"
-            aria-label="Close navigation menu"
+            aria-label={t("layout.closeNavigation")}
             onClick={() => setIsMobileNavOpen(false)}
           />
           <motion.aside
@@ -778,7 +778,7 @@ export function DashboardLayout() {
             transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
           >
             <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex h-full flex-row overflow-hidden rounded-r-[1.75rem] border-y-0 border-l-0 p-0 shadow-[0_18px_45px_rgb(8_15_27_/_0.28)]" elevated>
-              <nav className="sidebar-icon-rail flex w-[4.25rem] shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label="Mobile primary navigation">
+              <nav className="sidebar-icon-rail flex w-[4.25rem] shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label={t("nav.mobilePrimaryNavigation")}>
                 <div className="mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
                   <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
                 </div>
@@ -817,7 +817,7 @@ export function DashboardLayout() {
                 <button
                   type="button"
                   className="mt-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                  aria-label="Close navigation menu"
+                  aria-label={t("layout.closeNavigation")}
                   onClick={() => setIsMobileNavOpen(false)}
                 >
                   <X size={16} />
