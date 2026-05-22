@@ -559,7 +559,277 @@
     "scheduleLater": "Jadualkan Nanti",
     "startCampaign": "Mula Kempen",
     "searchPlaceholder": "Cari kempen atau audiens",
-    "shown": "{{count}} dipaparkan"
+    "shown": "{{count}} dipaparkan",
+    "emailOnboarding": {
+      "label": "Panduan Tetapan",
+      "stepLabel": "Langkah {{current}} / {{total}}",
+      "fallback": "Target panduan tidak dijumpai pada skrin ini, jadi panduan dipaparkan pada posisi fallback yang selamat.",
+      "status": {
+        "verified": "Disahkan",
+        "notStarted": "Belum mula",
+        "ready": "Sedia",
+        "pending": "Menunggu",
+        "locked": "Dikunci",
+        "needsAttention": "Perlu perhatian",
+        "warning": "Amaran"
+      },
+      "actions": {
+        "showGuide": "Tunjuk panduan tetapan",
+        "closeGuide": "Tutup panduan tetapan",
+        "dontShowAgain": "Jangan tunjuk lagi",
+        "skip": "Langkau panduan",
+        "back": "Kembali",
+        "next": "Seterusnya",
+        "finish": "Selesai",
+        "connectSender": "Sambung Sender",
+        "createAudience": "Cipta Audiens",
+        "runCheck": "Jalankan Semakan",
+        "createDraft": "Cipta Draf",
+        "start": "Mula"
+      },
+      "panel": {
+        "eyebrow": "Pusat Arahan Emel",
+        "title": "Kemajuan Tetapan",
+        "description": "Ikut langkah ini sekali, kemudian guna workspace ini untuk cipta, hantar dan jejak kempen emel.",
+        "nextBestAction": "Tindakan terbaik seterusnya",
+        "cards": {
+          "sender": {
+            "title": "Sender",
+            "helperReady": "Sekurang-kurangnya satu sender emel sudah disahkan.",
+            "helperPending": "Sambung dan sahkan alamat emel yang pelanggan akan nampak."
+          },
+          "audience": {
+            "title": "Audiens",
+            "helperReady": "Audiens emel sudah tersedia.",
+            "helperPending": "Cipta atau import orang yang anda mahu emel."
+          },
+          "draft": {
+            "title": "Draf Emel",
+            "helperReady": "Draf atau kempen sudah wujud.",
+            "helperReadyWithSubject": "Draf sedia: {{subject}}",
+            "helperPending": "Tulis draf kempen emel pertama anda atau guna pembantu draf untuk sediakan emel permulaan.",
+            "extra": "Pembantu draf tersedia"
+          },
+          "compliance": {
+            "title": "Pematuhan",
+            "helperReady": "Sender, audiens, footer unsubscribe dan peraturan suppression sudah sedia.",
+            "helperPending": "Semak sender, audiens, footer unsubscribe dan peraturan suppression sebelum menghantar.",
+            "extra": "Semakan berasaskan peraturan tersedia"
+          },
+          "send": {
+            "title": "Hantar / Jadual",
+            "helperReady": "Anda boleh hantar ujian, mula atau jadualkan kempen.",
+            "helperPending": "Dibuka selepas sender, audiens, draf dan pematuhan sudah sedia."
+          }
+        }
+      },
+      "guide": {
+        "steps": {
+          "newDraft": {
+            "title": "Mula dengan draf baru",
+            "description": "Klik Create Email Campaign untuk masuk ke workspace draf dan sediakan kempen emel pertama anda."
+          },
+          "sender": {
+            "title": "Sahkan sender anda",
+            "description": "Pastikan sekurang-kurangnya satu sender emel sudah disahkan sebelum hantar kempen."
+          },
+          "audience": {
+            "title": "Pilih audiens anda",
+            "description": "Pilih atau import audiens emel yang patut menerima kempen ini."
+          },
+          "draft": {
+            "title": "Sediakan mesej anda",
+            "description": "Tulis atau jana kandungan emel anda sebelum menghantar."
+          },
+          "compliance": {
+            "title": "Semak pematuhan",
+            "description": "Sahkan footer unsubscribe, identiti sender dan peraturan suppression."
+          },
+          "send": {
+            "title": "Hantar atau jadualkan",
+            "description": "Selepas semua semakan sedia, hantar sekarang atau jadualkan penghantaran."
+          }
+        }
+      }
+    },
+    "emailDraftWizard": {
+      "label": "Panduan email draft",
+      "stepLabel": "Langkah {{current}} / {{total}}",
+      "actions": {
+        "skip": "Langkau Panduan",
+        "back": "Kembali",
+        "next": "Seterusnya",
+        "finish": "Selesai"
+      },
+      "helpers": {
+        "objective": "Pilih tujuan utama email ni.",
+        "tone": "Pilih gaya bahasa yang sesuai dengan pelanggan.",
+        "businessName": "Masukkan nama bisnes, produk atau kempen.",
+        "ctaLabel": "Teks button yang pelanggan akan klik.",
+        "offerDetails": "Masukkan detail promosi, tarikh tamat, harga atau mesej penting.",
+        "generateSimpleDraft": "AI akan bantu sediakan draft awal berdasarkan maklumat di sebelah kiri."
+      },
+      "steps": {
+        "newDraft": {
+          "title": "Mula dengan draft baru",
+          "description": "Tekan New Draft untuk mula sediakan campaign email baru. Kalau baru masuk halaman ini, mula dari sini dulu."
+        },
+        "basicInfo": {
+          "title": "Isi maklumat asas",
+          "description": "Maklumat ini akan bantu sistem hasilkan draft email yang lebih tepat. Isi ikut kempen yang awak nak jalankan."
+        },
+        "objective": {
+          "title": "Pilih tujuan campaign",
+          "description": "Contohnya promosi, follow-up, reminder atau announcement. Pilih yang paling dekat dengan tujuan email ini."
+        },
+        "tone": {
+          "title": "Tentukan gaya bahasa",
+          "description": "Pilih tone yang sesuai dengan cara awak nak bercakap dengan pelanggan. Biar mesej rasa kena dengan audience."
+        },
+        "businessName": {
+          "title": "Masukkan nama bisnes atau produk",
+          "description": "Letak nama bisnes, produk atau nama kempen supaya isi draft lebih jelas dan mudah difahami."
+        },
+        "ctaLabel": {
+          "title": "Letak CTA yang jelas",
+          "description": "CTA ini ialah teks button atau arahan ringkas yang pelanggan akan nampak dan klik nanti."
+        },
+        "offerDetails": {
+          "title": "Masukkan detail tawaran",
+          "description": "Letak info penting seperti promosi, harga, tarikh tamat atau kelebihan produk supaya draft lebih lengkap."
+        },
+        "generate": {
+          "title": "Generate draft",
+          "description": "Bila maklumat dah cukup, tekan button ini untuk hasilkan draft awal. Lepas itu awak masih boleh edit semula."
+        },
+        "editor": {
+          "title": "Semak dan edit",
+          "description": "Baca semula subject dan kandungan email, ubah ayat jika perlu, dan pastikan mesej jelas sebelum dihantar."
+        },
+        "sendTest": {
+          "title": "Hantar test email",
+          "description": "Sebelum hantar kepada pelanggan, test dulu ke email sendiri supaya mudah semak rupa dan isi mesej."
+        },
+        "audience": {
+          "title": "Pilih audience",
+          "description": "Pilih senarai pelanggan atau segment yang sesuai untuk campaign ini. Pastikan penerima memang betul."
+        },
+        "finalCheck": {
+          "title": "Final check",
+          "description": "Pastikan sender verified, audience betul, dan test email sudah dihantar. Bila draft sudah disimpan dan semua siap, guna aksi akhir di sini untuk teruskan hantar campaign."
+        }
+      }
+    },
+    "emailGuides": {
+      "campaigns": {
+        "label": "Panduan Kempen Emel",
+        "steps": {
+          "commandCenter": {
+            "title": "Fahami kemajuan tetapan anda",
+            "description": "Mulakan di sini untuk lihat sama ada sender, audiens, draf dan semakan pematuhan sudah sedia."
+          },
+          "newDraft": {
+            "title": "Cipta draf pertama anda",
+            "description": "Guna aksi utama di sini untuk masuk ke workspace draf dan mula bina kempen anda."
+          },
+          "draftFields": {
+            "title": "Isi butiran kempen",
+            "description": "Tetapkan objektif, tone, nama bisnes, CTA dan detail tawaran sebelum jana atau edit draf."
+          },
+          "launchReadiness": {
+            "title": "Semak kesiapsiagaan pelancaran",
+            "description": "Semak sama ada draf, sender, audiens dan pematuhan sudah sedia sebelum menghantar."
+          }
+        }
+      },
+      "audience": {
+        "label": "Panduan Audiens",
+        "steps": {
+          "list": {
+            "title": "Urus audiens anda",
+            "description": "Bahagian ini memaparkan kumpulan audiens guna semula yang tersedia untuk kempen emel."
+          },
+          "import": {
+            "title": "Import penerima",
+            "description": "Guna sumber audiens ini untuk muat naik atau susun penerima sebelum anda draf kempen."
+          },
+          "quality": {
+            "title": "Semak kualiti audiens",
+            "description": "Semak kiraan valid, invalid dan duplicate supaya senarai penghantaran sedia sebelum launch."
+          }
+        }
+      },
+      "senders": {
+        "label": "Panduan Tetapan Sender",
+        "steps": {
+          "list": {
+            "title": "Urus emel sender",
+            "description": "Inventori sender yang disahkan dipaparkan di sini supaya operator kempen tahu sender mana yang tersedia."
+          },
+          "add": {
+            "title": "Tambah sender",
+            "description": "Buka workspace setup untuk tambah dan sahkan sekurang-kurangnya satu sender sebelum launch kempen."
+          },
+          "status": {
+            "title": "Semak status pengesahan",
+            "description": "Hanya sender emel yang disahkan boleh digunakan untuk penghantaran kempen dari modul ini."
+          }
+        }
+      },
+      "templates": {
+        "label": "Panduan Template",
+        "steps": {
+          "library": {
+            "title": "Gunakan template mesej",
+            "description": "Template membantu anda guna semula corak kempen untuk promosi, peringatan, kemas kini dan follow-up."
+          },
+          "create": {
+            "title": "Cipta template",
+            "description": "Guna corak template ini sebagai titik mula untuk mesej kempen yang lebih konsisten."
+          }
+        }
+      },
+      "reports": {
+        "label": "Panduan Laporan",
+        "steps": {
+          "summary": {
+            "title": "Baca prestasi kempen",
+            "description": "Jejak penghantaran, pending, gagal dan hasil penerima lain untuk kempen yang dipilih di sini."
+          },
+          "history": {
+            "title": "Semak sejarah kempen",
+            "description": "Guna jadual penerima untuk periksa hasil dan bandingkan apa yang berlaku antara run kempen."
+          }
+        }
+      },
+      "settings": {
+        "label": "Panduan Tetapan Emel",
+        "steps": {
+          "tab": {
+            "title": "Buka workspace tetapan",
+            "description": "Bahagian tetapan ini mengumpulkan kawalan suppression, pematuhan dan sejarah untuk operasi emel."
+          },
+          "panel": {
+            "title": "Semak halaman tetapan semasa",
+            "description": "Guna panel tetapan semasa untuk semak status pematuhan, data suppression atau sejarah audit."
+          },
+          "action": {
+            "title": "Jalankan aksi tetapan seterusnya",
+            "description": "Guna aksi utama di sini untuk kemas kini halaman tetapan semasa, seperti jalankan semakan atau refresh history."
+          }
+        }
+      }
+    }
+  },
+  "guide": {
+    "stepLabel": "Langkah {{current}} / {{total}}",
+    "fallback": "Target panduan tidak dijumpai pada skrin ini, jadi panduan dipaparkan pada posisi fallback yang selamat.",
+    "actions": {
+      "skip": "Langkau panduan",
+      "back": "Kembali",
+      "next": "Seterusnya",
+      "finish": "Selesai"
+    }
   },
   "setup": {
     "whatsappTitle": "Tetapan WhatsApp",

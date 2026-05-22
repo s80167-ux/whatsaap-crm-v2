@@ -559,7 +559,277 @@
     "scheduleLater": "Schedule Later",
     "startCampaign": "Start Campaign",
     "searchPlaceholder": "Search campaigns or audience",
-    "shown": "{{count}} shown"
+    "shown": "{{count}} shown",
+    "emailOnboarding": {
+      "label": "Setup Guide",
+      "stepLabel": "Step {{current}} / {{total}}",
+      "fallback": "Guide target not found on this screen, so the guide is shown in a safe fallback position.",
+      "status": {
+        "verified": "Verified",
+        "notStarted": "Not started",
+        "ready": "Ready",
+        "pending": "Pending",
+        "locked": "Locked",
+        "needsAttention": "Needs attention",
+        "warning": "Warning"
+      },
+      "actions": {
+        "showGuide": "Show setup guide",
+        "closeGuide": "Close setup guide",
+        "dontShowAgain": "Don't show again",
+        "skip": "Skip guide",
+        "back": "Back",
+        "next": "Next",
+        "finish": "Finish",
+        "connectSender": "Connect Sender",
+        "createAudience": "Create Audience",
+        "runCheck": "Run Check",
+        "createDraft": "Create Draft",
+        "start": "Start"
+      },
+      "panel": {
+        "eyebrow": "Email Command Center",
+        "title": "Setup Progress",
+        "description": "Follow the steps once, then use this workspace to create, send and track email campaigns.",
+        "nextBestAction": "Next best action",
+        "cards": {
+          "sender": {
+            "title": "Sender",
+            "helperReady": "At least one sender email is verified.",
+            "helperPending": "Connect and verify the email address customers will see."
+          },
+          "audience": {
+            "title": "Audience",
+            "helperReady": "An email audience is available.",
+            "helperPending": "Create or import the people you want to email."
+          },
+          "draft": {
+            "title": "Email Draft",
+            "helperReady": "A draft or campaign already exists.",
+            "helperReadyWithSubject": "Draft ready: {{subject}}",
+            "helperPending": "Write your first email campaign draft or use the draft helper to prepare a starter email.",
+            "extra": "Draft helper available"
+          },
+          "compliance": {
+            "title": "Compliance",
+            "helperReady": "Sender, audience, unsubscribe footer and suppression rules are ready.",
+            "helperPending": "Check sender, audience, unsubscribe footer and suppression rules before sending.",
+            "extra": "Rule-based check available"
+          },
+          "send": {
+            "title": "Send / Schedule",
+            "helperReady": "You can send a test, start or schedule a campaign.",
+            "helperPending": "Unlocked after sender, audience, draft and compliance are ready."
+          }
+        }
+      },
+      "guide": {
+        "steps": {
+          "newDraft": {
+            "title": "Start with a new draft",
+            "description": "Click Create Email Campaign to move into the draft workspace and prepare your first email campaign."
+          },
+          "sender": {
+            "title": "Verify your sender",
+            "description": "Make sure at least one sender email is verified before sending campaigns."
+          },
+          "audience": {
+            "title": "Choose your audience",
+            "description": "Select or import the email audience who should receive this campaign."
+          },
+          "draft": {
+            "title": "Prepare your message",
+            "description": "Write or generate your email content before sending."
+          },
+          "compliance": {
+            "title": "Check compliance",
+            "description": "Confirm unsubscribe footer, sender identity and suppression rules."
+          },
+          "send": {
+            "title": "Send or schedule",
+            "description": "After all checks are ready, send now or schedule delivery."
+          }
+        }
+      }
+    },
+    "emailDraftWizard": {
+      "label": "Email draft guide",
+      "stepLabel": "Step {{current}} / {{total}}",
+      "actions": {
+        "skip": "Skip Guide",
+        "back": "Back",
+        "next": "Next",
+        "finish": "Finish"
+      },
+      "helpers": {
+        "objective": "Choose the main goal of this email.",
+        "tone": "Choose a writing style that fits your customers.",
+        "businessName": "Enter the business, product, or campaign name.",
+        "ctaLabel": "The button text your customer will click.",
+        "offerDetails": "Enter promo details, end date, pricing, or other important message.",
+        "generateSimpleDraft": "AI will help prepare a first draft based on the details on the left."
+      },
+      "steps": {
+        "newDraft": {
+          "title": "Start with a new draft",
+          "description": "Click New Draft to start preparing a new email campaign. If you are new to this page, begin here first."
+        },
+        "basicInfo": {
+          "title": "Fill in the basics",
+          "description": "These details help the system produce a more accurate draft. Fill them based on the campaign you want to run."
+        },
+        "objective": {
+          "title": "Choose the campaign goal",
+          "description": "For example promotion, follow-up, reminder, or announcement. Pick the option that best matches this email."
+        },
+        "tone": {
+          "title": "Set the writing style",
+          "description": "Choose a tone that matches how you want to speak to your customers."
+        },
+        "businessName": {
+          "title": "Enter business or product name",
+          "description": "Add the business, product, or campaign name so the draft is clearer and easier to understand."
+        },
+        "ctaLabel": {
+          "title": "Add a clear CTA",
+          "description": "This CTA is the short button text or instruction your customer will see and click later."
+        },
+        "offerDetails": {
+          "title": "Enter the offer details",
+          "description": "Include important information such as the promotion, price, end date, or product benefits so the draft feels complete."
+        },
+        "generate": {
+          "title": "Generate the draft",
+          "description": "Once the information is complete, click this button to create the first draft. You can still edit it afterward."
+        },
+        "editor": {
+          "title": "Review and edit",
+          "description": "Read through the subject and email content, adjust the wording if needed, and make sure the message is clear."
+        },
+        "sendTest": {
+          "title": "Send a test email",
+          "description": "Before sending to customers, send a test to your own email so you can review the layout and message."
+        },
+        "audience": {
+          "title": "Choose the audience",
+          "description": "Select the right customer list or segment for this campaign. Make sure the recipients are correct."
+        },
+        "finalCheck": {
+          "title": "Final check",
+          "description": "Make sure the sender is verified, the audience is correct, and the test email has been sent. Once the draft is saved and everything is ready, use the final action here to continue."
+        }
+      }
+    },
+    "emailGuides": {
+      "campaigns": {
+        "label": "Email Campaign Guide",
+        "steps": {
+          "commandCenter": {
+            "title": "Understand your setup progress",
+            "description": "Start here to see whether your sender, audience, draft and compliance checks are ready."
+          },
+          "newDraft": {
+            "title": "Create your first draft",
+            "description": "Use the primary action here to move into the draft workspace and start your campaign."
+          },
+          "draftFields": {
+            "title": "Fill in campaign details",
+            "description": "Set your objective, tone, business name, CTA and offer details before generating or editing the draft."
+          },
+          "launchReadiness": {
+            "title": "Check launch readiness",
+            "description": "Review whether the draft, sender, audience and compliance checks are ready before sending."
+          }
+        }
+      },
+      "audience": {
+        "label": "Audience Guide",
+        "steps": {
+          "list": {
+            "title": "Manage your audience",
+            "description": "This area shows the reusable audience groups available for email campaigns."
+          },
+          "import": {
+            "title": "Import recipients",
+            "description": "Use these audience sources to upload or organize recipients before you draft a campaign."
+          },
+          "quality": {
+            "title": "Check audience quality",
+            "description": "Review valid, invalid and duplicate counts so your send list is ready before launch."
+          }
+        }
+      },
+      "senders": {
+        "label": "Sender Setup Guide",
+        "steps": {
+          "list": {
+            "title": "Manage sender emails",
+            "description": "Verified sender inventory is shown here so campaign operators know which senders are available."
+          },
+          "add": {
+            "title": "Add sender",
+            "description": "Open the setup workspace to add and verify at least one sender before launching a campaign."
+          },
+          "status": {
+            "title": "Check verification status",
+            "description": "Only verified sender emails can be used for campaign sending from this module."
+          }
+        }
+      },
+      "templates": {
+        "label": "Template Guide",
+        "steps": {
+          "library": {
+            "title": "Use message templates",
+            "description": "Templates help you reuse campaign patterns for promotions, reminders, updates and follow-ups."
+          },
+          "create": {
+            "title": "Create a template",
+            "description": "Use these reusable template patterns as the starting point for governed campaign messaging."
+          }
+        }
+      },
+      "reports": {
+        "label": "Reports Guide",
+        "steps": {
+          "summary": {
+            "title": "Read campaign performance",
+            "description": "Track delivery, pending, failures and other recipient outcomes from the selected campaign here."
+          },
+          "history": {
+            "title": "Review campaign history",
+            "description": "Use the recipient table to inspect results and compare what happened across campaign runs."
+          }
+        }
+      },
+      "settings": {
+        "label": "Email Settings Guide",
+        "steps": {
+          "tab": {
+            "title": "Open the settings workspace",
+            "description": "This settings area groups suppression, compliance and history controls for email operations."
+          },
+          "panel": {
+            "title": "Review the current settings page",
+            "description": "Use the current settings panel to inspect compliance state, suppression data or audit history."
+          },
+          "action": {
+            "title": "Run the next settings action",
+            "description": "Use the primary action here to update the current settings page, such as running checks or refreshing history."
+          }
+        }
+      }
+    }
+  },
+  "guide": {
+    "stepLabel": "Step {{current}} / {{total}}",
+    "fallback": "Guide target not found on this screen, so the guide is shown in a safe fallback position.",
+    "actions": {
+      "skip": "Skip guide",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish"
+    }
   },
   "setup": {
     "whatsappTitle": "WhatsApp Setup",

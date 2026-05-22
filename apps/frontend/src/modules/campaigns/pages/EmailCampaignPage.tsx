@@ -2,7 +2,10 @@ import {
   AlertCircle,
   Ban,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
+  CircleHelp,
   FileCheck2,
   FileText,
   Mail,
@@ -21,9 +24,15 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
+import { GuideButton } from "../../../guide/GuideButton";
+import { GuidePopover } from "../../../guide/GuidePopover";
+import { GuideProvider } from "../../../guide/GuideProvider";
+import { createEmailGuideRegistry, getEmailGuideIdFromActiveTab } from "../../../guide/guideRegistry";
+import { useGuide } from "../../../guide/useGuide";
 import { Input, Select } from "../../../components/Input";
 import { PanelPagination, usePanelPagination } from "../../../components/PanelPagination";
 import { useCampaignEmailModuleStatus } from "../../../hooks/useAdmin";
@@ -201,9 +210,16 @@ const defaultSenderForm: SenderFormState = {
   testEmail: ""
 };
 
-const EMAIL_ONBOARDING_DISMISSED_KEY = "email_campaign_onboarding_dismissed";
-const EMAIL_ONBOARDING_COMPLETED_KEY = "email_campaign_onboarding_completed";
-const EMAIL_ONBOARDING_STARTED_SESSION_KEY = "email_campaign_onboarding_started_session";
+function getEmailDraftFieldHelpers(t: (key: string, options?: Record<string, unknown>) => string) {
+  return {
+    objective: t("campaign.emailDraftWizard.helpers.objective"),
+    tone: t("campaign.emailDraftWizard.helpers.tone"),
+    businessName: t("campaign.emailDraftWizard.helpers.businessName"),
+    ctaLabel: t("campaign.emailDraftWizard.helpers.ctaLabel"),
+    offerDetails: t("campaign.emailDraftWizard.helpers.offerDetails"),
+    generateSimpleDraft: t("campaign.emailDraftWizard.helpers.generateSimpleDraft")
+  } as const;
+}
 
 const defaultCampaignForm: CampaignFormState = {
   campaignId: "",
@@ -218,7 +234,28 @@ const defaultCampaignForm: CampaignFormState = {
   testEmail: ""
 };
 
+function EmailGuideAutoStart({ activeGuideId, enabled }: { activeGuideId: string; enabled: boolean }) {
+  const { activeGuideId: openGuideId, hasGuideStartedInSession, isGuideActive, isGuideCompleted, startGuide, stopGuide } = useGuide();
+
+  useEffect(() => {
+    if (isGuideActive && openGuideId && openGuideId !== activeGuideId) {
+      stopGuide();
+    }
+  }, [activeGuideId, isGuideActive, openGuideId, stopGuide]);
+
+  useEffect(() => {
+    if (!enabled || isGuideActive || isGuideCompleted(activeGuideId) || hasGuideStartedInSession(activeGuideId)) {
+      return;
+    }
+
+    startGuide(activeGuideId);
+  }, [activeGuideId, enabled, hasGuideStartedInSession, isGuideActive, isGuideCompleted, startGuide]);
+
+  return null;
+}
+
 export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: EmailCampaignTab }) {
+  const { t } = useTranslation();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const navigate = useNavigate();
   const currentUser = getStoredUser();
@@ -235,16 +272,8 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
   const [selectedReportCampaignId, setSelectedReportCampaignId] = useState("");
   const [recipientSearch, setRecipientSearch] = useState("");
   const [recipientStatusFilter, setRecipientStatusFilter] = useState("all");
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
-    typeof window === "undefined" ? false : window.localStorage.getItem(EMAIL_ONBOARDING_DISMISSED_KEY) === "true"
-  );
-  const [onboardingCompleted, setOnboardingCompleted] = useState(() =>
-    typeof window === "undefined" ? false : window.localStorage.getItem(EMAIL_ONBOARDING_COMPLETED_KEY) === "true"
-  );
-  const [onboardingStarted, setOnboardingStarted] = useState(() =>
-    typeof window === "undefined" ? false : window.sessionStorage.getItem(EMAIL_ONBOARDING_STARTED_SESSION_KEY) === "true"
-  );
+  const guideRegistry = useMemo(() => createEmailGuideRegistry(t), [t]);
+  const activeGuideId = useMemo(() => getEmailGuideIdFromActiveTab(activeTab), [activeTab]);
 
   const isReady = Boolean(organizationId) && isEmailAccessEnabled;
 
@@ -353,23 +382,6 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
     }
   }, [campaigns, selectedReportCampaignId]);
 
-  useEffect(() => {
-    if (!isReady || onboardingDismissed || onboardingCompleted || onboardingStarted || readiness.sendReady) {
-      return;
-    }
-
-    setIsOnboardingOpen(true);
-  }, [isReady, onboardingCompleted, onboardingDismissed, onboardingStarted, readiness.sendReady]);
-
-  useEffect(() => {
-    if (!readiness.sendReady || onboardingCompleted || typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(EMAIL_ONBOARDING_COMPLETED_KEY, "true");
-    setOnboardingCompleted(true);
-  }, [onboardingCompleted, readiness.sendReady]);
-
   function showNotice(type: Notice["type"], message: string) {
     setNotice({ type, message });
   }
@@ -379,8 +391,6 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
   }
 
   function handleNextAction(actionKey = readiness.nextAction.key) {
-    setIsOnboardingOpen(false);
-
     if (actionKey === "connect_sender") {
       navigate("/setup/channels/email");
       return;
@@ -397,25 +407,6 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
     }
 
     navigate("/campaigns/email/create");
-  }
-
-  function dismissOnboarding() {
-    if (typeof window !== "undefined") {
-      // TODO: migrate this local preference to user_onboarding_states with module_key = email_campaign.
-      window.localStorage.setItem(EMAIL_ONBOARDING_DISMISSED_KEY, "true");
-    }
-
-    setOnboardingDismissed(true);
-    setIsOnboardingOpen(false);
-  }
-
-  function startOnboardingSetup() {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(EMAIL_ONBOARDING_STARTED_SESSION_KEY, "true");
-    }
-
-    setOnboardingStarted(true);
-    handleNextAction();
   }
 
   const senderSaveMutation = useMutation({
@@ -556,7 +547,9 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
   });
 
   return (
-    <section className="space-y-5">
+    <GuideProvider registry={guideRegistry}>
+      <EmailGuideAutoStart activeGuideId={activeGuideId} enabled={isReady} />
+      <section className="space-y-5">
       <Card elevated className="workspace-page-header p-5 sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
@@ -570,12 +563,13 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
               Send newsletters, promotions and follow-ups using your own verified email address. Complete the setup once, then create and track campaigns easily.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button className="w-full shrink-0 px-3 sm:w-auto sm:px-5" onClick={() => handleNextAction()} disabled={!isReady}>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button className="w-full shrink px-2.5 sm:w-auto sm:px-3" size="sm" data-guide="email-new-draft" onClick={() => handleNextAction()} disabled={!isReady}>
               {readiness.nextAction.label}
             </Button>
-            <Button className="w-full shrink-0 px-3 sm:w-auto sm:px-5" variant="secondary" onClick={() => void refreshAll()} disabled={!isReady}>
-              <RefreshCw size={16} /> Refresh Workspace
+            <GuideButton guideId={activeGuideId} label={t("campaign.emailOnboarding.actions.showGuide")} size="sm" className="w-full shrink px-2.5 sm:w-auto sm:px-3" />
+            <Button className="w-full shrink px-2.5 sm:w-auto sm:px-3" size="sm" variant="secondary" onClick={() => void refreshAll()} disabled={!isReady}>
+              <RefreshCw size={14} /> Refresh Workspace
             </Button>
           </div>
         </div>
@@ -597,7 +591,7 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
         <DisabledNotice isEmailAccessEnabled={isEmailAccessEnabled} />
       ) : (
         <>
-          <EmailReadinessPanel readiness={readiness} onAction={handleNextAction} onShowGuide={() => setIsOnboardingOpen(true)} />
+          <EmailReadinessPanel readiness={readiness} onAction={handleNextAction} />
           {renderActiveTab({
             activeTab,
             readiness,
@@ -693,17 +687,11 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
             }
           })}
           <PlannedFlowCard />
-          <EmailOnboardingWizard
-            isOpen={isOnboardingOpen}
-            readiness={readiness}
-            onStart={startOnboardingSetup}
-            onSkip={dismissOnboarding}
-            onDontShowAgain={dismissOnboarding}
-            onClose={() => setIsOnboardingOpen(false)}
-          />
         </>
       )}
-    </section>
+      </section>
+      <GuidePopover />
+    </GuideProvider>
   );
 }
 
@@ -779,84 +767,94 @@ function renderActiveTab(props: {
   }
 }
 
-function EmailReadinessPanel({ readiness, onAction, onShowGuide }: { readiness: EmailReadinessState; onAction: (actionKey?: EmailNextActionKey) => void; onShowGuide: () => void }) {
+function EmailReadinessPanel({ readiness, onAction }: { readiness: EmailReadinessState; onAction: (actionKey?: EmailNextActionKey) => void }) {
+  const { t } = useTranslation();
   const steps = [
     {
       key: "sender" as const,
       icon: Mail,
-      title: "Sender",
+      title: t("campaign.emailOnboarding.panel.cards.sender.title"),
       done: readiness.senderReady,
-      status: readiness.senderReady ? "Verified" : "Not started",
-      helper: readiness.senderReady ? "At least one sender email is verified." : "Connect and verify the email address customers will see.",
+      status: readiness.senderReady ? t("campaign.emailOnboarding.status.verified") : t("campaign.emailOnboarding.status.notStarted"),
+      helper: readiness.senderReady ? t("campaign.emailOnboarding.panel.cards.sender.helperReady") : t("campaign.emailOnboarding.panel.cards.sender.helperPending"),
       action: "connect_sender" as EmailNextActionKey
     },
     {
       key: "audience" as const,
       icon: Users,
-      title: "Audience",
+      title: t("campaign.emailOnboarding.panel.cards.audience.title"),
       done: readiness.audienceReady,
-      status: readiness.audienceReady ? "Ready" : readiness.senderReady ? "Pending" : "Locked",
-      helper: readiness.audienceReady ? "An email audience is available." : "Create or import the people you want to email.",
+      status: readiness.audienceReady ? t("campaign.emailOnboarding.status.ready") : readiness.senderReady ? t("campaign.emailOnboarding.status.pending") : t("campaign.emailOnboarding.status.locked"),
+      helper: readiness.audienceReady ? t("campaign.emailOnboarding.panel.cards.audience.helperReady") : t("campaign.emailOnboarding.panel.cards.audience.helperPending"),
       action: "create_audience" as EmailNextActionKey
     },
     {
       key: "draft" as const,
       icon: FileText,
-      title: "Email Draft",
+      title: t("campaign.emailOnboarding.panel.cards.draft.title"),
       done: readiness.draftReady,
-      status: readiness.draftReady ? "Ready" : readiness.audienceReady ? "Pending" : "Locked",
+      status: readiness.draftReady ? t("campaign.emailOnboarding.status.ready") : readiness.audienceReady ? t("campaign.emailOnboarding.status.pending") : t("campaign.emailOnboarding.status.locked"),
       helper: readiness.draftReady
         ? readiness.draftSubject
-          ? `Draft ready: ${readiness.draftSubject}`
-          : "A draft or campaign already exists."
-        : "Write your first email campaign draft or use the draft helper to prepare a starter email.",
+          ? t("campaign.emailOnboarding.panel.cards.draft.helperReadyWithSubject", { subject: readiness.draftSubject })
+          : t("campaign.emailOnboarding.panel.cards.draft.helperReady")
+        : t("campaign.emailOnboarding.panel.cards.draft.helperPending"),
       action: "create_email" as EmailNextActionKey,
-      extra: "Draft helper available"
+      extra: t("campaign.emailOnboarding.panel.cards.draft.extra")
     },
     {
       key: "compliance" as const,
       icon: ShieldCheck,
-      title: "Compliance",
+      title: t("campaign.emailOnboarding.panel.cards.compliance.title"),
       done: readiness.complianceReady,
       status: readiness.complianceReady
-        ? "Ready"
+        ? t("campaign.emailOnboarding.status.ready")
         : !readiness.draftReady
-          ? "Locked"
+          ? t("campaign.emailOnboarding.status.locked")
           : readiness.complianceChecks.some((check) => check.status === "fail" || check.status === "not_checked")
-            ? "Needs attention"
-            : "Warning",
-      helper: readiness.complianceReady ? "Sender, audience, unsubscribe footer and suppression rules are ready." : "Check sender, audience, unsubscribe footer and suppression rules before sending.",
+            ? t("campaign.emailOnboarding.status.needsAttention")
+            : t("campaign.emailOnboarding.status.warning"),
+      helper: readiness.complianceReady ? t("campaign.emailOnboarding.panel.cards.compliance.helperReady") : t("campaign.emailOnboarding.panel.cards.compliance.helperPending"),
       action: "run_compliance" as EmailNextActionKey,
-      extra: "Rule-based check available"
+      extra: t("campaign.emailOnboarding.panel.cards.compliance.extra")
     },
     {
       key: "send" as const,
       icon: Send,
-      title: "Send / Schedule",
+      title: t("campaign.emailOnboarding.panel.cards.send.title"),
       done: readiness.sendReady,
-      status: readiness.sendReady ? "Ready" : "Locked",
-      helper: readiness.sendReady ? "You can send a test, start or schedule a campaign." : "Unlocked after sender, audience, draft and compliance are ready.",
+      status: readiness.sendReady ? t("campaign.emailOnboarding.status.ready") : t("campaign.emailOnboarding.status.locked"),
+      helper: readiness.sendReady ? t("campaign.emailOnboarding.panel.cards.send.helperReady") : t("campaign.emailOnboarding.panel.cards.send.helperPending"),
       action: "create_campaign" as EmailNextActionKey
     }
   ];
 
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
+    <Card data-guide="email-command-center" elevated className="space-y-4 p-4 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <SectionIntro
-          eyebrow="Email Command Center"
-          title="Setup Progress"
-          description="Follow the steps once, then use this workspace to create, send and track email campaigns."
+          eyebrow={t("campaign.emailOnboarding.panel.eyebrow")}
+          title={t("campaign.emailOnboarding.panel.title")}
+          description={t("campaign.emailOnboarding.panel.description")}
         />
-        <Button size="sm" variant="secondary" onClick={onShowGuide}>Show setup guide</Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {steps.map((step) => {
           const Icon = step.icon;
-          const tone = step.done ? "success" : step.status === "Locked" ? "muted" : step.status === "Needs attention" || step.status === "Warning" ? "warning" : "default";
+          const tone = step.done ? "success" : step.status === t("campaign.emailOnboarding.status.locked") ? "muted" : step.status === t("campaign.emailOnboarding.status.needsAttention") || step.status === t("campaign.emailOnboarding.status.warning") ? "warning" : "default";
+
+          const guideTarget = step.key === "sender"
+            ? "email-sender"
+            : step.key === "audience"
+              ? "email-audience"
+              : step.key === "draft"
+                ? "email-draft"
+                : step.key === "compliance"
+                  ? "email-compliance"
+                  : "email-send-schedule";
 
           return (
-            <div key={step.key} className={`border p-3 ${step.done ? "border-success/20 bg-success/5" : "border-border bg-background-tint"}`}>
+            <div key={step.key} data-guide={guideTarget} className={`border p-3 transition-shadow duration-200 ${step.done ? "border-success/20 bg-success/5" : "border-border bg-background-tint"}`}>
               <div className="flex items-start justify-between gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/15 bg-card text-primary">
                   <Icon size={17} />
@@ -866,9 +864,9 @@ function EmailReadinessPanel({ readiness, onAction, onShowGuide }: { readiness: 
               <p className="mt-3 text-sm font-semibold text-text">{step.title}</p>
               <p className="mt-1 min-h-[44px] text-xs leading-5 text-text-muted">{step.helper}</p>
               {step.extra ? <p className="mt-2 text-xs font-semibold text-primary">{step.extra}</p> : null}
-              {!step.done && step.status !== "Locked" ? (
+              {!step.done && step.status !== t("campaign.emailOnboarding.status.locked") ? (
                 <Button className="mt-3 w-full" size="sm" variant="secondary" onClick={() => onAction(step.action)}>
-                  {step.action === "connect_sender" ? "Connect Sender" : step.action === "create_audience" ? "Create Audience" : step.action === "run_compliance" ? "Run Check" : step.action === "create_email" ? "Create Draft" : "Start"}
+                  {step.action === "connect_sender" ? t("campaign.emailOnboarding.actions.connectSender") : step.action === "create_audience" ? t("campaign.emailOnboarding.actions.createAudience") : step.action === "run_compliance" ? t("campaign.emailOnboarding.actions.runCheck") : step.action === "create_email" ? t("campaign.emailOnboarding.actions.createDraft") : t("campaign.emailOnboarding.actions.start")}
                 </Button>
               ) : null}
             </div>
@@ -877,73 +875,12 @@ function EmailReadinessPanel({ readiness, onAction, onShowGuide }: { readiness: 
       </div>
       <div className="flex flex-col gap-3 border border-primary/15 bg-primary/5 p-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm font-semibold text-text">Next best action</p>
+          <p className="text-sm font-semibold text-text">{t("campaign.emailOnboarding.panel.nextBestAction")}</p>
           <p className="mt-1 text-sm leading-5 text-text-muted">{readiness.nextAction.description}</p>
         </div>
         <Button className="shrink-0" onClick={() => onAction(readiness.nextAction.key)}>{readiness.nextAction.label}</Button>
       </div>
     </Card>
-  );
-}
-
-function EmailOnboardingWizard({
-  isOpen,
-  readiness,
-  onClose,
-  onDontShowAgain,
-  onSkip,
-  onStart
-}: {
-  isOpen: boolean;
-  readiness: EmailReadinessState;
-  onClose: () => void;
-  onDontShowAgain: () => void;
-  onSkip: () => void;
-  onStart: () => void;
-}) {
-  if (!isOpen) {
-    return null;
-  }
-
-  const steps = [
-    { title: "Connect Sender", helper: "Connect the email address your customers will see as the sender.", checked: readiness.senderReady },
-    { title: "Add Audience", helper: "Import contacts or select an existing customer segment.", checked: readiness.audienceReady },
-    { title: "Create Email", helper: "Write from scratch, use a template, or generate a starter draft with the helper.", checked: readiness.draftReady },
-    { title: "Run Compliance Check", helper: "Check unsubscribe link, sender identity and suppression list before sending.", checked: readiness.complianceReady },
-    { title: "Send Test / Schedule", helper: "Preview your email, send a test, then schedule or send.", checked: readiness.sendReady }
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-      <div className="w-full max-w-2xl border border-border bg-card p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Setup Guide</p>
-            <h2 className="mt-2 text-xl font-semibold text-text">Welcome to Email Campaign</h2>
-            <p className="mt-2 text-sm leading-6 text-text-muted">Complete these steps once to start sending email campaigns safely.</p>
-          </div>
-          <Button size="icon" variant="ghost" aria-label="Close setup guide" onClick={onClose}><XCircle size={18} /></Button>
-        </div>
-        <div className="mt-5 grid gap-2">
-          {steps.map((step, index) => (
-            <div key={step.title} className="flex gap-3 border border-border bg-background-tint p-3">
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${step.checked ? "border-success/30 bg-success/10 text-success" : "border-primary/20 bg-card text-primary"}`}>
-                {step.checked ? <CheckCircle2 size={15} /> : index + 1}
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-text">{step.title}</p>
-                <p className="mt-1 text-xs leading-5 text-text-muted">{step.helper}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button variant="ghost" onClick={onDontShowAgain}>Don't show again</Button>
-          <Button variant="secondary" onClick={onSkip}>Skip for now</Button>
-          <Button onClick={onStart}>Start Setup</Button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1089,7 +1026,7 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-      <Card elevated className="space-y-4 p-4 sm:p-5">
+      <Card data-guide="email-add-sender" elevated className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <SectionIntro eyebrow="Sender Setup" title="Email sender setup now lives in Setup" description="Campaigns Email only references configured senders. Gmail App Password and Custom SMTP setup is owned by Setup Channels Email." />
           <Button variant="secondary" onClick={onGoToSetup}>Go to Email Setup</Button>
@@ -1108,14 +1045,14 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
         </div>
       </Card>
 
-      <Card elevated className="space-y-4 p-4 sm:p-5">
+      <Card data-guide="email-sender-list" elevated className="space-y-4 p-4 sm:p-5">
         <SectionIntro eyebrow="Saved Senders" title="Verified Sender Inventory" description="Campaign sending only consumes verified senders from the setup page. This tab stays read-only for campaign operators." />
         {loading.senders ? <EmptyState title="Loading senders" description="Fetching sender inventory." /> : null}
         <div className="space-y-3">
           {senders.length === 0 ? (
             <EmptyState title="No senders configured" description="No verified email sender found. Set up your sender first." />
           ) : (
-            senders.map((sender) => {
+            senders.map((sender, index) => {
               const SenderIcon = senderTypes.find((item) => item.title.toLowerCase().includes(sender.sender_type === "gmail_app_password" ? "gmail" : "custom"))?.icon ?? Mail;
               return (
                 <div key={sender.id} className="border border-border bg-background-tint p-4">
@@ -1128,7 +1065,9 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
                         <p className="mt-1 text-xs text-text-soft">{sender.smtp_host ?? "No host"} · {sender.smtp_username_masked ?? "Username hidden"}</p>
                       </div>
                     </div>
-                    <StatusBadge tone={statusTone(sender.status)}>{humanize(sender.status)}</StatusBadge>
+                    <div data-guide={index === 0 ? "email-sender-status" : undefined}>
+                      <StatusBadge tone={statusTone(sender.status)}>{humanize(sender.status)}</StatusBadge>
+                    </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
                     <span>Password: {sender.smtp_password_configured ? "configured" : "missing"}</span>
@@ -1149,6 +1088,7 @@ function SenderSetupPanel({ senders, loading, onGoToSetup }: Pick<Parameters<typ
 }
 
 function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienceGroups, campaigns, selectedComposerCampaign, mutations, onLoadCampaign, onResetCampaign, onGoToSetup, readiness }: Pick<Parameters<typeof renderActiveTab>[0], "campaignForm" | "setCampaignForm" | "senders" | "readyAudienceGroups" | "campaigns" | "selectedComposerCampaign" | "mutations" | "onLoadCampaign" | "onResetCampaign" | "onGoToSetup" | "readiness">) {
+  const { t } = useTranslation();
   const verifiedSenders = senders.filter((sender) => sender.status === "verified");
   const draftCampaigns = campaigns.filter((campaign) => campaign.status === "draft");
   const [draftAssistant, setDraftAssistant] = useState<EmailDraftState>({
@@ -1159,6 +1099,7 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
     ctaLabel: "Learn More",
     ctaUrl: ""
   });
+  const emailDraftFieldHelpers = useMemo(() => getEmailDraftFieldHelpers(t), [t]);
 
   if (verifiedSenders.length === 0) {
     return (
@@ -1172,13 +1113,16 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-      <Card elevated className="space-y-4 p-4 sm:p-5">
+    <>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <Card data-guide="email-draft-fields" elevated className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <SectionIntro eyebrow="Campaign Wizard" title="Create Email Campaign" description="Save a draft first, then send a test and start delivery when the sender is verified and the audience is ready." />
-          <Button variant="secondary" onClick={onResetCampaign}>New Draft</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={onResetCampaign}>New Draft</Button>
+          </div>
         </div>
-        <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
+          <div data-guide="email-draft-assistant" className="rounded-lg border border-primary/15 bg-primary/5 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1188,8 +1132,10 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
               <p className="mt-1 text-xs leading-5 text-text-muted">Generate a simple starter email from your objective and offer details. No external AI is used, and the text stays editable.</p>
             </div>
             <Button
+              data-guide="email-draft-generate"
               size="sm"
               variant="secondary"
+              title={emailDraftFieldHelpers.generateSimpleDraft}
               onClick={() => {
                 const generatedDraft = generateSimpleEmailDraft(draftAssistant);
                 setCampaignForm((current) => ({
@@ -1203,12 +1149,12 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
                 setDraftAssistant((current) => ({ ...current, ctaLabel: generatedDraft.ctaLabel || current.ctaLabel }));
               }}
             >
-              <Sparkles size={15} /> Generate simple draft
+              <Sparkles size={15} /> Generate Simple Draft
             </Button>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label>
-              <span className="workspace-label">Campaign objective</span>
+            <label data-guide="email-draft-objective">
+              <FieldHelperLabel label="Campaign objective" helper={emailDraftFieldHelpers.objective} />
               <Select value={draftAssistant.objective ?? "promotion"} onChange={(event) => setDraftAssistant((current) => ({ ...current, objective: event.target.value as EmailDraftObjective }))}>
                 <option value="promotion">Promotion</option>
                 <option value="announcement">Announcement</option>
@@ -1217,24 +1163,24 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
                 <option value="re_engagement">Re-engagement</option>
               </Select>
             </label>
-            <label>
-              <span className="workspace-label">Tone</span>
+            <label data-guide="email-draft-tone">
+              <FieldHelperLabel label="Tone" helper={emailDraftFieldHelpers.tone} />
               <Select value={draftAssistant.tone ?? "friendly"} onChange={(event) => setDraftAssistant((current) => ({ ...current, tone: event.target.value as EmailDraftTone }))}>
                 <option value="professional">Professional</option>
                 <option value="friendly">Friendly</option>
                 <option value="direct">Direct</option>
               </Select>
             </label>
-            <label>
-              <span className="workspace-label">Business / Product Name</span>
+            <label data-guide="email-draft-business-name">
+              <FieldHelperLabel label="Business / Product Name" helper={emailDraftFieldHelpers.businessName} />
               <Input value={draftAssistant.businessName ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, businessName: event.target.value }))} placeholder="Rezeki CRM" />
             </label>
-            <label>
-              <span className="workspace-label">CTA Label</span>
+            <label data-guide="email-draft-cta-label">
+              <FieldHelperLabel label="CTA Label" helper={emailDraftFieldHelpers.ctaLabel} />
               <Input value={draftAssistant.ctaLabel ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, ctaLabel: event.target.value }))} placeholder="Learn More" />
             </label>
-            <label className="md:col-span-2">
-              <span className="workspace-label">Offer Details</span>
+            <label data-guide="email-draft-offer-details" className="md:col-span-2 block">
+              <FieldHelperLabel label="Offer Details" helper={emailDraftFieldHelpers.offerDetails} />
               <textarea className="input-base min-h-20 w-full" value={draftAssistant.offerDetails ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, offerDetails: event.target.value }))} placeholder="Share the update, promotion, reminder or follow-up details." />
             </label>
             <label className="md:col-span-2">
@@ -1269,25 +1215,27 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
               {verifiedSenders.map((sender) => <option key={sender.id} value={sender.id}>{sender.display_name} · {sender.from_email}</option>)}
             </Select>
           </label>
-          <label>
+          <label data-guide="email-draft-audience">
             <span className="workspace-label">Audience Group</span>
             <Select value={campaignForm.audienceGroupId} onChange={(event) => setCampaignForm((current) => ({ ...current, audienceGroupId: event.target.value }))}>
               <option value="">Manual recipients only</option>
               {readyAudienceGroups.map((group) => <option key={group.id} value={group.id}>{group.name} · {group.valid_count} valid</option>)}
             </Select>
           </label>
-          <label className="md:col-span-2">
-            <span className="workspace-label">Subject</span>
-            <Input value={campaignForm.subject} onChange={(event) => setCampaignForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Important update from our team" />
-          </label>
-          <label className="md:col-span-2">
-            <span className="workspace-label">Preview Text / Preheader</span>
-            <Input value={campaignForm.previewText} onChange={(event) => setCampaignForm((current) => ({ ...current, previewText: event.target.value }))} placeholder="Short inbox preview text. This is not sent yet if the backend does not support it." />
-          </label>
-          <label className="md:col-span-2">
-            <span className="workspace-label">Body HTML or plain text</span>
-            <textarea className="input-base min-h-48 w-full" value={campaignForm.bodyHtml} onChange={(event) => setCampaignForm((current) => ({ ...current, bodyHtml: event.target.value }))} placeholder="Write your email body. Plain text will be converted into simple paragraphs." />
-          </label>
+          <div data-guide="email-draft-editor" className="md:col-span-2 grid gap-3">
+            <label>
+              <span className="workspace-label">Subject</span>
+              <Input value={campaignForm.subject} onChange={(event) => setCampaignForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Important update from our team" />
+            </label>
+            <label>
+              <span className="workspace-label">Preview Text / Preheader</span>
+              <Input value={campaignForm.previewText} onChange={(event) => setCampaignForm((current) => ({ ...current, previewText: event.target.value }))} placeholder="Short inbox preview text. This is not sent yet if the backend does not support it." />
+            </label>
+            <label>
+              <span className="workspace-label">Body HTML or plain text</span>
+              <textarea className="input-base min-h-48 w-full" value={campaignForm.bodyHtml} onChange={(event) => setCampaignForm((current) => ({ ...current, bodyHtml: event.target.value }))} placeholder="Write your email body. Plain text will be converted into simple paragraphs." />
+            </label>
+          </div>
           <label className="md:col-span-2">
             <span className="workspace-label">Plain-text fallback</span>
             <textarea className="input-base min-h-28 w-full" value={campaignForm.bodyText} onChange={(event) => setCampaignForm((current) => ({ ...current, bodyText: event.target.value }))} placeholder="Optional. If left blank, the backend derives plain text from the HTML body." />
@@ -1303,13 +1251,13 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
             <Input value={campaignForm.testEmail} onChange={(event) => setCampaignForm((current) => ({ ...current, testEmail: event.target.value }))} placeholder="qa@example.com" />
           </label>
           <Button onClick={() => mutations.saveCampaign.mutate()} disabled={mutations.saveCampaign.isPending}>{campaignForm.campaignId ? "Update Draft" : "Save Draft"}</Button>
-          <Button variant="secondary" onClick={() => mutations.testCampaign.mutate()} disabled={mutations.testCampaign.isPending || !campaignForm.campaignId || !campaignForm.testEmail.trim()}>
-            <Send size={16} /> Send Test
+          <Button data-guide="email-draft-send-test" variant="secondary" onClick={() => mutations.testCampaign.mutate()} disabled={mutations.testCampaign.isPending || !campaignForm.campaignId || !campaignForm.testEmail.trim()}>
+            <Send size={16} /> Send Test Email
           </Button>
         </div>
-      </Card>
+        </Card>
 
-      <Card elevated className="space-y-4 p-4 sm:p-5">
+        <Card data-guide="email-launch-readiness" elevated className="space-y-4 p-4 sm:p-5">
         <SectionIntro eyebrow="Draft Summary" title="Launch Readiness" description="Use this panel to see whether the currently loaded draft is ready for start. Starting is only enabled after the draft is saved." />
         <div className="space-y-3 rounded-lg border border-border bg-background-tint p-4 text-sm text-text-muted">
           <p><span className="font-semibold text-text">Draft:</span> {(selectedComposerCampaign?.name ?? campaignForm.name) || "Unsaved draft"}</p>
@@ -1327,7 +1275,7 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
             <div className="mt-3 whitespace-pre-wrap">{stripHtml(campaignForm.bodyText || campaignForm.bodyHtml) || "Compose a subject and message body to preview the plain-text fallback here."}</div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div data-guide="email-draft-final-action" className="flex flex-wrap gap-2">
           {campaignForm.campaignId ? (
             <Button onClick={() => mutations.startCampaign.mutate(campaignForm.campaignId)} disabled={mutations.startCampaign.isPending || !readiness.sendReady}>
               <Play size={16} /> Start Campaign
@@ -1344,23 +1292,25 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
               <XCircle size={16} /> Cancel
             </Button>
           ) : null}
+          {!campaignForm.campaignId ? <p className="text-xs text-text-muted">Save draft dulu untuk aktifkan aksi hantar akhir di sini.</p> : null}
         </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </>
   );
 }
 
 function TemplatesPanel({ campaigns }: { campaigns: EmailCampaign[] }) {
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
+    <Card data-guide="email-template-library" elevated className="space-y-4 p-4 sm:p-5">
       <SectionIntro
         eyebrow="Templates"
         title="Template Governance Reuse"
         description="Sprint 5 does not create a second template system. Email MVP drafts use direct subject/body composition while Sprint 3 governance remains the source of truth for governed messaging workflows."
       />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {templateCards.map((template) => (
-          <div key={template.title} className="flex min-h-[170px] flex-col justify-between border border-border bg-card p-4 shadow-soft">
+        {templateCards.map((template, index) => (
+          <div key={template.title} data-guide={index === 0 ? "email-create-template" : undefined} className="flex min-h-[170px] flex-col justify-between border border-border bg-card p-4 shadow-soft">
             <div>
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-base font-semibold text-text">{template.title}</h3>
@@ -1380,7 +1330,7 @@ function AudiencePanel({ audienceGroups }: { audienceGroups: AudienceGroup[] }) 
   const audiencePagination = usePanelPagination(audienceGroups);
 
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
+    <Card data-guide="email-audience-list" elevated className="space-y-4 p-4 sm:p-5">
       <SectionIntro
         eyebrow="Audience"
         title="Audience Management"
@@ -1390,11 +1340,11 @@ function AudiencePanel({ audienceGroups }: { audienceGroups: AudienceGroup[] }) 
         Existing audience groups are not duplicated. Email campaigns can target any imported audience group that already links to CRM contacts with email addresses.
       </InfoNotice>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {audienceSections.map((section) => {
+        {audienceSections.map((section, index) => {
           const Icon = section.icon;
 
           return (
-            <div key={section.title} className="border border-border bg-background-tint p-4 opacity-75">
+            <div key={section.title} data-guide={index === 0 ? "email-import-audience" : undefined} className="border border-border bg-background-tint p-4 opacity-75">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary">
                 <Icon size={17} />
               </span>
@@ -1404,7 +1354,7 @@ function AudiencePanel({ audienceGroups }: { audienceGroups: AudienceGroup[] }) 
           );
         })}
       </div>
-      <div className="workspace-table-wrap">
+      <div data-guide="email-audience-quality" className="workspace-table-wrap">
         <table className="workspace-table">
           <thead>
             <tr>
@@ -1445,13 +1395,13 @@ function SuppressionPanel({ suppressionEmail, setSuppressionEmail, suppressionRe
   const suppressionPagination = usePanelPagination(suppressionEntries);
 
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
+    <Card data-guide="email-settings-panel" elevated className="space-y-4 p-4 sm:p-5">
       <SectionIntro
         eyebrow="Suppression List"
         title="Suppression List"
         description="Prevent delivery to unsubscribed, bounced, complained, or manually blocked recipients. Public unsubscribe links also write into this same suppression table."
       />
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px] lg:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
+      <div data-guide="email-settings-action" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px] lg:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
         <label>
           <span className="workspace-label">Email Address</span>
           <Input value={suppressionEmail} onChange={(event) => setSuppressionEmail(event.target.value)} placeholder="blocked@example.com" />
@@ -1518,8 +1468,8 @@ function CompliancePanel({ campaigns, readiness, senders, suppressionEntries }: 
   const failCount = readiness.complianceChecks.filter((item) => item.status === "fail" || item.status === "not_checked").length;
 
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <Card data-guide="email-settings-panel" elevated className="space-y-4 p-4 sm:p-5">
+      <div data-guide="email-settings-action" className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <SectionIntro
           eyebrow="Compliance"
           title="Compliance and Safety Check"
@@ -1595,7 +1545,7 @@ function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCa
           ) : null}
         </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div data-guide="email-report-summary" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {[
           { label: "Sent", value: report?.sent ?? 0 },
           { label: "Pending", value: report?.pending ?? 0 },
@@ -1610,7 +1560,7 @@ function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCa
           </div>
         ))}
       </div>
-      <div className="workspace-table-wrap">
+      <div data-guide="email-campaign-history" className="workspace-table-wrap">
         <table className="workspace-table">
           <thead>
             <tr>
@@ -1657,13 +1607,13 @@ function ReportsPanel({ campaigns, selectedReportCampaignId, setSelectedReportCa
 
 function HistoryPanel({ historyEntries, isLoading, onRefresh }: { historyEntries: EmailHistoryEntry[]; isLoading: boolean; onRefresh: () => void }) {
   return (
-    <Card elevated className="space-y-4 p-4 sm:p-5">
+    <Card data-guide="email-settings-panel" elevated className="space-y-4 p-4 sm:p-5">
       <SectionIntro
         eyebrow="History"
         title="Email Campaign History"
         description="Audit-backed email sender, suppression, test-send, start, pause, cancel, and unsubscribe events appear here."
       />
-      <div className="flex justify-end"><Button variant="secondary" onClick={onRefresh}><RefreshCw size={16} /> Refresh History</Button></div>
+      <div data-guide="email-settings-action" className="flex justify-end"><Button variant="secondary" onClick={onRefresh}><RefreshCw size={16} /> Refresh History</Button></div>
       <div className="space-y-3">
         {isLoading ? <EmptyState title="Loading history" description="Fetching email audit events." /> : null}
         {!isLoading && historyEntries.length === 0 ? <EmptyState title="No email history yet" description="Audit entries will appear after sender setup, tests, sends, or unsubscribes." /> : null}
@@ -1736,6 +1686,33 @@ function DisabledChecklistItem({ label, checked = false }: { label: string; chec
       <input className="h-4 w-4 accent-primary" type="checkbox" checked={checked} readOnly />
       <span className={checked ? "text-sm font-medium text-text" : "text-sm font-medium text-text-muted"}>{label}</span>
     </label>
+  );
+}
+
+function FieldHelperLabel({ label, helper }: { label: string; helper: string }) {
+  return (
+    <span className="workspace-label flex items-center gap-2">
+      <span>{label}</span>
+      <HoverHelper helper={helper} />
+    </span>
+  );
+}
+
+function HoverHelper({ helper }: { helper: string }) {
+  return (
+    <span className="group relative inline-flex items-center">
+      <button
+        type="button"
+        aria-label={helper}
+        title={helper}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/15 bg-primary/5 text-primary transition hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+      >
+        <CircleHelp size={12} />
+      </button>
+      <span className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-20 hidden w-56 -translate-x-1/2 rounded-2xl border border-border bg-card px-3 py-2 text-left text-xs font-medium normal-case leading-5 text-text shadow-panel group-hover:block group-focus-within:block">
+        {helper}
+      </span>
+    </span>
   );
 }
 

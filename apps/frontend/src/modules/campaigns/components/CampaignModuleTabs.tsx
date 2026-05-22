@@ -68,7 +68,7 @@ export function CampaignModuleTabs({ channel }: { channel: "whatsapp" | "email" 
       })}
       </div>
       {settingsActive ? (
-        <div className="flex flex-wrap gap-2 border border-border bg-background-tint p-2">
+        <div data-guide="email-settings" className="flex flex-wrap gap-2 border border-border bg-background-tint p-2">
           {emailSettingsTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = location.pathname === tab.to;
