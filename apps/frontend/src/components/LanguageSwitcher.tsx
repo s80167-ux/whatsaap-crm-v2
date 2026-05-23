@@ -18,7 +18,11 @@ export function LanguageSwitcher({ className = "", compact = false }: LanguageSw
       <Select
         value={currentLanguage}
         aria-label={t("settings.language")}
-        className={compact ? "h-9 w-[10rem] max-w-[44vw] px-2.5 pr-8 text-xs" : "h-10 min-w-[10rem] px-3 pr-8 text-sm"}
+        className={
+          compact
+            ? "h-10 w-[10rem] max-w-[44vw] px-2.5 py-0 pr-8 text-xs leading-5"
+            : "h-10 min-w-[10rem] px-3 py-0 pr-8 text-sm leading-5"
+        }
         onChange={(event) => setLanguage(event.target.value as CrmLanguage)}
       >
         {availableLanguages.map((language) => (

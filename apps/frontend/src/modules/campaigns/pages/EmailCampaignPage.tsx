@@ -8,6 +8,7 @@ import {
   CircleHelp,
   FileCheck2,
   FileText,
+  ImagePlus,
   Mail,
   PauseCircle,
   Play,
@@ -21,7 +22,7 @@ import {
   UserX,
   XCircle
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -150,6 +151,12 @@ type CampaignFormState = {
   bodyText: string;
   recipientsText: string;
   testEmail: string;
+};
+
+type EmailBodyImage = {
+  id: string;
+  fileName: string;
+  dataUrl: string;
 };
 
 type EmailNextActionKey = "connect_sender" | "create_audience" | "create_email" | "run_compliance" | "create_campaign";
@@ -490,8 +497,7 @@ export function EmailCampaignPage({ activeTab = "overview" }: { activeTab?: Emai
         campaignId: campaignForm.campaignId,
         organizationId,
         to_email: campaignForm.testEmail,
-        subject: campaignForm.subject || null,
-        message: campaignForm.bodyText || stripHtml(campaignForm.bodyHtml) || null
+        subject: campaignForm.subject || null
       });
     },
     onSuccess: (result) => showNotice("success", result.message),
@@ -1091,6 +1097,8 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
   const { t } = useTranslation();
   const verifiedSenders = senders.filter((sender) => sender.status === "verified");
   const draftCampaigns = campaigns.filter((campaign) => campaign.status === "draft");
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const [bodyImageError, setBodyImageError] = useState<string | null>(null);
   const [draftAssistant, setDraftAssistant] = useState<EmailDraftState>({
     objective: "promotion",
     tone: "friendly",
@@ -1100,6 +1108,52 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
     ctaUrl: ""
   });
   const emailDraftFieldHelpers = useMemo(() => getEmailDraftFieldHelpers(t), [t]);
+  const bodyImages = useMemo(() => extractEmailBodyImages(campaignForm.bodyHtml), [campaignForm.bodyHtml]);
+
+  const insertBodyImage = (image: EmailBodyImage) => {
+    setCampaignForm((current) => ({
+      ...current,
+      bodyHtml: appendImageToEmailBody(current.bodyHtml, image)
+    }));
+  };
+
+  const removeBodyImage = (image: EmailBodyImage) => {
+    setCampaignForm((current) => ({
+      ...current,
+      bodyHtml: removeImageFromEmailBody(current.bodyHtml, image.id)
+    }));
+  };
+
+  const handleBodyImageSelect = (file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setBodyImageError("Choose an image file.");
+      return;
+    }
+
+    if (file.size > 1_500_000) {
+      setBodyImageError("Image must be 1.5 MB or smaller.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        return;
+      }
+
+      insertBodyImage({
+        id: createEmailBodyImageId(),
+        fileName: file.name,
+        dataUrl: reader.result
+      });
+      setBodyImageError(null);
+    };
+    reader.readAsDataURL(file);
+  };
 
   if (verifiedSenders.length === 0) {
     return (
@@ -1235,6 +1289,44 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
               <span className="workspace-label">Body HTML or plain text</span>
               <textarea className="input-base min-h-48 w-full" value={campaignForm.bodyHtml} onChange={(event) => setCampaignForm((current) => ({ ...current, bodyHtml: event.target.value }))} placeholder="Write your email body. Plain text will be converted into simple paragraphs." />
             </label>
+            <div className="rounded-lg border border-border bg-background-tint p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-text">Body Image</p>
+                  <p className="mt-1 text-xs text-text-muted">Add a JPG, PNG, GIF, or WebP image directly into this email body. Max 1.5 MB.</p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => imageInputRef.current?.click()}>
+                  <ImagePlus size={15} /> Add Image
+                </Button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  className="hidden"
+                  onChange={(event) => {
+                    handleBodyImageSelect(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+              {bodyImageError ? <p className="mt-2 text-xs text-danger">{bodyImageError}</p> : null}
+              {bodyImages.length > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {bodyImages.map((image) => (
+                    <div key={image.id} className="flex items-center gap-3 rounded-md border border-border bg-card p-2">
+                      <img src={image.dataUrl} alt={image.fileName} className="h-14 w-20 rounded object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-text">{image.fileName}</p>
+                        <p className="text-xs text-text-muted">Inline email image</p>
+                      </div>
+                      <Button variant="ghost" size="icon" aria-label={`Remove ${image.fileName}`} onClick={() => removeBodyImage(image)}>
+                        <XCircle size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
           <label className="md:col-span-2">
             <span className="workspace-label">Plain-text fallback</span>
@@ -1265,6 +1357,7 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
           <p><span className="font-semibold text-text">Audience:</span> {readyAudienceGroups.find((group) => group.id === campaignForm.audienceGroupId)?.name ?? "Manual recipients only"}</p>
           <p><span className="font-semibold text-text">Compliance:</span> {readiness.complianceReady ? "Ready" : "Run the rule-based check before sending"}</p>
           <p><span className="font-semibold text-text">Manual recipients:</span> {parseRecipients(campaignForm.recipientsText).length}</p>
+          <p><span className="font-semibold text-text">Body images:</span> {bodyImages.length}</p>
           <p><span className="font-semibold text-text">Unsubscribe footer:</span> {hasUnsubscribeCopy(campaignForm.bodyHtml) ? "present" : "backend will append it automatically"}</p>
         </div>
         <div className="rounded-lg border border-primary/15 bg-primary/5 p-4 text-sm text-text-muted">
@@ -2027,6 +2120,60 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat("en-MY", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+function createEmailBodyImageId() {
+  return `email-body-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function appendImageToEmailBody(bodyHtml: string, image: EmailBodyImage) {
+  const imageHtml = `<p><img src="${image.dataUrl}" alt="${escapeHtml(image.fileName)}" data-email-body-image-id="${image.id}" style="max-width:100%;height:auto;border:0;border-radius:8px;" /></p>`;
+  const trimmed = bodyHtml.trim();
+
+  if (!trimmed) {
+    return imageHtml;
+  }
+
+  if (/<[a-z][\s\S]*>/i.test(trimmed)) {
+    return `${trimmed}\n${imageHtml}`;
+  }
+
+  return `${normalizeHtmlBody(trimmed)}\n${imageHtml}`;
+}
+
+function extractEmailBodyImages(bodyHtml: string): EmailBodyImage[] {
+  const imagePattern = /<img\b[^>]*data-email-body-image-id=["']([^"']+)["'][^>]*>/gi;
+  const images: EmailBodyImage[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = imagePattern.exec(bodyHtml)) !== null) {
+    const tag = match[0];
+    const src = getHtmlAttribute(tag, "src");
+
+    if (!src?.startsWith("data:image/")) {
+      continue;
+    }
+
+    images.push({
+      id: match[1],
+      fileName: getHtmlAttribute(tag, "alt") || "Email body image",
+      dataUrl: src
+    });
+  }
+
+  return images;
+}
+
+function removeImageFromEmailBody(bodyHtml: string, imageId: string) {
+  const escapedId = escapeRegExp(imageId);
+  const wrappedParagraph = new RegExp(`\\s*<p>\\s*<img\\b[^>]*data-email-body-image-id=["']${escapedId}["'][^>]*>\\s*</p>`, "gi");
+  const bareImage = new RegExp(`\\s*<img\\b[^>]*data-email-body-image-id=["']${escapedId}["'][^>]*>`, "gi");
+  return bodyHtml.replace(wrappedParagraph, "").replace(bareImage, "").trim();
+}
+
+function getHtmlAttribute(tag: string, attributeName: string) {
+  const match = tag.match(new RegExp(`${attributeName}=["']([^"']*)["']`, "i"));
+  return match?.[1] ?? null;
+}
+
 function parseRecipients(value: string) {
   return value
     .split(/\r?\n/)
@@ -2068,6 +2215,10 @@ function hasUnsubscribeCopy(value: string) {
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function formatMetadata(value: unknown) {

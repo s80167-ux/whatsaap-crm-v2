@@ -96,6 +96,13 @@ type EmailSenderColumnSupport = {
   is_active: boolean;
 };
 
+type InlineMailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  cid: string;
+};
+
 let emailSenderColumnSupportCache: EmailSenderColumnSupport | null = null;
 
 function ensureReadAccess(user: AuthUser) {
@@ -236,6 +243,38 @@ function mapSenderWriteError(error: unknown): never {
 
 function sanitizeProviderError(error: unknown) {
   return mapFriendlySmtpError(error);
+}
+
+function extractInlineImageAttachments(htmlBody: string) {
+  const attachments: InlineMailAttachment[] = [];
+  let index = 0;
+  const html = htmlBody.replace(
+    /<img\b([^>]*?)\bsrc=(["'])(data:image\/(png|jpe?g|gif|webp);base64,([^"']+))\2([^>]*)>/gi,
+    (match: string, beforeSrc: string, quote: string, _dataUrl: string, imageType: string, base64: string, afterSrc: string) => {
+      const normalizedBase64 = base64.replace(/\s/g, "");
+      const buffer = Buffer.from(normalizedBase64, "base64");
+
+      if (buffer.length === 0 || buffer.length > 2_000_000) {
+        return match;
+      }
+
+      index += 1;
+      const normalizedImageType = imageType.toLowerCase() === "jpg" ? "jpeg" : imageType.toLowerCase();
+      const contentType = `image/${normalizedImageType}`;
+      const extension = normalizedImageType === "jpeg" ? "jpg" : normalizedImageType;
+      const cid = `email-body-image-${Date.now()}-${index}@crm`;
+      attachments.push({
+        filename: `email-body-image-${index}.${extension}`,
+        content: buffer,
+        contentType,
+        cid
+      });
+
+      return `<img${beforeSrc}src=${quote}cid:${cid}${quote}${afterSrc}>`;
+    }
+  );
+
+  return { html, attachments };
 }
 
 async function getEmailSenderColumnSupport(): Promise<EmailSenderColumnSupport> {
@@ -731,6 +770,7 @@ export class EmailSenderService {
     subject: string;
     htmlBody: string;
     textBody: string;
+    attachments?: InlineMailAttachment[];
   }) {
     const transport = this.buildTransport({
       smtp_host: input.smtpHost,
@@ -739,6 +779,7 @@ export class EmailSenderService {
       smtp_username: input.smtpUsername,
       smtp_password_encrypted: input.smtpPasswordEncrypted
     });
+    const inlineImages = extractInlineImageAttachments(input.htmlBody);
 
     return transport.sendMail({
       from: `${input.fromName} <${input.fromEmail}>`,
@@ -746,9 +787,10 @@ export class EmailSenderService {
       cc: input.cc,
       bcc: input.bcc,
       subject: input.subject,
-      html: input.htmlBody,
+      html: inlineImages.html,
       text: input.textBody,
-      replyTo: input.replyTo ?? undefined
+      replyTo: input.replyTo ?? undefined,
+      attachments: [...(input.attachments ?? []), ...inlineImages.attachments]
     });
   }
 

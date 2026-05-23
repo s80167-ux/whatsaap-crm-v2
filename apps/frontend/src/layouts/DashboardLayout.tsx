@@ -400,7 +400,7 @@ export function DashboardLayout() {
   const emailCampaignBadge = !showCampaigns
     ? null
     : campaignEmailModuleStatus?.isEnabled === true
-      ? <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge>
+      ? null
       : <ModuleBadge>{t("common.off")}</ModuleBadge>;
   const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
   const showContactReliability = user?.role === "super_admin" || user?.role === "org_admin" || user?.role === "manager";
