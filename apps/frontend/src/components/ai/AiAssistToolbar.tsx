@@ -2,22 +2,23 @@ import { Button } from "../Button";
 import type { AiMessageAction } from "../../api/ai";
 
 const actionItems: Array<{ action: AiMessageAction; label: string; helper: string; loadingLabel?: string }> = [
-  { action: "generate", label: "Generate Draft", helper: "Tukar point ringkas kepada template mesej.", loadingLabel: "Generating..." },
+  { action: "generate", label: "✨ Generate Message", helper: "Tukar point ringkas kepada template mesej.", loadingLabel: "Generating..." },
   { action: "improve", label: "Improve", helper: "Kemaskan ayat tanpa ubah maksud." },
   { action: "shorten", label: "Shorten", helper: "Pendekkan mesej supaya lebih sesuai untuk WhatsApp." },
   { action: "friendly", label: "Friendly", helper: "Jadikan ayat lebih mesra." },
   { action: "professional", label: "Professional", helper: "Jadikan ayat lebih profesional tetapi natural." },
-  { action: "check", label: "Check", helper: "Semak mesej sebelum dihantar." }
+  { action: "check", label: "📊 WhatsApp Score", helper: "Semak mesej sebelum dihantar." }
 ];
 
 type AiAssistToolbarProps = {
   actions?: AiMessageAction[];
-  disabled: boolean;
+  disabled?: boolean;
+  disabledActions?: AiMessageAction[];
   loadingAction: AiMessageAction | null;
   onAction: (action: AiMessageAction) => void;
 };
 
-export function AiAssistToolbar({ actions, disabled, loadingAction, onAction }: AiAssistToolbarProps) {
+export function AiAssistToolbar({ actions, disabled = false, disabledActions = [], loadingAction, onAction }: AiAssistToolbarProps) {
   const visibleActions = actions ?? ["improve", "shorten", "friendly", "professional", "check"];
 
   return (
@@ -27,7 +28,7 @@ export function AiAssistToolbar({ actions, disabled, loadingAction, onAction }: 
           key={item.action}
           size="sm"
           variant="secondary"
-          disabled={disabled || Boolean(loadingAction)}
+          disabled={disabled || disabledActions.includes(item.action) || Boolean(loadingAction)}
           title={item.helper}
           onClick={() => onAction(item.action)}
         >

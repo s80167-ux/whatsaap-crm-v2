@@ -1,6 +1,6 @@
 import { CheckCircle2, Clipboard, X } from "lucide-react";
 import { Button } from "../Button";
-import type { AiMessageAssistResponse } from "../../api/ai";
+import type { AiMessageAssistResponse, AiMessageReview } from "../../api/ai";
 
 type AiSuggestionCardProps = {
   result: AiMessageAssistResponse;
@@ -12,6 +12,7 @@ export function AiSuggestionCard({ result, onUse, onDismiss }: AiSuggestionCardP
   const isCheck = result.action === "check";
   const title = isCheck ? "AI Review" : result.source === "template" ? "Suggested Template" : "Suggested Version";
   const providerLabel = result.provider === "deepseek" ? "DeepSeek AI" : "Fallback review";
+  const whatsappScore = isCheck ? calculateWhatsAppScore(result.review) : null;
 
   async function handleCopy() {
     if (!result.suggestedMessage) {
@@ -39,6 +40,20 @@ export function AiSuggestionCard({ result, onUse, onDismiss }: AiSuggestionCardP
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {isCheck ? (
+        <div className="mt-3 rounded-xl border border-border bg-card px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-text">WhatsApp Score: {whatsappScore}/100</p>
+            <div className="flex flex-wrap gap-2">
+              <ScoreBadge label="Spam Risk" value={result.review.spamRisk} />
+              <ScoreBadge label="Readability" value={result.review.readability} />
+              <ScoreBadge label="CTA" value={result.review.ctaClarity} />
+              <ScoreBadge label="Warnings" value={String(result.review.warnings.length)} />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {result.suggestedMessage ? (
         <div className="mt-3 whitespace-pre-wrap rounded-xl border border-border bg-card px-3 py-3 text-sm leading-6 text-text">
@@ -84,5 +99,39 @@ export function AiSuggestionCard({ result, onUse, onDismiss }: AiSuggestionCardP
         </div>
       ) : null}
     </div>
+  );
+}
+
+export function calculateWhatsAppScore(review: AiMessageReview) {
+  let score = 100;
+
+  if (review.spamRisk === "medium") {
+    score -= 15;
+  } else if (review.spamRisk === "high") {
+    score -= 30;
+  }
+
+  if (review.readability === "medium") {
+    score -= 10;
+  } else if (review.readability === "hard") {
+    score -= 20;
+  }
+
+  if (review.ctaClarity === "unclear") {
+    score -= 10;
+  } else if (review.ctaClarity === "missing") {
+    score -= 25;
+  }
+
+  score -= review.warnings.length * 5;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function ScoreBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      {label}: {value}
+    </span>
   );
 }

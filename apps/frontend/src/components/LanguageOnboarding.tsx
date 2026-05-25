@@ -2,11 +2,16 @@ import { Globe2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../hooks/useLanguage";
 
+const publicRoutePrefixes = ["/login", "/privacy-policy", "/terms", "/data-deletion"];
+
 export function LanguageOnboarding() {
   const { t } = useTranslation();
   const { availableLanguages, isFirstTimeLanguageSetup, setLanguage } = useLanguage();
+  const isPublicRoute =
+    typeof window !== "undefined" &&
+    publicRoutePrefixes.some((routePrefix) => window.location.pathname.startsWith(routePrefix));
 
-  if (!isFirstTimeLanguageSetup) {
+  if (!isFirstTimeLanguageSetup || isPublicRoute) {
     return null;
   }
 
