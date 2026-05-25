@@ -19,6 +19,7 @@ export type Campaign = {
   senderWhatsAppAccountId?: string | null;
   senderWhatsAppLabel?: string | null;
   senderPhoneNumber?: string | null;
+  messageTemplate?: string | null;
   speedPreset?: CampaignSpeedPreset;
   delayPerMessageSeconds?: number;
   batchSize?: number;
