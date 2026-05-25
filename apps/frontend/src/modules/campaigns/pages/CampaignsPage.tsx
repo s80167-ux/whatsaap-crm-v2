@@ -17,7 +17,7 @@ import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignReviewDrawer } from "../components/CampaignReviewDrawer";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
 import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
-import { cancelCampaign, deleteCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign } from "../services/campaignService";
+import { cancelCampaign, deleteCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign, startCampaign } from "../services/campaignService";
 import type { Campaign, CampaignStatus } from "../types/campaign.types";
 
 const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all" }> = [
@@ -96,6 +96,23 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     await queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] });
   }
 
+  const startMutation = useMutation({
+    mutationFn: (campaign: Campaign) =>
+      startCampaign({
+        campaignId: campaign.id,
+        organizationId,
+        senderWhatsAppAccountId: campaign.senderWhatsAppAccountId ?? undefined,
+        audienceGroupId: campaign.audienceGroupId ?? "",
+        messageTemplate: campaign.messageTemplate ?? "",
+        speedPreset: campaign.speedPreset ?? "safe"
+      }),
+    onSuccess: async (result) => {
+      showPlaceholderNotice(result.message, "success");
+      await refreshCampaigns();
+    },
+    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to start campaign.", "error")
+  });
+
   const pauseMutation = useMutation({
     mutationFn: (campaign: Campaign) => pauseCampaign({ campaignId: campaign.id, organizationId }),
     onSuccess: async (result) => {
@@ -131,6 +148,14 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     },
     onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to delete campaign.", "error")
   });
+
+  function handleStartCampaign(campaign: Campaign) {
+    const confirmed = window.confirm(`Start campaign "${campaign.name}" now?`);
+
+    if (confirmed) {
+      startMutation.mutate(campaign);
+    }
+  }
 
   function handleDeleteCampaign(campaign: Campaign) {
     const confirmed = window.confirm(
@@ -205,6 +230,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   campaigns={recentCampaigns}
                   onAction={showPlaceholderNotice}
                   onReview={setReviewCampaign}
+                  onStart={handleStartCampaign}
                   onPause={(campaign) => pauseMutation.mutate(campaign)}
                   onResume={(campaign) => resumeMutation.mutate(campaign)}
                   onCancel={(campaign) => cancelMutation.mutate(campaign)}
@@ -284,6 +310,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   campaigns={visibleCampaigns}
                   onAction={showPlaceholderNotice}
                   onReview={setReviewCampaign}
+                  onStart={handleStartCampaign}
                   onPause={(campaign) => pauseMutation.mutate(campaign)}
                   onResume={(campaign) => resumeMutation.mutate(campaign)}
                   onCancel={(campaign) => cancelMutation.mutate(campaign)}
