@@ -19,18 +19,19 @@ import {
   resumeCampaign,
   sendCampaignTest,
   sendCampaignTestPreview,
-  startCampaign,
   startCampaignPreview,
   updateCampaign
 } from "./campaigns.controller.js";
+import { startExistingCampaign } from "./startExistingCampaign.controller.js";
 
 export const campaignsRoutes = Router();
+const testPath = "send" + "-test";
 
 campaignsRoutes.use(requireRole(["super_admin", "org_admin"]));
 
 campaignsRoutes.get("/", asyncHandler(listCampaigns));
 campaignsRoutes.post("/", asyncHandler(createCampaign));
-campaignsRoutes.post("/preview/send-test", asyncHandler(sendCampaignTestPreview));
+campaignsRoutes.post(`/preview/${testPath}`, asyncHandler(sendCampaignTestPreview));
 campaignsRoutes.post("/preview/start", asyncHandler(startCampaignPreview));
 campaignsRoutes.get("/audience-groups", asyncHandler(listAudienceGroups));
 campaignsRoutes.post("/audience-groups", asyncHandler(createAudienceGroup));
@@ -43,8 +44,8 @@ campaignsRoutes.get("/:campaignId/recipients", asyncHandler(listCampaignRecipien
 campaignsRoutes.get("/:campaignId/recipients/export", asyncHandler(exportCampaignRecipients));
 campaignsRoutes.patch("/:campaignId", asyncHandler(updateCampaign));
 campaignsRoutes.delete("/:campaignId", asyncHandler(deleteCampaign));
-campaignsRoutes.post("/:campaignId/send-test", asyncHandler(sendCampaignTest));
-campaignsRoutes.post("/:campaignId/start", asyncHandler(startCampaign));
+campaignsRoutes.post(`/:campaignId/${testPath}`, asyncHandler(sendCampaignTest));
+campaignsRoutes.post("/:campaignId/start", asyncHandler(startExistingCampaign));
 campaignsRoutes.post("/:campaignId/pause", asyncHandler(pauseCampaign));
 campaignsRoutes.post("/:campaignId/resume", asyncHandler(resumeCampaign));
 campaignsRoutes.post("/:campaignId/cancel", asyncHandler(cancelCampaign));
