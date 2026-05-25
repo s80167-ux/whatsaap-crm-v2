@@ -9,6 +9,7 @@ import type { MessageTemplate, MessageTemplateCategory, TemplateFormDraft, Templ
 import { extractTemplateVariables } from "../utils/templateVariables";
 
 const governedTemplateType = "campaign_message" as const;
+const superAdminOrganizationKey = "crm_super_admin_organization_id";
 const validCategories = new Set<MessageTemplateCategory>([
   "Promotion",
   "Reminder",
@@ -20,18 +21,20 @@ const validCategories = new Set<MessageTemplateCategory>([
 ]);
 
 export async function fetchMessageTemplates(organizationId?: string | null) {
+  const scopedOrganizationId = resolveScopedOrganizationId(organizationId);
   const templates = await getGovernedTemplates({
-    organizationId,
+    organizationId: scopedOrganizationId,
     templateType: governedTemplateType,
     limit: 200
   });
 
-  return templates.map(mapGovernedTemplateToMessageTemplate);
+  return templates.map((template) => mapGovernedTemplateToMessageTemplate(template, scopedOrganizationId));
 }
 
 export async function createMessageTemplate(input: TemplateFormDraft & { organizationId?: string | null }) {
   const title = input.name.trim();
   const body = input.content.trim();
+  const scopedOrganizationId = resolveScopedOrganizationId(input.organizationId);
 
   if (!title) {
     throw new Error("Template name is required.");
@@ -42,7 +45,7 @@ export async function createMessageTemplate(input: TemplateFormDraft & { organiz
   }
 
   await createGovernedTemplate({
-    organizationId: input.organizationId,
+    organizationId: scopedOrganizationId,
     template_type: governedTemplateType,
     title,
     body,
@@ -51,12 +54,13 @@ export async function createMessageTemplate(input: TemplateFormDraft & { organiz
     change_summary: "Created from WhatsApp Message Templates"
   });
 
-  return getMostRecentTemplate(input.organizationId, title);
+  return getMostRecentTemplate(scopedOrganizationId, title);
 }
 
 export async function updateMessageTemplate(input: TemplateFormDraft & { templateId: string; organizationId?: string | null }) {
   const title = input.name.trim();
   const body = input.content.trim();
+  const scopedOrganizationId = resolveScopedOrganizationId(input.organizationId);
 
   if (!title) {
     throw new Error("Template name is required.");
@@ -68,7 +72,7 @@ export async function updateMessageTemplate(input: TemplateFormDraft & { templat
 
   await createTemplateVersion({
     templateId: input.templateId,
-    organizationId: input.organizationId,
+    organizationId: scopedOrganizationId,
     template_type: governedTemplateType,
     title,
     body,
@@ -77,14 +81,15 @@ export async function updateMessageTemplate(input: TemplateFormDraft & { templat
     change_summary: "Updated from WhatsApp Message Templates"
   });
 
-  return getTemplateById(input.templateId, input.organizationId);
+  return getTemplateById(input.templateId, scopedOrganizationId);
 }
 
 export async function duplicateMessageTemplate(templateId: string, organizationId?: string | null) {
-  const source = await getTemplateById(templateId, organizationId);
+  const scopedOrganizationId = resolveScopedOrganizationId(organizationId);
+  const source = await getTemplateById(templateId, scopedOrganizationId);
 
   await createGovernedTemplate({
-    organizationId,
+    organizationId: scopedOrganizationId,
     template_type: governedTemplateType,
     title: `${source.name} Copy`,
     body: source.content,
@@ -93,16 +98,18 @@ export async function duplicateMessageTemplate(templateId: string, organizationI
     change_summary: `Duplicated from ${source.name}`
   });
 
-  return getMostRecentTemplate(organizationId, `${source.name} Copy`);
+  return getMostRecentTemplate(scopedOrganizationId, `${source.name} Copy`);
 }
 
 export async function archiveMessageTemplate(templateId: string, organizationId?: string | null) {
-  await archiveGovernedTemplate({ templateId, organizationId });
-  return getTemplateById(templateId, organizationId);
+  const scopedOrganizationId = resolveScopedOrganizationId(organizationId);
+  await archiveGovernedTemplate({ templateId, organizationId: scopedOrganizationId });
+  return getTemplateById(templateId, scopedOrganizationId);
 }
 
 export async function deleteMessageTemplate(templateId: string, organizationId?: string | null) {
-  await archiveGovernedTemplate({ templateId, organizationId });
+  const scopedOrganizationId = resolveScopedOrganizationId(organizationId);
+  await archiveGovernedTemplate({ templateId, organizationId: scopedOrganizationId });
   return { ok: true };
 }
 
@@ -131,7 +138,23 @@ async function getMostRecentTemplate(organizationId: string | null | undefined, 
   return templates.find((template) => template.name === title) ?? templates[0];
 }
 
-function mapGovernedTemplateToMessageTemplate(template: GovernedTemplate): MessageTemplate {
+function resolveScopedOrganizationId(organizationId: string | null | undefined) {
+  if (organizationId !== undefined) {
+    return organizationId;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(superAdminOrganizationKey) || null;
+  } catch {
+    return null;
+  }
+}
+
+function mapGovernedTemplateToMessageTemplate(template: GovernedTemplate, organizationId?: string | null): MessageTemplate {
   const snapshot = template.active_snapshot ?? null;
   const content = template.active_body ?? snapshot?.body ?? "";
   const category = normalizeCategory(template.category ?? snapshot?.category ?? null);
@@ -140,7 +163,7 @@ function mapGovernedTemplateToMessageTemplate(template: GovernedTemplate): Messa
 
   return {
     id: template.template_id,
-    organization_id: null,
+    organization_id: organizationId ?? null,
     name: template.title,
     category,
     description: null,
