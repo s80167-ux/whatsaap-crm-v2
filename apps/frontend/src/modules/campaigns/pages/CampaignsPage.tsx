@@ -101,10 +101,10 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
       startCampaign({
         campaignId: campaign.id,
         organizationId,
-        senderWhatsAppAccountId: campaign.senderWhatsAppAccountId ?? undefined,
-        audienceGroupId: campaign.audienceGroupId ?? "",
-        messageTemplate: campaign.messageTemplate ?? "",
-        speedPreset: campaign.speedPreset ?? "safe"
+        ...(campaign.senderWhatsAppAccountId ? { senderWhatsAppAccountId: campaign.senderWhatsAppAccountId } : {}),
+        ...(campaign.audienceGroupId ? { audienceGroupId: campaign.audienceGroupId } : {}),
+        ...(campaign.messageTemplate ? { messageTemplate: campaign.messageTemplate } : {}),
+        ...(campaign.speedPreset ? { speedPreset: campaign.speedPreset } : {})
       }),
     onSuccess: async (result) => {
       showPlaceholderNotice(result.message, "success");
