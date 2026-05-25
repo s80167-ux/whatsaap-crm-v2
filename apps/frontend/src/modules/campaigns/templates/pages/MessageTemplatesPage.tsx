@@ -32,7 +32,7 @@ export function MessageTemplatesPage() {
   const [templateQuery, setTemplateQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<MessageTemplateCategory | "all">("all");
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
-  const { data: templates = [] } = useMessageTemplates(organizationId, shouldFetch);
+  const { data: templates = [], isError, error, isLoading } = useMessageTemplates(organizationId, shouldFetch);
   const queryKey = getMessageTemplatesQueryKey(organizationId);
 
   const stats = useMemo(() => getTemplateStats(templates), [templates]);
@@ -65,7 +65,7 @@ export function MessageTemplatesPage() {
   }, [categoryFilter, setPage, templateQuery]);
 
   const duplicateMutation = useMutation({
-    mutationFn: (template: MessageTemplate) => duplicateMessageTemplate(template.id),
+    mutationFn: (template: MessageTemplate) => duplicateMessageTemplate(template.id, organizationId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       showNotice("Template duplicated.");
@@ -74,7 +74,7 @@ export function MessageTemplatesPage() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (template: MessageTemplate) => archiveMessageTemplate(template.id),
+    mutationFn: (template: MessageTemplate) => archiveMessageTemplate(template.id, organizationId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       showNotice("Template archived.");
@@ -83,12 +83,12 @@ export function MessageTemplatesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (template: MessageTemplate) => deleteMessageTemplate(template.id),
+    mutationFn: (template: MessageTemplate) => deleteMessageTemplate(template.id, organizationId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
-      showNotice("Template deleted.");
+      showNotice("Template archived.");
     },
-    onError: (error) => showNotice(error instanceof Error ? error.message : "Unable to delete template.", "error")
+    onError: (error) => showNotice(error instanceof Error ? error.message : "Unable to archive template.", "error")
   });
 
   function showNotice(message: string, variant: "success" | "error" = "success") {
@@ -96,7 +96,7 @@ export function MessageTemplatesPage() {
   }
 
   function handleDelete(template: MessageTemplate) {
-    if (window.confirm(`Delete template "${template.name}"?`)) {
+    if (window.confirm(`Archive template "${template.name}"? It will stay in governance history.`)) {
       deleteMutation.mutate(template);
     }
   }
@@ -139,22 +139,30 @@ export function MessageTemplatesPage() {
         <Card elevated className="p-5 text-sm text-text-muted">
           Choose an organization from the sidebar before managing Message Templates.
         </Card>
+      ) : isError ? (
+        <Card elevated className="p-5 text-sm text-destructive">
+          {error instanceof Error ? error.message : "Unable to load message templates."}
+        </Card>
       ) : (
         <Card elevated className="space-y-4 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Template list</p>
-              <p className="mt-2 text-sm text-text-muted">Reusable content is stored separately from campaign delivery.</p>
+              <p className="mt-2 text-sm text-text-muted">Reusable content is now stored in Template Governance for the selected workspace.</p>
             </div>
             <p className="shrink-0 text-xs font-semibold text-text-muted">{filteredTemplates.length} shown</p>
           </div>
-          <TemplateListTable
-            templates={visibleItems}
-            onEdit={(template) => navigate(`/campaigns/whatsapp/templates/create?edit=${encodeURIComponent(template.id)}`)}
-            onDuplicate={(template) => duplicateMutation.mutate(template)}
-            onArchive={(template) => archiveMutation.mutate(template)}
-            onDelete={handleDelete}
-          />
+          {isLoading ? (
+            <div className="p-5 text-sm text-text-muted">Loading templates...</div>
+          ) : (
+            <TemplateListTable
+              templates={visibleItems}
+              onEdit={(template) => navigate(`/campaigns/whatsapp/templates/create?edit=${encodeURIComponent(template.id)}`)}
+              onDuplicate={(template) => duplicateMutation.mutate(template)}
+              onArchive={(template) => archiveMutation.mutate(template)}
+              onDelete={handleDelete}
+            />
+          )}
           <PanelPagination page={page} pageCount={pageCount} pageSize={pageSize} totalItems={totalItems} onPageChange={setPage} />
         </Card>
       )}
