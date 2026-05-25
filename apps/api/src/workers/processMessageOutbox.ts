@@ -3,8 +3,10 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { pool } from "../config/database.js";
 import { MessageDispatchService } from "../services/messageDispatchService.js";
+import { CampaignQueuedRecipientReconciler } from "../services/campaignQueuedRecipientReconciler.js";
 
 const dispatcher = new MessageDispatchService();
+const campaignQueuedReconciler = new CampaignQueuedRecipientReconciler();
 const runOnce = process.argv.includes("--once");
 
 async function main() {
@@ -13,10 +15,16 @@ async function main() {
   do {
     try {
       const processed = await dispatcher.processPendingBatch(env.MESSAGE_OUTBOX_WORKER_BATCH_SIZE);
+      const reconciled = await campaignQueuedReconciler.reconcile(env.MESSAGE_OUTBOX_WORKER_BATCH_SIZE);
+      const changed = reconciled.sentCount + reconciled.failedCount + reconciled.repairedCount;
       consecutiveFailures = 0;
 
       if (processed > 0) {
         logger.info({ processed }, "Processed pending outbound message jobs");
+      }
+
+      if (changed > 0) {
+        logger.info({ reconciled }, "Reconciled queued campaign recipient statuses");
       }
 
       if (runOnce) {

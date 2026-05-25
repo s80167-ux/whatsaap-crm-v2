@@ -208,11 +208,11 @@ export async function sendCampaignTest(input: {
 export async function startCampaign(input: {
   campaignId?: string;
   organizationId?: string | null;
-  senderWhatsAppAccountId: string;
-  audienceGroupId: string;
-  messageTemplate: string;
+  senderWhatsAppAccountId?: string;
+  audienceGroupId?: string;
+  messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
-  speedPreset: CampaignSpeedPreset;
+  speedPreset?: CampaignSpeedPreset;
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/start` : "/campaigns/preview/start";
   const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);

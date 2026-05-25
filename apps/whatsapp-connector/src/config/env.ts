@@ -16,6 +16,21 @@ for (const envPath of [connectorEnvPath, workspaceConnectorEnvPath, rootEnvPath]
   }
 }
 
+function defaultConnectorInstanceId() {
+  const railwayServiceId = process.env.RAILWAY_SERVICE_ID?.trim();
+  const railwayServiceName = process.env.RAILWAY_SERVICE_NAME?.trim();
+
+  if (railwayServiceId) {
+    return `railway-${railwayServiceId}`;
+  }
+
+  if (railwayServiceName) {
+    return `railway-${railwayServiceName}`;
+  }
+
+  return `connector-${process.pid}`;
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4010),
@@ -30,15 +45,19 @@ const envSchema = z.object({
   DATABASE_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
   DATABASE_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   BAILEYS_AUTH_DIR: z.string().default("./data/baileys_auth"),
+  WHATSAPP_AUTH_DIR: z.string().optional(),
   CONNECTOR_INTERNAL_SECRET: z.string().min(1),
-  CONNECTOR_INSTANCE_ID: z.string().min(1).default(`connector-${process.pid}`),
+  CONNECTOR_INSTANCE_ID: z.string().min(1).default(defaultConnectorInstanceId()),
   CONNECTOR_LEASE_TTL_MS: z.coerce.number().int().positive().default(30000),
   CONNECTOR_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10000),
   CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES: z.coerce.number().int().min(1).default(5),
   ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR: z.coerce.boolean().default(false)
 });
 
-const parsedEnv = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse({
+  ...process.env,
+  BAILEYS_AUTH_DIR: process.env.BAILEYS_AUTH_DIR ?? process.env.WHATSAPP_AUTH_DIR
+});
 
 function resolveBaileysAuthDir(rawAuthDir: string): string {
   const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID);

@@ -26,6 +26,7 @@ const initialDraft: TemplateFormDraft = {
   status: "Active"
 };
 
+const suggestedUnsubscribeText = "Reply STOP untuk berhenti menerima mesej.";
 const maxTemplateAttachments = 3;
 const maxAttachmentBytes = 3 * 1024 * 1024;
 const maxImagePreviewBytes = 1024 * 1024;
@@ -50,6 +51,7 @@ export function CreateTemplatePage() {
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<TemplateFormDraft>(initialDraft);
+  const [unsubscribeText, setUnsubscribeText] = useState("");
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const editTemplateId = searchParams.get("edit");
   const { data: templates = [] } = useMessageTemplates(organizationId, shouldAllowCreate && Boolean(editTemplateId));
@@ -57,14 +59,18 @@ export function CreateTemplatePage() {
     () => templates.find((template) => template.id === editTemplateId) ?? null,
     [editTemplateId, templates]
   );
-  const detectedVariables = useMemo(() => extractTemplateVariables(draft.content), [draft.content]);
+  const finalTemplateContent = useMemo(
+    () => buildTemplateContentWithUnsubscribe(draft.content, unsubscribeText),
+    [draft.content, unsubscribeText]
+  );
+  const detectedVariables = useMemo(() => extractTemplateVariables(finalTemplateContent), [finalTemplateContent]);
   const invalidVariables = useMemo(
-    () => getInvalidTemplateVariables(draft.content, configurableTemplateVariables),
-    [draft.content]
+    () => getInvalidTemplateVariables(finalTemplateContent, configurableTemplateVariables),
+    [finalTemplateContent]
   );
   const samplePreview = useMemo(
-    () => renderTemplateSample(draft.content, configurableTemplateVariables),
-    [draft.content]
+    () => renderTemplateSample(finalTemplateContent, configurableTemplateVariables),
+    [finalTemplateContent]
   );
 
   useEffect(() => {
@@ -72,22 +78,30 @@ export function CreateTemplatePage() {
       return;
     }
 
+    const existingUnsubscribeText = inferUnsubscribeText(editingTemplate.content);
+
+    setUnsubscribeText(existingUnsubscribeText);
     setDraft({
       name: editingTemplate.name,
       category: editingTemplate.category,
       description: editingTemplate.description ?? "",
-      content: editingTemplate.content,
+      content: stripUnsubscribeText(editingTemplate.content, existingUnsubscribeText),
       attachments: editingTemplate.attachments ?? [],
       status: editingTemplate.status
     });
   }, [editingTemplate]);
 
   const saveMutation = useMutation({
-    mutationFn: () => (
-      editTemplateId
-        ? updateMessageTemplate({ ...draft, templateId: editTemplateId })
-        : createMessageTemplate({ ...draft, organizationId })
-    ),
+    mutationFn: () => {
+      const draftToSave = {
+        ...draft,
+        content: finalTemplateContent
+      };
+
+      return editTemplateId
+        ? updateMessageTemplate({ ...draftToSave, templateId: editTemplateId })
+        : createMessageTemplate({ ...draftToSave, organizationId });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getMessageTemplatesQueryKey(organizationId) });
       navigate("/campaigns/whatsapp/templates");
@@ -204,6 +218,14 @@ export function CreateTemplatePage() {
       return;
     }
 
+    if (!unsubscribeText.trim()) {
+      const message = "Sila masukkan Opt-out Message sebelum submit template. Contoh: Reply STOP untuk berhenti menerima mesej.";
+      window.alert(message);
+      showNotice(message, "error");
+      setStep(2);
+      return;
+    }
+
     saveMutation.mutate();
   }
 
@@ -272,6 +294,22 @@ export function CreateTemplatePage() {
                       templatePurpose={draft.description || draft.category}
                     />
                   </WizardField>
+
+                  <WizardField label="Opt-out Message" hint="Required. This footer will be appended to the saved template and helps campaign safety checks pass.">
+                    <textarea
+                      value={unsubscribeText}
+                      onChange={(event) => setUnsubscribeText(event.target.value)}
+                      className="input-base min-h-[90px] resize-y leading-6"
+                      placeholder={suggestedUnsubscribeText}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setUnsubscribeText(suggestedUnsubscribeText)}>
+                        Use Suggested Text
+                      </Button>
+                      <p className="text-xs text-text-muted">Example: {suggestedUnsubscribeText}</p>
+                    </div>
+                  </WizardField>
+
                   <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
@@ -319,11 +357,11 @@ export function CreateTemplatePage() {
                       </Button>
                     ))}
                   </div>
-                  <p className="text-xs font-semibold text-text-muted">{draft.content.length.toLocaleString()} characters</p>
+                  <p className="text-xs font-semibold text-text-muted">{finalTemplateContent.length.toLocaleString()} characters including opt-out message</p>
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">WhatsApp Preview</p>
-                  <WhatsAppTemplatePreview content={draft.content} attachments={draft.attachments} />
+                  <WhatsAppTemplatePreview content={finalTemplateContent} attachments={draft.attachments} />
                 </div>
               </div>
             ) : null}
@@ -353,6 +391,11 @@ export function CreateTemplatePage() {
                       All detected variables are configured.
                     </div>
                   )}
+                  {!unsubscribeText.trim() ? (
+                    <div className="border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                      Opt-out Message is still empty. You will be reminded to add it before saving this template.
+                    </div>
+                  ) : null}
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">Available Variables</p>
@@ -376,6 +419,14 @@ export function CreateTemplatePage() {
                     <h3 className="mt-2 text-lg font-semibold text-text">{draft.name}</h3>
                     <p className="mt-1 text-sm text-text-muted">{draft.category}</p>
                     {draft.description ? <p className="mt-3 text-sm text-text-muted">{draft.description}</p> : null}
+                  </div>
+                  <div className="app-card p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">Opt-out Message</p>
+                    {unsubscribeText.trim() ? (
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-text">{unsubscribeText.trim()}</p>
+                    ) : (
+                      <p className="mt-3 text-sm text-coral">Missing. You must add this before saving.</p>
+                    )}
                   </div>
                   <div className="app-card p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">Detected Variables</p>
@@ -406,7 +457,7 @@ export function CreateTemplatePage() {
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">Final Preview</p>
-                  <WhatsAppTemplatePreview content={draft.content} attachments={draft.attachments} />
+                  <WhatsAppTemplatePreview content={finalTemplateContent} attachments={draft.attachments} />
                 </div>
               </div>
             ) : null}
@@ -519,4 +570,39 @@ async function getAttachmentPreviewDataUrl(file: File) {
   } catch {
     return undefined;
   }
+}
+
+function buildTemplateContentWithUnsubscribe(content: string, unsubscribeText: string) {
+  const body = content.trim();
+  const footer = unsubscribeText.trim();
+
+  if (!footer) {
+    return body;
+  }
+
+  if (body.toLowerCase().includes(footer.toLowerCase())) {
+    return body;
+  }
+
+  return body ? `${body}\n\n${footer}` : footer;
+}
+
+function inferUnsubscribeText(content: string) {
+  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const match = [...lines].reverse().find((line) => /(stop|unsubscribe|tak nak|taknak|berhenti|jangan hantar|cancel|opt out)/i.test(line));
+  return match ?? "";
+}
+
+function stripUnsubscribeText(content: string, unsubscribeText: string) {
+  const footer = unsubscribeText.trim();
+
+  if (!footer) {
+    return content;
+  }
+
+  return content
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== footer)
+    .join("\n")
+    .trim();
 }

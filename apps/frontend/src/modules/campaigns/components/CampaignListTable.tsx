@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Play, Trash2 } from "lucide-react";
 import { Button } from "../../../components/Button";
 import type { Campaign } from "../types/campaign.types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
@@ -7,6 +7,7 @@ export function CampaignListTable({
   campaigns,
   onAction,
   onReview,
+  onStart,
   onPause,
   onResume,
   onCancel,
@@ -15,6 +16,7 @@ export function CampaignListTable({
   campaigns: Campaign[];
   onAction: (message: string) => void;
   onReview?: (campaign: Campaign) => void;
+  onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
@@ -38,6 +40,7 @@ export function CampaignListTable({
             campaign={campaign}
             onAction={onAction}
             onReview={onReview}
+            onStart={onStart}
             onPause={onPause}
             onResume={onResume}
             onCancel={onCancel}
@@ -77,6 +80,7 @@ export function CampaignListTable({
                     campaign={campaign}
                     onAction={onAction}
                     onReview={onReview}
+                    onStart={onStart}
                     onPause={onPause}
                     onResume={onResume}
                     onCancel={onCancel}
@@ -96,6 +100,7 @@ function CampaignMobileCard({
   campaign,
   onAction,
   onReview,
+  onStart,
   onPause,
   onResume,
   onCancel,
@@ -104,6 +109,7 @@ function CampaignMobileCard({
   campaign: Campaign;
   onAction: (message: string) => void;
   onReview?: (campaign: Campaign) => void;
+  onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
@@ -148,6 +154,7 @@ function CampaignMobileCard({
         campaign={campaign}
         onAction={onAction}
         onReview={onReview}
+        onStart={onStart}
         onPause={onPause}
         onResume={onResume}
         onCancel={onCancel}
@@ -171,6 +178,7 @@ function CampaignActions({
   campaign,
   onAction,
   onReview,
+  onStart,
   onPause,
   onResume,
   onCancel,
@@ -180,18 +188,32 @@ function CampaignActions({
   campaign: Campaign;
   onAction: (message: string) => void;
   onReview?: (campaign: Campaign) => void;
+  onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
   onDelete?: (campaign: Campaign) => void;
   mobile?: boolean;
 }) {
+  const canStart = ["Draft", "Scheduled", "Failed"].includes(campaign.status);
+
   return (
     <div className={mobile ? "mt-3 grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+      {canStart && onStart ? (
+        <Button
+          size="sm"
+          variant="primary"
+          className={mobile ? "col-span-2 w-full" : undefined}
+          onClick={() => onStart(campaign)}
+        >
+          <Play size={14} />
+          Start
+        </Button>
+      ) : null}
       <Button
         size="sm"
-        variant={mobile ? "primary" : "ghost"}
-        className={mobile ? "col-span-2 w-full" : undefined}
+        variant={mobile && !canStart ? "primary" : "ghost"}
+        className={mobile && !canStart ? "col-span-2 w-full" : undefined}
         onClick={() => (onReview ? onReview(campaign) : onAction("Campaign progress is shown in the table."))}
       >
         Review
