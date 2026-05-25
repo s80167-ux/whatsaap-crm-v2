@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { query } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 
@@ -70,11 +71,16 @@ function organizationId(input: { organizationId?: string | null; organization_id
   return input.organizationId ?? input.organization_id ?? null;
 }
 
+async function ensureWhatsAppAccountsStatusCompat() {
+  await query("alter table if exists whatsapp_accounts add column if not exists status text");
+}
+
 export async function getCampaignPrecheck(request: Request, response: Response) {
   const auth = requireAuth(request);
   const { campaignId } = campaignParamsSchema.parse(request.params);
-  const query = organizationQuerySchema.parse(request.query);
-  const precheck = await campaignSafetyService.runCampaignPrecheck(auth, { organizationId: query.organization_id, campaignId });
+  const queryInput = organizationQuerySchema.parse(request.query);
+  await ensureWhatsAppAccountsStatusCompat();
+  const precheck = await campaignSafetyService.runCampaignPrecheck(auth, { organizationId: queryInput.organization_id, campaignId });
   return response.json({ data: precheck });
 }
 
@@ -94,8 +100,8 @@ export async function checkContentRisk(request: Request, response: Response) {
 
 export async function getSafetySettings(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const query = organizationQuerySchema.parse(request.query);
-  const settings = await campaignSafetyService.getSettings(auth, { organizationId: query.organization_id });
+  const queryInput = organizationQuerySchema.parse(request.query);
+  const settings = await campaignSafetyService.getSettings(auth, { organizationId: queryInput.organization_id });
   return response.json({ data: settings });
 }
 
@@ -121,12 +127,12 @@ export async function updateSafetySettings(request: Request, response: Response)
 
 export async function listOptOuts(request: Request, response: Response) {
   const auth = requireAuth(request);
-  const query = organizationQuerySchema.parse(request.query);
+  const queryInput = organizationQuerySchema.parse(request.query);
   const rows = await campaignSafetyService.listOptOuts(auth, {
-    organizationId: query.organization_id,
-    status: query.status,
-    search: query.search,
-    limit: query.limit
+    organizationId: queryInput.organization_id,
+    status: queryInput.status,
+    search: queryInput.search,
+    limit: queryInput.limit
   });
   return response.json({ data: rows });
 }
