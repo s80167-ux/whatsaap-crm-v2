@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, FileText, Image, Music, Paperclip, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Image, Music, Paperclip, Trash2, Upload, Video } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
