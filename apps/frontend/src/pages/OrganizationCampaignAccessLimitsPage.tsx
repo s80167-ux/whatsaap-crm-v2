@@ -12,6 +12,7 @@ import {
   MessageSquare,
   SlidersHorizontal,
   Sparkles,
+  TrendingUp,
   Users
 } from "lucide-react";
 import { Navigate, useOutletContext } from "react-router-dom";
@@ -32,6 +33,9 @@ type AccessFormState = {
   campaignWhatsAppEnabled: boolean;
   campaignEmailEnabled: boolean;
   aiMessageAssistEnabled: boolean;
+  inboxEnabled: boolean;
+  crmEnabled: boolean;
+  salesEnabled: boolean;
   maxWhatsappAccounts: string;
   historySyncDays: string;
   maxUsers: string;
@@ -61,6 +65,9 @@ const initialFormState: AccessFormState = {
   campaignWhatsAppEnabled: false,
   campaignEmailEnabled: false,
   aiMessageAssistEnabled: false,
+  inboxEnabled: true,
+  crmEnabled: true,
+  salesEnabled: true,
   maxWhatsappAccounts: "1",
   historySyncDays: "7",
   maxUsers: "",
@@ -114,6 +121,9 @@ export function OrganizationCampaignAccessLimitsPage() {
       campaignWhatsAppEnabled: getModuleEnabled(moduleStatusMap, "campaign.whatsapp"),
       campaignEmailEnabled: getModuleEnabled(moduleStatusMap, "campaign.email"),
       aiMessageAssistEnabled: getModuleEnabled(moduleStatusMap, "ai_message_assist"),
+      inboxEnabled: getModuleEnabled(moduleStatusMap, "inbox"),
+      crmEnabled: getModuleEnabled(moduleStatusMap, "crm"),
+      salesEnabled: getModuleEnabled(moduleStatusMap, "sales"),
       maxWhatsappAccounts: String(accessLimits.limits.maxWhatsappAccounts),
       historySyncDays: String(accessLimits.limits.historySyncDays),
       maxUsers: accessLimits.limits.maxUsers == null ? "" : String(accessLimits.limits.maxUsers),
@@ -146,6 +156,9 @@ export function OrganizationCampaignAccessLimitsPage() {
         campaignWhatsAppEnabled: form.campaignWhatsAppEnabled,
         campaignEmailEnabled: form.campaignEmailEnabled,
         aiMessageAssistEnabled: form.aiMessageAssistEnabled,
+        inboxEnabled: form.inboxEnabled,
+        crmEnabled: form.crmEnabled,
+        salesEnabled: form.salesEnabled,
         maxWhatsappAccounts: Number(form.maxWhatsappAccounts),
         historySyncDays: Number(form.historySyncDays),
         maxUsers: form.maxUsers.trim() ? Number(form.maxUsers) : null,
@@ -182,6 +195,12 @@ export function OrganizationCampaignAccessLimitsPage() {
         queryClient.invalidateQueries({ queryKey: ["organization-module-status", "campaigns", "current"] }),
         queryClient.invalidateQueries({ queryKey: ["organization-module-status", "ai_message_assist", selectedOrganizationId] }),
         queryClient.invalidateQueries({ queryKey: ["organization-module-status", "ai_message_assist", "current"] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "inbox", selectedOrganizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "inbox", "current"] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "crm", selectedOrganizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "crm", "current"] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "sales", selectedOrganizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-module-status", "sales", "current"] }),
         queryClient.invalidateQueries({ queryKey: ["organization-modules", selectedOrganizationId] })
       ]);
 
@@ -259,11 +278,50 @@ export function OrganizationCampaignAccessLimitsPage() {
 
       <SectionHeading eyebrow="Modules" title="Organization modules" />
       <div className="grid gap-3 xl:grid-cols-3">
-        <FeatureToggleCard title="Contacts" category="Core Module" description="Contact records and CRM data stay available by default." icon={<Users size={17} />} statusLabel="Included" statusTone="success" />
-        <FeatureToggleCard title="Inbox" category="Core Module" description="Conversation handling and reply tools stay available by default." icon={<MessageSquare size={17} />} statusLabel="Included" statusTone="success" />
-        <FeatureToggleCard title="Sales / Reports" category="Core Module" description="Sales pipeline and reporting remain available within the current app setup." icon={<Gauge size={17} />} statusLabel="Included" statusTone="success" />
         <FeatureToggleCard
-          title="Campaign"
+          title="Inbox Module"
+          category="Optional Module"
+          description="Enable Inbox to manage WhatsApp and future channel conversations."
+          icon={<MessageSquare size={17} />}
+          statusLabel={form.inboxEnabled ? "Enabled" : "Disabled"}
+          statusTone={form.inboxEnabled ? "success" : "muted"}
+          action={
+            <Button variant={form.inboxEnabled ? "secondary" : "primary"} size="sm" disabled={disabled} onClick={() => setForm((current) => ({ ...current, inboxEnabled: !current.inboxEnabled }))}>
+              <CheckCircle2 size={16} />
+              {form.inboxEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          }
+        />
+        <FeatureToggleCard
+          title="CRM Module"
+          category="Optional Module"
+          description="Enable CRM to manage Contacts, Reports and Data Export."
+          icon={<Users size={17} />}
+          statusLabel={form.crmEnabled ? "Enabled" : "Disabled"}
+          statusTone={form.crmEnabled ? "success" : "muted"}
+          action={
+            <Button variant={form.crmEnabled ? "secondary" : "primary"} size="sm" disabled={disabled} onClick={() => setForm((current) => ({ ...current, crmEnabled: !current.crmEnabled }))}>
+              <CheckCircle2 size={16} />
+              {form.crmEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          }
+        />
+        <FeatureToggleCard
+          title="Sales Module"
+          category="Optional Module"
+          description="Enable Sales to manage leads, pipeline and sales tracking."
+          icon={<TrendingUp size={17} />}
+          statusLabel={form.salesEnabled ? "Enabled" : "Disabled"}
+          statusTone={form.salesEnabled ? "success" : "muted"}
+          action={
+            <Button variant={form.salesEnabled ? "secondary" : "primary"} size="sm" disabled={disabled} onClick={() => setForm((current) => ({ ...current, salesEnabled: !current.salesEnabled }))}>
+              <CheckCircle2 size={16} />
+              {form.salesEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          }
+        />
+        <FeatureToggleCard
+          title="Campaign Module"
           category="Parent Module"
           description="Controls whether Campaign appears in navigation for the organization."
           icon={<Megaphone size={17} />}

@@ -214,6 +214,9 @@ export async function updateOrganizationAccessLimits(
     campaignWhatsAppEnabled?: boolean;
     campaignEmailEnabled?: boolean;
     aiMessageAssistEnabled?: boolean;
+    inboxEnabled?: boolean;
+    crmEnabled?: boolean;
+    salesEnabled?: boolean;
     maxWhatsappAccounts?: number;
     historySyncDays?: number;
     maxUsers?: number | null;

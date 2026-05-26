@@ -32,7 +32,20 @@ function isAllowedOrigin(origin: string | undefined) {
   return false;
 }
 
-app.use(helmet());
+if (env.NODE_ENV === "development") {
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          connectSrc: ["'self'", "http://localhost:4000", "ws://localhost:4000"],
+        },
+      },
+    })
+  );
+} else {
+  app.use(helmet());
+}
 app.use(
   cors({
     origin(origin, callback) {

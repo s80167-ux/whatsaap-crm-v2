@@ -76,7 +76,7 @@ const campaignsModuleStatusQuerySchema = z.object({
 });
 
 const moduleStatusParamsSchema = z.object({
-  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist"])
+  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist", "inbox", "crm", "sales"])
 });
 
 const updateOrganizationAccessLimitsSchema = z.object({
@@ -85,6 +85,9 @@ const updateOrganizationAccessLimitsSchema = z.object({
   campaignWhatsAppEnabled: z.boolean().optional(),
   campaignEmailEnabled: z.boolean().optional(),
   aiMessageAssistEnabled: z.boolean().optional(),
+  inboxEnabled: z.boolean().optional(),
+  crmEnabled: z.boolean().optional(),
+  salesEnabled: z.boolean().optional(),
   maxWhatsappAccounts: z.coerce.number().int().min(0).max(20).optional(),
   historySyncDays: z.coerce.number().int().min(0).max(365).optional(),
   maxUsers: z.coerce.number().int().min(1).max(500).nullable().optional(),

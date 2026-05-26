@@ -541,7 +541,18 @@
     "create": "Create Campaign",
     "sendTest": "Send Test",
     "whatsapp": {
-      "title": "WhatsApp Campaign"
+      "title": "WhatsApp Campaign",
+      "launchMonitorTitle": "Launch & Monitor",
+      "launchMonitorCopy": "Start, pause, resume, and monitor campaigns here after setup is complete and the safety check has passed.",
+      "workflow": {
+        "audience": "Audience",
+        "template": "Template",
+        "governance": "Governance",
+        "setup": "Setup",
+        "safety": "Safety",
+        "launch": "Launch",
+        "launchAfterSafety": "Launch only after safety check"
+      }
     },
     "email": {
       "title": "Email Campaign"
@@ -550,7 +561,9 @@
     "audienceGroups": "Audience Groups",
     "audience": "Audience",
     "governance": "Governance",
-    "safety": "Safety",
+    "setup": "Campaign Setup",
+    "safety": "Safety Check",
+    "launchMonitor": "Launch & Monitor",
     "history": "History",
     "senders": "Senders",
     "suppressionList": "Suppression List",

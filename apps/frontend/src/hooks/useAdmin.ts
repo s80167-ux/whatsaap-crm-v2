@@ -80,6 +80,18 @@ export function useAiMessageAssistModuleStatus(organizationId?: string | null, e
   return useOrganizationModuleStatus("ai_message_assist", organizationId, enabled);
 }
 
+export function useInboxModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("inbox", organizationId, enabled);
+}
+
+export function useCrmModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("crm", organizationId, enabled);
+}
+
+export function useSalesModuleStatus(organizationId?: string | null, enabled = true) {
+  return useOrganizationModuleStatus("sales", organizationId, enabled);
+}
+
 export function useOrganizationModules(organizationId?: string | null, enabled = true) {
   return useQuery({
     queryKey: ["organization-modules", organizationId],

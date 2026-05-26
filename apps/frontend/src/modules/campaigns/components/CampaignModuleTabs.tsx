@@ -4,12 +4,12 @@ import { FileCheck2, FileText, History, ListPlus, Mail, Megaphone, PlusCircle, S
 
 const campaignModuleTabs = {
   whatsapp: [
-    { labelKey: "nav.overview", to: "/campaigns/whatsapp", icon: Megaphone, end: true },
-    { labelKey: "campaign.create", to: "/campaigns/whatsapp/create", icon: PlusCircle, end: true },
-    { labelKey: "campaign.templates", to: "/campaigns/whatsapp/templates", icon: FileText, end: false },
-    { labelKey: "campaign.governance", to: "/campaigns/whatsapp/templates/governance", icon: ShieldCheck, end: true },
-    { labelKey: "campaign.safety", to: "/campaigns/whatsapp/safety", icon: ShieldCheck, end: true },
     { labelKey: "campaign.audience", to: "/campaigns/whatsapp/audience", icon: ListPlus, end: false },
+    { labelKey: "campaign.templates", to: "/campaigns/whatsapp/templates", icon: FileText, end: false, excludeActivePaths: ["/campaigns/whatsapp/templates/governance"] },
+    { labelKey: "campaign.governance", to: "/campaigns/whatsapp/templates/governance", icon: ShieldCheck, end: true },
+    { labelKey: "campaign.setup", to: "/campaigns/whatsapp/create", icon: PlusCircle, end: true },
+    { labelKey: "campaign.safety", to: "/campaigns/whatsapp/safety", icon: ShieldCheck, end: true },
+    { labelKey: "campaign.launchMonitor", to: "/campaigns/whatsapp", icon: Megaphone, end: true },
     { labelKey: "campaign.history", to: "/campaigns/whatsapp/history", icon: History, end: true }
   ],
   email: [
@@ -40,7 +40,11 @@ export function CampaignModuleTabs({ channel }: { channel: "whatsapp" | "email" 
       <div className="flex flex-wrap gap-2">
       {tabs.map((tab) => {
         const activePaths = "activePaths" in tab ? [...tab.activePaths] : [tab.to];
-        const isActive = activePaths.some((path) => location.pathname === path) || (!tab.end && location.pathname.startsWith(`${tab.to}/`));
+        const excludeActivePaths = "excludeActivePaths" in tab ? [...tab.excludeActivePaths] : [];
+        const isExcluded = excludeActivePaths.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
+        const isActive =
+          !isExcluded &&
+          (activePaths.some((path) => location.pathname === path) || (!tab.end && location.pathname.startsWith(`${tab.to}/`)));
         const Icon = tab.icon;
 
         if (isActive) {

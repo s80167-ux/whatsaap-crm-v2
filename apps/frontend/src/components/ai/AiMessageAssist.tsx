@@ -47,11 +47,9 @@ export function AiMessageAssist({
   });
   const trimmedValue = value.trim();
   const user = getStoredUser();
-  const shouldFetchModuleStatus = user?.role === "org_admin" || (user?.role === "super_admin" && Boolean(organizationId));
+  const shouldFetchModuleStatus = Boolean(user && (user.role !== "super_admin" || organizationId));
   const moduleStatusQuery = useAiMessageAssistModuleStatus(organizationId, shouldFetchModuleStatus);
-  const isEnabled = user?.role === "super_admin" || user?.role === "org_admin"
-    ? moduleStatusQuery.data?.isEnabled === true
-    : false;
+  const isEnabled = moduleStatusQuery.data?.isEnabled === true;
   const disabledWhenEmpty: AiMessageAction[] = source === "template"
     ? ["improve", "shorten", "friendly", "professional", "check"]
     : ["generate", "improve", "shorten", "friendly", "professional", "check"];

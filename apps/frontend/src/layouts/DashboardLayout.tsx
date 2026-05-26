@@ -50,7 +50,10 @@ import {
   useCampaignEmailModuleStatus,
   useCampaignsModuleStatus,
   useCampaignWhatsAppModuleStatus,
-  useOrganizations
+  useCrmModuleStatus,
+  useInboxModuleStatus,
+  useOrganizations,
+  useSalesModuleStatus
 } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { clearAuthSession, getStoredUser, updateStoredUser } from "../lib/auth";
@@ -203,6 +206,9 @@ function SidebarContent({
   selectedOrganizationId,
   selectedOrganizationName,
   setSelectedOrganizationId,
+  showInbox,
+  showCrm,
+  showSales,
   showCampaigns,
   whatsappCampaignBadge,
   emailCampaignBadge,
@@ -216,6 +222,9 @@ function SidebarContent({
   selectedOrganizationId: string;
   selectedOrganizationName: string | null;
   setSelectedOrganizationId: (organizationId: string) => void;
+  showInbox: boolean;
+  showCrm: boolean;
+  showSales: boolean;
   showCampaigns: boolean;
   whatsappCampaignBadge?: ReactNode;
   emailCampaignBadge?: ReactNode;
@@ -276,34 +285,38 @@ function SidebarContent({
       <nav className={`space-y-1.5 ${mobile ? "mt-4" : "mt-8"}`}>
         {mobile ? <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.primary")}</p> : null}
         <NavLinkItem to="/dashboard" icon={<BarChart3 size={18} />} label={t("nav.dashboard")} onClick={onNavigate} compact={mobile} />
-        <SidebarNavGroup
-          icon={<MessageSquare size={18} />}
-          label={t("nav.inbox")}
-          items={[
-            { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
-            { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
-            { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-            { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-            { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-            { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
-          ]}
-          onNavigate={onNavigate}
-          compact={mobile}
-        />
-        <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label={t("nav.sales")} onClick={onNavigate} compact={mobile} />
+        {showInbox ? (
+          <SidebarNavGroup
+            icon={<MessageSquare size={18} />}
+            label={t("nav.inbox")}
+            items={[
+              { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
+              { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
+              { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
+            ]}
+            onNavigate={onNavigate}
+            compact={mobile}
+          />
+        ) : null}
+        {showSales ? <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label={t("nav.sales")} onClick={onNavigate} compact={mobile} /> : null}
         {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.workspace")}</p> : null}
-        <SidebarNavGroup
-          icon={<Users size={18} />}
-          label={t("nav.crm")}
-          items={[
-            { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
-            ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
-            { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.report") },
-            ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
-          ]}
-          onNavigate={onNavigate}
-          compact={mobile}
-        />
+        {showCrm ? (
+          <SidebarNavGroup
+            icon={<Users size={18} />}
+            label={t("nav.crm")}
+            items={[
+              { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
+              ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
+              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.report") },
+              ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
+            ]}
+            onNavigate={onNavigate}
+            compact={mobile}
+          />
+        ) : null}
         {showCampaigns ? (
           <SidebarNavGroup
             icon={<Megaphone size={18} />}
@@ -388,10 +401,17 @@ export function DashboardLayout() {
   const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
   const { data: campaignWhatsAppModuleStatus } = useCampaignWhatsAppModuleStatus(null, user?.role === "org_admin");
   const { data: campaignEmailModuleStatus } = useCampaignEmailModuleStatus(null, user?.role === "org_admin");
+  const shouldCheckOrganizationModules = Boolean(user && user.role !== "super_admin");
+  const { data: inboxModuleStatus } = useInboxModuleStatus(null, shouldCheckOrganizationModules);
+  const { data: crmModuleStatus } = useCrmModuleStatus(null, shouldCheckOrganizationModules);
+  const { data: salesModuleStatus } = useSalesModuleStatus(null, shouldCheckOrganizationModules);
   const showCampaigns = canAccessCampaigns({
     role: user?.role,
     parentModuleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
   });
+  const showInbox = isSuperAdmin || inboxModuleStatus?.isEnabled === true;
+  const showCrm = isSuperAdmin || crmModuleStatus?.isEnabled === true;
+  const showSales = isSuperAdmin || salesModuleStatus?.isEnabled === true;
   const whatsappCampaignBadge = !showCampaigns
     ? null
     : isSuperAdmin || campaignWhatsAppModuleStatus?.isEnabled === true
@@ -429,36 +449,48 @@ export function DashboardLayout() {
       icon: <BarChart3 size={18} />,
       items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: t("nav.overview") }]
     },
-    {
-      id: "inbox",
-      label: t("nav.inbox"),
-      icon: <MessageSquare size={18} />,
-      items: [
-        { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
-        { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
-        { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-        { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-        { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-        { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
-      ]
-    },
-    {
-      id: "sales",
-      label: t("nav.sales"),
-      icon: <TrendingUp size={18} />,
-      items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }]
-    },
-    {
-      id: "crm",
-      label: t("nav.crm"),
-      icon: <Users size={18} />,
-      items: [
-        { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
-        ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
-        { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") },
-        ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
-      ]
-    },
+    ...(showInbox
+      ? [
+          {
+            id: "inbox",
+            label: t("nav.inbox"),
+            icon: <MessageSquare size={18} />,
+            items: [
+              { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
+              { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
+              { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
+              { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
+            ]
+          }
+        ]
+      : []),
+    ...(showSales
+      ? [
+          {
+            id: "sales",
+            label: t("nav.sales"),
+            icon: <TrendingUp size={18} />,
+            items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }]
+          }
+        ]
+      : []),
+    ...(showCrm
+      ? [
+          {
+            id: "crm",
+            label: t("nav.crm"),
+            icon: <Users size={18} />,
+            items: [
+              { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
+              ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
+              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") },
+              ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
+            ]
+          }
+        ]
+      : []),
     ...(showCampaigns
       ? [
           {

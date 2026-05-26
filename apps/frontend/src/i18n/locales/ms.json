@@ -541,7 +541,18 @@
     "create": "Cipta Kempen",
     "sendTest": "Hantar Ujian",
     "whatsapp": {
-      "title": "Kempen WhatsApp"
+      "title": "Kempen WhatsApp",
+      "launchMonitorTitle": "Lancar & Pantau",
+      "launchMonitorCopy": "Mula, jeda, sambung semula, dan pantau kempen di sini selepas tetapan lengkap dan semakan keselamatan lulus.",
+      "workflow": {
+        "audience": "Audiens",
+        "template": "Template",
+        "governance": "Tadbir Urus",
+        "setup": "Tetapan",
+        "safety": "Keselamatan",
+        "launch": "Lancar",
+        "launchAfterSafety": "Lancar hanya selepas semakan keselamatan"
+      }
     },
     "email": {
       "title": "Kempen Emel"
@@ -550,7 +561,9 @@
     "audienceGroups": "Kumpulan Audiens",
     "audience": "Audiens",
     "governance": "Tadbir Urus",
-    "safety": "Keselamatan",
+    "setup": "Tetapan Kempen",
+    "safety": "Semakan Keselamatan",
+    "launchMonitor": "Lancar & Pantau",
     "history": "Sejarah",
     "senders": "Penghantar",
     "suppressionList": "Senarai Sekatan",

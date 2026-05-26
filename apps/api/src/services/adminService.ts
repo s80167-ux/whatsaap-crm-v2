@@ -21,12 +21,18 @@ const CAMPAIGN_MODULE_KEY = "campaign";
 const CAMPAIGN_WHATSAPP_MODULE_KEY = "campaign.whatsapp";
 const CAMPAIGN_EMAIL_MODULE_KEY = "campaign.email";
 const AI_MESSAGE_ASSIST_MODULE_KEY = "ai_message_assist";
+const INBOX_MODULE_KEY = "inbox";
+const CRM_MODULE_KEY = "crm";
+const SALES_MODULE_KEY = "sales";
 const SUPPORTED_MODULE_KEYS = [
   LEGACY_CAMPAIGNS_MODULE_KEY,
   CAMPAIGN_MODULE_KEY,
   CAMPAIGN_WHATSAPP_MODULE_KEY,
   CAMPAIGN_EMAIL_MODULE_KEY,
-  AI_MESSAGE_ASSIST_MODULE_KEY
+  AI_MESSAGE_ASSIST_MODULE_KEY,
+  INBOX_MODULE_KEY,
+  CRM_MODULE_KEY,
+  SALES_MODULE_KEY
 ] as const;
 const MAX_WHATSAPP_ACCOUNTS_KEY = "max_whatsapp_accounts";
 const HISTORY_SYNC_DAYS_KEY = "history_sync_days";
@@ -102,6 +108,9 @@ type OrganizationAccessLimitsUpdateInput = {
   campaignWhatsAppEnabled?: boolean;
   campaignEmailEnabled?: boolean;
   aiMessageAssistEnabled?: boolean;
+  inboxEnabled?: boolean;
+  crmEnabled?: boolean;
+  salesEnabled?: boolean;
   maxWhatsappAccounts?: number;
   historySyncDays?: number;
   maxUsers?: number | null;
@@ -170,6 +179,10 @@ function getModuleLookupKeys(moduleKey: OrganizationModuleKey) {
     default:
       return [moduleKey] as const;
   }
+}
+
+function getMissingModuleDefault(moduleKey: OrganizationModuleKey) {
+  return moduleKey === INBOX_MODULE_KEY || moduleKey === CRM_MODULE_KEY || moduleKey === SALES_MODULE_KEY;
 }
 
 function slugifyOrganizationName(name: string) {
@@ -310,7 +323,7 @@ export class AdminService {
       return {
         organizationId: resolvedOrganizationId,
         moduleKey,
-        isEnabled: result.rows[0]?.is_enabled ?? false
+        isEnabled: result.rows[0]?.is_enabled ?? getMissingModuleDefault(moduleKey)
       };
     } finally {
       client.release();
@@ -335,6 +348,18 @@ export class AdminService {
 
   async getAiMessageAssistModuleStatus(authUser: AuthUser, organizationId?: string | null) {
     return this.getOrganizationModuleStatus(authUser, AI_MESSAGE_ASSIST_MODULE_KEY, organizationId);
+  }
+
+  async getInboxModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, INBOX_MODULE_KEY, organizationId);
+  }
+
+  async getCrmModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, CRM_MODULE_KEY, organizationId);
+  }
+
+  async getSalesModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+    return this.getOrganizationModuleStatus(authUser, SALES_MODULE_KEY, organizationId);
   }
 
   async listOrganizationModules(organizationId: string) {
@@ -763,6 +788,9 @@ export class AdminService {
       const campaignWhatsAppStatus = await this.getCampaignWhatsAppModuleStatus(authUser, organizationId);
       const campaignEmailStatus = await this.getCampaignEmailModuleStatus(authUser, organizationId);
       const aiMessageAssistStatus = await this.getAiMessageAssistModuleStatus(authUser, organizationId);
+      const inboxStatus = await this.getInboxModuleStatus(authUser, organizationId);
+      const crmStatus = await this.getCrmModuleStatus(authUser, organizationId);
+      const salesStatus = await this.getSalesModuleStatus(authUser, organizationId);
       const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
         client,
         organizationId,
@@ -915,6 +943,18 @@ export class AdminService {
           {
             moduleKey: AI_MESSAGE_ASSIST_MODULE_KEY,
             isEnabled: aiMessageAssistStatus.isEnabled
+          },
+          {
+            moduleKey: INBOX_MODULE_KEY,
+            isEnabled: inboxStatus.isEnabled
+          },
+          {
+            moduleKey: CRM_MODULE_KEY,
+            isEnabled: crmStatus.isEnabled
+          },
+          {
+            moduleKey: SALES_MODULE_KEY,
+            isEnabled: salesStatus.isEnabled
           }
         ],
         limits: {
@@ -1025,6 +1065,18 @@ export class AdminService {
           AI_MESSAGE_ASSIST_MODULE_KEY,
           input.aiMessageAssistEnabled
         );
+      }
+
+      if (input.inboxEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(client, authUser, organizationId, INBOX_MODULE_KEY, input.inboxEnabled);
+      }
+
+      if (input.crmEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(client, authUser, organizationId, CRM_MODULE_KEY, input.crmEnabled);
+      }
+
+      if (input.salesEnabled !== undefined) {
+        await this.updateOrganizationModuleWithClient(client, authUser, organizationId, SALES_MODULE_KEY, input.salesEnabled);
       }
 
       if (input.maxWhatsappAccounts !== undefined) {

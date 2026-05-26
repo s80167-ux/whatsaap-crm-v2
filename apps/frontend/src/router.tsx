@@ -86,6 +86,9 @@ const CreateTemplatePage = lazy(() =>
 const CampaignsRouteGuard = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsRouteGuard }))
 );
+const ModuleRouteGuard = lazy(() =>
+  import("./components/ModuleRouteGuard").then((module) => ({ default: module.ModuleRouteGuard }))
+);
 
 function withRouteFallback(page: ReactElement) {
   const Fallback = () => {
@@ -139,18 +142,18 @@ export const router = createBrowserRouter([
         children: [
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
           { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: "inbox", element: withRouteFallback(<InboxPage />) },
-          { path: "inbox/whatsapp", element: withRouteFallback(<InboxPage />) },
-          { path: "inbox/social", element: withRouteFallback(<InboxChannelPlaceholderPage variant="social" />) },
-          { path: "inbox/facebook", element: withRouteFallback(<InboxChannelPlaceholderPage variant="facebook" />) },
-          { path: "inbox/instagram", element: withRouteFallback(<InboxChannelPlaceholderPage variant="instagram" />) },
-          { path: "inbox/ecommerce", element: withRouteFallback(<InboxChannelPlaceholderPage variant="ecommerce" />) },
-          { path: "inbox/replies", element: withRouteFallback(<InboxReplyLibraryPage />) },
-          { path: "contacts", element: withRouteFallback(<ContactsPage />) },
-          { path: "contacts/reliability", element: withRouteFallback(<ContactReliabilityPage />) },
-          { path: "sales", element: withRouteFallback(<SalesPage />) },
-          { path: "reports", element: withRouteFallback(<ReportsPage />) },
-          { path: "exports", element: withRouteFallback(<DataExportPage />) },
+          { path: "inbox", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxPage /></ModuleRouteGuard>) },
+          { path: "inbox/whatsapp", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxPage /></ModuleRouteGuard>) },
+          { path: "inbox/social", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="social" /></ModuleRouteGuard>) },
+          { path: "inbox/facebook", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="facebook" /></ModuleRouteGuard>) },
+          { path: "inbox/instagram", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="instagram" /></ModuleRouteGuard>) },
+          { path: "inbox/ecommerce", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="ecommerce" /></ModuleRouteGuard>) },
+          { path: "inbox/replies", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxReplyLibraryPage /></ModuleRouteGuard>) },
+          { path: "contacts", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactsPage /></ModuleRouteGuard>) },
+          { path: "contacts/reliability", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactReliabilityPage /></ModuleRouteGuard>) },
+          { path: "sales", element: withRouteFallback(<ModuleRouteGuard moduleKey="sales" moduleName="Sales"><SalesPage /></ModuleRouteGuard>) },
+          { path: "reports", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ReportsPage /></ModuleRouteGuard>) },
+          { path: "exports", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><DataExportPage /></ModuleRouteGuard>) },
           {
             path: "campaigns",
             element: <Navigate to="/campaigns/whatsapp" replace />

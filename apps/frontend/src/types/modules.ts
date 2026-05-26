@@ -1,4 +1,12 @@
-export type ModuleKey = "campaigns" | "campaign" | "campaign.whatsapp" | "campaign.email" | "ai_message_assist";
+export type ModuleKey =
+  | "campaigns"
+  | "campaign"
+  | "campaign.whatsapp"
+  | "campaign.email"
+  | "ai_message_assist"
+  | "inbox"
+  | "crm"
+  | "sales";
 
 export interface OrganizationModule {
   id: string;

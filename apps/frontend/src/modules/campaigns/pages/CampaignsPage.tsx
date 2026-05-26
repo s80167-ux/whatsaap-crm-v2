@@ -29,6 +29,14 @@ const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all
   { label: "Completed", value: "Completed" }
 ];
 const campaignListPageSize = 5;
+const whatsappWorkflowStepKeys = [
+  "campaign.whatsapp.workflow.audience",
+  "campaign.whatsapp.workflow.template",
+  "campaign.whatsapp.workflow.governance",
+  "campaign.whatsapp.workflow.setup",
+  "campaign.whatsapp.workflow.safety",
+  "campaign.whatsapp.workflow.launch"
+];
 
 export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overview" | "create" | "history" }) {
   const { t } = useTranslation();
@@ -197,6 +205,22 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
         </div>
       </Card>
 
+      <Card elevated className="p-4 sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-text sm:text-sm">
+            {whatsappWorkflowStepKeys.map((stepKey, index) => (
+              <span key={stepKey} className="inline-flex items-center gap-2">
+                <span className={stepKey.endsWith(".safety") ? "text-primary" : ""}>{t(stepKey)}</span>
+                {index < whatsappWorkflowStepKeys.length - 1 ? <span className="text-text-soft">-&gt;</span> : null}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            {t("campaign.whatsapp.workflow.launchAfterSafety")}
+          </p>
+        </div>
+      </Card>
+
       <CampaignModuleTabs channel="whatsapp" />
 
       {outletContext.isSuperAdmin && !organizationId ? (
@@ -217,8 +241,10 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
             <Card elevated className="space-y-4 p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Overview</p>
-                  <p className="mt-2 text-sm text-text-muted">Recent broadcast activity and quick links for the WhatsApp campaign workflow.</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
+                  <p className="mt-2 text-sm text-text-muted">
+                    {t("campaign.whatsapp.launchMonitorCopy")}
+                  </p>
                 </div>
                 <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/history")}>
                   View History
