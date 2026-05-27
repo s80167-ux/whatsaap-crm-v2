@@ -10,6 +10,7 @@ import { mergeContactWithoutDowngrade, hasRecoveryMergeChanges } from "../utils/
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { calculateContactQualityScore, normalizeWhatsAppIdentity, pickBestRecoveryName } from "../utils/whatsappIdentity.js";
 import { ConnectorClient } from "./connectorClient.js";
+import { ConnectorIdentityResolverClient, type ConnectorIdentityResolution } from "./connectorIdentityResolverClient.js";
 import { ContactEnrichmentCacheService } from "./contactEnrichmentCacheService.js";
 import { ContactRecoveryAuditService } from "./contactRecoveryAuditService.js";
 import { ContactRepairProposalService } from "./contactRepairProposalService.js";
@@ -38,6 +39,21 @@ function toE164(phone: string | null | undefined) {
   return normalizePhoneNumber(phone);
 }
 
+function candidateFromConnectorResolution(resolution: ConnectorIdentityResolution | null | undefined): RecoveryCandidate | null {
+  if (!resolution?.resolved) return null;
+
+  return {
+    source: resolution.source ?? "connector_identity_resolver",
+    confidenceScore: Number(resolution.confidenceScore ?? 0),
+    normalizedJid: resolution.normalizedJid ?? null,
+    phoneNumber: resolution.phoneNumber ?? null,
+    lid: resolution.lid ?? null,
+    displayName: pickBestRecoveryName(resolution.verifiedName, resolution.displayName, resolution.pushName, resolution.notifyName),
+    profilePicUrl: resolution.profilePicUrl ?? null,
+    rawPayload: resolution
+  };
+}
+
 export class WhatsAppContactRecoveryEngine {
   constructor(
     private readonly accountRepository = new WhatsAppAdminRepository(),
@@ -46,7 +62,8 @@ export class WhatsAppContactRecoveryEngine {
     private readonly profilePictureService = new ProfilePictureRecoveryService(),
     private readonly auditService = new ContactRecoveryAuditService(),
     private readonly identityRepository = new ContactIdentityRepository(),
-    private readonly connectorClient = new ConnectorClient()
+    private readonly connectorClient = new ConnectorClient(),
+    private readonly identityResolverClient = new ConnectorIdentityResolverClient()
   ) {}
 
   async verifyPhoneOnWhatsApp(input: {
@@ -186,6 +203,32 @@ export class WhatsAppContactRecoveryEngine {
 
       let candidate: RecoveryCandidate | null = cacheCandidate ?? snapshotCandidate;
 
+      if (!candidate || candidate.confidenceScore < 85) {
+        try {
+          const connectorResolution = await this.identityResolverClient.resolveContactIdentity({
+            accountId: input.whatsappAccountId,
+            contactId: input.contactId,
+            jid: normalizedJid,
+            lid,
+            knownPhone: phoneNumber,
+            displayName: contact.display_name
+          });
+          const connectorCandidate = candidateFromConnectorResolution(connectorResolution);
+          if (connectorCandidate && (!candidate || connectorCandidate.confidenceScore > candidate.confidenceScore)) {
+            candidate = connectorCandidate;
+          }
+        } catch (error) {
+          await this.auditService.record(client, {
+            organizationId: input.organizationId,
+            whatsappAccountId: input.whatsappAccountId,
+            contactId: input.contactId,
+            action: "connector_identity_resolver_failed",
+            source: "connector_identity_resolver",
+            reason: error instanceof Error ? error.message : "Unable to resolve contact identity from connector"
+          });
+        }
+      }
+
       if (!candidate && phoneNumber && !normalizedJid) {
         const verified = await this.verifyPhoneOnWhatsApp({
           organizationId: input.organizationId,
@@ -213,7 +256,7 @@ export class WhatsAppContactRecoveryEngine {
           contactId: input.contactId,
           action: "skipped_low_confidence",
           source: "recovery_engine",
-          reason: "No cache, snapshot, or verified WhatsApp candidate found"
+          reason: "No cache, snapshot, verified WhatsApp, or connector resolver candidate found"
         });
         return { status: "skipped", reason: "no_candidate" };
       }
