@@ -52,6 +52,7 @@ const ChannelSetupPlaceholderPage = lazy(() =>
   import("./pages/ChannelSetupPlaceholderPage").then((module) => ({ default: module.ChannelSetupPlaceholderPage }))
 );
 const WhatsAppAccountDashboard = lazy(() => import("./pages/WhatsAppAccountDashboard").then((module) => ({ default: module.WhatsAppAccountDashboard })));
+const WhatsAppContactRecoveryPage = lazy(() => import("./pages/WhatsAppContactRecoveryPage").then((module) => ({ default: module.WhatsAppContactRecoveryPage })));
 const SuperAdminMapPage = lazy(() =>
   import("./pages/SuperAdminMapPage").then((module) => ({ default: module.SuperAdminMapPage }))
 );
@@ -303,6 +304,7 @@ export const router = createBrowserRouter([
           },
           { path: "setup/channels", element: withRouteFallback(<ChannelSetupPage />) },
           { path: "setup/channels/whatsapp", element: withRouteFallback(<WhatsAppAccountDashboard />) },
+          { path: "setup/channels/whatsapp/recovery", element: withRouteFallback(<WhatsAppContactRecoveryPage />) },
           { path: "setup/whatsapp-number-access", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "setup/channels/facebook", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="facebook" />) },
           { path: "setup/channels/instagram", element: withRouteFallback(<ChannelSetupPlaceholderPage variant="instagram" />) },
@@ -313,6 +315,7 @@ export const router = createBrowserRouter([
           { path: "setup/channels/email", element: withRouteFallback(<EmailSetupPage />) },
           { path: "setup/whatsapp-accounts", element: <Navigate to="/setup/channels/whatsapp" replace /> },
           { path: "whatsapp-accounts", element: withRouteFallback(<WhatsAppAccountDashboard />) },
+          { path: "whatsapp-accounts/recovery", element: withRouteFallback(<WhatsAppContactRecoveryPage />) },
           { path: "super-admin-map", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/data-structure", element: withRouteFallback(<SuperAdminMapPage />) },
           { path: "super-admin-map/organization-structure", element: withRouteFallback(<SuperAdminMapPage />) },
