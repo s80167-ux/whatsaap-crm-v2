@@ -1788,11 +1788,27 @@ canvas {
   }
 
   .theme-switcher-panel {
-    @apply app-card max-h-[min(34rem,calc(100vh-6rem))] min-w-[14rem] overflow-y-auto p-1.5 shadow-panel;
+    @apply app-card max-h-[min(30rem,calc(100vh-6rem))] w-[17rem] overflow-y-auto p-1 shadow-panel;
+  }
+
+  @media (max-width: 640px) {
+    .theme-switcher-panel {
+      position: fixed !important;
+      top: 3.25rem !important;
+      left: auto !important;
+      right: 0.75rem !important;
+      width: min(17rem, calc(100vw - 1.5rem)) !important;
+      min-width: 0 !important;
+      max-width: calc(100vw - 1.5rem) !important;
+      z-index: 9999 !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
   }
 
   .theme-switcher-option {
-    @apply flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm text-foreground;
+    @apply flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left text-sm text-foreground;
   }
 
   .theme-switcher-option:hover,

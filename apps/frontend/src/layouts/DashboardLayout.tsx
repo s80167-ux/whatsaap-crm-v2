@@ -27,7 +27,7 @@ import {
   PlugZap
 } from "lucide-react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { FormEvent, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -793,140 +793,123 @@ export function DashboardLayout() {
         </div>
       </header>
 
-      {isMobileNavOpen ? (
-        <div className="fixed inset-0 z-40 md:hidden" aria-hidden={!isMobileNavOpen}>
-          <button
+      <AnimatePresence>
+        {isMobileNavOpen ? (
+          <motion.div
+            className="fixed inset-0 z-40 md:hidden"
+            aria-hidden={!isMobileNavOpen}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+          <motion.button
             type="button"
             className="absolute inset-0 bg-background/40 backdrop-blur-md backdrop-saturate-150"
             aria-label={t("layout.closeNavigation")}
             onClick={() => setIsMobileNavOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
           />
-          <motion.aside
-            className="absolute inset-y-12 left-0 overflow-hidden pr-3"
-            initial={false}
+          <motion.div
+            className="absolute left-0 right-0 top-12 w-full overflow-x-auto"
+            initial={{ y: -18, opacity: 0, scale: 0.985 }}
             animate={{
-              width: isMobileSecondTierVisible ? "min(calc(100vw - 0.875rem), 28rem)" : "5.75rem"
+              height: "auto",
+              y: 0,
+              opacity: 1,
+              scale: 1
             }}
+            exit={{ y: -14, opacity: 0, scale: 0.985 }}
             transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
           >
-            <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex h-full flex-row overflow-hidden rounded-r-[1.75rem] border-y-0 border-l-0 p-0 shadow-[0_18px_45px_rgb(8_15_27_/_0.28)]" elevated>
-              <nav className="sidebar-icon-rail flex w-[4.25rem] shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label={t("nav.mobilePrimaryNavigation")}>
-                <div className="mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
-                  <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
-                </div>
+            <Card className="app-shell dashboard-sidebar relative flex flex-col overflow-hidden md:hidden rounded-b-2xl border-x-0 border-t-0 border-b px-2 py-2 shadow-[0_20px_60px_rgb(var(--primary)_/_0.22),0_10px_26px_rgb(8_15_27_/_0.28)] ring-1 ring-primary/20" elevated>
+              <div className="pointer-events-none absolute inset-x-4 -top-16 h-28 bg-primary/25 blur-3xl" aria-hidden />
+              <div className="relative flex flex-row items-center gap-2 overflow-x-auto pb-2">
                 {navSections.map((section) => {
                   const isActive = section.id === activeNavSection.id;
                   const isSelected = section.id === mobileNavSection.id;
-
                   return (
                     <button
                       key={section.id}
                       type="button"
                       className={clsx(
-                        "sidebar-rail-button group relative flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/62 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground",
-                        isSelected || isActive ? "bg-sidebar-foreground/12 text-sidebar-foreground hover:bg-sidebar-foreground/12" : null
+                        "sidebar-rail-button group flex flex-col items-center justify-center px-3 py-2 rounded-lg text-sidebar-foreground/62 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground",
+                        isSelected || isActive
+                          ? "bg-sidebar-foreground/12 text-sidebar-foreground shadow-[0_0_22px_rgb(var(--primary)_/_0.25)] ring-1 ring-primary/25 hover:bg-sidebar-foreground/12"
+                          : null
                       )}
                       aria-label={section.label}
                       aria-current={isActive ? "page" : undefined}
                       title={section.label}
                       onClick={() => {
-                        const isSameSection = mobileNavSection.id === section.id;
-
-                        if (isSameSection) {
-                          setIsMobileSecondTierVisible((current) => !current);
-                          return;
-                        }
-
                         setMobileNavSectionId(section.id);
                         setIsMobileSecondTierVisible(true);
                       }}
                     >
                       {section.icon}
-                      {isSelected || isActive ? <span className="absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" /> : null}
+                      <span className="text-xs mt-1 whitespace-nowrap">{section.label}</span>
                     </button>
                   );
                 })}
                 <button
                   type="button"
-                  className="mt-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                  className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
                   aria-label={t("layout.closeNavigation")}
                   onClick={() => setIsMobileNavOpen(false)}
                 >
                   <X size={16} />
                 </button>
-              </nav>
-
-              <motion.div
-                className="sidebar-context-panel min-w-0 flex-1 overflow-y-auto px-4 py-4"
-                initial={false}
-                animate={{
-                  x: isMobileSecondTierVisible ? 0 : 28,
-                  opacity: isMobileSecondTierVisible ? 1 : 0,
-                  scale: isMobileSecondTierVisible ? 1 : 0.985
-                }}
-                transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.85 }}
-                style={{ pointerEvents: isMobileSecondTierVisible ? "auto" : "none" }}
-                aria-hidden={!isMobileSecondTierVisible}
-              >
-                <div className="flex items-start justify-between gap-3 border-b border-sidebar-foreground/10 pb-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{mobileNavSection.label}</p>
-                    <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</h2>
-                    <p className="mt-1 truncate text-[11px] text-sidebar-foreground/45">{mobileNavSection.items.length === 1 ? mobileNavSection.items[0]?.label : t("layout.destinations", { count: mobileNavSection.items.length })}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sidebar-foreground/10 bg-sidebar-foreground/5 text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                    aria-label={t("layout.hideNavigationDetails")}
-                    onClick={() => setIsMobileSecondTierVisible(false)}
+              </div>
+              <AnimatePresence initial={false}>
+                {isMobileSecondTierVisible ? (
+                  <motion.div
+                    className="relative w-full overflow-hidden border-t border-sidebar-foreground/10 pt-2"
+                    initial={{ height: 0, opacity: 0, y: -8 }}
+                    animate={{ height: "auto", opacity: 1, y: 0 }}
+                    exit={{ height: 0, opacity: 0, y: -8 }}
+                    transition={{ type: "spring", stiffness: 360, damping: 34, mass: 0.85 }}
                   >
-                    <ChevronsLeft size={15} />
-                  </button>
-                </div>
-
-                {!isSuperAdmin ? (
-                  <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">{t("common.workspace")}</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.whatsappWorkspace")}</p>
-                    <p className="mt-1 text-[11px] text-sidebar-foreground/48">{t("layout.switchModules")}</p>
+                  <div className="flex items-center justify-between gap-3 pb-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{mobileNavSection.label}</p>
+                      <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</h2>
+                      <p className="mt-1 truncate text-[11px] text-sidebar-foreground/45">{mobileNavSection.items.length === 1 ? mobileNavSection.items[0]?.label : t("layout.destinations", { count: mobileNavSection.items.length })}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-sidebar-foreground/10 bg-sidebar-foreground/5 text-sidebar-foreground/60 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                      aria-label={t("layout.hideNavigationDetails")}
+                      onClick={() => setIsMobileSecondTierVisible(false)}
+                    >
+                      <ChevronsLeft size={15} />
+                    </button>
                   </div>
+                  <nav className="mt-2 flex flex-row flex-wrap gap-2" aria-label={`${mobileNavSection.label} navigation`}>
+                    {mobileNavSection.items.map((item) => (
+                      <NavLinkItem
+                        key={item.to}
+                        to={item.to}
+                        icon={item.icon}
+                        label={item.label}
+                        badge={item.badge}
+                        variant="sub"
+                        end={item.end}
+                        onClick={() => setIsMobileNavOpen(false)}
+                        compact
+                      />
+                    ))}
+                  </nav>
+                  </motion.div>
                 ) : null}
-
-                {isSuperAdmin ? (
-                  <div className="mt-4 rounded-[1rem] border border-sidebar-foreground/10 bg-sidebar-foreground/5 px-3 py-3">
-                    <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{t("layout.currentOrg")}</span>
-                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-8 rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10 px-2.5 text-[13px]" aria-label={t("layout.chooseOrganizationToView")}>
-                        <option value="">{t("layout.chooseOrganization")}</option>
-                        {organizations.map((organization) => (
-                          <option key={organization.id} value={organization.id}>{organization.name}</option>
-                        ))}
-                      </Select>
-                    </label>
-                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
-                  </div>
-                ) : null}
-
-                <nav className="mt-4 space-y-1.5" aria-label={`${mobileNavSection.label} navigation`}>
-                  {mobileNavSection.items.map((item) => (
-                    <NavLinkItem
-                      key={item.to}
-                      to={item.to}
-                      icon={item.icon}
-                      label={item.label}
-                      badge={item.badge}
-                      variant="sub"
-                      end={item.end}
-                      onClick={() => setIsMobileNavOpen(false)}
-                      compact
-                    />
-                  ))}
-                </nav>
-              </motion.div>
+              </AnimatePresence>
             </Card>
-          </motion.aside>
-        </div>
-      ) : null}
+          </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <PopupOverlay
         open={isProfilePanelOpen}
@@ -1085,7 +1068,8 @@ export function DashboardLayout() {
           isDesktopNavCollapsed ? "dashboard-content--sidebar-collapsed" : "dashboard-content--sidebar-expanded"
         )}
       >
-        <motion.aside ref={desktopSidebarRef} className="dashboard-sidebar-sticky hidden min-w-0 self-start md:block md:h-[calc(100dvh-3rem)]" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
+        {/* Desktop sidebar: always render for md and up */}
+        <motion.aside ref={desktopSidebarRef} className="dashboard-sidebar-sticky min-w-0 self-start hidden md:block md:h-[calc(100dvh-3rem)]" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <Card className="app-shell dashboard-sidebar dashboard-sidebar--two-tier flex flex-row overflow-hidden p-0" elevated>
             <nav className="sidebar-icon-rail flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-foreground/10 px-2 py-3" aria-label="Primary navigation">
               {navSections.map((section) => {
@@ -1130,72 +1114,72 @@ export function DashboardLayout() {
               </button>
             </nav>
 
-              <div
-                className={clsx(
-                  "sidebar-context-panel min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
-                  isDesktopNavCollapsed
-                    ? "w-0 -translate-x-2 px-0 opacity-0"
-                    : "w-[13rem] translate-x-0 opacity-100 xl:w-[14rem]"
-                )}
-                aria-hidden={isDesktopNavCollapsed}
-              >
-                <div className="border-b border-sidebar-foreground/10 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
-                      <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
-                      <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</p>
-                    </div>
+            <div
+              className={clsx(
+                "sidebar-context-panel min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 transition-[opacity,transform,padding,width] duration-300 ease-out",
+                isDesktopNavCollapsed
+                  ? "w-0 -translate-x-2 px-0 opacity-0"
+                  : "w-[13rem] translate-x-0 opacity-100 xl:w-[14rem]"
+              )}
+              aria-hidden={isDesktopNavCollapsed}
+            >
+              <div className="border-b border-sidebar-foreground/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/10">
+                    <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-cover" />
                   </div>
-                </div>
-
-                {isSuperAdmin ? (
-                  <div className="mt-4">
-                    <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{t("layout.viewingOrg")}</span>
-                      <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label={t("layout.chooseOrganizationToView")}>
-                        <option value="">{t("layout.chooseOrganization")}</option>
-                        {organizations.map((organization) => (
-                          <option key={organization.id} value={organization.id}>{organization.name}</option>
-                        ))}
-                      </Select>
-                    </label>
-                    {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</p>
                   </div>
-                ) : null}
-
-                <div className="mt-6">
-                  <div className="flex items-center justify-between gap-3 px-1">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.module")}</p>
-                      <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{activeNavSection.label}</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/58 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-                      aria-label={t("layout.collapseSidebar")}
-                      onClick={() => setIsDesktopNavCollapsed(true)}
-                    >
-                      <ChevronsLeft size={16} />
-                    </button>
-                  </div>
-                  <nav className="mt-3 space-y-1.5" aria-label={`${activeNavSection.label} navigation`}>
-                    {activeNavSection.items.map((item) => (
-                      <NavLinkItem
-                        key={item.to}
-                        to={item.to}
-                        icon={item.icon}
-                        label={item.label}
-                        badge={item.badge}
-                        variant="sub"
-                        end={item.end}
-                      />
-                    ))}
-                  </nav>
                 </div>
               </div>
+
+              {isSuperAdmin ? (
+                <div className="mt-4">
+                  <label className="block">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/45">{t("layout.viewingOrg")}</span>
+                    <Select value={selectedOrganizationId} onChange={(event) => setSelectedOrganizationId(event.target.value)} className="sidebar-org-select mt-1.5 h-9 px-0 py-0 text-sm font-medium" aria-label={t("layout.chooseOrganizationToView")}> 
+                      <option value="">{t("layout.chooseOrganization")}</option>
+                      {organizations.map((organization) => (
+                        <option key={organization.id} value={organization.id}>{organization.name}</option>
+                      ))}
+                    </Select>
+                  </label>
+                  {selectedOrganizationName ? <p className="mt-1 truncate text-[11px] text-sidebar-foreground/40">{t("layout.scopedTo", { name: selectedOrganizationName })}</p> : <p className="mt-1 text-[11px] text-sidebar-foreground/40">{t("layout.orgRequired")}</p>}
+                </div>
+              ) : null}
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.module")}</p>
+                    <h2 className="mt-1 truncate text-base font-semibold text-sidebar-foreground">{activeNavSection.label}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/58 transition duration-200 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                    aria-label={t("layout.collapseSidebar")}
+                    onClick={() => setIsDesktopNavCollapsed(true)}
+                  >
+                    <ChevronsLeft size={16} />
+                  </button>
+                </div>
+                <nav className="mt-3 space-y-1.5" aria-label={`${activeNavSection.label} navigation`}>
+                  {activeNavSection.items.map((item) => (
+                    <NavLinkItem
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      badge={item.badge}
+                      variant="sub"
+                      end={item.end}
+                    />
+                  ))}
+                </nav>
+              </div>
+            </div>
           </Card>
         </motion.aside>
         <main className="min-w-0 bg-transparent px-3 pb-4 pt-12 md:px-4 md:pt-4 xl:px-5">

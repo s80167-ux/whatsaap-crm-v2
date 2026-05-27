@@ -102,7 +102,11 @@ export function ThemeSwitcher({ className }: { className?: string }) {
       </button>
 
       {isOpen ? (
-        <div className="theme-switcher-panel absolute right-0 top-11 z-[140]" role="listbox" aria-label="Theme options">
+        <div
+          className="theme-switcher-panel absolute right-0 top-11 z-[140] sm:absolute sm:right-0 sm:top-11"
+          role="listbox"
+          aria-label="Theme options"
+        >
           {THEME_OPTIONS.map((option) => {
             const isSelected = selectedTheme === option.value;
 
@@ -119,14 +123,14 @@ export function ThemeSwitcher({ className }: { className?: string }) {
                   setIsOpen(false);
                 }}
               >
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-foreground">
-                  <option.icon className="h-4 w-4" />
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground">
+                  <option.icon className="h-3.5 w-3.5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-card-foreground">{option.label}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{option.description}</span>
+                  <span className="block text-[13px] font-medium text-card-foreground">{option.label}</span>
+                  <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">{option.description}</span>
                 </span>
-                {isSelected ? <Check className="h-4 w-4 text-primary" /> : null}
+                {isSelected ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
               </button>
             );
           })}
