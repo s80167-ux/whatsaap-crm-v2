@@ -16,6 +16,7 @@ type DashboardSummary = {
   scope: "agent" | "admin" | "super_admin";
   organizationId?: string | null;
   generatedAt?: string;
+  enabledModules?: string[];
   summary?: {
     title: string;
     subtitle: string;
@@ -76,6 +77,7 @@ type DashboardSummary = {
 const LEGACY_CAMPAIGNS_MODULE_KEY = "campaigns";
 const CAMPAIGN_MODULE_KEY = "campaign";
 const CORE_DEFAULT_MODULE_KEYS = new Set(["inbox", "crm", "sales"]);
+const CAMPAIGN_CHILD_MODULE_KEYS = ["campaign.whatsapp", "campaign.email"] as const;
 const ORGANIZATION_DASHBOARD_PROVIDERS: DashboardProvider[] = [
   inboxDashboardProvider,
   crmDashboardProvider,
@@ -392,8 +394,11 @@ export class DashboardService {
     }
   }
 
-  async getAdminDashboard(authUser: AuthUser): Promise<DashboardSummary> {
-    if (!authUser.organizationId) {
+  async getAdminDashboard(authUser: AuthUser, organizationIdOverride?: string | null): Promise<DashboardSummary> {
+    const organizationId = authUser.role === "super_admin" ? organizationIdOverride ?? authUser.organizationId : authUser.organizationId;
+    const scopedAuthUser = { ...authUser, organizationId };
+
+    if (!organizationId) {
       throw new Error("organization_id is required");
     }
 
@@ -402,11 +407,11 @@ export class DashboardService {
       const [contacts, openConversations, messagesToday, activeAccounts, salesRows, leadRows] = await Promise.all([
         client.query<{ count: string }>(
           "select count(*)::text as count from contacts where organization_id = $1",
-          [authUser.organizationId]
+          [organizationId]
         ),
         client.query<{ count: string }>(
           "select count(*)::text as count from conversations where organization_id = $1 and status = 'open'",
-          [authUser.organizationId]
+          [organizationId]
         ),
         client.query<{ count: string }>(
           `
@@ -415,7 +420,7 @@ export class DashboardService {
             where organization_id = $1
               and sent_at >= date_trunc('day', timezone('utc', now()))
           `,
-          [authUser.organizationId]
+          [organizationId]
         ),
         client.query<{ count: string }>(
           `
@@ -424,7 +429,7 @@ export class DashboardService {
             where organization_id = $1
               and connection_status in ('connected', 'reconnecting', 'pairing', 'qr_required')
           `,
-          [authUser.organizationId]
+          [organizationId]
         ),
         client.query<{ status: string; count: string; value: string }>(
           `
@@ -436,7 +441,7 @@ export class DashboardService {
             where so.organization_id = $1
             group by so.status
           `,
-          [authUser.organizationId]
+          [organizationId]
         ),
         client.query<{ status: string; count: string }>(
           `
@@ -447,7 +452,7 @@ export class DashboardService {
             where l.organization_id = $1
             group by l.status
           `,
-          [authUser.organizationId]
+          [organizationId]
         )
       ]);
 
@@ -464,7 +469,7 @@ export class DashboardService {
           group by 1
           order by 1 asc
         `,
-        [authUser.organizationId]
+        [organizationId]
       );
       const wonRevenueTrendRows = await client.query<{ bucket_start: string; value: string }>(
         `
@@ -479,12 +484,12 @@ export class DashboardService {
           group by 1
           order by 1 asc
         `,
-        [authUser.organizationId]
+        [organizationId]
       );
       const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
       const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
       const leaderboard = authUser.role === "org_admin"
-        ? await getSalesLeaderboard(client, { organizationId: authUser.organizationId })
+        ? await getSalesLeaderboard(client, { organizationId })
         : null;
 
       const dashboard: DashboardSummary = {
@@ -570,7 +575,7 @@ export class DashboardService {
         }
       };
 
-      return this.withOrganizationWidgets(dashboard, authUser, client, "admin");
+      return this.withOrganizationWidgets(dashboard, scopedAuthUser, client, "admin");
     } finally {
       client.release();
     }
@@ -725,6 +730,7 @@ export class DashboardService {
           activeModuleCount: 0,
           alertCount: 0
         },
+        enabledModules: [],
         widgets: []
       };
     }
@@ -762,6 +768,7 @@ export class DashboardService {
       title: "Organization Command Center",
       subtitle: "Module-aware overview for the features enabled on this organization.",
       activeModuleCount: enabledModules.size,
+      enabledModules: Array.from(enabledModules).sort(),
       widgets
     });
   }
@@ -794,6 +801,7 @@ export class DashboardService {
       title: "Platform Command Center",
       subtitle: "Cross-organization platform health and usage signals.",
       activeModuleCount: 1,
+      enabledModules: ["platform"],
       widgets: [widget]
     });
   }
@@ -806,6 +814,7 @@ export class DashboardService {
       title: string;
       subtitle: string;
       activeModuleCount: number;
+      enabledModules: string[];
       widgets: DashboardWidget[];
     }
   ): DashboardSummary {
@@ -816,6 +825,7 @@ export class DashboardService {
       ...dashboard,
       organizationId: input.organizationId,
       generatedAt: input.generatedAt,
+      enabledModules: input.enabledModules,
       summary: {
         title: input.title,
         subtitle: input.subtitle,
@@ -829,7 +839,14 @@ export class DashboardService {
 
   private async getEnabledOrganizationModules(client: PoolClient, organizationId: string) {
     const moduleKeys = ORGANIZATION_DASHBOARD_PROVIDERS.map((provider) => provider.moduleKey);
-    const lookupKeys = [...moduleKeys, LEGACY_CAMPAIGNS_MODULE_KEY, CAMPAIGN_MODULE_KEY];
+    const lookupKeys = [
+      ...new Set([
+        ...moduleKeys,
+        ...ORGANIZATION_DASHBOARD_PROVIDERS.flatMap((provider) => provider.moduleAliases ?? []),
+        LEGACY_CAMPAIGNS_MODULE_KEY,
+        CAMPAIGN_MODULE_KEY
+      ])
+    ];
     const result = await client.query<{ module_key: string; is_enabled: boolean }>(
       `
         select module_key, is_enabled
@@ -849,8 +866,16 @@ export class DashboardService {
       }
     }
 
+    for (const provider of ORGANIZATION_DASHBOARD_PROVIDERS) {
+      if (provider.moduleAliases?.some((alias) => rowsByKey.get(alias) === true)) {
+        enabledModules.add(provider.moduleKey);
+      }
+    }
+
     if (rowsByKey.get(CAMPAIGN_MODULE_KEY) === true || rowsByKey.get(LEGACY_CAMPAIGNS_MODULE_KEY) === true) {
-      enabledModules.add("campaign.whatsapp");
+      for (const campaignModuleKey of CAMPAIGN_CHILD_MODULE_KEYS) {
+        enabledModules.add(campaignModuleKey);
+      }
     }
 
     return enabledModules;

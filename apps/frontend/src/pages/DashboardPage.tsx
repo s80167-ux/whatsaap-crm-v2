@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Activity, AlertCircle, ArrowRight, Bot, BriefcaseBusiness, CheckCircle2, ChevronDown, Medal, MessageSquare, ShieldAlert, Sparkles, Target, Trophy, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
 
 // Helper to map width percent to Tailwind width class
@@ -25,9 +25,11 @@ import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useRoleDashboard } from "../hooks/useDashboard";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser } from "../lib/auth";
+import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import type { DashboardMetric, DashboardSummary, DynamicDashboardWidget } from "../types/dashboard";
 
 type SalesDashboard = NonNullable<DashboardSummary["sales"]>;
+type StoredUserRole = NonNullable<ReturnType<typeof getStoredUser>>["role"];
 type TrendDay = {
   key: string;
   label: string;
@@ -38,17 +40,20 @@ type TrendDay = {
 export function DashboardPage() {
   const { t } = useTranslation();
   const user = getStoredUser();
+  const outletContext = useOutletContext<DashboardOutletContext>();
   const isMobile = useIsMobileViewport();
-  const { data, isLoading } = useRoleDashboard();
+  const selectedOrganizationId = user?.role === "super_admin" ? outletContext.selectedOrganizationId : null;
+  const { data, isLoading, isError, error } = useRoleDashboard({ organizationId: selectedOrganizationId });
   const { toast: copyToast, copyText } = useCopyFeedback();
   const canShowSalesPerformance = user?.role === "org_admin" || user?.role === "user";
-
-  const title =
-    user?.role === "super_admin"
-      ? t("dashboard.platform")
-      : user?.role === "org_admin" || user?.role === "manager"
-        ? t("dashboard.organization")
-        : t("dashboard.mine");
+  const title = titleForRole(user?.role, t);
+  const loadingDashboard = buildLoadingDashboard(
+    user?.role === "super_admin" && selectedOrganizationId
+      ? outletContext.selectedOrganizationName ?? t("dashboard.organization")
+      : title
+  );
+  const visibleDashboard = data ?? (isLoading ? loadingDashboard : null);
+  const hasDynamicDashboard = Boolean(visibleDashboard?.summary || visibleDashboard?.widgets || visibleDashboard?.enabledModules);
 
   async function copyTimelineLink(input: {
     href?: string;
@@ -83,8 +88,10 @@ export function DashboardPage() {
 
   return (
     <section className="dashboard-main-grid dashboard-page">
-      {data?.widgets?.length ? (
-        <DynamicDashboard title={title} dashboard={data} isLoading={isLoading} />
+      {isError ? <DashboardErrorCard message={error instanceof Error ? error.message : "Unable to load dashboard widgets."} /> : null}
+
+      {!isError && hasDynamicDashboard && visibleDashboard ? (
+        <DynamicDashboard title={title} dashboard={visibleDashboard} isLoading={isLoading} />
       ) : data?.sales ? (
         <SalesCommandCenter title={title} sales={data.sales} operationalMetrics={data.metrics} isLoading={isLoading} />
       ) : (
@@ -109,9 +116,9 @@ export function DashboardPage() {
         </>
       )}
 
-      {!data?.widgets?.length && data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
+      {!hasDynamicDashboard && data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
 
-      {!data?.widgets?.length && data?.sales?.trends?.length ? (
+      {!hasDynamicDashboard && data?.sales?.trends?.length ? (
         <CompactSection title={t("dashboard.recentDailyBuckets")} eyebrow={t("dashboard.trendDrillDown")} summary={t("dashboard.openMatchingOrders")} defaultOpen={!isMobile}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {data.sales.trends.map((point) => (
@@ -154,6 +161,45 @@ export function DashboardPage() {
 
       <Toast message={copyToast?.message ?? null} variant={copyToast?.variant} />
     </section>
+  );
+}
+
+function titleForRole(role: StoredUserRole | undefined, translate: (key: string) => string) {
+  if (role === "super_admin") {
+    return translate("dashboard.platform");
+  }
+
+  if (role === "org_admin" || role === "manager") {
+    return translate("dashboard.organization");
+  }
+
+  return translate("dashboard.mine");
+}
+
+function buildLoadingDashboard(title: string): DashboardSummary {
+  return {
+    scope: "admin",
+    generatedAt: new Date().toISOString(),
+    enabledModules: [],
+    summary: {
+      title,
+      subtitle: "Loading module-aware dashboard widgets.",
+      healthStatus: "unknown",
+      activeModuleCount: 0,
+      alertCount: 0
+    },
+    widgets: [],
+    metrics: []
+  };
+}
+
+function DashboardErrorCard({ message }: { message: string }) {
+  return (
+    <Card elevated className="workspace-block border-destructive/20 p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-destructive">Dashboard unavailable</p>
+      <h2 className="mt-2 text-xl font-semibold text-text">Unable to load dashboard widgets</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-text-muted">{message}</p>
+    </Card>
   );
 }
 
@@ -360,6 +406,7 @@ function DynamicDashboard({
   const widgets = (dashboard.widgets ?? []).slice().sort((left, right) => left.priority - right.priority);
   const alerts = widgets.flatMap((widget) => widget.alerts.map((alert) => ({ ...alert, widgetTitle: widget.title })));
   const quickActions = widgets.flatMap((widget) => widget.quickActions).slice(0, 6);
+  const enabledModules = dashboard.enabledModules ?? [];
   const todayActivity =
     widgets
       .flatMap((widget) => widget.metrics)
@@ -371,10 +418,19 @@ function DynamicDashboard({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
-            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">Organization Command Center</h2>
+            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">{dashboard.summary?.title ?? title}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
               {dashboard.summary?.subtitle ?? title}
             </p>
+            {enabledModules.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {enabledModules.map((moduleKey) => (
+                  <span key={moduleKey} className="rounded-full border border-border bg-background-tint px-2.5 py-1 text-[11px] font-semibold text-text-muted">
+                    {formatModuleKey(moduleKey)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
           <DashboardStatusBadge status={dashboard.summary?.healthStatus ?? "unknown"} />
         </div>
@@ -440,6 +496,16 @@ function DynamicDashboard({
           </motion.div>
         ))}
       </div>
+
+      {!isLoading && widgets.length === 0 ? (
+        <Card elevated className="workspace-block p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">No widgets enabled</p>
+          <h3 className="mt-2 text-lg font-semibold text-text">This organization has no dashboard modules turned on.</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+            Enable Inbox, CRM, Sales, Campaigns, or AI from organization access limits to populate this page.
+          </p>
+        </Card>
+      ) : null}
     </div>
   );
 }
@@ -1480,6 +1546,26 @@ function formatHealthLabel(status: string) {
       return "Locked";
     default:
       return "Unknown";
+  }
+}
+
+function formatModuleKey(moduleKey: string) {
+  switch (moduleKey) {
+    case "campaign.whatsapp":
+      return "WhatsApp Campaigns";
+    case "campaign.email":
+      return "Email Campaigns";
+    case "ai_message_assist":
+    case "ai":
+      return "AI Assist";
+    case "crm":
+      return "CRM";
+    default:
+      return moduleKey
+        .split(/[._-]/g)
+        .filter(Boolean)
+        .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+        .join(" ");
   }
 }
 

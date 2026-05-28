@@ -48,6 +48,7 @@ export type DashboardProviderContext = {
 
 export type DashboardProvider = {
   moduleKey: string;
+  moduleAliases?: string[];
   title: string;
   description: string;
   priority: number;

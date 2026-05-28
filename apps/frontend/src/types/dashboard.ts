@@ -6,6 +6,8 @@ export interface DashboardMetric {
   tone?: "neutral" | "success" | "warning" | "danger" | "primary";
 }
 
+export type DashboardRouteRole = "agent" | "admin" | "super-admin";
+
 export type DashboardWidgetStatus = "healthy" | "warning" | "critical" | "locked" | "empty";
 
 export interface DynamicDashboardWidget {
@@ -34,6 +36,7 @@ export interface DashboardSummary {
   scope: "agent" | "admin" | "super_admin";
   organizationId?: string | null;
   generatedAt?: string;
+  enabledModules?: string[];
   summary?: {
     title: string;
     subtitle: string;

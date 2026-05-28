@@ -2,7 +2,8 @@ import type { DashboardProvider } from "./types.js";
 import { createWidget, safeQuery } from "./types.js";
 
 export const aiDashboardProvider: DashboardProvider = {
-  moduleKey: "ai_message_assist",
+  moduleKey: "ai",
+  moduleAliases: ["ai_message_assist"],
   title: "AI Assist",
   description: "AI usage, credits, and source mix.",
   priority: 70,
@@ -11,7 +12,7 @@ export const aiDashboardProvider: DashboardProvider = {
     if (!organizationId) {
       return createWidget({
         id: "ai-message-assist",
-        moduleKey: "ai_message_assist",
+        moduleKey: "ai",
         title: this.title,
         description: this.description,
         status: "empty",
@@ -87,7 +88,7 @@ export const aiDashboardProvider: DashboardProvider = {
 
     return createWidget({
       id: "ai-message-assist",
-      moduleKey: "ai_message_assist",
+      moduleKey: "ai",
       title: this.title,
       description: this.description,
       // Missing AI usage tables produce a quiet empty widget so older dev DBs keep loading.

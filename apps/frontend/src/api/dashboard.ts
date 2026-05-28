@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from "../lib/http";
 import type {
+  DashboardRouteRole,
   DashboardSummary,
   PlatformAuditLog,
   PlatformHealthSummary,
@@ -9,13 +10,19 @@ import type {
   PlatformUsageSummary
 } from "../types/dashboard";
 
-export async function fetchRoleDashboard(role: "agent" | "admin" | "super-admin") {
-  const response = await apiGet<{ data: DashboardSummary }>(`/dashboard/${role}`);
+export async function fetchRoleDashboard(role: DashboardRouteRole, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: DashboardSummary }>(`/dashboard/${role}${suffix}`);
   return response.data;
 }
 
-export async function fetchDynamicDashboard(role: "agent" | "admin" | "super-admin") {
-  return fetchRoleDashboard(role);
+export async function fetchDynamicDashboard(role: DashboardRouteRole, organizationId?: string | null): Promise<DashboardSummary> {
+  const dashboard = await fetchRoleDashboard(role, organizationId);
+  return {
+    ...dashboard,
+    widgets: dashboard.widgets ?? [],
+    enabledModules: dashboard.enabledModules ?? []
+  };
 }
 
 export async function fetchPlatformOrganizations() {
