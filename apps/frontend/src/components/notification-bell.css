@@ -1,0 +1,60 @@
+.notification-bell-panel {
+  border: 1px solid rgb(var(--topbar-border));
+  background: rgb(var(--topbar) / 0.92);
+  color: rgb(var(--topbar-foreground));
+  box-shadow: 0 18px 48px rgb(15 23 42 / 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.notification-bell-panel__header {
+  border-bottom: 1px solid rgb(var(--topbar-border));
+  background: linear-gradient(180deg, rgb(var(--topbar) / 0.96), rgb(var(--topbar) / 0.86));
+}
+
+.notification-bell-panel__list {
+  background: rgb(var(--card) / 0.84);
+}
+
+.notification-bell-row {
+  border-bottom: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--card) / 0.84);
+}
+
+.notification-bell-row:hover {
+  background: rgb(var(--primary) / 0.08);
+}
+
+.notification-bell-row--unread {
+  background: linear-gradient(135deg, rgb(var(--primary) / 0.12), rgb(var(--card) / 0.94));
+}
+
+@media (max-width: 640px) {
+  .notification-bell-panel {
+    position: fixed !important;
+    top: 4.75rem !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto !important;
+    max-height: calc(100dvh - 6rem);
+    overflow: hidden;
+    border-radius: 1.25rem !important;
+  }
+
+  .notification-bell-panel__header {
+    padding: 0.85rem 1rem;
+  }
+
+  .notification-bell-panel__list {
+    max-height: calc(100dvh - 12rem);
+  }
+
+  .notification-bell-row {
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .notification-bell-row__title {
+    white-space: normal;
+    line-height: 1.25;
+  }
+}
