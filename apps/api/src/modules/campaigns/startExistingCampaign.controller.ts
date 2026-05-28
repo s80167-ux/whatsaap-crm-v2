@@ -48,6 +48,7 @@ type AudienceGroupRecord = {
   id: string;
   status: string;
   valid_count: number;
+  storage_status: string;
 };
 
 type CampaignAudienceContactRecord = {
@@ -279,7 +280,7 @@ async function assertConnectedSender(organizationId: string, senderWhatsAppAccou
 async function assertReadyAudienceGroup(organizationId: string, audienceGroupId: string) {
   const result = await query<AudienceGroupRecord>(
     `
-      select id, status, valid_count
+      select id, status, valid_count, storage_status
       from campaign_audience_groups
       where organization_id = $1
         and id = $2
@@ -289,7 +290,7 @@ async function assertReadyAudienceGroup(organizationId: string, audienceGroupId:
   );
   const group = result.rows[0];
 
-  if (!group || group.status !== "imported" || group.valid_count <= 0) {
+  if (!group || group.status !== "imported" || group.valid_count <= 0 || group.storage_status === "deleted_details") {
     throw new AppError("Audience Group with valid contacts is required", 400, "audience_group_not_ready");
   }
 }

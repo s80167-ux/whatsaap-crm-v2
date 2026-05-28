@@ -1,4 +1,4 @@
-import { Eye, Trash2 } from "lucide-react";
+import { Archive, Database, Eye, Trash2 } from "lucide-react";
 import { Button } from "../../../../components/Button";
 import { PanelPagination, usePanelPagination } from "../../../../components/PanelPagination";
 import type { AudienceGroup } from "../types/audienceGroup.types";
@@ -8,9 +8,24 @@ type AudienceGroupListTableProps = {
   loading?: boolean;
   onView: (group: AudienceGroup) => void;
   onDelete: (group: AudienceGroup) => void;
+  onSaveAsCrm?: (group: AudienceGroup) => void;
+  onArchive?: (group: AudienceGroup) => void;
+  onDeleteDetails?: (group: AudienceGroup) => void;
+  canManageStorage?: boolean;
+  crmSaveDisabledReason?: string | null;
 };
 
-export function AudienceGroupListTable({ groups, loading = false, onView, onDelete }: AudienceGroupListTableProps) {
+export function AudienceGroupListTable({
+  groups,
+  loading = false,
+  onView,
+  onDelete,
+  onSaveAsCrm,
+  onArchive,
+  onDeleteDetails,
+  canManageStorage = false,
+  crmSaveDisabledReason = null
+}: AudienceGroupListTableProps) {
   const groupPagination = usePanelPagination(groups);
 
   if (loading) {
@@ -33,12 +48,11 @@ export function AudienceGroupListTable({ groups, loading = false, onView, onDele
           <thead>
             <tr>
               <Th>Group Name</Th>
-              <Th>Status</Th>
-              <Th>Total Rows</Th>
+              <Th>Import Status</Th>
+              <Th>CRM Status</Th>
+              <Th>Storage Status</Th>
+              <Th>Total</Th>
               <Th>Valid</Th>
-              <Th>Invalid</Th>
-              <Th>Duplicates</Th>
-              <Th>Opt-out Blocked</Th>
               <Th>Linked CRM</Th>
               <Th>Created At</Th>
               <Th>Action</Th>
@@ -54,22 +68,62 @@ export function AudienceGroupListTable({ groups, loading = false, onView, onDele
                   </div>
                 </Td>
                 <Td>
-                  <span className="inline-flex border border-border bg-background-tint px-2 py-1 text-xs font-semibold capitalize text-text-muted">
-                    {group.status}
-                  </span>
+                  <StatusBadge label={group.status} />
+                </Td>
+                <Td>
+                  <StatusBadge label={formatCrmStatus(group.crm_save_status ?? "not_saved")} tone={group.crm_save_status === "saved" ? "success" : "muted"} />
+                </Td>
+                <Td>
+                  <StatusBadge label={formatStorageStatus(group.storage_status ?? "active")} tone={group.storage_status === "archived" ? "warning" : group.storage_status === "deleted_details" ? "danger" : "success"} />
                 </Td>
                 <Td>{group.total_rows}</Td>
                 <Td>{group.valid_count}</Td>
-                <Td>{group.invalid_count}</Td>
-                <Td>{group.duplicate_count}</Td>
-                <Td>{group.opt_out_count}</Td>
-                <Td>{group.linked_crm_count}</Td>
+                <Td>{group.crm_saved_count ?? group.linked_crm_count}</Td>
                 <Td>{formatDate(group.created_at)}</Td>
                 <Td>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button size="icon" variant="ghost" className="border border-border bg-card text-text hover:bg-muted hover:text-primary" aria-label="View Audience Group" onClick={() => onView(group)}>
                       <Eye size={16} />
                     </Button>
+                    {canManageStorage && onSaveAsCrm ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="border border-border bg-card text-text hover:bg-muted hover:text-primary disabled:opacity-50"
+                        aria-label={crmSaveDisabledReason ?? "Save as CRM Contacts"}
+                        title={crmSaveDisabledReason ?? "Save as CRM Contacts"}
+                        disabled={Boolean(crmSaveDisabledReason) || group.storage_status === "deleted_details"}
+                        onClick={() => onSaveAsCrm(group)}
+                      >
+                        <Database size={16} />
+                      </Button>
+                    ) : null}
+                    {canManageStorage && onArchive ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="border border-border bg-card text-text hover:bg-muted hover:text-primary disabled:opacity-50"
+                        aria-label="Archive Audience"
+                        title="Archive Audience"
+                        disabled={group.storage_status !== "active"}
+                        onClick={() => onArchive(group)}
+                      >
+                        <Archive size={16} />
+                      </Button>
+                    ) : null}
+                    {canManageStorage && onDeleteDetails ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="border border-border bg-card text-coral hover:bg-muted hover:text-coral disabled:opacity-50"
+                        aria-label="Delete Audience Details"
+                        title="Delete Audience Details"
+                        disabled={group.storage_status === "deleted_details"}
+                        onClick={() => onDeleteDetails(group)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    ) : null}
                     <Button size="icon" variant="ghost" className="border border-border bg-card text-coral hover:bg-muted hover:text-coral" aria-label="Delete Audience Group" onClick={() => onDelete(group)}>
                       <Trash2 size={16} />
                     </Button>
@@ -97,6 +151,27 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return <td>{children}</td>;
+}
+
+function StatusBadge({ label, tone = "muted" }: { label: string; tone?: "muted" | "success" | "warning" | "danger" }) {
+  const toneClass =
+    tone === "success"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+      : tone === "warning"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
+        : tone === "danger"
+          ? "border-coral/30 bg-coral/10 text-coral"
+          : "border-border bg-background-tint text-text-muted";
+
+  return <span className={`inline-flex border px-2 py-1 text-xs font-semibold capitalize ${toneClass}`}>{label}</span>;
+}
+
+function formatCrmStatus(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+function formatStorageStatus(value: string) {
+  return value === "deleted_details" ? "Details Deleted" : value;
 }
 
 function formatDate(value: string) {

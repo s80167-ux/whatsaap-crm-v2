@@ -3,8 +3,10 @@ import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requireRole } from "../../middleware/authMiddleware.js";
 import {
   cancelCampaign,
+  archiveAudienceGroup,
   createCampaign,
   createAudienceGroup,
+  deleteAudienceGroupDetails,
   deleteAudienceGroup,
   deleteCampaign,
   exportCampaignRecipients,
@@ -16,7 +18,9 @@ import {
   listAudienceGroups,
   listCampaigns,
   pauseCampaign,
+  previewSaveAudienceAsCrmContacts,
   resumeCampaign,
+  saveAudienceAsCrmContacts,
   sendCampaignTest,
   sendCampaignTestPreview,
   startCampaignPreview,
@@ -38,6 +42,10 @@ campaignsRoutes.post("/audience-groups", asyncHandler(createAudienceGroup));
 campaignsRoutes.get("/audience-groups/:audienceGroupId", asyncHandler(getAudienceGroup));
 campaignsRoutes.post("/audience-groups/:audienceGroupId/import", asyncHandler(importAudienceGroupContacts));
 campaignsRoutes.get("/audience-groups/:audienceGroupId/contacts", asyncHandler(getAudienceGroupContacts));
+campaignsRoutes.get("/audience-groups/:audienceGroupId/save-as-crm-contacts/preview", asyncHandler(previewSaveAudienceAsCrmContacts));
+campaignsRoutes.post("/audience-groups/:audienceGroupId/save-as-crm-contacts", asyncHandler(saveAudienceAsCrmContacts));
+campaignsRoutes.post("/audience-groups/:audienceGroupId/archive", asyncHandler(archiveAudienceGroup));
+campaignsRoutes.post("/audience-groups/:audienceGroupId/delete-details", asyncHandler(deleteAudienceGroupDetails));
 campaignsRoutes.delete("/audience-groups/:audienceGroupId", asyncHandler(deleteAudienceGroup));
 campaignsRoutes.get("/:campaignId", asyncHandler(getCampaign));
 campaignsRoutes.get("/:campaignId/recipients", asyncHandler(listCampaignRecipients));

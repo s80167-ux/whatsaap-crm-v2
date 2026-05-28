@@ -55,7 +55,6 @@ export function CreateAudienceGroupDrawer({
   const [rows, setRows] = useState<ReturnType<typeof parseAudienceCsv>["rows"]>([]);
   const [mapping, setMapping] = useState<AudienceColumnMapping>({});
   const [result, setResult] = useState<AudienceValidationResult | null>(null);
-  const [addToCrm, setAddToCrm] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   const canContinue = useMemo(() => {
@@ -91,7 +90,6 @@ export function CreateAudienceGroupDrawer({
     setRows([]);
     setMapping({});
     setResult(null);
-    setAddToCrm(false);
     setIsBusy(false);
   }
 
@@ -165,8 +163,7 @@ export function CreateAudienceGroupDrawer({
       const imported = await importAudienceContacts({
         audienceGroupId: group.id,
         organizationId,
-        contacts: result.contacts,
-        addValidNewContactsToCrm: addToCrm
+        contacts: result.contacts
       });
 
       onCreated(imported, result);
@@ -272,20 +269,12 @@ export function CreateAudienceGroupDrawer({
         {stepIndex === 5 ? (
           <div className="space-y-4">
             <AudienceValidationSummary result={result} />
-            <label className="flex items-start gap-3 border border-border bg-background-tint p-3">
-              <input
-                type="checkbox"
-                checked={addToCrm}
-                onChange={(event) => setAddToCrm(event.target.checked)}
-                className="mt-1"
-              />
-              <span>
-                <span className="block text-sm font-semibold text-text">Add valid new contacts to CRM Contacts</span>
-                <span className="mt-1 block text-xs leading-5 text-text-muted">
-                  Optional for Phase 1. Existing CRM matches are linked by phone when available; new CSV rows stay audience-only unless this is selected.
-                </span>
-              </span>
-            </label>
+            <div className="border border-border bg-background-tint p-3">
+              <p className="text-sm font-semibold text-text">Audience will be saved for campaign use only.</p>
+              <p className="mt-1 text-xs leading-5 text-text-muted">
+                Admins can manually save this audience as CRM Contacts later from the Audience Group list.
+              </p>
+            </div>
           </div>
         ) : null}
 

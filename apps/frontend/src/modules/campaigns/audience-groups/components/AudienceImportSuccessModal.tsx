@@ -36,7 +36,7 @@ export function AudienceImportSuccessModal({
           </span>
           <div>
             <p className="text-base font-semibold text-text">{group?.name ?? "Audience Group"}</p>
-            <p className="mt-1 text-sm text-text-muted">Ready for Phase 2 campaign creation.</p>
+            <p className="mt-1 text-sm text-text-muted">Ready to use in campaigns. CRM saving stays manual from the Audience Group list.</p>
           </div>
         </div>
 
@@ -51,9 +51,7 @@ export function AudienceImportSuccessModal({
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={onViewGroup}>View Audience Group</Button>
-          <Button variant="secondary" onClick={onPhaseTwoNotice} disabled>
-            Create Campaign
-          </Button>
+          <Button variant="secondary" onClick={onPhaseTwoNotice}>Create Campaign</Button>
         </div>
 
         <AudienceErrorReportButton result={result} />

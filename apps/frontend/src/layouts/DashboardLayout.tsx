@@ -81,6 +81,8 @@ function ModuleBadge({ children, tone = "muted" }: { children: ReactNode; tone?:
 
 export type DashboardOutletContext = {
   isSuperAdmin: boolean;
+  role: "super_admin" | "org_admin" | "manager" | "agent" | "user" | null;
+  crmModuleEnabled: boolean;
   selectedOrganizationId: string;
   selectedOrganizationName: string | null;
   setSelectedOrganizationId: (organizationId: string) => void;
@@ -301,7 +303,18 @@ function SidebarContent({
             compact={mobile}
           />
         ) : null}
-        {showSales ? <NavLinkItem to="/sales" icon={<TrendingUp size={18} />} label={t("nav.sales")} onClick={onNavigate} compact={mobile} /> : null}
+        {showSales ? (
+          <SidebarNavGroup
+            icon={<TrendingUp size={18} />}
+            label={t("nav.sales")}
+            items={[
+              { to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") },
+              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") }
+            ]}
+            onNavigate={onNavigate}
+            compact={mobile}
+          />
+        ) : null}
         {mobile ? <p className="px-3 pt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">{t("common.workspace")}</p> : null}
         {showCrm ? (
           <SidebarNavGroup
@@ -310,7 +323,6 @@ function SidebarContent({
             items={[
               { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
               ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
-              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.report") },
               ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
             ]}
             onNavigate={onNavigate}
@@ -472,7 +484,10 @@ export function DashboardLayout() {
             id: "sales",
             label: t("nav.sales"),
             icon: <TrendingUp size={18} />,
-            items: [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }]
+            items: [
+              { to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") },
+              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") }
+            ]
           }
         ]
       : []),
@@ -485,7 +500,6 @@ export function DashboardLayout() {
             items: [
               { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
               ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
-              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") },
               ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
             ]
           }
@@ -1184,7 +1198,14 @@ export function DashboardLayout() {
         </motion.aside>
         <main className="min-w-0 bg-transparent px-3 pb-4 pt-12 md:px-4 md:pt-4 xl:px-5">
           <RouteTransition className="route-transition-stage">
-            <Outlet context={{ isSuperAdmin, selectedOrganizationId, selectedOrganizationName, setSelectedOrganizationId } satisfies DashboardOutletContext} />
+            <Outlet context={{
+              isSuperAdmin,
+              role: user?.role ?? null,
+              crmModuleEnabled: showCrm,
+              selectedOrganizationId,
+              selectedOrganizationName,
+              setSelectedOrganizationId
+            } satisfies DashboardOutletContext} />
           </RouteTransition>
         </main>
       </div>

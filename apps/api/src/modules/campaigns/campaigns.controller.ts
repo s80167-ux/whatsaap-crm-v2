@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { PoolClient } from "pg";
 import { z } from "zod";
 import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
@@ -60,8 +61,7 @@ const audienceContactSchema = z.object({
 
 const importAudienceContactsBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
-  contacts: z.array(audienceContactSchema),
-  addValidNewContactsToCrm: z.boolean().default(false)
+  contacts: z.array(audienceContactSchema)
 });
 
 const tempoSchema = z.object({
@@ -122,6 +122,14 @@ const campaignActionBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable()
 });
 
+const audienceStorageActionBodySchema = z.object({
+  organizationId: z.string().uuid().optional().nullable()
+});
+
+const audienceGroupsQuerySchema = organizationQuerySchema.extend({
+  storage_status: z.enum(["active", "archived", "deleted_details", "all"]).optional()
+});
+
 const campaignRecipientsQuerySchema = z.object({
   organization_id: z.string().uuid().optional(),
   status: z.enum(["pending", "queued", "sent", "failed", "skipped"]).optional(),
@@ -146,6 +154,35 @@ type AudienceGroupRecord = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  crm_save_status: "not_saved" | "partially_saved" | "saved" | "failed";
+  crm_saved_count: number;
+  crm_created_count: number;
+  crm_linked_count: number;
+  crm_skipped_count: number;
+  crm_save_requested_at: string | null;
+  crm_saved_at: string | null;
+  crm_saved_by: string | null;
+  storage_status: "active" | "archived" | "deleted_details";
+  archived_at: string | null;
+  archived_by: string | null;
+  details_deleted_at: string | null;
+  details_deleted_by: string | null;
+};
+
+type SaveAudiencePreviewSummary = {
+  audienceGroupId: string;
+  audienceGroupName: string;
+  totalAudienceContacts: number;
+  validContacts: number;
+  alreadyLinkedCrmContacts: number;
+  matchedExistingContacts: number;
+  matchedContactIdentities: number;
+  existingContactsToLink: number;
+  estimatedNewContactsToCreate: number;
+  skippedInvalid: number;
+  skippedDuplicate: number;
+  skippedOptedOut: number;
+  skippedMissingPhone: number;
 };
 
 type CampaignRecord = {
@@ -262,15 +299,25 @@ function resolveOrganizationId(request: Request, inputOrganizationId?: string | 
 }
 
 export async function listAudienceGroups(request: Request, response: Response) {
+  const queryInput = audienceGroupsQuerySchema.parse(request.query);
   const organizationId = resolveOrganizationId(request);
+  const storageStatus = queryInput.storage_status ?? "active";
+  const values: unknown[] = [organizationId];
+  const storageFilter = storageStatus === "all" ? "" : "and storage_status = $2";
+
+  if (storageStatus !== "all") {
+    values.push(storageStatus);
+  }
+
   const result = await query<AudienceGroupRecord>(
     `
       select *
       from campaign_audience_groups
       where organization_id = $1
+        ${storageFilter}
       order by created_at desc, name asc
     `,
-    [organizationId]
+    values
   );
 
   return response.json({ data: result.rows });
@@ -1027,9 +1074,6 @@ export async function importAudienceGroupContacts(request: Request, response: Re
       );
     }
 
-    // TODO Phase 1 follow-up: if addValidNewContactsToCrm is true, insert only new valid contacts through ContactCommandService.
-    void input.addValidNewContactsToCrm;
-
     const updateResult = await client.query<AudienceGroupRecord>(
       `
         update campaign_audience_groups
@@ -1093,6 +1137,433 @@ export async function deleteAudienceGroup(request: Request, response: Response) 
   );
 
   return response.json({ ok: true });
+}
+
+export async function previewSaveAudienceAsCrmContacts(request: Request, response: Response) {
+  const organizationId = resolveOrganizationId(request);
+  const { audienceGroupId } = audienceGroupParamsSchema.parse(request.params);
+  const group = await findAudienceGroup(organizationId, audienceGroupId);
+
+  if (!group) {
+    throw new AppError("Audience Group not found", 404, "audience_group_not_found");
+  }
+
+  return response.json({ data: await buildSaveAudiencePreview(organizationId, group) });
+}
+
+export async function saveAudienceAsCrmContacts(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { audienceGroupId } = audienceGroupParamsSchema.parse(request.params);
+  const input = audienceStorageActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+  const group = await findAudienceGroup(organizationId, audienceGroupId);
+
+  if (!group) {
+    throw new AppError("Audience Group not found", 404, "audience_group_not_found");
+  }
+
+  const beforeSummary = await buildSaveAudiencePreview(organizationId, group);
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        update campaign_audience_groups
+        set crm_save_requested_at = timezone('utc', now()),
+            crm_save_status = 'not_saved',
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [organizationId, audienceGroupId]
+    );
+
+    await linkAudienceRowsToExistingContacts(client, organizationId, audienceGroupId);
+    await createMissingAudienceContacts(client, organizationId, audienceGroupId);
+    await linkAudienceRowsToExistingContacts(client, organizationId, audienceGroupId);
+    await fillEmptyContactNamesFromAudience(client, organizationId, audienceGroupId);
+    await insertAudienceContactSources(client, organizationId, audienceGroupId, group.name, auth.organizationUserId);
+  });
+
+  const afterSummary = await buildSaveAudiencePreview(organizationId, group);
+  const savedCount = afterSummary.alreadyLinkedCrmContacts;
+  const createdCount =
+    beforeSummary.estimatedNewContactsToCreate > 0
+      ? beforeSummary.estimatedNewContactsToCreate
+      : group.crm_created_count;
+  const linkedCount = Math.max(savedCount - createdCount, 0);
+  const skippedCount =
+    afterSummary.skippedInvalid +
+    afterSummary.skippedDuplicate +
+    afterSummary.skippedOptedOut +
+    afterSummary.skippedMissingPhone;
+  const crmSaveStatus =
+    savedCount <= 0
+      ? "failed"
+      : savedCount >= afterSummary.validContacts
+        ? "saved"
+        : "partially_saved";
+
+  const updatedGroup = await query<AudienceGroupRecord>(
+    `
+      update campaign_audience_groups
+      set crm_save_status = $3,
+          crm_saved_count = $4,
+          crm_created_count = $5,
+          crm_linked_count = $6,
+          crm_skipped_count = $7,
+          crm_save_requested_at = coalesce(crm_save_requested_at, timezone('utc', now())),
+          crm_saved_at = timezone('utc', now()),
+          crm_saved_by = $8,
+          linked_crm_count = $4,
+          updated_at = timezone('utc', now())
+      where organization_id = $1
+        and id = $2
+      returning *
+    `,
+    [
+      organizationId,
+      audienceGroupId,
+      crmSaveStatus,
+      savedCount,
+      createdCount,
+      linkedCount,
+      skippedCount,
+      auth.organizationUserId
+    ]
+  );
+
+  return response.json({
+    data: {
+      ...afterSummary,
+      crmCreatedCount: createdCount,
+      crmLinkedCount: linkedCount,
+      crmSkippedCount: skippedCount,
+      crmSaveStatus,
+      group: updatedGroup.rows[0] ?? null
+    }
+  });
+}
+
+export async function archiveAudienceGroup(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { audienceGroupId } = audienceGroupParamsSchema.parse(request.params);
+  const input = audienceStorageActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+
+  const result = await query<AudienceGroupRecord>(
+    `
+      update campaign_audience_groups
+      set storage_status = 'archived',
+          archived_at = timezone('utc', now()),
+          archived_by = $3,
+          updated_at = timezone('utc', now())
+      where organization_id = $1
+        and id = $2
+        and storage_status <> 'deleted_details'
+      returning *
+    `,
+    [organizationId, audienceGroupId, auth.organizationUserId]
+  );
+
+  if (!result.rows[0]) {
+    throw new AppError("Audience Group not found", 404, "audience_group_not_found");
+  }
+
+  return response.json({ data: result.rows[0] });
+}
+
+export async function deleteAudienceGroupDetails(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { audienceGroupId } = audienceGroupParamsSchema.parse(request.params);
+  const input = audienceStorageActionBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+  const activeCampaigns = await query<{ count: string }>(
+    `
+      select count(*) as count
+      from campaigns
+      where organization_id = $1
+        and audience_group_id = $2
+        and status in ('draft', 'scheduled', 'queued', 'sending', 'running', 'paused')
+    `,
+    [organizationId, audienceGroupId]
+  );
+
+  if (Number(activeCampaigns.rows[0]?.count ?? 0) > 0) {
+    throw new AppError("Audience details cannot be deleted while an active campaign is using this audience.", 400, "audience_in_active_campaign");
+  }
+
+  const group = await withTransaction(async (client) => {
+    await client.query(
+      `
+        delete from campaign_audience_contacts
+        where organization_id = $1
+          and audience_group_id = $2
+      `,
+      [organizationId, audienceGroupId]
+    );
+
+    const updateResult = await client.query<AudienceGroupRecord>(
+      `
+        update campaign_audience_groups
+        set storage_status = 'deleted_details',
+            details_deleted_at = timezone('utc', now()),
+            details_deleted_by = $3,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+        returning *
+      `,
+      [organizationId, audienceGroupId, auth.organizationUserId]
+    );
+
+    return updateResult.rows[0] ?? null;
+  });
+
+  if (!group) {
+    throw new AppError("Audience Group not found", 404, "audience_group_not_found");
+  }
+
+  return response.json({ data: group });
+}
+
+async function buildSaveAudiencePreview(organizationId: string, group: AudienceGroupRecord): Promise<SaveAudiencePreviewSummary> {
+  const result = await query<{
+    total_audience_contacts: string;
+    valid_contacts: string;
+    already_linked_crm_contacts: string;
+    matched_existing_contacts: string;
+    matched_contact_identities: string;
+    existing_contacts_to_link: string;
+    estimated_new_contacts_to_create: string;
+    skipped_invalid: string;
+    skipped_duplicate: string;
+    skipped_opted_out: string;
+    skipped_missing_phone: string;
+  }>(
+    `
+      with contacts_scored as (
+        select
+          cac.*,
+          existing.crm_contact_id as direct_contact_id,
+          identity_match.crm_contact_id as identity_contact_id
+        from campaign_audience_contacts cac
+        left join lateral (
+          select c.id as crm_contact_id
+          from contacts c
+          where c.organization_id = cac.organization_id
+            and c.primary_phone_normalized = cac.phone_normalized
+          order by c.created_at asc, c.id asc
+          limit 1
+        ) existing on true
+        left join lateral (
+          select ci.contact_id as crm_contact_id
+          from contact_identities ci
+          where ci.organization_id = cac.organization_id
+            and ci.phone_normalized = cac.phone_normalized
+          order by ci.is_primary desc, ci.created_at asc, ci.id asc
+          limit 1
+        ) identity_match on true
+        where cac.organization_id = $1
+          and cac.audience_group_id = $2
+      ),
+      eligible as (
+        select *
+        from contacts_scored
+        where validation_status = 'valid'
+          and is_duplicate = false
+          and is_opted_out = false
+          and phone_normalized is not null
+      )
+      select
+        count(*)::text as total_audience_contacts,
+        (select count(*) from eligible)::text as valid_contacts,
+        (select count(*) from eligible where crm_contact_id is not null)::text as already_linked_crm_contacts,
+        (select count(*) from eligible where direct_contact_id is not null)::text as matched_existing_contacts,
+        (select count(*) from eligible where identity_contact_id is not null)::text as matched_contact_identities,
+        (
+          select count(*)
+          from eligible
+          where crm_contact_id is null
+            and coalesce(direct_contact_id, identity_contact_id) is not null
+        )::text as existing_contacts_to_link,
+        (
+          select count(*)
+          from eligible
+          where crm_contact_id is null
+            and direct_contact_id is null
+            and identity_contact_id is null
+        )::text as estimated_new_contacts_to_create,
+        count(*) filter (where validation_status <> 'valid')::text as skipped_invalid,
+        count(*) filter (where is_duplicate = true)::text as skipped_duplicate,
+        count(*) filter (where is_opted_out = true)::text as skipped_opted_out,
+        count(*) filter (where phone_normalized is null)::text as skipped_missing_phone
+      from contacts_scored
+    `,
+    [organizationId, group.id]
+  );
+
+  const row = result.rows[0];
+
+  return {
+    audienceGroupId: group.id,
+    audienceGroupName: group.name,
+    totalAudienceContacts: Number(row?.total_audience_contacts ?? 0),
+    validContacts: Number(row?.valid_contacts ?? 0),
+    alreadyLinkedCrmContacts: Number(row?.already_linked_crm_contacts ?? 0),
+    matchedExistingContacts: Number(row?.matched_existing_contacts ?? 0),
+    matchedContactIdentities: Number(row?.matched_contact_identities ?? 0),
+    existingContactsToLink: Number(row?.existing_contacts_to_link ?? 0),
+    estimatedNewContactsToCreate: Number(row?.estimated_new_contacts_to_create ?? 0),
+    skippedInvalid: Number(row?.skipped_invalid ?? 0),
+    skippedDuplicate: Number(row?.skipped_duplicate ?? 0),
+    skippedOptedOut: Number(row?.skipped_opted_out ?? 0),
+    skippedMissingPhone: Number(row?.skipped_missing_phone ?? 0)
+  };
+}
+
+async function linkAudienceRowsToExistingContacts(client: PoolClient, organizationId: string, audienceGroupId: string) {
+  await client.query(
+    `
+      with matches as (
+        select
+          cac.id as audience_contact_id,
+          coalesce(existing.crm_contact_id, identity_match.crm_contact_id) as crm_contact_id
+        from campaign_audience_contacts cac
+        left join lateral (
+          select c.id as crm_contact_id
+          from contacts c
+          where c.organization_id = cac.organization_id
+            and c.primary_phone_normalized = cac.phone_normalized
+          order by c.created_at asc, c.id asc
+          limit 1
+        ) existing on true
+        left join lateral (
+          select ci.contact_id as crm_contact_id
+          from contact_identities ci
+          where ci.organization_id = cac.organization_id
+            and ci.phone_normalized = cac.phone_normalized
+          order by ci.is_primary desc, ci.created_at asc, ci.id asc
+          limit 1
+        ) identity_match on true
+        where cac.organization_id = $1
+          and cac.audience_group_id = $2
+          and cac.validation_status = 'valid'
+          and cac.is_duplicate = false
+          and cac.is_opted_out = false
+          and cac.phone_normalized is not null
+          and cac.crm_contact_id is null
+      )
+      update campaign_audience_contacts cac
+      set crm_contact_id = matches.crm_contact_id
+      from matches
+      where cac.id = matches.audience_contact_id
+        and matches.crm_contact_id is not null
+    `,
+    [organizationId, audienceGroupId]
+  );
+}
+
+async function createMissingAudienceContacts(client: PoolClient, organizationId: string, audienceGroupId: string) {
+  await client.query(
+    `
+      insert into contacts (
+        organization_id,
+        display_name,
+        primary_phone_e164,
+        primary_phone_normalized,
+        profile_quality_score,
+        is_verified,
+        anchored_by_source,
+        lifecycle_status
+      )
+      select
+        cac.organization_id,
+        nullif(trim(cac.name), ''),
+        cac.phone_normalized,
+        cac.phone_normalized,
+        35,
+        false,
+        'audience_upload',
+        'lead'
+      from campaign_audience_contacts cac
+      where cac.organization_id = $1
+        and cac.audience_group_id = $2
+        and cac.validation_status = 'valid'
+        and cac.is_duplicate = false
+        and cac.is_opted_out = false
+        and cac.phone_normalized is not null
+        and cac.crm_contact_id is null
+        and not exists (
+          select 1
+          from contacts c
+          where c.organization_id = cac.organization_id
+            and c.primary_phone_normalized = cac.phone_normalized
+        )
+        and not exists (
+          select 1
+          from contact_identities ci
+          where ci.organization_id = cac.organization_id
+            and ci.phone_normalized = cac.phone_normalized
+        )
+    `,
+    [organizationId, audienceGroupId]
+  );
+}
+
+async function fillEmptyContactNamesFromAudience(client: PoolClient, organizationId: string, audienceGroupId: string) {
+  await client.query(
+    `
+      update contacts c
+      set display_name = nullif(trim(cac.name), ''),
+          updated_at = timezone('utc', now())
+      from campaign_audience_contacts cac
+      where cac.organization_id = $1
+        and cac.audience_group_id = $2
+        and cac.crm_contact_id = c.id
+        and nullif(trim(cac.name), '') is not null
+        and nullif(trim(coalesce(c.display_name, '')), '') is null
+    `,
+    [organizationId, audienceGroupId]
+  );
+}
+
+async function insertAudienceContactSources(
+  client: PoolClient,
+  organizationId: string,
+  audienceGroupId: string,
+  audienceGroupName: string,
+  createdBy: string | null
+) {
+  await client.query(
+    `
+      insert into contact_sources (
+        organization_id,
+        contact_id,
+        source_type,
+        source_ref_id,
+        source_label,
+        confidence_score,
+        created_by
+      )
+      select distinct
+        cac.organization_id,
+        cac.crm_contact_id,
+        'audience_upload',
+        cac.audience_group_id,
+        $3,
+        70,
+        $4
+      from campaign_audience_contacts cac
+      where cac.organization_id = $1
+        and cac.audience_group_id = $2
+        and cac.crm_contact_id is not null
+        and cac.validation_status = 'valid'
+        and cac.is_duplicate = false
+        and cac.is_opted_out = false
+      on conflict do nothing
+    `,
+    [organizationId, audienceGroupId, audienceGroupName, createdBy]
+  );
 }
 
 async function findAudienceGroup(organizationId: string, audienceGroupId: string) {
@@ -1479,7 +1950,7 @@ async function syncCampaignSenderAccounts(
 async function assertReadyAudienceGroup(organizationId: string, audienceGroupId: string) {
   const group = await findAudienceGroup(organizationId, audienceGroupId);
 
-  if (!group || group.status !== "imported" || group.valid_count <= 0) {
+  if (!group || group.status !== "imported" || group.valid_count <= 0 || group.storage_status === "deleted_details") {
     throw new AppError("Audience Group with valid contacts is required", 400, "audience_group_not_ready");
   }
 }

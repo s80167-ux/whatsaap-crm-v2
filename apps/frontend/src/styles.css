@@ -2023,6 +2023,33 @@ canvas {
     @apply px-3 py-2.5;
   }
 
+  .workspace-table-wrap,
+  .sales-table-wrap {
+    overflow-x: auto;
+  }
+
+  .workspace-table {
+    min-width: 760px;
+  }
+
+  .workspace-table th {
+    white-space: nowrap;
+  }
+
+  .workspace-table td {
+    overflow-wrap: normal;
+  }
+
+  .sales-table-wrap .workspace-table {
+    min-width: 760px;
+    table-layout: auto;
+  }
+
+  .sales-table-wrap .workspace-table th {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
   .sales-page {
     @apply space-y-4;
   }

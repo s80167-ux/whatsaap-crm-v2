@@ -153,7 +153,7 @@ export const router = createBrowserRouter([
           { path: "contacts", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactsPage /></ModuleRouteGuard>) },
           { path: "contacts/reliability", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactReliabilityPage /></ModuleRouteGuard>) },
           { path: "sales", element: withRouteFallback(<ModuleRouteGuard moduleKey="sales" moduleName="Sales"><SalesPage /></ModuleRouteGuard>) },
-          { path: "reports", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ReportsPage /></ModuleRouteGuard>) },
+          { path: "reports", element: withRouteFallback(<ModuleRouteGuard moduleKey="sales" moduleName="Sales"><ReportsPage /></ModuleRouteGuard>) },
           { path: "exports", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><DataExportPage /></ModuleRouteGuard>) },
           {
             path: "campaigns",
