@@ -6,6 +6,7 @@ import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications 
 import { useRefetchOnPageActive } from "../hooks/useRefetchOnPageActive";
 import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 import type { NotificationItem } from "../types/api";
+import "./notification-bell.css";
 
 export function NotificationBell() {
   const navigate = useNavigate();
@@ -64,11 +65,11 @@ export function NotificationBell() {
       </button>
 
       {isOpen ? (
-        <div className="app-card absolute right-0 top-10 z-[120] w-[min(calc(100vw-1.5rem),24rem)] overflow-hidden text-card-foreground shadow-[0_20px_60px_rgb(2_6_23/0.28)]">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="notification-bell-panel absolute right-0 top-10 z-[140] w-[min(calc(100vw-1.5rem),24rem)] overflow-hidden text-card-foreground">
+          <div className="notification-bell-panel__header flex items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-text">Notifications</p>
-              <p className="text-xs text-text-muted">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</p>
+              <p className="text-sm font-semibold text-card-foreground">Notifications</p>
+              <p className="text-xs text-muted-foreground">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</p>
             </div>
             <button
               type="button"
@@ -81,9 +82,9 @@ export function NotificationBell() {
             </button>
           </div>
 
-          <div className="max-h-[min(70vh,28rem)] overflow-y-auto">
+          <div className="notification-bell-panel__list max-h-[min(70vh,28rem)] overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-text-muted">
+              <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading notifications
               </div>
@@ -97,7 +98,7 @@ export function NotificationBell() {
                 />
               ))
             ) : (
-              <div className="px-4 py-8 text-center text-sm text-text-muted">No notifications yet.</div>
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications yet.</div>
             )}
           </div>
         </div>
@@ -125,8 +126,8 @@ function NotificationRow({
     <button
       type="button"
       className={clsx(
-        "flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition last:border-b-0 hover:bg-background-tint disabled:cursor-wait",
-        isUnread ? "bg-primary/10" : "bg-card"
+        "notification-bell-row flex w-full items-start gap-3 px-4 py-3 text-left transition last:border-b-0 disabled:cursor-wait",
+        isUnread && "notification-bell-row--unread"
       )}
       disabled={disabled}
       onClick={onClick}
@@ -138,11 +139,11 @@ function NotificationRow({
         )}
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-text">{notification.title}</span>
+        <span className="notification-bell-row__title block truncate text-sm font-semibold text-card-foreground">{notification.title}</span>
         {notification.message ? (
-          <span className="mt-1 block line-clamp-2 text-xs leading-5 text-text-muted">{notification.message}</span>
+          <span className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground">{notification.message}</span>
         ) : null}
-        <span className="mt-1 block text-[11px] font-medium uppercase tracking-[0.12em] text-text-soft">{timeLabel}</span>
+        <span className="mt-1 block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">{timeLabel}</span>
       </span>
     </button>
   );
