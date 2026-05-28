@@ -748,7 +748,7 @@ canvas {
     }
 
     .login-auth-card {
-      border-radius: 1.75rem !important;
+      border-radius: 0 !important;
     }
   }
 
