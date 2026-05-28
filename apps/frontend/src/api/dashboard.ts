@@ -14,6 +14,10 @@ export async function fetchRoleDashboard(role: "agent" | "admin" | "super-admin"
   return response.data;
 }
 
+export async function fetchDynamicDashboard(role: "agent" | "admin" | "super-admin") {
+  return fetchRoleDashboard(role);
+}
+
 export async function fetchPlatformOrganizations() {
   const response = await apiGet<{ data: PlatformOrganization[] }>("/platform/organizations");
   return response.data;

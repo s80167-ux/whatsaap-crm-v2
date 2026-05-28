@@ -1,12 +1,47 @@
 export interface DashboardMetric {
   label: string;
   value: number | string;
-  hint: string;
+  hint?: string;
   href?: string;
+  tone?: "neutral" | "success" | "warning" | "danger" | "primary";
+}
+
+export type DashboardWidgetStatus = "healthy" | "warning" | "critical" | "locked" | "empty";
+
+export interface DynamicDashboardWidget {
+  id: string;
+  moduleKey: string;
+  title: string;
+  description: string;
+  status: DashboardWidgetStatus;
+  priority: number;
+  href: string;
+  metrics: DashboardMetric[];
+  alerts: Array<{
+    severity: "info" | "warning" | "critical";
+    message: string;
+    href?: string;
+  }>;
+  quickActions: Array<{
+    label: string;
+    href: string;
+    variant?: "primary" | "secondary";
+  }>;
+  updatedAt: string;
 }
 
 export interface DashboardSummary {
   scope: "agent" | "admin" | "super_admin";
+  organizationId?: string | null;
+  generatedAt?: string;
+  summary?: {
+    title: string;
+    subtitle: string;
+    healthStatus: "healthy" | "warning" | "critical" | "unknown";
+    activeModuleCount: number;
+    alertCount: number;
+  };
+  widgets?: DynamicDashboardWidget[];
   metrics: DashboardMetric[];
   sales?: {
     title: string;

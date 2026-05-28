@@ -2,9 +2,28 @@ import type { PoolClient } from "pg";
 import { pool } from "../config/database.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import type { AuthUser } from "../types/auth.js";
+import { aiDashboardProvider } from "./dashboard/providers/aiDashboardProvider.js";
+import { campaignEmailDashboardProvider } from "./dashboard/providers/campaignEmailDashboardProvider.js";
+import { campaignWhatsappDashboardProvider } from "./dashboard/providers/campaignWhatsappDashboardProvider.js";
+import { crmDashboardProvider } from "./dashboard/providers/crmDashboardProvider.js";
+import { inboxDashboardProvider } from "./dashboard/providers/inboxDashboardProvider.js";
+import { platformDashboardProvider } from "./dashboard/providers/platformDashboardProvider.js";
+import { salesDashboardProvider } from "./dashboard/providers/salesDashboardProvider.js";
+import { setupHealthDashboardProvider } from "./dashboard/providers/setupHealthDashboardProvider.js";
+import type { DashboardProvider, DashboardScope, DashboardWidget, DashboardWidgetStatus } from "./dashboard/providers/types.js";
 
 type DashboardSummary = {
   scope: "agent" | "admin" | "super_admin";
+  organizationId?: string | null;
+  generatedAt?: string;
+  summary?: {
+    title: string;
+    subtitle: string;
+    healthStatus: "healthy" | "warning" | "critical" | "unknown";
+    activeModuleCount: number;
+    alertCount: number;
+  };
+  widgets?: DashboardWidget[];
   metrics: Array<{
     label: string;
     value: number | string;
@@ -53,6 +72,18 @@ type DashboardSummary = {
     leaderboard_average_won_count?: number;
   };
 };
+
+const LEGACY_CAMPAIGNS_MODULE_KEY = "campaigns";
+const CAMPAIGN_MODULE_KEY = "campaign";
+const CORE_DEFAULT_MODULE_KEYS = new Set(["inbox", "crm", "sales"]);
+const ORGANIZATION_DASHBOARD_PROVIDERS: DashboardProvider[] = [
+  inboxDashboardProvider,
+  crmDashboardProvider,
+  campaignWhatsappDashboardProvider,
+  campaignEmailDashboardProvider,
+  salesDashboardProvider,
+  aiDashboardProvider
+];
 
 type SalesLeaderboardEntry = {
   id: string;
@@ -280,7 +311,7 @@ export class DashboardService {
           })
         : null;
 
-      return {
+      const dashboard: DashboardSummary = {
         scope: "agent",
         metrics: [
           {
@@ -354,6 +385,8 @@ export class DashboardService {
             : {})
         }
       };
+
+      return this.withOrganizationWidgets(dashboard, authUser, client, "agent");
     } finally {
       client.release();
     }
@@ -454,7 +487,7 @@ export class DashboardService {
         ? await getSalesLeaderboard(client, { organizationId: authUser.organizationId })
         : null;
 
-      return {
+      const dashboard: DashboardSummary = {
         scope: "admin",
         metrics: [
           {
@@ -536,6 +569,8 @@ export class DashboardService {
             : {})
         }
       };
+
+      return this.withOrganizationWidgets(dashboard, authUser, client, "admin");
     } finally {
       client.release();
     }
@@ -593,7 +628,7 @@ export class DashboardService {
       );
       const createdByDay = new Map(createdOrderTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), Number(row.count)]));
       const wonRevenueByDay = new Map(wonRevenueTrendRows.rows.map((row) => [new Date(row.bucket_start).toISOString(), row.value]));
-      return {
+      const dashboard: DashboardSummary = {
         scope: "super_admin",
         metrics: [
           {
@@ -665,8 +700,174 @@ export class DashboardService {
           ]),
         }
       };
+
+      return this.withPlatformWidgets(dashboard, client);
     } finally {
       client.release();
     }
   }
+
+  private async withOrganizationWidgets(
+    dashboard: DashboardSummary,
+    authUser: AuthUser,
+    client: PoolClient,
+    scope: Exclude<DashboardScope, "super_admin">
+  ): Promise<DashboardSummary> {
+    if (!authUser.organizationId) {
+      return {
+        ...dashboard,
+        organizationId: null,
+        generatedAt: new Date().toISOString(),
+        summary: {
+          title: "Organization Command Center",
+          subtitle: "No organization is attached to this session.",
+          healthStatus: "unknown",
+          activeModuleCount: 0,
+          alertCount: 0
+        },
+        widgets: []
+      };
+    }
+
+    const generatedAt = new Date().toISOString();
+    const enabledModules = await this.getEnabledOrganizationModules(client, authUser.organizationId);
+    const widgets: DashboardWidget[] = [];
+
+    const setupWidget = await setupHealthDashboardProvider.getWidget(authUser, client, {
+      organizationId: authUser.organizationId,
+      scope,
+      generatedAt
+    });
+    if (setupWidget.status === "critical" || setupWidget.status === "warning") {
+      widgets.push(setupWidget);
+    }
+
+    for (const provider of ORGANIZATION_DASHBOARD_PROVIDERS) {
+      if (!enabledModules.has(provider.moduleKey)) {
+        continue;
+      }
+
+      widgets.push(
+        await provider.getWidget(authUser, client, {
+          organizationId: authUser.organizationId,
+          scope,
+          generatedAt
+        })
+      );
+    }
+
+    return this.withDashboardEnvelope(dashboard, {
+      organizationId: authUser.organizationId,
+      generatedAt,
+      title: "Organization Command Center",
+      subtitle: "Module-aware overview for the features enabled on this organization.",
+      activeModuleCount: enabledModules.size,
+      widgets
+    });
+  }
+
+  private async withPlatformWidgets(dashboard: DashboardSummary, client: PoolClient): Promise<DashboardSummary> {
+    const generatedAt = new Date().toISOString();
+    const widget = await platformDashboardProvider.getWidget(
+      {
+        authUserId: "platform",
+        organizationUserId: null,
+        organizationId: null,
+        organizationName: null,
+        role: "super_admin",
+        email: "",
+        fullName: null,
+        avatarUrl: null,
+        permissionKeys: []
+      },
+      client,
+      {
+        organizationId: null,
+        scope: "super_admin",
+        generatedAt
+      }
+    );
+
+    return this.withDashboardEnvelope(dashboard, {
+      organizationId: null,
+      generatedAt,
+      title: "Platform Command Center",
+      subtitle: "Cross-organization platform health and usage signals.",
+      activeModuleCount: 1,
+      widgets: [widget]
+    });
+  }
+
+  private withDashboardEnvelope(
+    dashboard: DashboardSummary,
+    input: {
+      organizationId: string | null;
+      generatedAt: string;
+      title: string;
+      subtitle: string;
+      activeModuleCount: number;
+      widgets: DashboardWidget[];
+    }
+  ): DashboardSummary {
+    const widgets = input.widgets.slice().sort((left, right) => left.priority - right.priority);
+    const alertCount = widgets.reduce((total, widget) => total + widget.alerts.length, 0);
+
+    return {
+      ...dashboard,
+      organizationId: input.organizationId,
+      generatedAt: input.generatedAt,
+      summary: {
+        title: input.title,
+        subtitle: input.subtitle,
+        healthStatus: getDashboardHealthStatus(widgets),
+        activeModuleCount: input.activeModuleCount,
+        alertCount
+      },
+      widgets
+    };
+  }
+
+  private async getEnabledOrganizationModules(client: PoolClient, organizationId: string) {
+    const moduleKeys = ORGANIZATION_DASHBOARD_PROVIDERS.map((provider) => provider.moduleKey);
+    const lookupKeys = [...moduleKeys, LEGACY_CAMPAIGNS_MODULE_KEY, CAMPAIGN_MODULE_KEY];
+    const result = await client.query<{ module_key: string; is_enabled: boolean }>(
+      `
+        select module_key, is_enabled
+        from organization_modules
+        where organization_id = $1
+          and module_key = any($2::text[])
+      `,
+      [organizationId, lookupKeys]
+    );
+    const rowsByKey = new Map(result.rows.map((row) => [row.module_key, row.is_enabled]));
+    const enabledModules = new Set<string>();
+
+    for (const moduleKey of moduleKeys) {
+      const explicitValue = rowsByKey.get(moduleKey);
+      if (explicitValue === true || (typeof explicitValue === "undefined" && CORE_DEFAULT_MODULE_KEYS.has(moduleKey))) {
+        enabledModules.add(moduleKey);
+      }
+    }
+
+    if (rowsByKey.get(CAMPAIGN_MODULE_KEY) === true || rowsByKey.get(LEGACY_CAMPAIGNS_MODULE_KEY) === true) {
+      enabledModules.add("campaign.whatsapp");
+    }
+
+    return enabledModules;
+  }
+}
+
+function getDashboardHealthStatus(widgets: DashboardWidget[]): "healthy" | "warning" | "critical" | "unknown" {
+  if (widgets.length === 0) {
+    return "unknown";
+  }
+
+  const statuses = new Set<DashboardWidgetStatus>(widgets.map((widget) => widget.status));
+  if (statuses.has("critical")) {
+    return "critical";
+  }
+  if (statuses.has("warning")) {
+    return "warning";
+  }
+  return "healthy";
 }

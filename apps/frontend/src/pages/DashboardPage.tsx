@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertCircle, ArrowRight, Bot, BriefcaseBusiness, ChevronDown, Medal, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
+import { Activity, AlertCircle, ArrowRight, Bot, BriefcaseBusiness, CheckCircle2, ChevronDown, Medal, MessageSquare, ShieldAlert, Sparkles, Target, Trophy, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -25,7 +25,7 @@ import { useCopyFeedback } from "../hooks/useCopyFeedback";
 import { useRoleDashboard } from "../hooks/useDashboard";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser } from "../lib/auth";
-import type { DashboardMetric, DashboardSummary } from "../types/dashboard";
+import type { DashboardMetric, DashboardSummary, DynamicDashboardWidget } from "../types/dashboard";
 
 type SalesDashboard = NonNullable<DashboardSummary["sales"]>;
 type TrendDay = {
@@ -83,7 +83,9 @@ export function DashboardPage() {
 
   return (
     <section className="dashboard-main-grid dashboard-page">
-      {data?.sales ? (
+      {data?.widgets?.length ? (
+        <DynamicDashboard title={title} dashboard={data} isLoading={isLoading} />
+      ) : data?.sales ? (
         <SalesCommandCenter title={title} sales={data.sales} operationalMetrics={data.metrics} isLoading={isLoading} />
       ) : (
         <>
@@ -107,9 +109,9 @@ export function DashboardPage() {
         </>
       )}
 
-      {data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
+      {!data?.widgets?.length && data?.sales ? <DashboardAnalytics sales={data.sales} showPerformance={canShowSalesPerformance} /> : null}
 
-      {data?.sales?.trends?.length ? (
+      {!data?.widgets?.length && data?.sales?.trends?.length ? (
         <CompactSection title={t("dashboard.recentDailyBuckets")} eyebrow={t("dashboard.trendDrillDown")} summary={t("dashboard.openMatchingOrders")} defaultOpen={!isMobile}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {data.sales.trends.map((point) => (
@@ -344,6 +346,207 @@ function SalesCommandCenter({
       </div>
     </div>
   );
+}
+
+function DynamicDashboard({
+  title,
+  dashboard,
+  isLoading
+}: {
+  title: string;
+  dashboard: DashboardSummary;
+  isLoading: boolean;
+}) {
+  const widgets = (dashboard.widgets ?? []).slice().sort((left, right) => left.priority - right.priority);
+  const alerts = widgets.flatMap((widget) => widget.alerts.map((alert) => ({ ...alert, widgetTitle: widget.title })));
+  const quickActions = widgets.flatMap((widget) => widget.quickActions).slice(0, 6);
+  const todayActivity =
+    widgets
+      .flatMap((widget) => widget.metrics)
+      .find((metric) => metric.label.toLowerCase().includes("today"))?.value ?? 0;
+
+  return (
+    <div className="space-y-4">
+      <Card elevated className="workspace-page-header p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Dashboard</p>
+            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-text">Organization Command Center</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
+              {dashboard.summary?.subtitle ?? title}
+            </p>
+          </div>
+          <DashboardStatusBadge status={dashboard.summary?.healthStatus ?? "unknown"} />
+        </div>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryStripCard icon={<Zap size={16} />} label="Active modules" value={String(dashboard.summary?.activeModuleCount ?? widgets.length)} />
+        <SummaryStripCard icon={<ShieldAlert size={16} />} label="Alerts" value={String(dashboard.summary?.alertCount ?? alerts.length)} tone={alerts.length ? "warning" : "success"} />
+        <SummaryStripCard icon={<Activity size={16} />} label="Today activity" value={String(todayActivity)} />
+        <SummaryStripCard icon={<CheckCircle2 size={16} />} label="Organization health" value={formatHealthLabel(dashboard.summary?.healthStatus ?? "unknown")} tone={dashboard.summary?.healthStatus ?? "neutral"} />
+      </div>
+
+      {quickActions.length ? (
+        <Card elevated className="workspace-block p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {quickActions.map((action) => (
+              <Link
+                key={`${action.label}-${action.href}`}
+                to={action.href}
+                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold transition ${
+                  action.variant === "primary"
+                    ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                    : "border-border bg-background-tint text-text hover:border-primary/30 hover:text-primary"
+                }`}
+              >
+                {action.label}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {alerts.length ? (
+        <Card elevated className="workspace-block p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-soft">Action Required</p>
+              <h3 className="mt-1 text-lg font-semibold text-text">What needs attention</h3>
+            </div>
+            <span className="rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+              {alerts.length} open
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 lg:grid-cols-2">
+            {alerts.slice(0, 6).map((alert, index) => (
+              <Link
+                key={`${alert.widgetTitle}-${alert.message}-${index}`}
+                to={alert.href ?? "#"}
+                className={`rounded-xl border px-3 py-2.5 text-sm leading-6 ${getAlertTone(alert.severity)}`}
+              >
+                <span className="block text-xs font-semibold uppercase tracking-[0.16em]">{alert.widgetTitle}</span>
+                <span className="mt-1 block">{alert.message}</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        {(isLoading ? Array.from({ length: 3 }, () => null as DynamicDashboardWidget | null) : widgets).map((widget, index) => (
+          <motion.div key={widget?.id ?? index} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 + index * 0.04 }}>
+            <DynamicWidgetCard widget={widget} />
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DynamicWidgetCard({ widget }: { widget: DynamicDashboardWidget | null }) {
+  if (!widget) {
+    return (
+      <Card elevated className="min-h-[260px] p-5">
+        <div className="h-full animate-pulse rounded-xl bg-background-tint" />
+      </Card>
+    );
+  }
+
+  return (
+    <Card elevated className="workspace-block flex min-h-[280px] flex-col p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link to={widget.href} className="text-lg font-semibold tracking-tight text-text hover:text-primary">
+            {widget.title}
+          </Link>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-text-muted">{widget.description}</p>
+        </div>
+        <StatusPill status={widget.status} />
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {widget.metrics.slice(0, 4).map((metric) => (
+          <Link
+            key={metric.label}
+            to={metric.href ?? widget.href}
+            className="rounded-xl border border-border bg-background-tint px-3 py-2.5 transition hover:border-primary/30 hover:bg-primary/5"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">{metric.label}</p>
+            <p className={`mt-1 text-xl font-semibold tracking-tight ${getMetricTone(metric.tone)}`}>{metric.value}</p>
+            {metric.hint ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{metric.hint}</p> : null}
+          </Link>
+        ))}
+      </div>
+
+      {widget.metrics.length === 0 ? (
+        <div className="mt-4 rounded-xl border border-dashed border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+          No activity is visible yet. Use the quick action below to finish setup or create the first record for this module.
+        </div>
+      ) : null}
+
+      {widget.alerts.length ? (
+        <div className="mt-4 space-y-2">
+          {widget.alerts.slice(0, 2).map((alert) => (
+            <Link key={alert.message} to={alert.href ?? widget.href} className={`block rounded-xl border px-3 py-2 text-xs leading-5 ${getAlertTone(alert.severity)}`}>
+              {alert.message}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-auto flex flex-wrap gap-2 pt-4">
+        {widget.quickActions.map((action) => (
+          <Link
+            key={`${action.label}-${action.href}`}
+            to={action.href}
+            className={`inline-flex min-h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition ${
+              action.variant === "primary"
+                ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                : "border-border bg-background-tint text-text-muted hover:border-primary/30 hover:text-primary"
+            }`}
+          >
+            {action.label}
+          </Link>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function SummaryStripCard({
+  icon,
+  label,
+  value,
+  tone = "neutral"
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <Card elevated className="workspace-block min-h-[112px] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${getSummaryTone(tone)}`}>{icon}</span>
+        <p className="text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-text-soft">{label}</p>
+      </div>
+      <p className="mt-4 text-2xl font-semibold tracking-tight text-text">{value}</p>
+    </Card>
+  );
+}
+
+function DashboardStatusBadge({ status }: { status: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${getStatusTone(status)}`}>
+      <span className="h-2 w-2 rounded-full bg-current" />
+      {formatHealthLabel(status)}
+    </span>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  return <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getStatusTone(status)}`}>{formatHealthLabel(status)}</span>;
 }
 
 function HeroMetricCard({
@@ -1205,6 +1408,78 @@ function getPipelineDotTone(status: string) {
       return "bg-destructive";
     default:
       return "bg-warning";
+  }
+}
+
+function getStatusTone(status: string) {
+  switch (status) {
+    case "healthy":
+      return "border-success/20 bg-success/10 text-success";
+    case "warning":
+      return "border-warning/20 bg-warning/10 text-warning";
+    case "critical":
+      return "border-destructive/20 bg-destructive/10 text-destructive";
+    case "empty":
+      return "border-border bg-background-tint text-text-muted";
+    default:
+      return "border-border bg-background-tint text-text-muted";
+  }
+}
+
+function getMetricTone(tone?: DashboardMetric["tone"]) {
+  switch (tone) {
+    case "success":
+      return "text-success";
+    case "warning":
+      return "text-warning";
+    case "danger":
+      return "text-destructive";
+    case "primary":
+      return "text-primary";
+    default:
+      return "text-text";
+  }
+}
+
+function getSummaryTone(tone: string) {
+  switch (tone) {
+    case "healthy":
+    case "success":
+      return "border-success/20 bg-success/10 text-success";
+    case "warning":
+      return "border-warning/20 bg-warning/10 text-warning";
+    case "critical":
+      return "border-destructive/20 bg-destructive/10 text-destructive";
+    default:
+      return "border-primary/20 bg-primary/10 text-primary";
+  }
+}
+
+function getAlertTone(severity: "info" | "warning" | "critical") {
+  switch (severity) {
+    case "critical":
+      return "border-destructive/20 bg-destructive/10 text-destructive";
+    case "warning":
+      return "border-warning/20 bg-warning/10 text-warning";
+    default:
+      return "border-primary/20 bg-primary/10 text-primary";
+  }
+}
+
+function formatHealthLabel(status: string) {
+  switch (status) {
+    case "healthy":
+      return "Healthy";
+    case "warning":
+      return "Warning";
+    case "critical":
+      return "Critical";
+    case "empty":
+      return "No data";
+    case "locked":
+      return "Locked";
+    default:
+      return "Unknown";
   }
 }
 

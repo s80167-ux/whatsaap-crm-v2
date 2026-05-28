@@ -6,7 +6,7 @@ import {
   fetchPlatformOutboundDispatch,
   fetchPlatformServiceHealth,
   fetchPlatformUsage,
-  fetchRoleDashboard
+  fetchDynamicDashboard
 } from "../api/dashboard";
 import { getStoredUser } from "../lib/auth";
 
@@ -27,7 +27,7 @@ function resolveDashboardPath() {
 export function useRoleDashboard() {
   return useQuery({
     queryKey: ["role-dashboard", resolveDashboardPath()],
-    queryFn: () => fetchRoleDashboard(resolveDashboardPath())
+    queryFn: () => fetchDynamicDashboard(resolveDashboardPath())
   });
 }
 
