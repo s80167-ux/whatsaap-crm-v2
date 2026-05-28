@@ -2,6 +2,7 @@ import { Mail, Send, Users } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PublicSection } from "../../components/public/PublicSection";
+import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
 import { SUPPORT_EMAIL } from "../../constants/publicBrand";
 
 export function ContactPage() {
@@ -15,6 +16,12 @@ export function ContactPage() {
 
   return (
     <PublicSection className="bg-white/95" eyebrow={t("public.contactPage.eyebrow")} title={t("public.contactPage.title")} description={t("public.contactPage.description")}>
+      <PublicVisualShowcase
+        title={t("public.contactPage.title")}
+        description={t("public.contactPage.description")}
+        image="dashboard"
+        highlights={[t("public.contactPage.emailTitle"), t("public.contactPage.audienceTitle"), t("public.common.tryDemo")]}
+      />
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-4">
           <article className="public-glow-card rounded-3xl border border-[#d9e1ef] bg-[#f8fbff] p-6">

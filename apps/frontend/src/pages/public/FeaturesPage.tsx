@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PublicCTA } from "../../components/public/PublicCTA";
 import { PublicSection } from "../../components/public/PublicSection";
+import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
 
 type FeatureCategory = {
   title: string;
@@ -20,6 +21,12 @@ export function FeaturesPage() {
   return (
     <>
       <PublicSection className="bg-white/95" eyebrow={t("public.featuresPage.eyebrow")} title={t("public.featuresPage.title")} description={t("public.featuresPage.description")}>
+        <PublicVisualShowcase
+          title={t("public.featuresPage.title")}
+          description={t("public.featuresPage.description")}
+          image="dashboard"
+          highlights={categories.slice(0, 4).map((category) => category.title)}
+        />
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
             <article key={category.title} className="public-glow-card rounded-3xl border border-[#d9e1ef] bg-[#f8fbff] p-6 shadow-sm">

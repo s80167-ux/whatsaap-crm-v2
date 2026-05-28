@@ -2,6 +2,7 @@ import { BarChart3, GitBranch, Inbox, Megaphone, PieChart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PublicSection } from "../../components/public/PublicSection";
+import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
 
 type PreviewCard = {
   title: string;
@@ -21,6 +22,12 @@ export function DemoPage() {
   return (
     <>
       <PublicSection className="bg-white/95" eyebrow={t("public.demoPage.eyebrow")} title={t("public.demoPage.title")} description={t("public.demoPage.description")}>
+        <PublicVisualShowcase
+          title={t("public.demoPage.title")}
+          description={t("public.demoPage.description")}
+          image="dashboard"
+          highlights={previews.slice(0, 4).map((preview) => preview.title)}
+        />
         <div className="public-glow-card rounded-[2rem] border border-[#d9e1ef] bg-[#071f52] p-4 shadow-2xl shadow-[#021f62]/15 sm:p-6">
           <div className="grid gap-4 md:grid-cols-4">
             {["newLeads", "pendingFollowUp", "campaignStatus", "salesPipeline"].map((key) => (

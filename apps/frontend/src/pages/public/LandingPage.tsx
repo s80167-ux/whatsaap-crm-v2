@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PublicCTA } from "../../components/public/PublicCTA";
 import { PublicSection } from "../../components/public/PublicSection";
+import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
 
 type CardItem = {
   title: string;
@@ -88,6 +89,15 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <PublicSection>
+        <PublicVisualShowcase
+          title={t("public.landing.solution.title")}
+          description={t("public.landing.hero.subtitle")}
+          image="campaign"
+          highlights={solutions.slice(0, 4).map((solution) => solution.title)}
+        />
+      </PublicSection>
 
       <PublicSection title={t("public.landing.pain.title")}>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

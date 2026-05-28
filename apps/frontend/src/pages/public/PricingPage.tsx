@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PublicSection } from "../../components/public/PublicSection";
+import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
 
 type PricingPlan = {
   name: string;
@@ -28,6 +29,12 @@ export function PricingPage() {
   return (
     <>
       <PublicSection className="bg-white/95" eyebrow={t("public.pricingPage.eyebrow")} title={t("public.pricingPage.title")} description={t("public.pricingPage.description")}>
+        <PublicVisualShowcase
+          title={t("public.pricingPage.title")}
+          description={t("public.pricingPage.description")}
+          image="campaign"
+          highlights={plans.map((plan) => plan.name)}
+        />
         <div className="grid gap-5 lg:grid-cols-3">
           {plans.map((plan) => (
             <article
