@@ -845,7 +845,7 @@ export function EmailSetupPage() {
                   <div className="grid gap-2.5 md:grid-cols-2">
                     <label>
                       <span className={compactLabelClassName}>Sender Name</span>
-                      <Input className={fieldClassName(fieldErrors.senderName)} value={form.senderName} onChange={(event) => updateForm({ ...form, senderName: event.target.value })} placeholder="Rezeki CRM Team" />
+                      <Input className={fieldClassName(fieldErrors.senderName)} value={form.senderName} onChange={(event) => updateForm({ ...form, senderName: event.target.value })} placeholder="Rezeki Dashboard Team" />
                       <FieldError message={fieldErrors.senderName} />
                     </label>
                     <label>
@@ -874,7 +874,7 @@ export function EmailSetupPage() {
                   <GmailAdvancedSettings form={form} onChange={updateForm} />
                 </div>
                 <div className="space-y-2">
-                  {["Login to the correct Google Account.", "Enable 2-Step Verification.", "Open App Passwords.", "Create App Password for Mail / Rezeki CRM.", "Copy the 16-character password.", "Paste it into CRM.", "Send test email."].map((label) => (
+                  {["Login to the correct Google Account.", "Enable 2-Step Verification.", "Open App Passwords.", "Create App Password for Mail / Rezeki Dashboard.", "Copy the 16-character password.", "Paste it into CRM.", "Send test email."].map((label) => (
                     <ChecklistItem key={label} checked={false} label={label} />
                   ))}
                 </div>

@@ -246,7 +246,7 @@ function SidebarContent({
                 <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Rezeki CRM</p>
+                <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Rezeki Dashboard</p>
                 <p className="text-[11px] leading-4 text-sidebar-foreground/55 break-words">{selectedOrganizationName ?? t("layout.whatsappWorkspace")}</p>
               </div>
             </div>
@@ -746,7 +746,7 @@ export function DashboardLayout() {
               <Menu size={16} />
             </button>
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-success shadow-[0_0_18px_rgb(var(--success)/0.45)]" />
-            <span className="topbar-brand truncate text-[11px] font-semibold uppercase tracking-[0.22em]">Rezeki CRM</span>
+            <span className="topbar-brand truncate text-[11px] font-semibold uppercase tracking-[0.22em]">Rezeki Dashboard</span>
             {selectedOrganizationName ? <span className="topbar-scope hidden truncate text-xs sm:inline">/ {selectedOrganizationName}</span> : null}
           </div>
 
@@ -1101,10 +1101,10 @@ export function DashboardLayout() {
               <div className="border-b border-sidebar-foreground/10 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="sidebar-brand-mark flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-foreground/10 bg-white">
-                    <img src={brandLogoMobile} alt="Rezeki CRM" className="h-full w-full object-contain" />
+                    <img src={brandLogoMobile} alt="Rezeki Dashboard" className="h-full w-full object-contain" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki CRM</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/42">Rezeki Dashboard</p>
                     <p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{selectedOrganizationName ?? t("layout.operationsWorkspace")}</p>
                   </div>
                 </div>

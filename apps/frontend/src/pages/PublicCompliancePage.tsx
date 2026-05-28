@@ -7,7 +7,7 @@ type PublicCompliancePageProps = {
 };
 
 const supportEmail = "support@rezekicrm.com";
-const productName = "Rezeki CRM";
+const productName = "Rezeki Dashboard";
 
 export function PublicCompliancePage({ variant }: PublicCompliancePageProps) {
   const isDataDeletion = variant === "data-deletion";
@@ -16,8 +16,8 @@ export function PublicCompliancePage({ variant }: PublicCompliancePageProps) {
   const pageDescription = isDataDeletion
     ? "Instructions for requesting removal of data connected through Facebook Login, Facebook Messenger, or other supported channel integrations."
     : isPrivacyPolicy
-      ? "How Rezeki CRM collects, uses, protects, and manages information for CRM users and connected messaging channels."
-      : "Standard terms for using the Rezeki CRM web application and connected messaging tools.";
+      ? "How Rezeki Dashboard collects, uses, protects, and manages information for CRM users and connected messaging channels."
+      : "Standard terms for using the Rezeki Dashboard web application and connected messaging tools.";
 
   return (
     <main className="min-h-screen bg-hero-grid px-4 py-10 text-text sm:px-6 lg:px-8">

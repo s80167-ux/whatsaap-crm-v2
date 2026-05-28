@@ -1,4 +1,4 @@
-# Rezeki CRM v2 Task List
+# Rezeki Dashboard v2 Task List
 
 This task list converts the SaaS blueprint into an implementation roadmap for the current repository. The goal is to migrate from the existing `frontend` + `backend` scaffold into a production-oriented multi-tenant monorepo without breaking the working login and dashboard bootstrap path.
 

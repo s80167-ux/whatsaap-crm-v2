@@ -1227,7 +1227,7 @@ function CreateEmailPanel({ campaignForm, setCampaignForm, senders, readyAudienc
             </label>
             <label data-guide="email-draft-business-name">
               <FieldHelperLabel label="Business / Product Name" helper={emailDraftFieldHelpers.businessName} />
-              <Input value={draftAssistant.businessName ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, businessName: event.target.value }))} placeholder="Rezeki CRM" />
+              <Input value={draftAssistant.businessName ?? ""} onChange={(event) => setDraftAssistant((current) => ({ ...current, businessName: event.target.value }))} placeholder="Rezeki Dashboard" />
             </label>
             <label data-guide="email-draft-cta-label">
               <FieldHelperLabel label="CTA Label" helper={emailDraftFieldHelpers.ctaLabel} />

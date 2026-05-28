@@ -1,4 +1,4 @@
-# Rezeki CRM v2 Migration Map
+# Rezeki Dashboard v2 Migration Map
 
 This document maps the current working scaffold into the target architecture from the SaaS blueprint.
 
