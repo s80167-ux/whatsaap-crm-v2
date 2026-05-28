@@ -850,6 +850,227 @@
     "channels": "Channels",
     "general": "General"
   },
+  "public": {
+    "nav": {
+      "aria": "Public site navigation",
+      "features": "Features",
+      "pricing": "Pricing",
+      "demo": "Demo",
+      "faq": "FAQ",
+      "contact": "Contact",
+      "login": "Login",
+      "language": "Language",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    },
+    "footer": {
+      "description": "A lightweight CRM dashboard to help Malaysian SMEs organize leads, customers, follow-ups and campaigns.",
+      "product": "Product",
+      "company": "Company",
+      "links": {
+        "features": "Features",
+        "pricing": "Pricing",
+        "demo": "Demo",
+        "faq": "FAQ",
+        "contact": "Contact",
+        "privacy": "Privacy Policy",
+        "terms": "Terms",
+        "dataDeletion": "Data Deletion"
+      }
+    },
+    "common": {
+      "tryDemo": "Try Demo",
+      "contactUs": "Contact Us"
+    },
+    "landing": {
+      "hero": {
+        "badge": "For Malaysian SMEs",
+        "title": "Manage WhatsApp, customers and sales campaigns in one dashboard.",
+        "subtitle": "Rezeki Dashboard helps small businesses organize leads, follow up with customers, monitor sales and run campaigns more systematically.",
+        "primaryCta": "Try Demo",
+        "secondaryCta": "View Pricing"
+      },
+      "preview": {
+        "label": "Dashboard preview",
+        "title": "Today's sales",
+        "totalLeads": { "label": "Total Leads", "value": "128" },
+        "followUpToday": { "label": "Follow Up Today", "value": "24" },
+        "campaignReady": { "label": "Campaign Ready", "value": "6" },
+        "closedWon": { "label": "Closed Won", "value": "RM18.4k" },
+        "rows": ["Asked for size M follow-up", "Waiting for booking deposit", "Wants weekend viewing"],
+        "status": "Active"
+      },
+      "pain": {
+        "title": "Common problems when your business depends only on WhatsApp",
+        "cards": [
+          { "title": "Customer chats get mixed", "description": "Business conversations can get buried among personal chats and old messages." },
+          { "title": "Follow-ups are unclear", "description": "It is hard to know which leads need attention today or this week." },
+          { "title": "Contact names go missing", "description": "Contacts can become unknown and make it difficult for the team to identify customers." },
+          { "title": "Campaigns are manual", "description": "Broadcasts and customer lists are handled one by one without clean records." },
+          { "title": "Owners lack visibility", "description": "Sales activity, performance and team access are not visible in one place." }
+        ]
+      },
+      "solution": {
+        "title": "Rezeki Dashboard makes your sales process more organized",
+        "cards": [
+          { "title": "Customer inbox", "description": "Bring customer conversations into a workspace that is easier to monitor." },
+          { "title": "CRM pipeline", "description": "Organize leads by sales status, stage and next follow-up." },
+          { "title": "WhatsApp campaign", "description": "Prepare audiences, message templates and campaign history with better control." },
+          { "title": "Contact recovery", "description": "Help detect and recover incomplete or unknown customer contacts." },
+          { "title": "Reports", "description": "View sales, campaign and team activity summaries on a dashboard." },
+          { "title": "Team access", "description": "Control user, admin and super-admin access based on organization needs." }
+        ]
+      },
+      "how": {
+        "title": "How it works",
+        "steps": [
+          { "title": "Connect your channel", "description": "Start with the right business communication channel." },
+          { "title": "Import contacts", "description": "Add and organize customer lists into useful groups." },
+          { "title": "Follow up with customers", "description": "Track tasks and lead status so prospects do not slip away." },
+          { "title": "Launch campaign", "description": "Prepare messages, audiences and campaign history more cleanly." },
+          { "title": "Monitor performance", "description": "View daily reports for owners, admins and sales teams." }
+        ]
+      },
+      "suitable": {
+        "title": "Suitable for",
+        "items": ["Bundle shops", "Appointment-based services", "Property agents", "Food businesses", "Local service businesses", "Small sales teams"]
+      },
+      "finalCta": {
+        "title": "Start managing sales in a more organized way.",
+        "description": "Preview the product, choose an initial package and contact us when you are ready to organize sales operations."
+      }
+    },
+    "featuresPage": {
+      "eyebrow": "Core features",
+      "title": "Built for fast-moving SME sales operations",
+      "description": "From customer inbox to owner reports, Rezeki Dashboard helps small teams work with more clarity.",
+      "categories": [
+        { "title": "Inbox & Customer Conversation", "description": "Manage customer conversations in one place.", "items": ["Centralized customer inbox", "Conversation tagging", "Quick replies", "Future AI assist ready"] },
+        { "title": "CRM & Sales Pipeline", "description": "Organize leads and sales opportunities with clear status.", "items": ["Lead status", "Follow-up tracking", "Sales stage", "Customer profile"] },
+        { "title": "Campaign Tools", "description": "Prepare campaigns that are easier to govern and review.", "items": ["Audience groups", "Message templates", "Campaign safety and governance", "Campaign history"] },
+        { "title": "Contact Reliability", "description": "Reduce unknown contacts and incomplete customer data.", "items": ["Detect unknown contacts", "Contact recovery workflow", "Multiple WhatsApp source readiness"] },
+        { "title": "Reports & Dashboard", "description": "Monitor daily performance without messy spreadsheets.", "items": ["Sales summary", "Campaign summary", "Team activity", "Organization-level view"] },
+        { "title": "Admin & Access Control", "description": "Control users and modules based on your business structure.", "items": ["Organization-based access", "Module access", "User/admin/super-admin structure"] }
+      ],
+      "cta": {
+        "title": "Build a follow-up system your team can follow.",
+        "description": "Start with the public preview, then contact us for a quick demo."
+      }
+    },
+    "pricingPage": {
+      "eyebrow": "Pricing",
+      "title": "Simple early packages",
+      "description": "Choose the level that fits how your business manages customers, campaigns and teams.",
+      "plans": [
+        { "name": "Starter", "price": "RM49/month", "bestFor": "Small businesses starting to organize customers.", "features": ["1 workspace", "Basic CRM", "Contact management", "Basic dashboard", "Email support"] },
+        { "name": "Growth", "price": "RM99/month", "badge": "Popular", "bestFor": "SMEs actively doing follow-ups and campaigns.", "features": ["Everything in Starter", "Campaign tools", "Audience groups", "Message templates", "Reports", "Team access"] },
+        { "name": "Pro", "price": "RM199/month", "bestFor": "Sales teams that need access control and reporting.", "features": ["Everything in Growth", "Advanced access control", "Multi-channel readiness", "Contact reliability tools", "Priority support", "Admin reporting"] }
+      ],
+      "note": "Pricing is an initial guide and may change depending on package, usage and organization needs.",
+      "faqTitle": "Pricing FAQ",
+      "faqs": [
+        { "question": "Is there a free trial?", "answer": "Contact us to check demo or trial options that fit your business." },
+        { "question": "Can I upgrade later?", "answer": "Yes. Packages can be reviewed as your team and usage grow." },
+        { "question": "Is a long contract required?", "answer": "The early packages are designed to make it easy to start. Final terms depend on organization needs." },
+        { "question": "Can multiple users use it?", "answer": "Yes. Growth and Pro are suitable for teams that need shared access." }
+      ]
+    },
+    "demoPage": {
+      "eyebrow": "Public demo",
+      "title": "See how Rezeki Dashboard helps manage daily sales.",
+      "description": "This preview uses sample data only. No backend connection and no real customer data.",
+      "metrics": {
+        "newLeads": { "label": "New leads", "value": "18", "note": "Today" },
+        "pendingFollowUp": { "label": "Pending follow-up", "value": "9", "note": "Needs action" },
+        "campaignStatus": { "label": "Campaign status", "value": "Ready", "note": "Mock preview" },
+        "salesPipeline": { "label": "Sales pipeline", "value": "RM42k", "note": "Opportunity value" }
+      },
+      "pipelineTitle": "Sales pipeline",
+      "inboxTitle": "Customer inbox",
+      "mockOnly": "Sample data for preview only",
+      "previews": [
+        { "title": "Dashboard", "description": "A summary of leads, follow-ups, campaigns and daily sales." },
+        { "title": "Inbox", "description": "View customer conversations and action status in one place." },
+        { "title": "CRM", "description": "Organize leads by stage so the team knows the next step." },
+        { "title": "Campaign", "description": "Plan audiences, templates and campaign history with better control." },
+        { "title": "Reports", "description": "Track sales performance and team activity at a glance." }
+      ],
+      "loginCta": "Login",
+      "contactCta": "Contact Us"
+    },
+    "faqPage": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "description": "Short answers for business owners and sales teams who want to understand Rezeki Dashboard.",
+      "items": [
+        { "question": "What is Rezeki Dashboard?", "answer": "Rezeki Dashboard is a SaaS CRM that helps SMEs manage customers, follow-ups, campaigns and reports in one dashboard." },
+        { "question": "What businesses is it suitable for?", "answer": "It is suitable for bundle shops, appointment services, property, food businesses, local services and small sales teams." },
+        { "question": "Do I need to install software?", "answer": "No. It runs in a modern browser and can be accessed through a web link." },
+        { "question": "Can I use it on a phone?", "answer": "Yes. The public site and dashboard are designed to be responsive on mobile and desktop screens." },
+        { "question": "Is customer data secure?", "answer": "The system is designed with user and organization-based access. Final security practice depends on production configuration." },
+        { "question": "Can multiple users use it?", "answer": "Yes. User, admin and super-admin structures are available for teams." },
+        { "question": "Can I run WhatsApp campaigns?", "answer": "Yes, Rezeki Dashboard supports campaign flows, audiences, templates and campaign history." },
+        { "question": "How is this different from normal WhatsApp?", "answer": "Normal WhatsApp is good for chat, while Rezeki Dashboard adds CRM, follow-ups, reports and team controls." },
+        { "question": "Is there a free trial?", "answer": "Contact us to check available demo or trial options." },
+        { "question": "How do I get support?", "answer": "Email admin@syedmohdhatta.my for demos, package questions or further help." }
+      ],
+      "cta": {
+        "title": "Still have questions?",
+        "description": "Contact us and we will help suggest the next step."
+      }
+    },
+    "contactPage": {
+      "eyebrow": "Contact",
+      "title": "Contact Us",
+      "description": "Have questions about Rezeki Dashboard? Contact us for a quick demo or more information.",
+      "emailTitle": "Email",
+      "responseNote": "We will try to respond as soon as possible.",
+      "audienceTitle": "Best for",
+      "audienceNote": "SMEs, founders, business owners and sales teams.",
+      "form": {
+        "name": "Name",
+        "email": "Email",
+        "businessName": "Business Name",
+        "message": "Message",
+        "submit": "Send Message"
+      },
+      "success": "Thank you. Demo message received. Please connect the real contact endpoint later."
+    },
+    "legal": {
+      "data-deletion": {
+        "title": "Data Deletion Instructions",
+        "description": "Instructions for requesting removal of data connected through Facebook Login, Facebook Messenger, or other supported channel integrations.",
+        "sections": {
+          "request": "How to Request Data Deletion",
+          "delete": "What We Delete",
+          "time": "Processing Time",
+          "contact": "Contact"
+        }
+      },
+      "privacy-policy": {
+        "title": "Privacy Policy",
+        "description": "How Rezeki Dashboard collects, uses, protects, and manages information for CRM users and connected messaging channels.",
+        "sections": {
+          "collect": "Information We Collect",
+          "use": "How We Use Information",
+          "sharing": "Data Sharing",
+          "security": "Security and Retention",
+          "choices": "Your Choices"
+        }
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "Standard terms for using the Rezeki Dashboard web application and connected messaging tools.",
+        "sections": {
+          "service": "Use of Service",
+          "account": "Account Responsibility",
+          "messaging": "Messaging and Platform Compliance",
+          "privacy": "Data and Privacy",
+          "changes": "Changes and Contact"
+        }
+      }
+    }
+  },
   "validation": {
     "required": "This field is required",
     "invalidEmail": "Enter a valid email address"

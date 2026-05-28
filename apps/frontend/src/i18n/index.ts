@@ -17,11 +17,11 @@ export function isCrmLanguage(value: string | null | undefined): value is CrmLan
 
 function getInitialLanguage(): CrmLanguage {
   if (typeof window === "undefined") {
-    return "en";
+    return "ms";
   }
 
   const savedLanguage = window.localStorage.getItem(CRM_LANGUAGE_STORAGE_KEY);
-  return isCrmLanguage(savedLanguage) ? savedLanguage : "en";
+  return isCrmLanguage(savedLanguage) ? savedLanguage : "ms";
 }
 
 void i18n.use(initReactI18next).init({

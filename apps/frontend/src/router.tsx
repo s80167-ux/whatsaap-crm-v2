@@ -14,6 +14,7 @@ function GlobalErrorElement() {
   );
 }
 import { ProtectedLayout } from "./layouts/ProtectedLayout";
+import { PublicLayout } from "./layouts/PublicLayout";
 import { RouteTransition } from "./components/RouteTransition";
 
 const DashboardLayout = lazy(() =>
@@ -42,6 +43,12 @@ const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ def
 const PublicCompliancePage = lazy(() =>
   import("./pages/PublicCompliancePage").then((module) => ({ default: module.PublicCompliancePage }))
 );
+const LandingPage = lazy(() => import("./pages/public/LandingPage").then((module) => ({ default: module.LandingPage })));
+const FeaturesPage = lazy(() => import("./pages/public/FeaturesPage").then((module) => ({ default: module.FeaturesPage })));
+const PricingPage = lazy(() => import("./pages/public/PricingPage").then((module) => ({ default: module.PricingPage })));
+const DemoPage = lazy(() => import("./pages/public/DemoPage").then((module) => ({ default: module.DemoPage })));
+const FaqPage = lazy(() => import("./pages/public/FaqPage").then((module) => ({ default: module.FaqPage })));
+const ContactPage = lazy(() => import("./pages/public/ContactPage").then((module) => ({ default: module.ContactPage })));
 const PlatformPage = lazy(() => import("./pages/PlatformPage").then((module) => ({ default: module.PlatformPage })));
 const ReportsPage = lazy(() => import("./pages/ReportsPage").then((module) => ({ default: module.ReportsPage })));
 const SalesPage = lazy(() => import("./pages/SalesPage").then((module) => ({ default: module.SalesPage })));
@@ -117,20 +124,24 @@ function withSuspense(page: ReactElement) {
 
 export const router = createBrowserRouter([
   {
+    path: "/",
+    element: <PublicLayout />,
+    errorElement: <GlobalErrorElement />,
+    children: [
+      { index: true, element: withRouteFallback(<LandingPage />) },
+      { path: "features", element: withRouteFallback(<FeaturesPage />) },
+      { path: "pricing", element: withRouteFallback(<PricingPage />) },
+      { path: "demo", element: withRouteFallback(<DemoPage />) },
+      { path: "faq", element: withRouteFallback(<FaqPage />) },
+      { path: "contact", element: withRouteFallback(<ContactPage />) },
+      { path: "data-deletion", element: withRouteFallback(<PublicCompliancePage variant="data-deletion" />) },
+      { path: "privacy-policy", element: withRouteFallback(<PublicCompliancePage variant="privacy-policy" />) },
+      { path: "terms", element: withRouteFallback(<PublicCompliancePage variant="terms" />) }
+    ]
+  },
+  {
     path: "/login",
     element: withRouteFallback(<LoginPage />)
-  },
-  {
-    path: "/data-deletion",
-    element: withRouteFallback(<PublicCompliancePage variant="data-deletion" />)
-  },
-  {
-    path: "/privacy-policy",
-    element: withRouteFallback(<PublicCompliancePage variant="privacy-policy" />)
-  },
-  {
-    path: "/terms",
-    element: withRouteFallback(<PublicCompliancePage variant="terms" />)
   },
   {
     element: <ProtectedLayout />, 
@@ -142,7 +153,6 @@ export const router = createBrowserRouter([
         errorElement: <GlobalErrorElement />, // Dashboard-level error boundary
         children: [
           { path: "dashboard", element: withRouteFallback(<DashboardPage />) },
-          { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: "inbox", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxPage /></ModuleRouteGuard>) },
           { path: "inbox/whatsapp", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxPage /></ModuleRouteGuard>) },
           { path: "inbox/social", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="social" /></ModuleRouteGuard>) },

@@ -36,7 +36,7 @@ export function LoginPage() {
 
     try {
       await login({ email, password });
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t("auth.unableSignIn"));
     } finally {

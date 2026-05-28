@@ -850,6 +850,227 @@
     "channels": "Saluran",
     "general": "Umum"
   },
+  "public": {
+    "nav": {
+      "aria": "Navigasi laman awam",
+      "features": "Fungsi",
+      "pricing": "Harga",
+      "demo": "Demo",
+      "faq": "FAQ",
+      "contact": "Hubungi",
+      "login": "Log Masuk",
+      "language": "Bahasa",
+      "openMenu": "Buka menu",
+      "closeMenu": "Tutup menu"
+    },
+    "footer": {
+      "description": "Dashboard CRM ringan untuk bantu PMKS Malaysia urus prospek, pelanggan, follow up dan kempen dengan lebih tersusun.",
+      "product": "Produk",
+      "company": "Syarikat",
+      "links": {
+        "features": "Fungsi",
+        "pricing": "Harga",
+        "demo": "Demo",
+        "faq": "FAQ",
+        "contact": "Hubungi",
+        "privacy": "Polisi Privasi",
+        "terms": "Terma",
+        "dataDeletion": "Padam Data"
+      }
+    },
+    "common": {
+      "tryDemo": "Cuba Demo",
+      "contactUs": "Hubungi Kami"
+    },
+    "landing": {
+      "hero": {
+        "badge": "Untuk PMKS Malaysia",
+        "title": "Urus WhatsApp, pelanggan dan kempen jualan dalam satu dashboard.",
+        "subtitle": "Rezeki Dashboard bantu bisnes kecil dan sederhana susun prospek, follow up pelanggan, pantau jualan dan jalankan kempen dengan lebih teratur.",
+        "primaryCta": "Cuba Demo",
+        "secondaryCta": "Lihat Harga"
+      },
+      "preview": {
+        "label": "Preview dashboard",
+        "title": "Jualan hari ini",
+        "totalLeads": { "label": "Total Leads", "value": "128" },
+        "followUpToday": { "label": "Follow Up Today", "value": "24" },
+        "campaignReady": { "label": "Campaign Ready", "value": "6" },
+        "closedWon": { "label": "Closed Won", "value": "RM18.4k" },
+        "rows": ["Minta follow up saiz M", "Tunggu deposit tempahan", "Mahukan viewing hujung minggu"],
+        "status": "Aktif"
+      },
+      "pain": {
+        "title": "Masalah biasa bila bisnes bergantung pada WhatsApp sahaja",
+        "cards": [
+          { "title": "Chat pelanggan bercampur", "description": "Perbualan bisnes mudah tenggelam bersama chat peribadi dan mesej lama." },
+          { "title": "Follow up tak jelas", "description": "Susah tahu prospek mana perlu dihubungi hari ini atau minggu ini." },
+          { "title": "Nama kontak hilang", "description": "Kontak boleh jadi unknown dan menyukarkan pasukan kenal pelanggan sebenar." },
+          { "title": "Kempen manual", "description": "Broadcast dan senarai pelanggan dibuat satu-satu tanpa rekod yang kemas." },
+          { "title": "Owner sukar pantau team", "description": "Aktiviti jualan, prestasi dan akses pasukan tidak nampak dalam satu tempat." }
+        ]
+      },
+      "solution": {
+        "title": "Rezeki Dashboard jadikan proses jualan lebih tersusun",
+        "cards": [
+          { "title": "Customer inbox", "description": "Satukan perbualan pelanggan dalam ruang kerja yang mudah dipantau." },
+          { "title": "CRM pipeline", "description": "Susun lead mengikut status jualan, stage dan follow up seterusnya." },
+          { "title": "WhatsApp campaign", "description": "Sediakan audience, template mesej dan sejarah kempen dengan lebih terkawal." },
+          { "title": "Contact recovery", "description": "Bantu kesan dan pulihkan kontak yang kurang lengkap atau menjadi unknown." },
+          { "title": "Reports", "description": "Lihat ringkasan jualan, kempen dan aktiviti pasukan pada dashboard." },
+          { "title": "Team access", "description": "Kawal akses user, admin dan super-admin mengikut keperluan organisasi." }
+        ]
+      },
+      "how": {
+        "title": "Cara ia berfungsi",
+        "steps": [
+          { "title": "Sambung channel", "description": "Mulakan dengan saluran komunikasi bisnes yang sesuai." },
+          { "title": "Import kontak", "description": "Masukkan dan susun senarai pelanggan mengikut kumpulan." },
+          { "title": "Follow up pelanggan", "description": "Pantau tugasan dan status lead supaya tiada prospek tercicir." },
+          { "title": "Lancarkan kempen", "description": "Sediakan mesej, audience dan sejarah campaign dengan lebih kemas." },
+          { "title": "Pantau prestasi", "description": "Lihat laporan harian untuk owner, admin dan team sales." }
+        ]
+      },
+      "suitable": {
+        "title": "Sesuai untuk",
+        "items": ["Kedai bundle", "Servis berasaskan appointment", "Ejen hartanah", "Bisnes makanan", "Servis lokal", "Team sales kecil"]
+      },
+      "finalCta": {
+        "title": "Mulakan dengan cara yang lebih teratur.",
+        "description": "Lihat preview, pilih pakej awal dan hubungi kami bila anda bersedia untuk susun operasi jualan."
+      }
+    },
+    "featuresPage": {
+      "eyebrow": "Fungsi utama",
+      "title": "Dibina untuk operasi jualan PMKS yang bergerak laju",
+      "description": "Daripada inbox pelanggan hingga laporan owner, Rezeki Dashboard bantu pasukan kecil bekerja dengan lebih jelas.",
+      "categories": [
+        { "title": "Inbox & Customer Conversation", "description": "Urus perbualan pelanggan dalam satu tempat.", "items": ["Inbox pelanggan berpusat", "Tag perbualan", "Quick replies", "Sedia untuk AI assist akan datang"] },
+        { "title": "CRM & Sales Pipeline", "description": "Susun lead dan peluang jualan dengan status yang jelas.", "items": ["Status lead", "Tracking follow-up", "Sales stage", "Profil pelanggan"] },
+        { "title": "Campaign Tools", "description": "Sediakan kempen yang lebih terkawal dan mudah disemak.", "items": ["Audience groups", "Template mesej", "Keselamatan dan governance campaign", "Sejarah campaign"] },
+        { "title": "Contact Reliability", "description": "Kurangkan masalah kontak tidak dikenali dan data tidak lengkap.", "items": ["Kesan unknown contacts", "Workflow contact recovery", "Sedia untuk pelbagai sumber WhatsApp"] },
+        { "title": "Reports & Dashboard", "description": "Pantau prestasi harian tanpa spreadsheet berselerak.", "items": ["Ringkasan jualan", "Ringkasan campaign", "Aktiviti team", "Paparan organisasi"] },
+        { "title": "Admin & Access Control", "description": "Kawal pengguna dan modul ikut struktur bisnes.", "items": ["Akses berasaskan organisasi", "Akses modul", "Struktur user/admin/super-admin"] }
+      ],
+      "cta": {
+        "title": "Bina sistem follow up yang pasukan boleh ikut.",
+        "description": "Mulakan dengan preview awam dahulu, kemudian hubungi kami untuk demo ringkas."
+      }
+    },
+    "pricingPage": {
+      "eyebrow": "Harga",
+      "title": "Pakej awal yang mudah difahami",
+      "description": "Pilih tahap yang sesuai dengan cara bisnes anda urus pelanggan, campaign dan pasukan.",
+      "plans": [
+        { "name": "Starter", "price": "RM49/month", "bestFor": "Bisnes kecil yang baru nak susun pelanggan.", "features": ["1 workspace", "Basic CRM", "Contact management", "Basic dashboard", "Email support"] },
+        { "name": "Growth", "price": "RM99/month", "badge": "Popular", "bestFor": "PMKS yang aktif buat follow up dan campaign.", "features": ["Everything in Starter", "Campaign tools", "Audience groups", "Message templates", "Reports", "Team access"] },
+        { "name": "Pro", "price": "RM199/month", "bestFor": "Team sales yang perlukan kawalan dan reporting.", "features": ["Everything in Growth", "Advanced access control", "Multi-channel readiness", "Contact reliability tools", "Priority support", "Admin reporting"] }
+      ],
+      "note": "Harga adalah cadangan awal dan boleh berubah mengikut pakej, penggunaan dan keperluan organisasi.",
+      "faqTitle": "Soalan harga",
+      "faqs": [
+        { "question": "Ada free trial?", "answer": "Hubungi kami untuk semak pilihan demo atau percubaan yang sesuai." },
+        { "question": "Boleh upgrade kemudian?", "answer": "Boleh. Pakej boleh disemak semula apabila team dan penggunaan meningkat." },
+        { "question": "Perlu kontrak panjang?", "answer": "Pakej awal direka supaya mudah bermula. Terma akhir bergantung pada keperluan organisasi." },
+        { "question": "Boleh guna banyak user?", "answer": "Ya, pakej Growth dan Pro sesuai untuk team yang perlukan akses bersama." }
+      ]
+    },
+    "demoPage": {
+      "eyebrow": "Demo awam",
+      "title": "Lihat bagaimana Rezeki Dashboard bantu urus jualan harian.",
+      "description": "Preview ini guna data contoh sahaja. Tiada sambungan backend, tiada data pelanggan sebenar.",
+      "metrics": {
+        "newLeads": { "label": "New leads", "value": "18", "note": "Hari ini" },
+        "pendingFollowUp": { "label": "Pending follow-up", "value": "9", "note": "Perlu tindakan" },
+        "campaignStatus": { "label": "Campaign status", "value": "Ready", "note": "Mock preview" },
+        "salesPipeline": { "label": "Sales pipeline", "value": "RM42k", "note": "Nilai peluang" }
+      },
+      "pipelineTitle": "Sales pipeline",
+      "inboxTitle": "Inbox pelanggan",
+      "mockOnly": "Data contoh untuk preview sahaja",
+      "previews": [
+        { "title": "Dashboard", "description": "Ringkasan lead, follow up, campaign dan jualan harian." },
+        { "title": "Inbox", "description": "Lihat perbualan pelanggan dan status tindakan dalam satu tempat." },
+        { "title": "CRM", "description": "Susun lead mengikut stage supaya team tahu langkah seterusnya." },
+        { "title": "Campaign", "description": "Rancang audience, template dan sejarah kempen secara lebih terkawal." },
+        { "title": "Reports", "description": "Pantau prestasi jualan dan aktiviti pasukan secara ringkas." }
+      ],
+      "loginCta": "Log Masuk",
+      "contactCta": "Hubungi Kami"
+    },
+    "faqPage": {
+      "eyebrow": "FAQ",
+      "title": "Soalan lazim",
+      "description": "Jawapan ringkas untuk owner bisnes dan team sales yang mahu faham Rezeki Dashboard.",
+      "items": [
+        { "question": "Apa itu Rezeki Dashboard?", "answer": "Rezeki Dashboard ialah SaaS CRM untuk bantu PMKS urus pelanggan, follow up, campaign dan laporan dalam satu dashboard." },
+        { "question": "Sesuai untuk bisnes apa?", "answer": "Ia sesuai untuk kedai bundle, servis appointment, hartanah, makanan, servis lokal dan team sales kecil." },
+        { "question": "Adakah perlu install software?", "answer": "Tidak. Ia berjalan dalam browser moden dan boleh diakses melalui pautan web." },
+        { "question": "Boleh guna di handphone?", "answer": "Boleh. Laman awam dan dashboard direka responsif untuk skrin mobile dan desktop." },
+        { "question": "Adakah data pelanggan selamat?", "answer": "Sistem direka dengan akses berasaskan user dan organisasi. Amalan keselamatan akhir bergantung pada konfigurasi produksi." },
+        { "question": "Boleh guna banyak user?", "answer": "Boleh. Struktur user, admin dan super-admin disediakan untuk pasukan." },
+        { "question": "Boleh buat WhatsApp campaign?", "answer": "Ya, Rezeki Dashboard menyediakan aliran campaign, audience, template dan sejarah kempen." },
+        { "question": "Apa beza dengan guna WhatsApp biasa?", "answer": "WhatsApp biasa sesuai untuk chat, tetapi Rezeki Dashboard tambah CRM, follow up, reports dan kawalan pasukan." },
+        { "question": "Ada free trial?", "answer": "Hubungi kami untuk semak pilihan demo atau percubaan yang tersedia." },
+        { "question": "Macam mana nak dapat support?", "answer": "Emel admin@syedmohdhatta.my untuk demo, pertanyaan pakej atau bantuan lanjut." }
+      ],
+      "cta": {
+        "title": "Masih ada soalan?",
+        "description": "Hubungi kami dan kami akan bantu cadangkan langkah seterusnya."
+      }
+    },
+    "contactPage": {
+      "eyebrow": "Contact",
+      "title": "Hubungi Kami",
+      "description": "Ada soalan tentang Rezeki Dashboard? Hubungi kami untuk demo ringkas atau pertanyaan lanjut.",
+      "emailTitle": "Email",
+      "responseNote": "Kami akan cuba balas secepat mungkin.",
+      "audienceTitle": "Sesuai untuk",
+      "audienceNote": "PMKS, founder, owner bisnes dan team sales.",
+      "form": {
+        "name": "Nama",
+        "email": "Email",
+        "businessName": "Nama Bisnes",
+        "message": "Mesej",
+        "submit": "Hantar Mesej"
+      },
+      "success": "Terima kasih. Mesej demo diterima. Sila sambungkan endpoint contact sebenar kemudian."
+    },
+    "legal": {
+      "data-deletion": {
+        "title": "Arahan Pemadaman Data",
+        "description": "Arahan untuk memohon pemadaman data yang disambungkan melalui Facebook Login, Facebook Messenger atau integrasi channel lain.",
+        "sections": {
+          "request": "Cara Memohon Pemadaman Data",
+          "delete": "Data Yang Kami Padam",
+          "time": "Masa Pemprosesan",
+          "contact": "Hubungi"
+        }
+      },
+      "privacy-policy": {
+        "title": "Polisi Privasi",
+        "description": "Cara Rezeki Dashboard mengumpul, menggunakan, melindungi dan mengurus maklumat untuk pengguna CRM dan channel mesej yang disambungkan.",
+        "sections": {
+          "collect": "Maklumat Yang Kami Kumpul",
+          "use": "Cara Kami Menggunakan Maklumat",
+          "sharing": "Perkongsian Data",
+          "security": "Keselamatan dan Retensi",
+          "choices": "Pilihan Anda"
+        }
+      },
+      "terms": {
+        "title": "Terma Perkhidmatan",
+        "description": "Terma standard untuk menggunakan aplikasi web Rezeki Dashboard dan alat mesej yang disambungkan.",
+        "sections": {
+          "service": "Penggunaan Perkhidmatan",
+          "account": "Tanggungjawab Akaun",
+          "messaging": "Pematuhan Mesej dan Platform",
+          "privacy": "Data dan Privasi",
+          "changes": "Perubahan dan Hubungan"
+        }
+      }
+    }
+  },
   "validation": {
     "required": "Medan ini wajib diisi",
     "invalidEmail": "Masukkan alamat emel yang sah"

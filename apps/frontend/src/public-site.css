@@ -1,0 +1,101 @@
+.public-shell {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(7, 81, 216, 0.18), transparent 30rem),
+    radial-gradient(circle at 86% 18%, rgba(90, 142, 255, 0.18), transparent 28rem),
+    linear-gradient(180deg, #f4f8ff 0%, #ffffff 48%, #eef4ff 100%);
+}
+
+.public-ambient {
+  position: relative;
+  isolation: isolate;
+}
+
+.public-ambient::before {
+  content: "";
+  position: fixed;
+  inset: -20% -10% auto;
+  z-index: -1;
+  height: 34rem;
+  background:
+    radial-gradient(circle at 22% 22%, rgba(7, 81, 216, 0.16), transparent 18rem),
+    radial-gradient(circle at 72% 10%, rgba(90, 142, 255, 0.14), transparent 20rem);
+  pointer-events: none;
+}
+
+.public-reveal {
+  animation: public-rise 520ms ease both;
+}
+
+.public-float {
+  animation: public-float 7s ease-in-out infinite;
+}
+
+.public-glow-card {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 22px 60px rgba(2, 31, 98, 0.12);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+.public-glow-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(7, 81, 216, 0.12), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+
+.public-glow-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(7, 81, 216, 0.28);
+  box-shadow: 0 30px 80px rgba(2, 31, 98, 0.18);
+}
+
+.public-glow-card:hover::before {
+  opacity: 1;
+}
+
+.public-logo-mark {
+  filter: drop-shadow(0 12px 24px rgba(2, 31, 98, 0.18));
+}
+
+@keyframes public-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes public-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-reveal,
+  .public-float {
+    animation: none;
+  }
+
+  .public-glow-card,
+  .public-glow-card:hover {
+    transform: none;
+    transition: none;
+  }
+}
