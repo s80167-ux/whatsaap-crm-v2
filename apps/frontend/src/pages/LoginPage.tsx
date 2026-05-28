@@ -48,7 +48,7 @@ export function LoginPage() {
       <img
         src={loginBanner}
         alt="Rezeki Dashboard campaign management preview"
-        className="login-backdrop-image absolute inset-0 h-full w-full object-fill"
+        className="login-backdrop-image absolute inset-0 h-full w-full"
       />
 
       <motion.div
