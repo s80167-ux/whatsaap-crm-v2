@@ -6,6 +6,7 @@ import { Card } from "../../../../components/Card";
 import { PopupOverlay } from "../../../../components/PopupOverlay";
 import { Toast } from "../../../../components/Toast";
 import type { DashboardOutletContext } from "../../../../layouts/DashboardLayout";
+import { canSyncContactIdentity } from "../../../../lib/moduleAccess";
 import type { AudienceGroup, AudienceValidationResult, SaveAudiencePreviewSummary } from "../types/audienceGroup.types";
 import {
   archiveAudienceGroup,
@@ -40,10 +41,10 @@ export function AudienceGroupsPage() {
     enabled: shouldFetch
   });
   const canManageStorage = outletContext.role === "super_admin" || outletContext.role === "org_admin";
-  const crmSaveDisabledReason =
-    outletContext.role === "org_admin" && !outletContext.crmModuleEnabled
-      ? "CRM module must be enabled before saving audience as CRM contacts."
-      : null;
+  const syncIdentityAllowed = canSyncContactIdentity({
+    role: outletContext.role,
+    permissionKeys: outletContext.permissionKeys
+  });
   const storageSummary = useMemo(() => ({
     active: groups.filter((group) => (group.storage_status ?? "active") === "active").length,
     archived: groups.filter((group) => group.storage_status === "archived").length,
@@ -78,9 +79,9 @@ export function AudienceGroupsPage() {
       await queryClient.invalidateQueries({ queryKey });
       setSavePreviewGroup(null);
       setSavePreview(null);
-      showNotice(`Audience saved to CRM. ${summary.crmCreatedCount} new, ${summary.crmLinkedCount} linked.`);
+      showNotice(`Contact identity synced. ${summary.crmCreatedCount} created, ${summary.crmLinkedCount} linked, ${summary.crmSkippedCount} skipped.`);
     },
-    onError: (error) => showNotice(error instanceof Error ? error.message : "Unable to save audience as CRM Contacts.", "error")
+    onError: (error) => showNotice(error instanceof Error ? error.message : "Unable to sync contact identity.", "error")
   });
 
   const archiveMutation = useMutation({
@@ -160,7 +161,7 @@ export function AudienceGroupsPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Audience group list</p>
-              <p className="mt-2 text-sm text-text-muted">CSV recipient lists stay campaign-first. Admins can save selected audiences as CRM Contacts when needed.</p>
+              <p className="mt-2 text-sm text-text-muted">CSV recipient lists stay campaign-first. Sync selected audiences to Contact Identity when replies need stable names and phone numbers.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {(["active", "archived", "deleted_details", "all"] as const).map((status) => (
@@ -180,7 +181,7 @@ export function AudienceGroupsPage() {
             <StorageMetric label="Archived audience groups" value={storageSummary.archived} />
             <StorageMetric label="Deleted detail groups" value={storageSummary.deletedDetails} />
             <StorageMetric label="Active audience rows" value={storageSummary.activeRows} />
-            <StorageMetric label="Rows saved to CRM" value={storageSummary.savedToCrm} />
+            <StorageMetric label="Rows linked to identity" value={storageSummary.savedToCrm} />
           </div>
           <AudienceGroupListTable
             groups={groups}
@@ -191,7 +192,7 @@ export function AudienceGroupsPage() {
             onArchive={handleArchive}
             onDeleteDetails={handleDeleteDetails}
             canManageStorage={canManageStorage}
-            crmSaveDisabledReason={crmSaveDisabledReason}
+            canSyncIdentity={syncIdentityAllowed}
           />
         </Card>
       )}
@@ -220,8 +221,8 @@ export function AudienceGroupsPage() {
           setSavePreviewGroup(null);
           setSavePreview(null);
         }}
-        title="Save Audience as CRM Contacts?"
-        description="This will create CRM contacts from valid audience members that are not already in CRM. Invalid, duplicate and opted-out rows will be skipped."
+        title="Sync Contact Identity?"
+        description="This will link valid audience contacts to existing contact identities or create lightweight contact records if not found. This helps Inbox show stable names and phone numbers when customers reply to campaigns."
         panelClassName="max-w-[min(34rem,calc(100vw-2rem))]"
       >
         {savePreview ? (
@@ -230,7 +231,7 @@ export function AudienceGroupsPage() {
               <SummaryRow label="Audience group name" value={savePreview.audienceGroupName} />
               <SummaryRow label="Total uploaded" value={savePreview.totalAudienceContacts} />
               <SummaryRow label="Valid recipients" value={savePreview.validContacts} />
-              <SummaryRow label="Already linked CRM contacts" value={savePreview.alreadyLinkedCrmContacts} />
+              <SummaryRow label="Already linked identities" value={savePreview.alreadyLinkedCrmContacts} />
               <SummaryRow label="Existing contacts to link" value={savePreview.existingContactsToLink} />
               <SummaryRow label="New contacts to create" value={savePreview.estimatedNewContactsToCreate} />
               <SummaryRow label="Skipped invalid" value={savePreview.skippedInvalid} />
@@ -249,7 +250,7 @@ export function AudienceGroupsPage() {
                 onClick={() => savePreviewGroup && saveAsCrmMutation.mutate(savePreviewGroup)}
                 disabled={saveAsCrmMutation.isPending}
               >
-                Confirm Save
+                Confirm Sync
               </Button>
             </div>
           </div>

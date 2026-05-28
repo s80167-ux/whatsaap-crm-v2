@@ -272,7 +272,7 @@ export function CreateAudienceGroupDrawer({
             <div className="border border-border bg-background-tint p-3">
               <p className="text-sm font-semibold text-text">Audience will be saved for campaign use only.</p>
               <p className="mt-1 text-xs leading-5 text-text-muted">
-                Admins can manually save this audience as CRM Contacts later from the Audience Group list.
+                Admins can sync contact identity later from the action icon in each Audience Group row.
               </p>
             </div>
           </div>

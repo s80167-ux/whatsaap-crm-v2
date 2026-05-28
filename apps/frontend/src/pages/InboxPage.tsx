@@ -26,7 +26,7 @@ import type { InboxChannelFilter } from "../api/crm";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
-type ConversationFilterMode = "mine" | "unread" | "unassigned" | "sales" | "all";
+type ConversationFilterMode = "mine" | "unread" | "unassigned" | "campaign_replies" | "sales" | "all";
 
 const OUTGOING_STATUS_POLL_INTERVAL_MS = 1000;
 const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
@@ -137,6 +137,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
         ? conversations.filter((conversation) => conversation.assigned_user_id === currentOrganizationUserId).length
         : 0,
       unassigned: conversations.filter((conversation) => !conversation.assigned_user_id).length,
+      campaignReplies: 0,
       sales: conversations.filter((conversation) => Boolean(conversation.has_sales || conversation.has_sales_lead_tag)).length
     }),
     [conversations, currentOrganizationUserId]
@@ -164,6 +165,8 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               return conversation.unread_count > 0;
             case "unassigned":
               return !conversation.assigned_user_id;
+            case "campaign_replies":
+              return false;
             case "sales":
               return Boolean(conversation.has_sales || conversation.has_sales_lead_tag);
             default:
@@ -304,6 +307,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                 { key: "mine", label: t("inbox.mine"), count: queueCounts.mine },
                 { key: "unread", label: t("inbox.unread"), count: queueCounts.unread },
                 { key: "unassigned", label: t("inbox.unassigned"), count: queueCounts.unassigned },
+                { key: "campaign_replies", label: "Campaign Replies", count: queueCounts.campaignReplies },
                 { key: "sales", label: t("nav.sales"), count: queueCounts.sales },
                 { key: "all", label: t("inbox.all"), count: queueCounts.all }
               ].map((item) => (

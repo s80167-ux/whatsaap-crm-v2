@@ -13,7 +13,8 @@ import {
   SlidersHorizontal,
   Sparkles,
   TrendingUp,
-  Users
+  Users,
+  XCircle
 } from "lucide-react";
 import { Navigate, useOutletContext } from "react-router-dom";
 import { updateOrganizationAccessLimits } from "../api/admin";
@@ -92,6 +93,93 @@ const initialFormState: AccessFormState = {
   campaignEmailRequireUnsubscribe: true
 };
 
+const accessPresets = [
+  {
+    name: "Campaign Starter",
+    values: {
+      campaignEnabled: true,
+      campaignWhatsAppEnabled: true,
+      campaignEmailEnabled: false,
+      inboxEnabled: false,
+      crmEnabled: false,
+      salesEnabled: false,
+      aiMessageAssistEnabled: false,
+      maxWhatsappAccounts: "1",
+      maxUsers: "3",
+      campaignMonthlyCount: "20",
+      campaignRecipientsPerCampaign: "1000",
+      campaignTemplatesCount: "25",
+      campaignAudienceSegments: "10",
+      campaignScheduledCount: "10",
+      aiDailyCredits: "0",
+      aiMonthlyCredits: "0"
+    }
+  },
+  {
+    name: "Campaign Growth",
+    values: {
+      campaignEnabled: true,
+      campaignWhatsAppEnabled: true,
+      campaignEmailEnabled: false,
+      inboxEnabled: true,
+      crmEnabled: false,
+      salesEnabled: false,
+      aiMessageAssistEnabled: true,
+      maxWhatsappAccounts: "2",
+      maxUsers: "5",
+      campaignMonthlyCount: "100",
+      campaignRecipientsPerCampaign: "3000",
+      campaignTemplatesCount: "100",
+      campaignAudienceSegments: "50",
+      campaignScheduledCount: "30",
+      aiDailyCredits: "100",
+      aiMonthlyCredits: "1000"
+    }
+  },
+  {
+    name: "Campaign Pro",
+    values: {
+      campaignEnabled: true,
+      campaignWhatsAppEnabled: true,
+      campaignEmailEnabled: true,
+      inboxEnabled: true,
+      crmEnabled: true,
+      salesEnabled: false,
+      aiMessageAssistEnabled: true,
+      maxWhatsappAccounts: "3",
+      maxUsers: "10",
+      campaignMonthlyCount: "300",
+      campaignRecipientsPerCampaign: "10000",
+      campaignTemplatesCount: "300",
+      campaignAudienceSegments: "150",
+      campaignScheduledCount: "100",
+      aiDailyCredits: "500",
+      aiMonthlyCredits: "5000"
+    }
+  },
+  {
+    name: "Full CRM Suite",
+    values: {
+      campaignEnabled: true,
+      campaignWhatsAppEnabled: true,
+      campaignEmailEnabled: true,
+      inboxEnabled: true,
+      crmEnabled: true,
+      salesEnabled: true,
+      aiMessageAssistEnabled: true,
+      maxWhatsappAccounts: "5",
+      maxUsers: "",
+      campaignMonthlyCount: "1000",
+      campaignRecipientsPerCampaign: "50000",
+      campaignTemplatesCount: "1000",
+      campaignAudienceSegments: "500",
+      campaignScheduledCount: "300",
+      aiDailyCredits: "1000",
+      aiMonthlyCredits: "20000"
+    }
+  }
+] satisfies Array<{ name: string; values: Partial<AccessFormState> }>;
+
 export function OrganizationCampaignAccessLimitsPage() {
   const user = getStoredUser();
   const isSuperAdmin = user?.role === "super_admin";
@@ -110,6 +198,7 @@ export function OrganizationCampaignAccessLimitsPage() {
   );
   const [form, setForm] = useState<AccessFormState>(initialFormState);
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+  const [presetNotice, setPresetNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessLimits) {
@@ -244,6 +333,11 @@ export function OrganizationCampaignAccessLimitsPage() {
   const whatsappUsageTone = getUsageAlertTone(currentWhatsappUsage, maxWhatsappValue);
   const whatsappCampaignsDisabled = !form.campaignEnabled;
 
+  function applyPreset(values: Partial<AccessFormState>) {
+    setForm((current) => ({ ...current, ...values }));
+    setPresetNotice("Preset applied locally. Review the values before saving.");
+  }
+
   return (
     <section className="space-y-4">
       <Card elevated className="!p-5 space-y-3">
@@ -275,6 +369,37 @@ export function OrganizationCampaignAccessLimitsPage() {
           description="Parent Campaign access controls WhatsApp and Email visibility. Email remains placeholder-only even when enabled."
         />
       </div>
+
+      <Card elevated className="!p-4 space-y-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-text-soft">Package Presets</p>
+            <h3 className="mt-1 text-lg font-semibold text-text">Apply a campaign-first access preset</h3>
+            <p className="mt-1 text-sm leading-5 text-text-muted">Preset buttons update this form only. Save changes when the values are correct.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {accessPresets.map((preset) => (
+              <Button key={preset.name} size="sm" variant="secondary" disabled={disabled} onClick={() => applyPreset(preset.values)}>
+                {preset.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {presetNotice ? (
+          <div className="border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+            {presetNotice}
+          </div>
+        ) : null}
+      </Card>
+
+      <OrganizationAccessSummary
+        organizationName={selectedOrganization?.name ?? selectedOrganizationName ?? "Selected organization"}
+        form={form}
+        campaignUsage={campaignUsage}
+        whatsappAccountsUsage={currentWhatsappUsage}
+        aiTodayCredits={aiToday?.creditUnits ?? 0}
+        aiMonthCredits={aiMonth?.creditUnits ?? 0}
+      />
 
       <SectionHeading eyebrow="Modules" title="Organization modules" />
       <div className="grid gap-3 xl:grid-cols-3">
@@ -464,6 +589,87 @@ export function OrganizationCampaignAccessLimitsPage() {
 
 function getModuleEnabled(map: Map<ModuleKey, boolean>, key: ModuleKey) {
   return map.get(key) ?? false;
+}
+
+function OrganizationAccessSummary({
+  aiMonthCredits,
+  aiTodayCredits,
+  campaignUsage,
+  form,
+  organizationName,
+  whatsappAccountsUsage
+}: {
+  aiMonthCredits: number;
+  aiTodayCredits: number;
+  campaignUsage?: {
+    whatsappSentToday?: number;
+    whatsappSentThisMonth?: number;
+    whatsappFailedThisMonth?: number;
+  };
+  form: AccessFormState;
+  organizationName: string;
+  whatsappAccountsUsage: number;
+}) {
+  // Entitlement rules: Campaign controls parent navigation; WhatsApp/Email control channel access.
+  // Inbox, CRM Contacts, Sales Pipeline, and AI assist are separate UI modules.
+  // Contact Identity Core intentionally has no toggle and must not depend on crmEnabled.
+  const modules = [
+    { label: "Campaign", enabled: form.campaignEnabled },
+    { label: "Campaign > WhatsApp", enabled: form.campaignWhatsAppEnabled },
+    { label: "Campaign > Email", enabled: form.campaignEmailEnabled },
+    { label: "Inbox", enabled: form.inboxEnabled },
+    { label: "CRM Contacts", enabled: form.crmEnabled },
+    { label: "Sales Pipeline", enabled: form.salesEnabled },
+    { label: "AI Message Assist", enabled: form.aiMessageAssistEnabled }
+  ];
+
+  return (
+    <Card elevated className="!p-4 space-y-4">
+      <div>
+        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-text-soft">Organization Access Summary</p>
+        <h3 className="mt-1 text-lg font-semibold text-text">Organization: {organizationName}</h3>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div>
+          <p className="text-sm font-semibold text-text">Enabled Modules</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {modules.map((module) => (
+              <ModuleAccessLine key={module.label} label={module.label} enabled={module.enabled} />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-text">Core System</p>
+            <div className="mt-2 border border-success/20 bg-success/10 px-3 py-2 text-sm text-success">
+              <span className="inline-flex items-center gap-2 font-semibold"><CheckCircle2 size={16} /> Contact Identity Core</span>
+              <p className="mt-1 text-xs leading-5 text-success/80">Always Active for audience identity sync and Inbox contact matching.</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-text">Current Usage</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <UsageStat label="WhatsApp accounts" value={formatNumber(whatsappAccountsUsage)} />
+              <UsageStat label="WhatsApp today" value={formatNumber(campaignUsage?.whatsappSentToday ?? 0)} />
+              <UsageStat label="WhatsApp month" value={formatNumber(campaignUsage?.whatsappSentThisMonth ?? 0)} />
+              <UsageStat label="AI credits month" value={formatNumber(aiMonthCredits)} />
+              <UsageStat label="AI credits today" value={formatNumber(aiTodayCredits)} />
+              <UsageStat label="WhatsApp failed" value={formatNumber(campaignUsage?.whatsappFailedThisMonth ?? 0)} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ModuleAccessLine({ enabled, label }: { enabled: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2 border border-border bg-background-tint px-3 py-2 text-sm">
+      {enabled ? <CheckCircle2 size={16} className="text-success" /> : <XCircle size={16} className="text-text-soft" />}
+      <span className={enabled ? "font-medium text-text" : "text-text-muted"}>{label}</span>
+    </div>
+  );
 }
 
 function SummaryCard({ description, eyebrow, icon, title }: { description: string; eyebrow: string; icon: ReactNode; title: string }) {

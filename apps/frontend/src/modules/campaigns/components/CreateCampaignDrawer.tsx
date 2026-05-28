@@ -83,6 +83,7 @@ export function CreateCampaignDrawer({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
+  const [identityHintDismissed, setIdentityHintDismissed] = useState(false);
 
   const connectedAccounts = useMemo(
     () => whatsappAccounts.filter((account) => isSenderConnected(account)),
@@ -120,6 +121,16 @@ export function CreateCampaignDrawer({
   const selectedGovernedTemplate = approvedCampaignTemplates.find((template) => template.active_version_id === templateGovernanceVersionId) ?? null;
   const selectedSenderIsConnected = selectedSender ? isSenderConnected(selectedSender) : false;
   const selectedAudienceGroup = readyAudienceGroups.find((group) => group.id === audienceGroupId) ?? null;
+  const selectedAudienceSyncedCount = selectedAudienceGroup
+    ? selectedAudienceGroup.crm_saved_count ?? selectedAudienceGroup.linked_crm_count ?? 0
+    : 0;
+  const shouldShowIdentitySyncHint = Boolean(
+    selectedAudienceGroup &&
+    !identityHintDismissed &&
+    selectedAudienceGroup.storage_status !== "deleted_details" &&
+    selectedAudienceGroup.valid_count > 0 &&
+    selectedAudienceSyncedCount < selectedAudienceGroup.valid_count
+  );
   const preview = useMemo(() => renderCampaignTemplate(messageTemplate, sampleContact), [messageTemplate, sampleContact]);
   const senderLabel = selectedSender ? formatSenderLabel(selectedSender) : null;
   const tempoLabel = formatTempoLabel(tempo);
@@ -194,6 +205,7 @@ export function CreateCampaignDrawer({
   async function handleAudienceGroupChange(nextAudienceGroupId: string) {
     setAudienceGroupId(nextAudienceGroupId);
     setTestSendNotice(null);
+    setIdentityHintDismissed(false);
 
     if (!nextAudienceGroupId) {
       setSampleContact(fallbackSampleContact);
@@ -413,6 +425,23 @@ export function CreateCampaignDrawer({
               <p className="mt-4 text-xs text-text-muted">
                 {selectedAudienceGroup.invalid_count} invalid skipped, {selectedAudienceGroup.duplicate_count} duplicates skipped
               </p>
+            ) : null}
+
+            {shouldShowIdentitySyncHint ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                <p className="font-semibold">Identity sync is recommended.</p>
+                <p className="mt-1">
+                  Some audience contacts are not linked to contact identity yet. Campaign can still be sent, but replies may appear with weaker name/phone matching in Inbox.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link className="inline-flex min-h-9 items-center border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100" to="/campaigns/whatsapp/audience">
+                    Sync Now
+                  </Link>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setIdentityHintDismissed(true)}>
+                    Continue Without Sync
+                  </Button>
+                </div>
+              </div>
             ) : null}
 
             {readyAudienceGroups.length === 0 ? (

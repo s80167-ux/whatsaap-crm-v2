@@ -7,7 +7,7 @@ import { AccessRestricted } from "./AccessRestricted";
 
 export function CampaignsRouteGuard({ children, moduleKey = "campaign" }: { children: ReactNode; moduleKey?: ModuleKey }) {
   const user = getStoredUser();
-  const shouldFetchStatus = user?.role === "org_admin";
+  const shouldFetchStatus = Boolean(user && user.role !== "super_admin");
   const campaignStatusQuery = useCampaignsModuleStatus(null, shouldFetchStatus);
   const moduleStatusQuery = useOrganizationModuleStatus(moduleKey, null, shouldFetchStatus && moduleKey !== "campaign");
 
@@ -21,6 +21,7 @@ export function CampaignsRouteGuard({ children, moduleKey = "campaign" }: { chil
 
   const canAccess = canAccessCampaigns({
     role: user?.role,
+    permissionKeys: user?.permissionKeys,
     parentModuleEnabled: campaignStatusQuery.data?.isEnabled === true,
     moduleEnabled: moduleKey === "campaign" ? true : moduleStatusQuery.data?.isEnabled === true
   });

@@ -12,7 +12,7 @@ type AudienceGroupListTableProps = {
   onArchive?: (group: AudienceGroup) => void;
   onDeleteDetails?: (group: AudienceGroup) => void;
   canManageStorage?: boolean;
-  crmSaveDisabledReason?: string | null;
+  canSyncIdentity?: boolean;
 };
 
 export function AudienceGroupListTable({
@@ -24,7 +24,7 @@ export function AudienceGroupListTable({
   onArchive,
   onDeleteDetails,
   canManageStorage = false,
-  crmSaveDisabledReason = null
+  canSyncIdentity = false
 }: AudienceGroupListTableProps) {
   const groupPagination = usePanelPagination(groups);
 
@@ -49,17 +49,21 @@ export function AudienceGroupListTable({
             <tr>
               <Th>Group Name</Th>
               <Th>Import Status</Th>
-              <Th>CRM Status</Th>
+              <Th>Identity Status</Th>
               <Th>Storage Status</Th>
               <Th>Total</Th>
               <Th>Valid</Th>
-              <Th>Linked CRM</Th>
+              <Th>Linked Identity</Th>
               <Th>Created At</Th>
               <Th>Action</Th>
             </tr>
           </thead>
           <tbody>
-            {groupPagination.visibleItems.map((group) => (
+            {groupPagination.visibleItems.map((group) => {
+              const identityStatus = getIdentityStatus(group);
+              const syncDisabledReason = getSyncIdentityDisabledReason(group, canSyncIdentity);
+
+              return (
               <tr key={group.id} className="border-b border-border">
                 <Td>
                   <div>
@@ -71,7 +75,7 @@ export function AudienceGroupListTable({
                   <StatusBadge label={group.status} />
                 </Td>
                 <Td>
-                  <StatusBadge label={formatCrmStatus(group.crm_save_status ?? "not_saved")} tone={group.crm_save_status === "saved" ? "success" : "muted"} />
+                  <StatusBadge label={identityStatus.label} tone={identityStatus.tone} />
                 </Td>
                 <Td>
                   <StatusBadge label={formatStorageStatus(group.storage_status ?? "active")} tone={group.storage_status === "archived" ? "warning" : group.storage_status === "deleted_details" ? "danger" : "success"} />
@@ -85,14 +89,14 @@ export function AudienceGroupListTable({
                     <Button size="icon" variant="ghost" className="border border-border bg-card text-text hover:bg-muted hover:text-primary" aria-label="View Audience Group" onClick={() => onView(group)}>
                       <Eye size={16} />
                     </Button>
-                    {canManageStorage && onSaveAsCrm ? (
+                    {onSaveAsCrm ? (
                       <Button
                         size="icon"
                         variant="ghost"
                         className="border border-border bg-card text-text hover:bg-muted hover:text-primary disabled:opacity-50"
-                        aria-label={crmSaveDisabledReason ?? "Save as CRM Contacts"}
-                        title={crmSaveDisabledReason ?? "Save as CRM Contacts"}
-                        disabled={Boolean(crmSaveDisabledReason) || group.storage_status === "deleted_details"}
+                        aria-label="Sync Contact Identity"
+                        title={syncDisabledReason ?? "Sync audience to contact identity so names and phone numbers are more stable when customers reply to campaigns."}
+                        disabled={Boolean(syncDisabledReason)}
                         onClick={() => onSaveAsCrm(group)}
                       >
                         <Database size={16} />
@@ -130,7 +134,8 @@ export function AudienceGroupListTable({
                   </div>
                 </Td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
@@ -166,8 +171,43 @@ function StatusBadge({ label, tone = "muted" }: { label: string; tone?: "muted" 
   return <span className={`inline-flex border px-2 py-1 text-xs font-semibold capitalize ${toneClass}`}>{label}</span>;
 }
 
-function formatCrmStatus(value: string) {
-  return value.replace(/_/g, " ");
+function getIdentityStatus(group: AudienceGroup): { label: string; tone: "muted" | "success" | "warning" | "danger" } {
+  if (group.storage_status === "deleted_details") {
+    return { label: "Details Deleted", tone: "danger" };
+  }
+
+  if (group.crm_save_status === "failed") {
+    return { label: "Sync Failed", tone: "danger" };
+  }
+
+  const syncedCount = group.crm_saved_count ?? group.linked_crm_count ?? 0;
+  const validCount = group.valid_count ?? 0;
+
+  if (validCount > 0 && syncedCount >= validCount) {
+    return { label: "Synced", tone: "success" };
+  }
+
+  if (syncedCount > 0 && syncedCount < validCount) {
+    return { label: "Partially Synced", tone: "warning" };
+  }
+
+  return { label: "Not Synced", tone: "muted" };
+}
+
+function getSyncIdentityDisabledReason(group: AudienceGroup, canSyncIdentity: boolean) {
+  if (group.storage_status === "deleted_details") {
+    return "Audience details were deleted.";
+  }
+
+  if ((group.valid_count ?? 0) <= 0) {
+    return "Audience has no valid contacts to sync.";
+  }
+
+  if (!canSyncIdentity) {
+    return "You do not have permission to sync contact identity.";
+  }
+
+  return null;
 }
 
 function formatStorageStatus(value: string) {

@@ -63,6 +63,7 @@ export async function deleteAudienceGroup(audienceGroupId: string, organizationI
 }
 
 export async function previewSaveAudienceAsCrmContacts(audienceGroupId: string, organizationId?: string | null) {
+  // TODO: rename this backend route to contact-identity-sync after the API contract can be migrated safely.
   const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
   const response = await apiGet<{ data: SaveAudiencePreviewSummary }>(
     `/campaigns/audience-groups/${audienceGroupId}/save-as-crm-contacts/preview${suffix}`
@@ -71,6 +72,7 @@ export async function previewSaveAudienceAsCrmContacts(audienceGroupId: string, 
 }
 
 export async function saveAudienceAsCrmContacts(audienceGroupId: string, organizationId?: string | null) {
+  // TODO: keep frontend language as Sync Contact Identity until this backend name is safely migrated.
   const response = await apiPost<{ data: SaveAudienceResult }>(
     `/campaigns/audience-groups/${audienceGroupId}/save-as-crm-contacts`,
     { organizationId: organizationId ?? null }

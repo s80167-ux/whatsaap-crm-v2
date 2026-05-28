@@ -47,9 +47,7 @@ import { RouteTransition } from "../components/RouteTransition";
 import { SocialChannelBrandLogo } from "../components/SocialChannelBrand";
 import { ThemeSwitcher } from "../components/theme-switcher";
 import {
-  useCampaignEmailModuleStatus,
   useCampaignsModuleStatus,
-  useCampaignWhatsAppModuleStatus,
   useCrmModuleStatus,
   useInboxModuleStatus,
   useOrganizations,
@@ -82,6 +80,7 @@ function ModuleBadge({ children, tone = "muted" }: { children: ReactNode; tone?:
 export type DashboardOutletContext = {
   isSuperAdmin: boolean;
   role: "super_admin" | "org_admin" | "manager" | "agent" | "user" | null;
+  permissionKeys: string[];
   crmModuleEnabled: boolean;
   selectedOrganizationId: string;
   selectedOrganizationName: string | null;
@@ -410,30 +409,21 @@ export function DashboardLayout() {
   const selectedOrganizationName = isSuperAdmin
     ? organizations.find((organization) => organization.id === selectedOrganizationId)?.name ?? null
     : user?.organizationName ?? null;
-  const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, user?.role === "org_admin");
-  const { data: campaignWhatsAppModuleStatus } = useCampaignWhatsAppModuleStatus(null, user?.role === "org_admin");
-  const { data: campaignEmailModuleStatus } = useCampaignEmailModuleStatus(null, user?.role === "org_admin");
   const shouldCheckOrganizationModules = Boolean(user && user.role !== "super_admin");
+  const { data: campaignsModuleStatus } = useCampaignsModuleStatus(null, shouldCheckOrganizationModules);
   const { data: inboxModuleStatus } = useInboxModuleStatus(null, shouldCheckOrganizationModules);
   const { data: crmModuleStatus } = useCrmModuleStatus(null, shouldCheckOrganizationModules);
   const { data: salesModuleStatus } = useSalesModuleStatus(null, shouldCheckOrganizationModules);
   const showCampaigns = canAccessCampaigns({
     role: user?.role,
+    permissionKeys: user?.permissionKeys,
     parentModuleEnabled: isSuperAdmin ? true : campaignsModuleStatus?.isEnabled === true
   });
   const showInbox = isSuperAdmin || inboxModuleStatus?.isEnabled === true;
   const showCrm = isSuperAdmin || crmModuleStatus?.isEnabled === true;
   const showSales = isSuperAdmin || salesModuleStatus?.isEnabled === true;
-  const whatsappCampaignBadge = !showCampaigns
-    ? null
-    : isSuperAdmin || campaignWhatsAppModuleStatus?.isEnabled === true
-      ? null
-      : <ModuleBadge>{t("common.off")}</ModuleBadge>;
-  const emailCampaignBadge = !showCampaigns
-    ? null
-    : campaignEmailModuleStatus?.isEnabled === true
-      ? null
-      : <ModuleBadge>{t("common.off")}</ModuleBadge>;
+  const whatsappCampaignBadge = null;
+  const emailCampaignBadge = null;
   const showDataExport = user?.role === "super_admin" || user?.role === "org_admin";
   const showContactReliability = user?.role === "super_admin" || user?.role === "org_admin" || user?.role === "manager";
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
@@ -456,55 +446,11 @@ export function DashboardLayout() {
 
   const navSections: SidebarSection[] = [
     {
-      id: "dashboard",
-      label: t("nav.dashboard"),
+      id: "overview",
+      label: "Overview",
       icon: <BarChart3 size={18} />,
-      items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: t("nav.overview") }]
+      items: [{ to: "/dashboard", icon: <BarChart3 size={16} />, label: t("nav.dashboard") }]
     },
-    ...(showInbox
-      ? [
-          {
-            id: "inbox",
-            label: t("nav.inbox"),
-            icon: <MessageSquare size={18} />,
-            items: [
-              { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.allInbox") },
-              { to: "/inbox/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: t("nav.whatsapp") },
-              { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-              { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-              { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-              { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
-            ]
-          }
-        ]
-      : []),
-    ...(showSales
-      ? [
-          {
-            id: "sales",
-            label: t("nav.sales"),
-            icon: <TrendingUp size={18} />,
-            items: [
-              { to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") },
-              { to: "/reports", icon: <FileBarChart size={16} />, label: t("nav.reports") }
-            ]
-          }
-        ]
-      : []),
-    ...(showCrm
-      ? [
-          {
-            id: "crm",
-            label: t("nav.crm"),
-            icon: <Users size={18} />,
-            items: [
-              { to: "/contacts", icon: <Users size={16} />, label: t("nav.contacts") },
-              ...(showContactReliability ? [{ to: "/contacts/reliability", icon: <ShieldCheck size={16} />, label: t("nav.contactReliability") }] : []),
-              ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
-            ]
-          }
-        ]
-      : []),
     ...(showCampaigns
       ? [
           {
@@ -518,39 +464,54 @@ export function DashboardLayout() {
           }
         ]
       : []),
+    ...(showInbox || showCrm || showSales
+      ? [
+          {
+            id: "follow-up",
+            label: "Follow-up",
+            icon: <MessageSquare size={18} />,
+            items: [
+              ...(showInbox ? [{ to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.inbox") }] : []),
+              ...(showCrm ? [{ to: "/contacts", icon: <Users size={16} />, label: "CRM Contacts" }] : []),
+              ...(showSales ? [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }] : [])
+            ]
+          }
+        ]
+      : []),
     {
-      id: "setup",
-      label: t("nav.setup"),
-      icon: <Settings2 size={18} />,
+      id: "channels",
+      label: "Channels",
+      icon: <PlugZap size={18} />,
       items: [
-        { to: "/setup", icon: <Settings2 size={16} />, label: t("nav.general") },
-        { to: "/setup/channels", icon: <PlugZap size={16} />, label: t("nav.channels") }
+        { to: "/setup", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp Setup" },
+        { to: "/campaigns/email/sender-setup", icon: <Mail size={16} />, label: "Email Sender Setup" }
       ]
     },
+    ...(showSales || showDataExport
+      ? [
+          {
+            id: "reports",
+            label: "Reports",
+            icon: <FileBarChart size={18} />,
+            items: [
+              ...(showSales ? [{ to: "/reports", icon: <FileBarChart size={16} />, label: "Campaign Results" }] : []),
+              ...(showDataExport ? [{ to: "/exports", icon: <Download size={16} />, label: t("nav.dataExport") }] : [])
+            ]
+          }
+        ]
+      : []),
     ...(isSuperAdmin
       ? [
           {
-            id: "admin-map",
-            label: t("nav.superAdminMap"),
-            icon: <Workflow size={18} />,
-            items: [
-              { to: "/super-admin-map", icon: <Workflow size={16} />, label: t("nav.platformWorkflow") },
-              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: t("nav.dataStructure") },
-              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: t("nav.orgUserStructure") }
-            ]
-          },
-          {
-            id: "platform",
-            label: t("nav.platform"),
-            icon: <Building2 size={18} />,
-            items: [{ to: "/platform", icon: <Building2 size={16} />, label: t("nav.organizations") }]
-          },
-          {
-            id: "system",
-            label: t("nav.systemTools"),
+            id: "super-admin",
+            label: "Super Admin",
             icon: <ShieldAlert size={18} />,
             items: [
+              { to: "/platform", icon: <Building2 size={16} />, label: t("nav.organizations") },
               { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: t("nav.accessLimits") },
+              { to: "/super-admin-map", icon: <Workflow size={16} />, label: t("nav.platformWorkflow") },
+              { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: t("nav.dataStructure") },
+              { to: "/super-admin-map/organization-structure", icon: <Users size={16} />, label: t("nav.orgUserStructure") },
               { to: "/super-admin/ops-center", icon: <Activity size={16} />, label: t("nav.opsCenter") },
               { to: "/super-admin/clear-organization-data", icon: <ShieldAlert size={16} />, label: t("nav.clearOrgData") },
               { to: "/super-admin/audit-logs", icon: <FileBarChart size={16} />, label: t("nav.auditLogs") }
@@ -1201,6 +1162,7 @@ export function DashboardLayout() {
             <Outlet context={{
               isSuperAdmin,
               role: user?.role ?? null,
+              permissionKeys: user?.permissionKeys ?? [],
               crmModuleEnabled: showCrm,
               selectedOrganizationId,
               selectedOrganizationName,

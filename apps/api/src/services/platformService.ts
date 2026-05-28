@@ -152,7 +152,8 @@ export class PlatformService {
         id: "railway-status",
         label: "Railway status",
         provider: "Railway",
-        url: "https://status.railway.com/api/v2/summary.json"
+        url: "https://status.railway.com",
+        parser: "railway-html"
       }),
       this.checkStatusPage({
         id: "vercel-status",
@@ -416,6 +417,7 @@ export class PlatformService {
     label: string;
     provider: ServiceHealthCheck["provider"];
     url: string;
+    parser?: "statuspage-json" | "railway-html";
   }): Promise<ServiceHealthCheck> {
     const startedAt = Date.now();
     const checkedAt = new Date().toISOString();
@@ -438,7 +440,40 @@ export class PlatformService {
         };
       }
 
-      const payload = (await response.json()) as StatusPageSummary;
+      const body = await response.text();
+      const contentType = response.headers.get("content-type") ?? "";
+
+      if (input.parser === "railway-html") {
+        const railwayStatus = parseRailwayStatusPage(body);
+
+        return {
+          id: input.id,
+          label: input.label,
+          provider: input.provider,
+          kind: "provider",
+          status: railwayStatus.status,
+          message: railwayStatus.message,
+          checked_at: checkedAt,
+          latency_ms: latencyMs,
+          target_url: input.url
+        };
+      }
+
+      if (!contentType.toLowerCase().includes("json")) {
+        return {
+          id: input.id,
+          label: input.label,
+          provider: input.provider,
+          kind: "provider",
+          status: "unknown",
+          message: "Status page did not return JSON",
+          checked_at: checkedAt,
+          latency_ms: latencyMs,
+          target_url: input.url
+        };
+      }
+
+      const payload = JSON.parse(body) as StatusPageSummary;
       const indicator = payload.status?.indicator ?? "unknown";
 
       return {
@@ -534,7 +569,8 @@ export class PlatformService {
       const failed = Number(row?.failed ?? 0);
       const oldestPendingAgeSeconds = Number(row?.oldest_pending_age_seconds ?? 0);
       const status: ServiceHealthStatus =
-        staleProcessing > 0 || oldestPendingAgeSeconds > 600 ? "degraded" : failed > 0 ? "degraded" : "healthy";
+        staleProcessing > 0 || oldestPendingAgeSeconds > 600 ? "degraded" : "healthy";
+      const queueDetails = `${staleProcessing} stale processing, ${failed} failed, oldest pending ${Math.round(oldestPendingAgeSeconds)}s`;
 
       return {
         id: "message-outbox-worker",
@@ -544,8 +580,10 @@ export class PlatformService {
         status,
         message:
           status === "healthy"
-            ? "Queue is moving normally"
-            : `${staleProcessing} stale processing, ${failed} failed, oldest pending ${Math.round(oldestPendingAgeSeconds)}s`,
+            ? failed > 0
+              ? `Queue is moving normally; ${failed} failed jobs need review`
+              : "Queue is moving normally"
+            : queueDetails,
         checked_at: checkedAt,
         latency_ms: Date.now() - startedAt,
         target_url: null
@@ -612,6 +650,41 @@ function mapStatusPageIndicator(indicator: string): ServiceHealthStatus {
     default:
       return "unknown";
   }
+}
+
+function parseRailwayStatusPage(html: string): { status: ServiceHealthStatus; message: string } {
+  const pageText = stripHtml(html).slice(0, 2_000).toLowerCase();
+
+  if (pageText.includes("major outage") || pageText.includes("critical")) {
+    return { status: "down", message: "Railway reports a major outage" };
+  }
+
+  if (
+    pageText.includes("partial outage") ||
+    pageText.includes("degraded") ||
+    pageText.includes("investigating") ||
+    pageText.includes("identified")
+  ) {
+    return { status: "degraded", message: "Railway reports degraded service" };
+  }
+
+  if (pageText.includes("fully operational") || pageText.includes("operational")) {
+    return { status: "healthy", message: "Fully Operational" };
+  }
+
+  return { status: "unknown", message: "Railway status page is reachable" };
+}
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getErrorMessage(error: unknown) {
