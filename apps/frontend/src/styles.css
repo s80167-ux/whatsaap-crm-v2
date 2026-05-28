@@ -735,7 +735,7 @@ canvas {
   }
 
   .login-backdrop-image {
-    object-position: center center;
+    object-position: left center;
   }
 
   .login-auth-card {
@@ -744,7 +744,7 @@ canvas {
 
   @media (min-width: 1024px) {
     .login-backdrop-image {
-      object-position: center center;
+      object-position: left center;
     }
 
     .login-auth-card {

@@ -1,16 +1,11 @@
 .login-backdrop-image {
+  display: block;
   object-fit: cover;
-  object-position: center center;
+  object-position: left center;
 }
 
 .login-backdrop-scene::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(244, 248, 255, 0.16), rgba(244, 248, 255, 0.42)),
-    linear-gradient(90deg, rgba(244, 248, 255, 0.5), rgba(244, 248, 255, 0.18));
+  content: none;
 }
 
 @media (max-width: 640px) {
@@ -27,11 +22,5 @@
 
   .login-auth-card {
     width: min(100%, 420px);
-  }
-
-  .login-backdrop-scene::after {
-    background:
-      linear-gradient(180deg, rgba(244, 248, 255, 0.58), rgba(244, 248, 255, 0.78)),
-      linear-gradient(90deg, rgba(244, 248, 255, 0.62), rgba(244, 248, 255, 0.34));
   }
 }
