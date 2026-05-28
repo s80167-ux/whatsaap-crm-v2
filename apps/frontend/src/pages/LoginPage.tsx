@@ -7,6 +7,7 @@ import { login, startGoogleLogin } from "../api/auth";
 import { Button } from "../components/Button";
 import { Input } from "../components/Input";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import "../login.css";
 
 export function LoginPage() {
   const { t } = useTranslation();
