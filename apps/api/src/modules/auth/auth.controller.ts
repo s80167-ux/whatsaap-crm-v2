@@ -175,7 +175,7 @@ export async function handleGoogleCallback(request: Request, response: Response)
       csrfToken
     });
     setNoStore(response);
-    return response.redirect(new URL("/", frontendRedirectBase).toString());
+    return response.redirect(new URL("/dashboard", frontendRedirectBase).toString());
   } catch (error) {
     clearGoogleOAuthCookies(response);
     clearSessionCookies(response);

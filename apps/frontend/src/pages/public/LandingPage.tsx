@@ -1,9 +1,10 @@
 import { ArrowRight, BarChart3, CheckCircle2, MessageCircle, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { PublicCTA } from "../../components/public/PublicCTA";
 import { PublicSection } from "../../components/public/PublicSection";
 import { PublicVisualShowcase } from "../../components/public/PublicVisualShowcase";
+import { getStoredUser } from "../../lib/auth";
 
 type CardItem = {
   title: string;
@@ -20,6 +21,11 @@ function translatedArray<T>(value: unknown): T[] {
 }
 
 export function LandingPage() {
+  const user = getStoredUser();
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const { t } = useTranslation();
   const painPoints = translatedArray<CardItem>(t("public.landing.pain.cards", { returnObjects: true }));
   const solutions = translatedArray<CardItem>(t("public.landing.solution.cards", { returnObjects: true }));

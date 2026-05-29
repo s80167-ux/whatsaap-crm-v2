@@ -20,9 +20,21 @@ export function startGoogleLogin() {
 }
 
 export async function fetchMe() {
-  const response = await apiGet<{ data: AuthProfile; csrfToken?: string }>("/auth/me");
-  storeAuthSession(response.data, response.csrfToken ?? null);
-  return response.data;
+  try {
+    const response = await apiGet<{ data: AuthProfile; csrfToken?: string }>("/auth/me");
+    storeAuthSession(response.data, response.csrfToken ?? null);
+    return response.data;
+  } catch (err) {
+    // TEMP DIAGNOSTIC LOG
+    // eslint-disable-next-line no-console
+    console.error("fetchMe failed", err, {
+      storedUser: (() => {
+        try { return localStorage.getItem("crm_auth_user"); } catch { return null; }
+      })(),
+      location: window.location.pathname
+    });
+    throw err;
+  }
 }
 
 export async function updateMyPassword(payload: { password: string }) {
