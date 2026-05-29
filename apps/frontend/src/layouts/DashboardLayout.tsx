@@ -32,7 +32,7 @@ import type { FormEvent, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import brandLogo from "../../asset/rezeki_dashboard_logo_glass.png";
 import brandLogoMobile from "../../asset/rezeki_dashboard_logo_mobile_transparent.png";
 import { fetchMe, logout, updateMyPassword, updateMyProfile } from "../api/auth";
@@ -728,6 +728,11 @@ export function DashboardLayout() {
     } finally {
       setIsUpdatingProfile(false);
     }
+  }
+
+  // Add minimal route guard for organization membership
+  if (user && user.role !== "super_admin" && !user.organizationId) {
+    return <Navigate to="/setup" replace />;
   }
 
   return (

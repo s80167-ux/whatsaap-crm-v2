@@ -311,26 +311,23 @@ export class AuthService {
       const organizationUser = await this.authzRepository.findOrganizationUserByAuthUserId(client, input.authUserId);
 
       if (!organizationUser) {
+        // If not super_admin and not org user, handle as before
         if (input.allowSignupRequest) {
           if (!input.email) {
             throw new AppError("Google account email is required", 403, "google_email_missing");
           }
-
           if (!input.isEmailVerified) {
             throw new AppError("Google account email must be verified", 403, "google_email_unverified");
           }
-
           await this.googleSignupRequestRepository.createOrRefreshPending(client, {
             authUserId: input.authUserId,
             email: input.email,
             fullName: input.fullName,
             avatarUrl: input.avatarUrl
           });
-
           throw new AppError("Google signup request is pending approval", 403, "google_signup_pending");
         }
-
-        throw new AppError("Account is not linked to a CRM workspace", 403, "crm_account_not_linked");
+        throw new AppError("Account is not linked to a CRM workspace or platform super admin", 403, "crm_account_not_linked");
       }
 
       if (organizationUser.status !== "active") {
