@@ -41,7 +41,11 @@ export const adminRoutes = Router();
 
 adminRoutes.get("/organization-modules/:moduleKey/status", asyncHandler(getCampaignsModuleStatus));
 adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
-adminRoutes.patch("/organizations/:organizationId/access-limits", asyncHandler(updateOrganizationAccessLimits));
+adminRoutes.patch(
+  "/organizations/:organizationId/access-limits",
+  requirePermission("org.manage_settings"),
+  asyncHandler(updateOrganizationAccessLimits)
+);
 adminRoutes.get("/google-signup-requests", requirePermission("platform.manage_organizations"), asyncHandler(listGoogleSignupRequests));
 adminRoutes.post(
   "/google-signup-requests/:requestId/approve",
@@ -57,13 +61,37 @@ adminRoutes.post(
 adminRoutes.get("/whatsapp-accounts", asyncHandler(listWhatsAppAccounts));
 adminRoutes.get("/whatsapp-account-access", asyncHandler(listWhatsAppAccountAccess));
 adminRoutes.get("/whatsapp-account-access/:whatsappAccountId", asyncHandler(getWhatsAppAccountAccess));
-adminRoutes.put("/whatsapp-account-access/:whatsappAccountId", asyncHandler(updateWhatsAppAccountAccess));
-adminRoutes.post("/whatsapp-accounts", asyncHandler(createWhatsAppAccount));
+adminRoutes.put(
+  "/whatsapp-account-access/:whatsappAccountId",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(updateWhatsAppAccountAccess)
+);
+adminRoutes.post(
+  "/whatsapp-accounts",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(createWhatsAppAccount)
+);
 adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAccountQr));
-adminRoutes.patch("/whatsapp-accounts/:accountId", asyncHandler(updateWhatsAppAccount));
-adminRoutes.post("/whatsapp-accounts/:accountId/disconnect", asyncHandler(disconnectWhatsAppAccount));
-adminRoutes.post("/whatsapp-accounts/:accountId/reconnect", asyncHandler(reconnectWhatsAppAccount));
-adminRoutes.post("/whatsapp-accounts/:accountId/reset-pairing", asyncHandler(resetWhatsAppAccountPairing));
+adminRoutes.patch(
+  "/whatsapp-accounts/:accountId",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(updateWhatsAppAccount)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/disconnect",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(disconnectWhatsAppAccount)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/reconnect",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(reconnectWhatsAppAccount)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/reset-pairing",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(resetWhatsAppAccountPairing)
+);
 adminRoutes.post(
   "/whatsapp-accounts/:accountId/backfill",
   requirePermission("org.manage_whatsapp_accounts"),
@@ -94,7 +122,11 @@ adminRoutes.get(
   requirePermission("org.manage_whatsapp_accounts"),
   asyncHandler(getWhatsAppSyncJob)
 );
-adminRoutes.delete("/whatsapp-accounts/:accountId", asyncHandler(deleteWhatsAppAccount));
+adminRoutes.delete(
+  "/whatsapp-accounts/:accountId",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(deleteWhatsAppAccount)
+);
 
 adminRoutes.get("/raw-events", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(listRawEvents));
 adminRoutes.post("/raw-events/replay", requirePermission("org.manage_whatsapp_accounts"), asyncHandler(replayRawEvents));

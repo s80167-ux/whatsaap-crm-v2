@@ -95,7 +95,7 @@ export async function mergeContacts(req: Request, res: Response) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  const organizationId = req.auth.organizationId ?? String(req.body.organization_id || "");
+  const organizationId = req.auth.organizationId ?? (req.auth.role === "super_admin" ? String(req.body.organization_id || "") : "");
 
   if (!organizationId) {
     return res.status(400).json({ error: "organization_id is required" });

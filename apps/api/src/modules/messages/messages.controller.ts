@@ -295,7 +295,7 @@ export async function retryOutboundMessage(request: Request, response: Response)
   });
 
   const input = bodySchema.parse(request.body ?? {});
-  const organizationId = input.organizationId ?? request.auth?.organizationId ?? null;
+  const organizationId = request.auth?.organizationId ?? input.organizationId ?? null;
 
   const result = await messageDispatchService.retryMessage({
     messageId,

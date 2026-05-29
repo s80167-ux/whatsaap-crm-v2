@@ -333,6 +333,7 @@ export function CreateTemplatePage() {
                       multiple
                       accept={attachmentAccept}
                       className="hidden"
+                      aria-label="Add attachment file(s)"
                       onChange={(event) => void handleAttachmentFiles(event.target.files)}
                     />
                     {draft.attachments.length > 0 ? (

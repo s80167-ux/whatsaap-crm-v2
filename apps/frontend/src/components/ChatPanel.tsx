@@ -1952,11 +1952,17 @@ function MessageAttachmentThumbnail({
     return <img src={previewUrl} alt={title} className="h-16 w-16 shrink-0 rounded-xl border border-border/80 bg-card object-cover" />;
   }
 
-  return (
-    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card">
-      {Icon ? <Icon className="h-5 w-5 text-text-soft" /> : <Paperclip className="h-5 w-5 text-text-soft" />}
-    </div>
-  );
+  // Only show the icon if there is a previewUrl (media) or a fileName (document)
+  if (previewUrl || title) {
+    return (
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card">
+        {Icon ? <Icon className="h-5 w-5 text-text-soft" /> : <Paperclip className="h-5 w-5 text-text-soft" />}
+      </div>
+    );
+  }
+
+  // No attachment, render nothing
+  return null;
 }
 
 function AttachmentPreviewIcon({ kind }: { kind: ComposerAttachment["kind"] }) {

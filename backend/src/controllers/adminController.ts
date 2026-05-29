@@ -102,6 +102,10 @@ export async function listOrganizationUsers(req: Request, res: Response) {
   }
 
   const organizationId = typeof req.query.organization_id === "string" ? req.query.organization_id : undefined;
+  if (req.auth.role !== "super_admin" && organizationId && organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const users = await adminService.listUsers(req.auth, organizationId);
   return res.json({ data: users });
 }
@@ -112,6 +116,10 @@ export async function createOrganizationUser(req: Request, res: Response) {
   }
 
   const input = createUserSchema.parse(req.body);
+  if (req.auth.role !== "super_admin" && input.organizationId && input.organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const user = await adminService.createUser(req.auth, {
     ...input,
     fullName: input.fullName ?? null
@@ -163,6 +171,10 @@ export async function listWhatsAppAccounts(req: Request, res: Response) {
   }
 
   const organizationId = typeof req.query.organization_id === "string" ? req.query.organization_id : undefined;
+  if (req.auth.role !== "super_admin" && organizationId && organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const accounts = await adminService.listWhatsAppAccounts(req.auth, organizationId);
   return res.json({ data: accounts.map(mapWhatsAppAccount) });
 }
@@ -173,6 +185,9 @@ export async function listRawEvents(req: Request, res: Response) {
   }
 
   const organizationId = typeof req.query.organization_id === "string" ? req.query.organization_id : undefined;
+  if (req.auth.role !== "super_admin" && organizationId && organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   const whatsappAccountId = typeof req.query.whatsapp_account_id === "string" ? req.query.whatsapp_account_id : undefined;
   const statusQuery = req.query.status;
   const statuses = Array.isArray(statusQuery)
@@ -201,6 +216,10 @@ export async function createWhatsAppAccount(req: Request, res: Response) {
   }
 
   const input = createWhatsAppAccountSchema.parse(req.body);
+  if (req.auth.role !== "super_admin" && input.organizationId && input.organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const account = await adminService.createWhatsAppAccount(req.auth, {
     ...input,
     phoneNumber: input.phoneNumber ?? null
@@ -254,6 +273,10 @@ export async function replayRawEvents(req: Request, res: Response) {
   }
 
   const input = replayRawEventsSchema.parse(req.body);
+  if (req.auth.role !== "super_admin" && input.organizationId && input.organizationId !== req.auth.organizationId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const result = await adminService.replayRawEvents(req.auth, {
     organizationId: input.organizationId ?? null,
     whatsappAccountId: input.whatsappAccountId ?? null,
