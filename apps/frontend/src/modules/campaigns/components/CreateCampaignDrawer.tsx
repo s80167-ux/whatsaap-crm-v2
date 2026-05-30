@@ -13,7 +13,7 @@ import { fetchAudienceGroupContacts } from "../audience-groups/services/audience
 import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
-import type { CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import type { CampaignAttachment, CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 
 const fallbackSampleContact: CampaignContact = {
   name: "Ahmad",
@@ -78,6 +78,8 @@ export function CreateCampaignDrawer({
   const [templateGovernanceVersionId, setTemplateGovernanceVersionId] = useState("");
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
+  const [attachment, setAttachment] = useState<CampaignAttachment | null>(null);
+  const [attachContactCard, setAttachContactCard] = useState(false);
   const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
   const [testSendNotice, setTestSendNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -181,8 +183,8 @@ export function CreateCampaignDrawer({
   }
 
   function validateTemplate() {
-    if (!messageTemplate.trim()) {
-      showError("Message Template is required.");
+    if (!messageTemplate.trim() && !attachment) {
+      showError("Message Template or an attachment is required.");
       return false;
     }
 
@@ -242,6 +244,43 @@ export function CreateCampaignDrawer({
     }));
   }
 
+  function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const maxBytes = 4 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      showError("Attachment too large. Please keep files under 4 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const kind = file.type.startsWith("image/")
+      ? "image"
+      : file.type.startsWith("video/")
+        ? "video"
+        : file.type.startsWith("audio/")
+          ? "audio"
+          : "document";
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      const [, dataBase64 = ""] = result.split(",");
+      if (dataBase64) {
+        setAttachment({
+          kind,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          dataBase64,
+          fileSizeBytes: file.size
+        });
+      }
+    };
+    reader.onerror = () => showError("Unable to read the selected file.");
+    reader.readAsDataURL(file);
+  }
+
   function validateCampaignName() {
     if (!campaignName.trim()) {
       showError("Campaign Name is required.");
@@ -266,7 +305,9 @@ export function CreateCampaignDrawer({
         audienceGroupId,
         messageTemplate,
         templateGovernanceVersionId: templateGovernanceVersionId || null,
-        tempo
+        tempo,
+        attachment,
+        attachContactCard
       });
       onPlaceholderAction(`Campaign draft "${campaign.name}" saved.`, "success");
       onCampaignChanged?.();
@@ -297,7 +338,9 @@ export function CreateCampaignDrawer({
         senderWhatsAppAccountId,
         testPhoneNumber: testPhoneNumber.trim(),
         messageTemplate: preview,
-        templateGovernanceVersionId: templateGovernanceVersionId || null
+        templateGovernanceVersionId: templateGovernanceVersionId || null,
+        attachment,
+        attachContactCard
       });
       showTestSendNotice(result.message || `Test message queued from ${senderLabel} to ${testPhoneNumber.trim()}.`, "success");
     } catch (error) {
@@ -322,7 +365,9 @@ export function CreateCampaignDrawer({
         audienceGroupId,
         messageTemplate,
         templateGovernanceVersionId: templateGovernanceVersionId || null,
-        tempo
+        tempo,
+        attachment,
+        attachContactCard
       });
 
       if (action === "Schedule Later") {
@@ -339,7 +384,9 @@ export function CreateCampaignDrawer({
         audienceGroupId,
         messageTemplate,
         templateGovernanceVersionId: templateGovernanceVersionId || null,
-        speedPreset: tempo.speedPreset
+        speedPreset: tempo.speedPreset,
+        attachment,
+        attachContactCard
       });
       onPlaceholderAction(result.message, "success");
       onCampaignChanged?.();
@@ -487,6 +534,39 @@ export function CreateCampaignDrawer({
                 placeholder={defaultTemplate}
               />
             </label>
+
+            <label className="mt-4 block">
+              <span className="workspace-label">Media Attachment</span>
+              <input
+                type="file"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                onChange={handleAttachmentChange}
+                className="block w-full text-sm text-text-muted file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-primary-dark"
+              />
+              {attachment ? (
+                <div className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs">
+                  <span className="font-semibold text-text">{attachment.kind.toUpperCase()}:</span>
+                  <span className="text-text-muted">{attachment.fileName}</span>
+                  <button
+                    type="button"
+                    className="ml-auto text-coral hover:text-coral-dark"
+                    onClick={() => setAttachment(null)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </label>
+
+            <label className="mt-4 flex items-center gap-2 text-sm text-text-muted">
+              <input
+                type="checkbox"
+                checked={attachContactCard}
+                onChange={(event) => setAttachContactCard(event.target.checked)}
+              />
+              Attach business contact card (recipients can save your number)
+            </label>
+
             <AiMessageAssist
               value={messageTemplate}
               onChange={setMessageTemplate}
@@ -551,6 +631,8 @@ export function CreateCampaignDrawer({
             audienceLabel={selectedAudienceGroup?.name}
             validRecipients={selectedAudienceGroup?.valid_count}
             tempoLabel={tempoLabel}
+            attachment={attachment}
+            attachContactCard={attachContactCard}
           />
 
           <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">

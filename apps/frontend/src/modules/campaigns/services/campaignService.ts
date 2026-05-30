@@ -2,6 +2,7 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
 import { config } from "../../../lib/config";
 import type {
   Campaign,
+  CampaignAttachment,
   CampaignRecipient,
   CampaignRecipientSendStatus,
   CampaignSpeedPreset,
@@ -91,9 +92,11 @@ export type CreateCampaignInput = {
   name: string;
   senderWhatsAppAccountId: string;
   audienceGroupId: string;
-  messageTemplate: string;
+  messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
   tempo: CampaignTempo;
+  attachment?: CampaignAttachment | null;
+  attachContactCard?: boolean;
 };
 
 export type UpdateCampaignInput = Partial<CreateCampaignInput> & {
@@ -197,8 +200,10 @@ export async function sendCampaignTest(input: {
   organizationId?: string | null;
   senderWhatsAppAccountId: string;
   testPhoneNumber: string;
-  messageTemplate: string;
+  messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
+  attachment?: CampaignAttachment | null;
+  attachContactCard?: boolean;
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/send-test` : "/campaigns/preview/send-test";
   const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);
@@ -213,6 +218,8 @@ export async function startCampaign(input: {
   messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
   speedPreset?: CampaignSpeedPreset;
+  attachment?: CampaignAttachment | null;
+  attachContactCard?: boolean;
 }) {
   const path = input.campaignId ? `/campaigns/${input.campaignId}/start` : "/campaigns/preview/start";
   const response = await apiPost<{ data: { ok: true; message: string } }>(path, input);

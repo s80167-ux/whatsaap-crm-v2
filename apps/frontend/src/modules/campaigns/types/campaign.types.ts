@@ -9,6 +9,14 @@ export type CampaignContact = {
   gender?: "male" | "female" | "unknown" | null;
 };
 
+export type CampaignAttachment = {
+  kind: "image" | "video" | "audio" | "document";
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  fileSizeBytes: number;
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -20,6 +28,8 @@ export type Campaign = {
   senderWhatsAppLabel?: string | null;
   senderPhoneNumber?: string | null;
   messageTemplate?: string | null;
+  attachment?: CampaignAttachment | null;
+  attachContactCard?: boolean;
   speedPreset?: CampaignSpeedPreset;
   delayPerMessageSeconds?: number;
   batchSize?: number;

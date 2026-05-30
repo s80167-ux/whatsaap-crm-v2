@@ -665,13 +665,13 @@ export class TemplateGovernanceService {
   async assertTemplateCanBeUsedInCampaign(input: {
     organizationId: string;
     templateGovernanceVersionId?: string | null;
-    messageTemplate: string;
+    messageTemplate?: string | null;
   }) {
     return withClient(async (client) => {
       await TemplateGovernanceService.ensureTables(client);
       const settings = await getSettingsOnClient(client, input.organizationId);
       if (!settings.approval_required && !input.templateGovernanceVersionId) {
-        return { body: input.messageTemplate, version: null };
+        return { body: input.messageTemplate ?? "", version: null };
       }
       if (!input.templateGovernanceVersionId) {
         throw new AppError("Template is not approved for campaign use.", 403, "template_not_approved");

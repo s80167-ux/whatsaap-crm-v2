@@ -118,6 +118,10 @@ export class ConnectorClient {
       mimeType: string;
       dataBase64: string;
     } | null;
+    contactCard?: {
+      displayName: string;
+      vcard: string;
+    } | null;
   }) {
     return this.request<{ key?: { id?: string } } | Record<string, unknown>>("/internal/messages/send", {
       method: "POST",

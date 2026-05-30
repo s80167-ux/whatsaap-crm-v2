@@ -91,6 +91,9 @@ export interface WhatsAppAccountRecord {
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;
+  health_score_computed_at?: string | null;
+  warmup_level?: number | null;
+  warmup_started_at?: string | null;
   live_connection_status?: string | null;
   live_connected?: boolean | null;
   live_status_error?: string | null;
@@ -124,6 +127,7 @@ export interface SendMessageInput {
   forwardedFromMessageId?: UUID | null;
   text?: string | null;
   attachment?: OutboundMediaAttachmentInput | null;
+  contactCard?: OutboundContactCardInput | null;
   outboxAvailableAt?: string | null;
   campaignContext?: {
     campaignId: UUID;
@@ -141,6 +145,11 @@ export interface OutboundMediaAttachmentInput {
   mimeType: string;
   dataBase64: string;
   fileSizeBytes: number;
+}
+
+export interface OutboundContactCardInput {
+  displayName: string;
+  vcard: string;
 }
 
 export interface InboundMediaAttachmentInput {

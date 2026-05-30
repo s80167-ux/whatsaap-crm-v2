@@ -41,7 +41,10 @@ type CampaignRecord = {
   sender_mode: "single" | "round_robin";
   sender_whatsapp_account_id: string | null;
   message_template: string | null;
+  message_body_type: string;
+  attachment: unknown | null;
   speed_preset: "safe" | "normal" | "custom";
+  attach_contact_card: boolean;
 };
 
 type AudienceGroupRecord = {

@@ -3,20 +3,29 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { pool } from "../config/database.js";
 import { CampaignDispatchService } from "../services/campaignDispatchService.js";
+import { WhatsAppAccountHealthService } from "../services/whatsappAccountHealthService.js";
 
 const dispatcher = new CampaignDispatchService();
+const healthService = new WhatsAppAccountHealthService();
 const runOnce = process.argv.includes("--once");
 
 async function main() {
   let consecutiveFailures = 0;
+  let batchCount = 0;
 
   do {
     try {
       const processed = await dispatcher.processPendingBatch(env.CAMPAIGN_DISPATCH_WORKER_BATCH_SIZE);
       consecutiveFailures = 0;
+      batchCount++;
 
       if (processed > 0) {
         logger.info({ processed }, "Processed pending campaign dispatch jobs");
+      }
+
+      // Refresh health scores every 10 batches
+      if (batchCount % 10 === 0) {
+        await healthService.refreshAll();
       }
 
       if (runOnce) {

@@ -13,14 +13,25 @@ type CampaignDispatchCandidate = {
   sender_whatsapp_account_id: string | null;
   sender_mode: "single" | "round_robin";
   message_template: string;
+  message_body_type: string;
+  attachment: {
+    kind: "image" | "video" | "audio" | "document";
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+    fileSizeBytes: number;
+  } | null;
   delay_per_message_seconds: number;
   batch_size: number;
   batch_pause_seconds: number;
   daily_limit: number;
+  attach_contact_card: boolean;
   sender_count: string;
   last_queued_at: string | null;
   dispatched_count: string;
   today_count: string;
+  min_delay_seconds: number;
+  max_delay_seconds: number;
 };
 
 type ClaimedCampaignRecipient = {
@@ -45,10 +56,21 @@ type ClaimedCampaignRecipient = {
   sender_whatsapp_account_id: string | null;
   sender_mode: "single" | "round_robin";
   message_template: string;
+  message_body_type: string;
+  attachment: {
+    kind: "image" | "video" | "audio" | "document";
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+    fileSizeBytes: number;
+  } | null;
   delay_per_message_seconds: number;
   batch_size: number;
   batch_pause_seconds: number;
   daily_limit: number;
+  attach_contact_card: boolean;
+  min_delay_seconds: number;
+  max_delay_seconds: number;
 };
 
 type CampaignSenderAccount = {
@@ -56,6 +78,7 @@ type CampaignSenderAccount = {
   sort_order: number;
   created_at: string;
   connection_status: string;
+  health_score: number | null;
 };
 
 type CampaignSenderAssignment = {
@@ -120,10 +143,15 @@ export class CampaignDispatchService {
           c.sender_whatsapp_account_id,
           c.sender_mode,
           c.message_template,
+          c.message_body_type,
+          c.attachment,
           c.delay_per_message_seconds,
           c.batch_size,
           c.batch_pause_seconds,
           c.daily_limit,
+          c.attach_contact_card,
+          coalesce(css.min_delay_seconds, 5) as min_delay_seconds,
+          coalesce(css.max_delay_seconds, 20) as max_delay_seconds,
           coalesce(
             (
               select count(*)
@@ -141,9 +169,10 @@ export class CampaignDispatchService {
           )::text as today_count
         from campaigns c
         join campaign_recipients cr on cr.campaign_id = c.id
+        left join campaign_safety_settings css on css.organization_id = c.organization_id
         where c.status = 'sending'
           and c.sender_whatsapp_account_id is not null
-          and c.message_template is not null
+          and (c.message_template is not null or c.attachment is not null)
           and cr.send_status in ('pending', 'failed')
           and cr.attempt_count < $1
           and coalesce(cr.next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
@@ -166,10 +195,13 @@ export class CampaignDispatchService {
 
       const dispatchedCount = Number(campaign.dispatched_count);
       const effectiveBatchSize = Math.max(campaign.batch_size * senderCount, 1);
-      const waitSeconds =
-        dispatchedCount > 0 && dispatchedCount % effectiveBatchSize === 0
-          ? campaign.batch_pause_seconds
-          : Math.max(1, Math.ceil(campaign.delay_per_message_seconds / senderCount));
+      const isBatchPause = dispatchedCount > 0 && dispatchedCount % effectiveBatchSize === 0;
+      const baseWaitSeconds = isBatchPause
+        ? campaign.batch_pause_seconds
+        : randomInRange(campaign.min_delay_seconds, campaign.max_delay_seconds) / senderCount;
+      // Occasional long pause every ~50 messages to mimic human behavior
+      const occasionalPauseSeconds = !isBatchPause && Math.random() < 0.02 ? randomInRange(30, 90) : 0;
+      const waitSeconds = Math.max(1, Math.ceil(baseWaitSeconds + occasionalPauseSeconds));
 
       if (campaign.last_queued_at) {
         const nextAllowedAt = new Date(campaign.last_queued_at).getTime() + waitSeconds * 1000;
@@ -218,11 +250,12 @@ export class CampaignDispatchService {
               failure_reason = null
           from candidate
           join campaigns c on c.id = $1
+          left join campaign_safety_settings css on css.organization_id = c.organization_id
           where cr.id = candidate.id
             and c.id = cr.campaign_id
             and c.status = 'sending'
             and c.sender_whatsapp_account_id is not null
-            and c.message_template is not null
+            and (c.message_template is not null or c.attachment is not null)
           returning
             cr.id,
             cr.organization_id,
@@ -245,10 +278,15 @@ export class CampaignDispatchService {
             c.sender_whatsapp_account_id,
             c.sender_mode,
             c.message_template,
+            c.message_body_type,
+            c.attachment,
             c.delay_per_message_seconds,
             c.batch_size,
             c.batch_pause_seconds,
-            c.daily_limit
+            c.daily_limit,
+            c.attach_contact_card,
+            coalesce(css.min_delay_seconds, 5) as min_delay_seconds,
+            coalesce(css.max_delay_seconds, 20) as max_delay_seconds
         `,
         [campaignId, env.CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES]
       );
@@ -281,6 +319,26 @@ export class CampaignDispatchService {
 
       const senderAssignment = await this.resolveSenderAssignment(recipient);
 
+      // Warm-up check
+      const warmupOk = await this.checkSenderWarmup(recipient.organization_id, senderAssignment.whatsappAccountId, recipient.daily_limit);
+      if (!warmupOk) {
+        await query(
+          `
+            update campaign_recipients
+            set send_status = 'pending',
+                queued_at = null,
+                next_attempt_at = date_trunc('day', timezone('utc', now())) + interval '1 day',
+                error_message = 'Sender account warm-up limit reached for today'
+            where organization_id = $1
+              and campaign_id = $2
+              and id = $3
+              and message_id is null
+          `,
+          [recipient.organization_id, recipient.campaign_id, recipient.id]
+        );
+        return;
+      }
+
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
         campaignId: recipient.campaign_id,
@@ -298,7 +356,9 @@ export class CampaignDispatchService {
           product_interest: recipient.product_interest,
           customer_type: recipient.customer_type,
           notes: recipient.notes
-        })
+        }),
+        attachment: recipient.attachment,
+        attachContactCard: recipient.attach_contact_card
       });
 
       await query(
@@ -331,6 +391,7 @@ export class CampaignDispatchService {
           senderAssignment.assignedAt
         ]
       );
+      await this.touchWarmupStarted(recipient.organization_id, senderAssignment.whatsappAccountId);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to send campaign message";
       const retryDelaySeconds = Math.min(recipient.attempt_count, 5) * 60;
@@ -381,6 +442,58 @@ export class CampaignDispatchService {
     return result.rows[0]?.status ?? null;
   }
 
+  private async checkSenderWarmup(organizationId: string, whatsappAccountId: string, baseDailyLimit: number): Promise<boolean> {
+    const account = await query<{ warmup_started_at: string | null; created_at: string }>(
+      `
+        select warmup_started_at, created_at
+        from whatsapp_accounts
+        where organization_id = $1
+          and id = $2
+        limit 1
+      `,
+      [organizationId, whatsappAccountId]
+    );
+    const row = account.rows[0];
+    if (!row) return false;
+
+    const warmupLimit = getWarmupDailyLimit(row.warmup_started_at ?? row.created_at, baseDailyLimit);
+
+    const sentToday = await query<{ count: string }>(
+      `
+        select count(*)::text as count
+        from campaign_recipients
+        where organization_id = $1
+          and assigned_whatsapp_account_id = $2
+          and sent_at >= date_trunc('day', timezone('utc', now()))
+      `,
+      [organizationId, whatsappAccountId]
+    );
+    const sentTodayCount = Number(sentToday.rows[0]?.count ?? 0);
+    return sentTodayCount < warmupLimit;
+  }
+
+  private async touchWarmupStarted(organizationId: string, whatsappAccountId: string) {
+    await query(
+      `
+        update whatsapp_accounts
+        set warmup_started_at = coalesce(warmup_started_at, timezone('utc', now())),
+            warmup_level = case
+              when warmup_started_at is null then 1
+              when warmup_started_at >= timezone('utc', now()) - interval '2 days' then 1
+              when warmup_started_at >= timezone('utc', now()) - interval '4 days' then 2
+              when warmup_started_at >= timezone('utc', now()) - interval '7 days' then 3
+              when warmup_started_at >= timezone('utc', now()) - interval '10 days' then 4
+              when warmup_started_at >= timezone('utc', now()) - interval '14 days' then 5
+              else 6
+            end,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [organizationId, whatsappAccountId]
+    );
+  }
+
   private async sendCampaignRecipientMessage(input: {
     organizationId: string;
     campaignId: string;
@@ -389,6 +502,14 @@ export class CampaignDispatchService {
     phoneNumber: string;
     profileName?: string | null;
     text: string;
+    attachment?: {
+      kind: "image" | "video" | "audio" | "document";
+      fileName: string;
+      mimeType: string;
+      dataBase64: string;
+      fileSizeBytes: number;
+    } | null;
+    attachContactCard?: boolean;
   }) {
     const normalizedPhone = normalizePhoneNumber(input.phoneNumber);
 
@@ -415,12 +536,30 @@ export class CampaignDispatchService {
       });
     });
 
+    let contactCard = null;
+    if (input.attachContactCard) {
+      const account = await query<{ display_name: string | null; account_phone_e164: string | null }>(
+        `select display_name, account_phone_e164 from whatsapp_accounts where id = $1 and organization_id = $2 limit 1`,
+        [input.senderAssignment.whatsappAccountId, input.organizationId]
+      );
+      const row = account.rows[0];
+      if (row?.account_phone_e164) {
+        const displayName = row.display_name || row.account_phone_e164;
+        contactCard = {
+          displayName,
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:${displayName}\nTEL;TYPE=CELL:${row.account_phone_e164}\nEND:VCARD`
+        };
+      }
+    }
+
     return this.sendMessageService.send(
       {
         organizationId: input.organizationId,
         whatsappAccountId: input.senderAssignment.whatsappAccountId,
         conversationId: conversation.id,
         text: input.text,
+        attachment: input.attachment ?? null,
+        contactCard,
         outboxAvailableAt: env.OUTBOUND_DISPATCH_MODE === "worker_only" ? input.senderAssignment.availableAt : null,
         campaignContext: {
           campaignId: input.campaignId,
@@ -510,7 +649,8 @@ export class CampaignDispatchService {
           csa.whatsapp_account_id,
           csa.sort_order,
           csa.created_at,
-          lower(coalesce(wa.connection_status, 'disconnected')) as connection_status
+          lower(coalesce(wa.connection_status, 'disconnected')) as connection_status,
+          wa.health_score
         from campaign_sender_accounts csa
         join whatsapp_accounts wa on wa.id = csa.whatsapp_account_id
         where csa.organization_id = $1
@@ -521,7 +661,17 @@ export class CampaignDispatchService {
       [organizationId, campaignId]
     );
 
-    return result.rows.filter((sender) => ["connected", "open", "ready"].includes(sender.connection_status));
+    const eligible = result.rows.filter((sender) =>
+      ["connected", "open", "ready"].includes(sender.connection_status) &&
+      !["banned", "logged_out"].includes(sender.connection_status)
+    );
+
+    // Sort by health_score desc so round-robin starts from healthiest accounts
+    eligible.sort((a, b) => (b.health_score ?? 50) - (a.health_score ?? 50));
+
+    // If there are healthy accounts (score >= 20), exclude very unhealthy ones
+    const healthy = eligible.filter((s) => (s.health_score ?? 50) >= 20);
+    return healthy.length > 0 ? healthy : eligible;
   }
 
   private async getRecipientSequenceIndex(
@@ -579,7 +729,17 @@ export class CampaignDispatchService {
     const indexWithinDay = assignmentIndex % dailyLimit;
     const dayOffset = Math.floor(assignmentIndex / dailyLimit);
     const pauseBlocks = Math.floor(indexWithinDay / Math.max(recipient.batch_size, 1));
-    const secondsOffset = indexWithinDay * recipient.delay_per_message_seconds + pauseBlocks * recipient.batch_pause_seconds;
+    const minDelay = recipient.min_delay_seconds ?? 5;
+    const maxDelay = recipient.max_delay_seconds ?? 20;
+    // Human-like jitter: random delay per message + occasional long pause
+    let messageDelays = 0;
+    for (let i = 0; i < indexWithinDay; i++) {
+      messageDelays += randomInRange(minDelay, maxDelay);
+      if (Math.random() < 0.02) {
+        messageDelays += randomInRange(30, 90);
+      }
+    }
+    const secondsOffset = messageDelays + pauseBlocks * recipient.batch_pause_seconds;
     const availableAt = new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000 + secondsOffset * 1000);
     return availableAt.toISOString();
   }
@@ -643,7 +803,92 @@ function renderCampaignMessage(template: string, recipient: {
     notes: recipient.notes ?? ""
   };
 
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
+  const withVariables = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
+  return renderSpintax(withVariables);
+}
+
+/**
+ * Parse and expand spin syntax: {option1|option2|option3}
+ * Supports nested groups and escaped braces: \{ and \}
+ */
+export function renderSpintax(text: string): string {
+  // Replace escaped braces with temporary placeholders so they don't interfere
+  const ESCAPED_OPEN = "\x00SPIN_OPEN\x00";
+  const ESCAPED_CLOSE = "\x00SPIN_CLOSE\x00";
+  let protectedText = text.replace(/\\\{/g, ESCAPED_OPEN).replace(/\\\}/g, ESCAPED_CLOSE);
+
+  // Find the first unescaped { that is NOT part of {{ (shouldn't exist after variable substitution,
+  // but we guard against it anyway by checking it's not preceded by another {)
+  function expand(input: string): string {
+    let result = "";
+    let i = 0;
+    while (i < input.length) {
+      const ch = input[i];
+      if (ch === "{" && input[i + 1] !== "{") {
+        // Find matching } at nesting level 0
+        let depth = 1;
+        let j = i + 1;
+        while (j < input.length && depth > 0) {
+          if (input[j] === "{" && input[j + 1] !== "{") depth++;
+          else if (input[j] === "}") depth--;
+          j++;
+        }
+        if (depth !== 0) {
+          // Unmatched brace — leave as-is to avoid data loss
+          result += ch;
+          i++;
+          continue;
+        }
+        const groupContent = input.slice(i + 1, j - 1);
+        // Split by | at nesting level 0
+        const options: string[] = [];
+        let optStart = 0;
+        let splitDepth = 0;
+        for (let k = 0; k < groupContent.length; k++) {
+          const c = groupContent[k];
+          if (c === "{" && groupContent[k + 1] !== "{") splitDepth++;
+          else if (c === "}") splitDepth--;
+          else if (c === "|" && splitDepth === 0) {
+            options.push(groupContent.slice(optStart, k));
+            optStart = k + 1;
+          }
+        }
+        options.push(groupContent.slice(optStart));
+        // Filter out empty options that resulted from stray pipes
+        const validOptions = options.filter((o) => o.length > 0);
+        if (validOptions.length === 0) {
+          result += ch;
+          i++;
+          continue;
+        }
+        const chosen = validOptions[Math.floor(Math.random() * validOptions.length)];
+        result += expand(chosen);
+        i = j;
+      } else {
+        result += ch;
+        i++;
+      }
+    }
+    return result;
+  }
+
+  const expanded = expand(protectedText);
+  return expanded.replace(new RegExp(ESCAPED_OPEN, "g"), "{").replace(new RegExp(ESCAPED_CLOSE, "g"), "}");
+}
+
+function randomInRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function getWarmupDailyLimit(warmupStartedAt: string | null | Date, baseLimit: number): number {
+  if (!warmupStartedAt) return 20;
+  const days = Math.floor((Date.now() - new Date(warmupStartedAt).getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 2) return 20;
+  if (days < 4) return 50;
+  if (days < 7) return 100;
+  if (days < 10) return 200;
+  if (days < 14) return 300;
+  return baseLimit;
 }
 
 export async function closeCampaignDispatchPool() {

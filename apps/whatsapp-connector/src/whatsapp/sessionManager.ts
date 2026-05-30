@@ -42,6 +42,11 @@ type OutboundMediaAttachment = {
   dataBase64: string;
 };
 
+type OutboundContactCard = {
+  displayName: string;
+  vcard: string;
+};
+
 type ContactSnapshot = Pick<Contact, "id" | "jid" | "lid" | "name" | "notify" | "verifiedName" | "imgUrl">;
 export type StoredContactSnapshot = {
   id: string;
@@ -494,13 +499,21 @@ export class WhatsAppSessionManager {
               !hadConnected &&
               consecutiveReconnectFailures >= env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES;
 
+            // Ban heuristics for Baileys:
+            // 1. loggedOut (401) while previously connected = kicked by WhatsApp
+            // 2. loggedOut (401) with repeated QR failures = QR rejected (banned)
+            // 3. loggedOut (401) without shouldReconnect = permanent disconnect
+            const isSuspectedBan =
+              statusCode === DisconnectReason.loggedOut &&
+              (hadConnected || consecutiveReconnectFailures >= 2);
+
             if (hadConnected) {
               this.reconnectFailureCounts.delete(account.id);
             } else {
               this.reconnectFailureCounts.set(account.id, consecutiveReconnectFailures);
             }
 
-            if (autoReconnectSuppressed) {
+            if (autoReconnectSuppressed || isSuspectedBan) {
               this.disabledAccounts.add(account.id);
               this.rejectConnectionWaiters(account.id, new Error("WhatsApp reconnect was suppressed after repeated failures"));
             }
@@ -526,7 +539,7 @@ export class WhatsAppSessionManager {
                   }
                 });
 
-                if (!shouldReconnect) {
+                if (!shouldReconnect || isSuspectedBan) {
                   await this.accountRepository.releaseLease(client, {
                     accountId: account.id,
                     ownerId: env.CONNECTOR_INSTANCE_ID
@@ -550,7 +563,22 @@ export class WhatsAppSessionManager {
                   });
                 }
 
-                await this.accountRepository.updateStatus(client, account.id, "disconnected");
+                if (isSuspectedBan) {
+                  await this.runtimeRepository.appendConnectionEvent(client, {
+                    whatsappAccountId: account.id,
+                    sessionId: session.id,
+                    eventType: "suspected_ban",
+                    severity: "critical",
+                    payload: {
+                      status_code: statusCode,
+                      had_connected: hadConnected,
+                      consecutive_reconnect_failures: consecutiveReconnectFailures
+                    }
+                  });
+                  await this.accountRepository.updateStatus(client, account.id, "banned");
+                } else {
+                  await this.accountRepository.updateStatus(client, account.id, "disconnected");
+                }
               });
             } catch (error) {
               closePersistenceFailed = true;
@@ -763,9 +791,15 @@ export class WhatsAppSessionManager {
     }
   }
 
-  async sendMessage(accountId: string, recipientJid: string, text: string | null, attachment: OutboundMediaAttachment | null) {
-    if (!text && !attachment) {
-      throw new Error("Message text or attachment is required");
+  async sendMessage(
+    accountId: string,
+    recipientJid: string,
+    text: string | null,
+    attachment: OutboundMediaAttachment | null,
+    contactCard: OutboundContactCard | null = null
+  ) {
+    if (!text && !attachment && !contactCard) {
+      throw new Error("Message text, attachment, or contact card is required");
     }
 
     const socket = await this.ensureConnectedForSend(accountId);
@@ -778,7 +812,14 @@ export class WhatsAppSessionManager {
     let result: unknown;
 
     try {
-      if (!attachment) {
+      if (contactCard) {
+        result = await socket.sendMessage(recipientJid, {
+          contacts: {
+            displayName: contactCard.displayName,
+            contacts: [{ displayName: contactCard.displayName, vcard: contactCard.vcard }]
+          }
+        });
+      } else if (!attachment) {
         result = await socket.sendMessage(recipientJid, { text: text ?? "" });
       } else {
         const mediaBuffer = Buffer.from(attachment.dataBase64, "base64");

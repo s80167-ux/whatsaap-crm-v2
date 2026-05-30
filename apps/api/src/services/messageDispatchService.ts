@@ -166,7 +166,8 @@ export class MessageDispatchService {
         accountId: job.whatsapp_account_id,
         recipientJid: job.recipient_jid,
         text: job.message_text,
-        attachment: this.extractAttachmentPayload(job.payload)
+        attachment: this.extractAttachmentPayload(job.payload),
+        contactCard: this.extractContactCardPayload(job.payload)
       });
 
       const sentAt = new Date();
@@ -529,6 +530,32 @@ export class MessageDispatchService {
       fileName: candidate.fileName,
       mimeType: candidate.mimeType,
       dataBase64: candidate.dataBase64
+    };
+  }
+
+  private extractContactCardPayload(payload: unknown) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const contactCard = (payload as { contactCard?: unknown }).contactCard;
+
+    if (!contactCard || typeof contactCard !== "object" || Array.isArray(contactCard)) {
+      return null;
+    }
+
+    const candidate = contactCard as {
+      displayName?: string;
+      vcard?: string;
+    };
+
+    if (!candidate.displayName || !candidate.vcard) {
+      return null;
+    }
+
+    return {
+      displayName: candidate.displayName,
+      vcard: candidate.vcard
     };
   }
 

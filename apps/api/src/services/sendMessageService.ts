@@ -108,6 +108,13 @@ export class SendMessageService {
               }
             }
           : {}),
+        ...(input.contactCard
+          ? {
+              contactCard: {
+                displayName: input.contactCard.displayName
+              }
+            }
+          : {}),
         ...(replyContextMessage
           ? {
               replyContext: {
@@ -170,6 +177,14 @@ export class SendMessageService {
                 fileName: input.attachment.fileName,
                 mimeType: input.attachment.mimeType,
                 dataBase64: input.attachment.dataBase64
+              }
+            }
+          : {}),
+        ...(input.contactCard
+          ? {
+              contactCard: {
+                displayName: input.contactCard.displayName,
+                vcard: input.contactCard.vcard
               }
             }
           : {}),

@@ -233,7 +233,8 @@ export class CampaignSafetyService {
       message_length: message.length,
       link_count: linkCount,
       has_opt_out_text: hasOptOutText,
-      variable_errors: findVariableErrors(message)
+      variable_errors: findVariableErrors(message),
+      spintax_errors: findSpintaxErrors(message)
     };
   }
 
@@ -312,15 +313,20 @@ export class CampaignSafetyService {
       const recipientSummary = await getRecipientSummary(client, campaign, settings);
       const contentSummary = CampaignSafetyService.checkContentRisk({ message: campaign.message_template ?? "" });
       const sendingSummary = await getSendingSummary(client, campaign, settings);
+      const bannedSenders = await getBannedSenderCount(client, campaign);
       const blockingErrors: string[] = [];
       const warnings: string[] = [];
 
       if (recipientSummary.valid <= 0) blockingErrors.push("no_valid_recipients");
-      if (!sendingSummary.selected_whatsapp_account_id || !["connected", "open", "ready"].includes(String(sendingSummary.account_status))) {
+      if (bannedSenders.all_banned) blockingErrors.push("whatsapp_account_banned");
+      else if (!sendingSummary.selected_whatsapp_account_id || !["connected", "open", "ready"].includes(String(sendingSummary.account_status))) {
         blockingErrors.push("whatsapp_account_disconnected");
+      } else if (bannedSenders.banned_count > 0) {
+        warnings.push("some_senders_banned");
       }
       if (sendingSummary.remaining_today <= 0) blockingErrors.push("daily_limit_reached");
       if (contentSummary.variable_errors.length > 0) blockingErrors.push("required_variables_missing");
+      if (contentSummary.spintax_errors.length > 0) blockingErrors.push("spintax_syntax_error");
       if (settings.require_opt_out_text && !contentSummary.has_opt_out_text) warnings.push("missing_opt_out_text");
       if (recipientSummary.duplicate > 0) warnings.push("duplicate_recipients");
       if (recipientSummary.opted_out > 0) warnings.push("opted_out_recipients");
@@ -781,7 +787,12 @@ async function getSendingSummary(client: PoolClient, campaign: CampaignRow, sett
   const remainingToday = Math.max(dailyLimit - sentTodayCount, 0);
   const estimatedRecipients = await getPendingRecipientEstimate(client, campaign);
   const rateLimitPerMinute = Math.max(Number(settings.send_rate_per_minute), 1);
-  const pacingDelaySeconds = Math.max(Number(settings.min_delay_seconds), campaign.delay_per_message_seconds || Number(settings.min_delay_seconds));
+  const minDelay = Number(settings.min_delay_seconds ?? 5);
+  const maxDelay = Number(settings.max_delay_seconds ?? 20);
+  const campaignDelay = campaign.delay_per_message_seconds || minDelay;
+  const pacingDelayMin = Math.max(minDelay, Math.min(campaignDelay, maxDelay));
+  const pacingDelayMax = Math.max(minDelay, maxDelay);
+  const avgDelay = (pacingDelayMin + pacingDelayMax) / 2;
 
   return {
     selected_whatsapp_account_id: campaign.sender_whatsapp_account_id,
@@ -789,9 +800,11 @@ async function getSendingSummary(client: PoolClient, campaign: CampaignRow, sett
     daily_limit: dailyLimit,
     sent_today: sentTodayCount,
     remaining_today: remainingToday,
-    estimated_duration_minutes: Math.ceil((estimatedRecipients * pacingDelaySeconds) / 60),
+    estimated_duration_minutes: Math.ceil((estimatedRecipients * avgDelay) / 60),
     rate_limit_per_minute: rateLimitPerMinute,
-    pacing_delay_seconds: pacingDelaySeconds
+    pacing_delay_seconds: avgDelay,
+    pacing_delay_min_seconds: pacingDelayMin,
+    pacing_delay_max_seconds: pacingDelayMax
   };
 }
 
@@ -802,6 +815,29 @@ async function getPendingRecipientEstimate(client: PoolClient, campaign: Campaig
     [campaign.organization_id, campaign.audience_group_id]
   );
   return Number(result.rows[0]?.count ?? 0);
+}
+
+async function getBannedSenderCount(client: PoolClient, campaign: CampaignRow) {
+  const result = await client.query<{ total: string; banned: string }>(
+    `
+      select
+        count(*)::text as total,
+        count(*) filter (where wa.connection_status = 'banned')::text as banned
+      from campaign_sender_accounts csa
+      join whatsapp_accounts wa on wa.id = csa.whatsapp_account_id
+      where csa.organization_id = $1
+        and csa.campaign_id = $2
+        and csa.is_enabled = true
+    `,
+    [campaign.organization_id, campaign.id]
+  );
+  const total = Number(result.rows[0]?.total ?? 0);
+  const banned = Number(result.rows[0]?.banned ?? 0);
+  return {
+    total_count: total,
+    banned_count: banned,
+    all_banned: total > 0 && banned === total
+  };
 }
 
 function calculateSafetyScore(blockingErrors: string[], warnings: string[], spamScore: number, summary: { total: number; valid: number }) {
@@ -816,6 +852,35 @@ function findVariableErrors(message: string) {
     const key = match[1];
     if (!/^[a-zA-Z0-9_]+$/.test(key)) {
       errors.push(`Invalid variable: ${key}`);
+    }
+  }
+  return errors;
+}
+
+function findSpintaxErrors(message: string) {
+  const errors: string[] = [];
+  let depth = 0;
+  for (let i = 0; i < message.length; i++) {
+    const ch = message[i];
+    const prev = message[i - 1];
+    if (ch === "{" && prev !== "{" && prev !== "\\") {
+      depth++;
+    } else if (ch === "}" && prev !== "\\") {
+      depth--;
+      if (depth < 0) {
+        errors.push("Unmatched closing brace '}'");
+        depth = 0;
+      }
+    }
+  }
+  if (depth > 0) {
+    errors.push("Unmatched opening brace '{'");
+  }
+  // Check for empty options like {a||b}
+  for (const match of message.matchAll(/\{([^}]*)\}/g)) {
+    const inner = match[1] ?? "";
+    if (inner.includes("|") && inner.split("|").some((opt) => opt.trim().length === 0)) {
+      errors.push("Empty spin option detected");
     }
   }
   return errors;

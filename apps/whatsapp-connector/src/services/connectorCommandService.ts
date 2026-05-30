@@ -78,8 +78,18 @@ export class ConnectorCommandService {
       mimeType: string;
       dataBase64: string;
     } | null;
+    contactCard?: {
+      displayName: string;
+      vcard: string;
+    } | null;
   }) {
-    return this.sessionManager.sendMessage(input.accountId, input.recipientJid, input.text ?? null, input.attachment ?? null);
+    return this.sessionManager.sendMessage(
+      input.accountId,
+      input.recipientJid,
+      input.text ?? null,
+      input.attachment ?? null,
+      input.contactCard ?? null
+    );
   }
 
   async verifyPhoneOnWhatsApp(accountId: string, phoneNumber: string) {

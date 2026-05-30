@@ -76,6 +76,14 @@ const tempoSchema = z.object({
 const senderModeSchema = z.enum(["single", "round_robin"]);
 const senderPoolSchema = z.array(z.string().uuid()).min(1).max(32);
 
+const attachmentSchema = z.object({
+  kind: z.enum(["image", "video", "audio", "document"]),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(255),
+  dataBase64: z.string().min(1),
+  fileSizeBytes: z.number().int().positive().max(4 * 1024 * 1024)
+});
+
 const createCampaignBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().trim().min(1).max(160),
@@ -83,9 +91,14 @@ const createCampaignBodySchema = z.object({
   senderWhatsAppAccountIds: senderPoolSchema.optional(),
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
-  messageTemplate: z.string().trim().min(1).max(5000),
+  messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
-  tempo: tempoSchema
+  tempo: tempoSchema,
+  attachment: attachmentSchema.optional().nullable(),
+  attachContactCard: z.boolean().optional().default(false)
+}).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
+  message: "Message template or an attachment is required",
+  path: ["messageTemplate"]
 });
 
 const updateCampaignBodySchema = z.object({
@@ -95,16 +108,29 @@ const updateCampaignBodySchema = z.object({
   senderWhatsAppAccountIds: senderPoolSchema.optional(),
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
-  messageTemplate: z.string().trim().min(1).max(5000).optional(),
-  tempo: tempoSchema.optional()
+  messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
+  tempo: tempoSchema.optional(),
+  attachment: attachmentSchema.optional().nullable(),
+  attachContactCard: z.boolean().optional()
+}).refine((input) => {
+  if (input.messageTemplate === undefined && input.attachment === undefined) return true;
+  return Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment);
+}, {
+  message: "Message template or an attachment is required",
+  path: ["messageTemplate"]
 });
 
 const sendTestBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   senderWhatsAppAccountId: z.string().uuid(),
   testPhoneNumber: z.string().trim().min(6),
-  messageTemplate: z.string().trim().min(1),
-  templateGovernanceVersionId: z.string().uuid().optional().nullable()
+  messageTemplate: z.string().trim().min(1).optional().nullable(),
+  templateGovernanceVersionId: z.string().uuid().optional().nullable(),
+  attachment: attachmentSchema.optional().nullable(),
+  attachContactCard: z.boolean().optional().default(false)
+}).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
+  message: "Message template or an attachment is required",
+  path: ["messageTemplate"]
 });
 
 const startCampaignBodySchema = z.object({
@@ -113,9 +139,14 @@ const startCampaignBodySchema = z.object({
   senderWhatsAppAccountIds: senderPoolSchema.optional(),
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
-  messageTemplate: z.string().trim().min(1),
+  messageTemplate: z.string().trim().min(1).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
-  speedPreset: z.enum(["safe", "normal", "custom"]).default("safe")
+  speedPreset: z.enum(["safe", "normal", "custom"]).default("safe"),
+  attachment: attachmentSchema.optional().nullable(),
+  attachContactCard: z.boolean().optional().default(false)
+}).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
+  message: "Message template or an attachment is required",
+  path: ["messageTemplate"]
 });
 
 const campaignActionBodySchema = z.object({
@@ -194,12 +225,15 @@ type CampaignRecord = {
   sender_mode: "single" | "round_robin";
   sender_whatsapp_account_id: string | null;
   message_template: string | null;
+  message_body_type: string;
+  attachment: unknown | null;
   speed_preset: string;
   delay_per_message_seconds: number;
   batch_size: number;
   batch_pause_seconds: number;
   daily_limit: number;
   stop_on_high_failure: boolean;
+  attach_contact_card: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -344,6 +378,8 @@ export async function createCampaign(request: Request, response: Response) {
     messageTemplate: input.messageTemplate
   });
 
+  const bodyType = input.attachment?.kind ?? 'text';
+
   const result = await withTransaction(async (client) => {
     const inserted = await client.query<CampaignRecord>(
       `
@@ -355,15 +391,18 @@ export async function createCampaign(request: Request, response: Response) {
           sender_mode,
           sender_whatsapp_account_id,
           message_template,
+          message_body_type,
+          attachment,
           speed_preset,
           delay_per_message_seconds,
           batch_size,
           batch_pause_seconds,
           daily_limit,
           stop_on_high_failure,
+          attach_contact_card,
           created_by
         )
-        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         returning *
       `,
       [
@@ -373,12 +412,15 @@ export async function createCampaign(request: Request, response: Response) {
         senderSelection.senderMode,
         senderSelection.primarySenderWhatsAppAccountId,
         governedTemplate.body,
+        bodyType,
+        input.attachment ? JSON.stringify(input.attachment) : null,
         input.tempo.speedPreset,
         input.tempo.delayPerMessageSeconds,
         input.tempo.batchSize,
         input.tempo.batchPauseSeconds,
         input.tempo.dailyLimit,
         input.tempo.stopOnHighFailure,
+        input.attachContactCard,
         auth.organizationUserId
       ]
     );
@@ -609,6 +651,7 @@ export async function updateCampaign(request: Request, response: Response) {
   }
 
   const nextTempo = input.tempo;
+  const nextBodyType = input.attachment?.kind ?? (input.attachment === null ? 'text' : undefined);
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
       `
@@ -618,12 +661,15 @@ export async function updateCampaign(request: Request, response: Response) {
             sender_mode = coalesce($5, sender_mode),
             sender_whatsapp_account_id = coalesce($6, sender_whatsapp_account_id),
             message_template = coalesce($7, message_template),
-            speed_preset = coalesce($8, speed_preset),
-            delay_per_message_seconds = coalesce($9, delay_per_message_seconds),
-            batch_size = coalesce($10, batch_size),
-            batch_pause_seconds = coalesce($11, batch_pause_seconds),
-            daily_limit = coalesce($12, daily_limit),
-            stop_on_high_failure = coalesce($13, stop_on_high_failure),
+            message_body_type = coalesce($8, message_body_type),
+            attachment = coalesce($9, attachment),
+            speed_preset = coalesce($10, speed_preset),
+            delay_per_message_seconds = coalesce($11, delay_per_message_seconds),
+            batch_size = coalesce($12, batch_size),
+            batch_pause_seconds = coalesce($13, batch_pause_seconds),
+            daily_limit = coalesce($14, daily_limit),
+            stop_on_high_failure = coalesce($15, stop_on_high_failure),
+            attach_contact_card = coalesce($16, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -637,12 +683,15 @@ export async function updateCampaign(request: Request, response: Response) {
         senderSelection?.senderMode ?? null,
         senderSelection?.primarySenderWhatsAppAccountId ?? null,
         input.messageTemplate ?? null,
+        nextBodyType ?? null,
+        input.attachment ? JSON.stringify(input.attachment) : null,
         nextTempo?.speedPreset ?? null,
         nextTempo?.delayPerMessageSeconds ?? null,
         nextTempo?.batchSize ?? null,
         nextTempo?.batchPauseSeconds ?? null,
         nextTempo?.dailyLimit ?? null,
-        nextTempo?.stopOnHighFailure ?? null
+        nextTempo?.stopOnHighFailure ?? null,
+        input.attachContactCard ?? null
       ]
     );
 
@@ -712,7 +761,9 @@ export async function sendCampaignTestPreview(request: Request, response: Respon
     organizationUserId: auth.organizationUserId,
     senderWhatsAppAccountId: input.senderWhatsAppAccountId,
     testPhoneNumber: input.testPhoneNumber,
-    messageTemplate: governedTemplate.body
+    messageTemplate: governedTemplate.body,
+    attachment: input.attachment,
+    attachContactCard: input.attachContactCard
   });
 
   return response.json({
@@ -741,7 +792,9 @@ export async function sendCampaignTest(request: Request, response: Response) {
     organizationUserId: auth.organizationUserId,
     senderWhatsAppAccountId: input.senderWhatsAppAccountId,
     testPhoneNumber: input.testPhoneNumber,
-    messageTemplate: governedTemplate.body
+    messageTemplate: governedTemplate.body,
+    attachment: input.attachment,
+    attachContactCard: input.attachContactCard
   });
 
   return response.json({
@@ -814,6 +867,7 @@ export async function startCampaign(request: Request, response: Response) {
     throw new AppError("Campaign has no recipients that passed safety validation", 400, "campaign_no_safe_recipients", validationSummary);
   }
 
+  const bodyType = input.attachment?.kind ?? 'text';
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
       `
@@ -823,7 +877,10 @@ export async function startCampaign(request: Request, response: Response) {
             sender_whatsapp_account_id = $4,
             audience_group_id = $5,
             message_template = $6,
-            speed_preset = $7,
+            message_body_type = $7,
+            attachment = coalesce($8, attachment),
+            speed_preset = $9,
+            attach_contact_card = coalesce($10, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -836,7 +893,10 @@ export async function startCampaign(request: Request, response: Response) {
         senderSelection.primarySenderWhatsAppAccountId,
         input.audienceGroupId,
         governedTemplate.body,
-        input.speedPreset
+        bodyType,
+        input.attachment ? JSON.stringify(input.attachment) : null,
+        input.speedPreset,
+        input.attachContactCard
       ]
     );
 
@@ -1960,7 +2020,15 @@ async function sendCampaignTestMessage(input: {
   organizationUserId?: string | null;
   senderWhatsAppAccountId: string;
   testPhoneNumber: string;
-  messageTemplate: string;
+  messageTemplate?: string | null;
+  attachment?: {
+    kind: "image" | "video" | "audio" | "document";
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+    fileSizeBytes: number;
+  } | null;
+  attachContactCard?: boolean;
 }) {
   return sendCampaignRecipientMessage({
     organizationId: input.organizationId,
@@ -1969,6 +2037,8 @@ async function sendCampaignTestMessage(input: {
     phoneNumber: input.testPhoneNumber,
     profileName: null,
     text: input.messageTemplate,
+    attachment: input.attachment,
+    attachContactCard: input.attachContactCard,
     waitForDispatch: true
   });
 }
@@ -1979,7 +2049,15 @@ async function sendCampaignRecipientMessage(input: {
   senderWhatsAppAccountId: string;
   phoneNumber: string;
   profileName?: string | null;
-  text: string;
+  text?: string | null;
+  attachment?: {
+    kind: "image" | "video" | "audio" | "document";
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+    fileSizeBytes: number;
+  } | null;
+  attachContactCard?: boolean;
   waitForDispatch?: boolean;
 }) {
   const normalizedPhone = normalizePhoneNumber(input.phoneNumber);
@@ -2007,12 +2085,30 @@ async function sendCampaignRecipientMessage(input: {
     });
   });
 
+  let contactCard = null;
+  if (input.attachContactCard) {
+    const account = await query<{ display_name: string | null; account_phone_e164: string | null }>(
+      `select display_name, account_phone_e164 from whatsapp_accounts where id = $1 and organization_id = $2 limit 1`,
+      [input.senderWhatsAppAccountId, input.organizationId]
+    );
+    const row = account.rows[0];
+    if (row?.account_phone_e164) {
+      const displayName = row.display_name || row.account_phone_e164;
+      contactCard = {
+        displayName,
+        vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:${displayName}\nTEL;TYPE=CELL:${row.account_phone_e164}\nEND:VCARD`
+      };
+    }
+  }
+
   return sendMessageService.send({
     organizationId: input.organizationId,
     whatsappAccountId: input.senderWhatsAppAccountId,
     conversationId: conversation.id,
     organizationUserId: input.organizationUserId ?? null,
-    text: input.text
+    text: input.text,
+    attachment: input.attachment ?? null,
+    contactCard
   }, { waitForDispatch: input.waitForDispatch ?? false });
 }
 

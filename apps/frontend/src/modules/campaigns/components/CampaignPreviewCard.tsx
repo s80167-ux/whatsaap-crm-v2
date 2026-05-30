@@ -1,4 +1,5 @@
 import { Card } from "../../../components/Card";
+import type { CampaignAttachment } from "../types/campaign.types";
 
 type CampaignPreviewCardProps = {
   preview: string;
@@ -6,6 +7,8 @@ type CampaignPreviewCardProps = {
   audienceLabel?: string | null;
   validRecipients?: number | null;
   tempoLabel?: string | null;
+  attachment?: CampaignAttachment | null;
+  attachContactCard?: boolean;
 };
 
 export function CampaignPreviewCard({
@@ -13,7 +16,9 @@ export function CampaignPreviewCard({
   senderLabel,
   audienceLabel,
   validRecipients,
-  tempoLabel
+  tempoLabel,
+  attachment,
+  attachContactCard
 }: CampaignPreviewCardProps) {
   return (
     <Card className="bg-background-tint p-4" elevated={false}>
@@ -27,6 +32,17 @@ export function CampaignPreviewCard({
         <PreviewMeta label="Valid recipients" value={String(validRecipients ?? 0)} />
         <PreviewMeta label="Estimated tempo" value={tempoLabel ?? "Safe mode, 12s/message, 20 per batch, 2 min pause"} />
       </div>
+      {attachment ? (
+        <div className="mt-2 rounded-xl border border-primary/10 bg-primary/5 px-3 py-2 text-xs">
+          <span className="font-semibold text-primary">Attachment:</span>{" "}
+          <span className="text-text-muted">{attachment.fileName}</span>
+        </div>
+      ) : null}
+      {attachContactCard ? (
+        <div className="mt-2 rounded-xl border border-success/10 bg-success/5 px-3 py-2 text-xs text-success">
+          Contact card will be attached
+        </div>
+      ) : null}
       <div className="mt-3 rounded-2xl border border-success/20 bg-card px-4 py-3 text-sm leading-6 text-card-foreground shadow-soft">
         {preview || "Message preview will appear here."}
       </div>
