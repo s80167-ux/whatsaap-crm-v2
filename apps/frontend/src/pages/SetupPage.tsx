@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { Info, Link2, PlugZap, RefreshCw, Trash2, Unplug, UserCircle, Zap } from "lucide-react";
+import { ArrowRight, Info, Link2, Mail, PlugZap, RefreshCw, Trash2, Unplug, UserCircle, Zap } from "lucide-react";
 import {
   approveGoogleSignupRequest,
   createOrganization,
@@ -103,6 +104,7 @@ function UserAvatarPreview({ src, label }: { src?: string | null; label?: string
 }
 
 export function SetupPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
   const currentUser = getStoredUser();
@@ -490,7 +492,7 @@ export function SetupPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Setup</p>
             <h2 className="mt-3 section-title">Tenant operations console</h2>
             <p className="mt-2 max-w-3xl section-copy">
-              This screen handles the first real admin workflow after auth: provision an organization, invite users, and register WhatsApp sessions without leaving the app.
+              Provision an organization, invite users, and manage channel connections from one place. Use the Channels section below to register WhatsApp sessions.
             </p>
           </div>
           <div className="workspace-subtle p-4">
@@ -501,6 +503,50 @@ export function SetupPage() {
           </div>
         </div>
         {notice ? <p className="mt-4 text-sm text-destructive">{notice}</p> : null}
+      </Card>
+
+      <Card elevated className="workspace-block">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Channels</p>
+            <h3 className="mt-2 text-lg font-semibold text-text">Channel connections</h3>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="workspace-subtle p-4 shadow-soft">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-background shadow-soft">
+                <svg className="h-6 w-6" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                  <path fill="#25D366" d="M12.02 2.1a9.8 9.8 0 0 0-8.35 14.95L2.5 21.5l4.56-1.16A9.8 9.8 0 1 0 12.02 2.1Z" />
+                  <path fill="#fff" d="M17.77 14.52c-.24.68-1.19 1.24-1.92 1.4-.51.11-1.18.2-3.42-.73-2.87-1.19-4.72-4.1-4.86-4.29-.14-.19-1.16-1.55-1.16-2.96s.73-2.1.99-2.39c.24-.27.53-.34.7-.34h.5c.16.01.38-.06.6.45.24.58.8 1.99.87 2.13.07.15.11.32.02.51-.09.19-.14.31-.28.48-.14.16-.29.36-.42.48-.14.14-.29.29-.12.58.16.29.72 1.19 1.55 1.93 1.07.96 1.96 1.26 2.25 1.4.29.15.46.13.63-.07.19-.22.72-.84.91-1.13.19-.29.39-.24.65-.15.27.1 1.7.8 1.99.95.29.14.48.22.55.34.07.12.07.72-.17 1.4Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-text">WhatsApp</p>
+                <p className="text-sm text-text-muted">Pair devices, manage QR connections, and sync history.</p>
+              </div>
+            </div>
+            <Button className="mt-4 w-full sm:w-auto" onClick={() => navigate("/setup/channels/whatsapp")}>
+              Manage WhatsApp
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+          <div className="workspace-subtle p-4 shadow-soft">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-background shadow-soft">
+                <Mail size={22} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-text">Email</p>
+                <p className="text-sm text-text-muted">Configure email senders for campaign delivery.</p>
+              </div>
+            </div>
+            <Button className="mt-4 w-full sm:w-auto" onClick={() => navigate("/setup/channels/email")}>
+              Email Setup
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {isSuperAdmin ? (

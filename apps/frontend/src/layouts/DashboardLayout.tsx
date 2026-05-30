@@ -479,12 +479,13 @@ export function DashboardLayout() {
         ]
       : []),
     {
-      id: "channels",
-      label: "Channels",
-      icon: <PlugZap size={18} />,
+      id: "setup",
+      label: "Setup",
+      icon: <Settings2 size={18} />,
       items: [
-        { to: "/setup", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp Setup" },
-        { to: "/campaigns/email/sender-setup", icon: <Mail size={16} />, label: "Email Sender Setup" }
+        { to: "/setup", icon: <Settings2 size={16} />, label: "General" },
+        { to: "/setup/channels/whatsapp", icon: <SocialChannelBrandLogo channel="whatsapp" className="h-4 w-4" />, label: "WhatsApp Setup" },
+        { to: "/setup/channels/email", icon: <Mail size={16} />, label: "Email Setup" }
       ]
     },
     ...(showSales || showDataExport
