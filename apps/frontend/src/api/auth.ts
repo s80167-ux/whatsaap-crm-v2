@@ -25,14 +25,6 @@ export async function fetchMe() {
     storeAuthSession(response.data, response.csrfToken ?? null);
     return response.data;
   } catch (err) {
-    // TEMP DIAGNOSTIC LOG
-    // eslint-disable-next-line no-console
-    console.error("fetchMe failed", err, {
-      storedUser: (() => {
-        try { return localStorage.getItem("crm_auth_user"); } catch { return null; }
-      })(),
-      location: window.location.pathname
-    });
     throw err;
   }
 }
