@@ -72,9 +72,11 @@ export class OpsCenterService {
         client.query<{ latest_inbound_message_at: string | null; latest_outbound_message_at: string | null }>(
           `
             select
-              max(sent_at) filter (where direction = 'incoming') as latest_inbound_message_at,
-              max(sent_at) filter (where direction = 'outgoing') as latest_outbound_message_at
+              max(coalesce(sent_at, created_at)) filter (where direction = 'incoming') as latest_inbound_message_at,
+              max(coalesce(sent_at, created_at)) filter (where direction = 'outgoing') as latest_outbound_message_at
             from messages
+            where channel = 'whatsapp'
+              and whatsapp_account_id is not null
           `
         )
       ]);
@@ -178,10 +180,11 @@ export class OpsCenterService {
         ) event_latest on true
         left join lateral (
           select
-            max(sent_at) filter (where direction = 'incoming') as last_inbound_at,
-            max(sent_at) filter (where direction = 'outgoing') as last_outbound_at
+            max(coalesce(sent_at, created_at)) filter (where direction = 'incoming') as last_inbound_at,
+            max(coalesce(sent_at, created_at)) filter (where direction = 'outgoing') as last_outbound_at
           from messages
           where whatsapp_account_id = wa.id
+            and channel = 'whatsapp'
         ) msg_activity on true
         order by o.name asc, coalesce(wa.display_name, wa.label, wa.account_phone_e164, wa.id::text) asc
       `,
