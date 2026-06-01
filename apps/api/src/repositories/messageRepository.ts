@@ -42,7 +42,7 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          sent_at,
+          coalesce(sent_at, created_at) as sent_at,
           delivered_at,
           read_at,
           ack_status
@@ -110,7 +110,7 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          sent_at,
+          coalesce(sent_at, created_at) as sent_at,
           delivered_at,
           read_at,
           ack_status
@@ -450,14 +450,14 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          sent_at,
+          coalesce(sent_at, created_at) as sent_at,
           delivered_at,
           read_at,
           ack_status
         from messages
         where ($1::uuid is null or organization_id = $1)
           and conversation_id = $2
-          and ($5::timestamptz is null or sent_at >= $5::timestamptz)
+          and ($5::timestamptz is null or coalesce(sent_at, created_at) >= $5::timestamptz)
           and (
             not $3::boolean
             or exists (
@@ -484,7 +484,7 @@ export class MessageRepository {
                 )
             )
           )
-        order by sent_at asc, id asc
+        order by coalesce(sent_at, created_at) asc, id asc
       `,
       [organizationId, conversationId, assignedOnly, organizationUserId, activitySince]
     );
@@ -530,18 +530,18 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          sent_at,
+          coalesce(sent_at, created_at) as sent_at,
           delivered_at,
           read_at,
           ack_status
         from messages
         where ($1::uuid is null or organization_id = $1)
           and conversation_id = $2
-          and ($5::timestamptz is null or sent_at >= $5::timestamptz)
+          and ($5::timestamptz is null or coalesce(sent_at, created_at) >= $5::timestamptz)
           and (
             $6::timestamptz is null
-            or sent_at < $6::timestamptz
-            or (sent_at = $6::timestamptz and id < $7::uuid)
+            or coalesce(sent_at, created_at) < $6::timestamptz
+            or (coalesce(sent_at, created_at) = $6::timestamptz and id < $7::uuid)
           )
           and (
             not $3::boolean
@@ -569,7 +569,7 @@ export class MessageRepository {
                 )
             )
           )
-        order by sent_at desc, id desc
+        order by coalesce(sent_at, created_at) desc, id desc
         limit $8
       `,
       [
