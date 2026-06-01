@@ -9,9 +9,14 @@ import {
   getMobileV1Inbox,
   getMobileV1InboxEvents,
   getMobileV1InboxMessages,
+  getMobileV1Lead,
   getMobileV1Leads,
   getMobileV1Me,
-  sendMobileV1Message
+  getMobileV1QuickReplies,
+  recordMobileV1QuickReplyUsage,
+  sendMobileV1Message,
+  updateMobileV1Contact,
+  updateMobileV1Lead
 } from "./mobileV1.controller.js";
 
 export const mobileV1Routes = Router();
@@ -76,10 +81,34 @@ mobileV1Routes.get(
   requireAnyMobilePermission(["contacts.read_all", "contacts.read_assigned"]),
   asyncHandler(getMobileV1Contact)
 );
+mobileV1Routes.patch(
+  "/contacts/:contactId",
+  requireMobilePermission("contacts.write"),
+  asyncHandler(updateMobileV1Contact)
+);
 mobileV1Routes.get(
   "/leads",
   requireAnyMobilePermission(["sales.read_all", "sales.read_assigned"]),
   asyncHandler(getMobileV1Leads)
+);
+mobileV1Routes.get(
+  "/leads/:leadId",
+  requireAnyMobilePermission(["sales.read_all", "sales.read_assigned"]),
+  asyncHandler(getMobileV1Lead)
+);
+mobileV1Routes.patch(
+  "/leads/:leadId",
+  requireMobilePermission("sales.write"),
+  asyncHandler(updateMobileV1Lead)
+);
+mobileV1Routes.get(
+  "/quick-replies",
+  asyncHandler(getMobileV1QuickReplies)
+);
+mobileV1Routes.post(
+  "/quick-replies/:templateId/usage",
+  requireMobilePermission("messages.send"),
+  asyncHandler(recordMobileV1QuickReplyUsage)
 );
 mobileV1Routes.post(
   "/messages/send",

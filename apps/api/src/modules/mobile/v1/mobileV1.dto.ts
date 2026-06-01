@@ -108,6 +108,22 @@ export function toMobileLeadDto(lead: LeadRow) {
   };
 }
 
+export function toMobileQuickReplyDto(template: {
+  id: string;
+  title: string | null;
+  body: string | null;
+  category: string | null;
+  is_active: boolean | null;
+}) {
+  return {
+    id: template.id,
+    title: stringOrFallback(template.title, "Quick reply"),
+    body: stringOrFallback(template.body, ""),
+    category: stringOrNull(template.category),
+    isActive: template.is_active !== false
+  };
+}
+
 export function toMobileMeDto(profile: {
   id: string;
   email: string | null;

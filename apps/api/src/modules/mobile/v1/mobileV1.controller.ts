@@ -4,9 +4,12 @@ import type { ContactRecord } from "../../../types/domain.js";
 import { logger } from "../../../config/logger.js";
 import { getRequestAuditContext } from "../../../lib/requestAudit.js";
 import { AppError } from "../../../lib/errors.js";
+import { withTransaction } from "../../../config/database.js";
 import { AuditLogService } from "../../../services/auditLogService.js";
 import { AuthService } from "../../../services/authService.js";
+import { ContactCommandService } from "../../../services/contactCommandService.js";
 import { LeadService } from "../../../services/leadService.js";
+import { QuickReplyService } from "../../../services/quickReplyService.js";
 import { QueryService, type ActivityRangeFilter } from "../../../services/queryService.js";
 import { SendMessageService } from "../../../services/sendMessageService.js";
 import { onMobileInboxUpdate, type MobileInboxUpdateEvent } from "../mobileInboxEvents.bus.js";
@@ -15,12 +18,15 @@ import {
   toMobileConversationDto,
   toMobileLeadDto,
   toMobileMeDto,
-  toMobileMessageDto
+  toMobileMessageDto,
+  toMobileQuickReplyDto
 } from "./mobileV1.dto.js";
 
 const authService = new AuthService();
 const queryService = new QueryService();
+const contactCommandService = new ContactCommandService();
 const leadService = new LeadService();
+const quickReplyService = new QuickReplyService();
 const sendMessageService = new SendMessageService();
 const auditLogService = new AuditLogService();
 const HEARTBEAT_INTERVAL_MS = 25_000;
@@ -31,6 +37,14 @@ const contactParamsSchema = z.object({
 
 const conversationParamsSchema = z.object({
   conversationId: z.string().uuid()
+});
+
+const leadParamsSchema = z.object({
+  leadId: z.string().uuid()
+});
+
+const quickReplyParamsSchema = z.object({
+  templateId: z.string().uuid()
 });
 
 const organizationQuerySchema = z.object({
@@ -79,6 +93,44 @@ const sendSchema = z
     message: "Message text or one attachment is required",
     path: ["text"]
   });
+
+const updateContactSchema = z
+  .object({
+    displayName: z.string().min(1).optional().nullable(),
+    phoneNumber: z.string().min(6).optional().nullable(),
+    email: z.string().trim().email().max(254).optional().nullable(),
+    companyName: z.string().trim().max(160).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable()
+  })
+  .refine(
+    (input) =>
+      input.displayName !== undefined ||
+      input.phoneNumber !== undefined ||
+      input.email !== undefined ||
+      input.companyName !== undefined ||
+      input.notes !== undefined,
+    { message: "At least one field must be provided" }
+  );
+
+const updateLeadSchema = z
+  .object({
+    source: z.string().trim().max(120).optional().nullable(),
+    status: z.enum(["new_lead", "contacted", "interested", "processing", "closed_won", "closed_lost"]).optional(),
+    temperature: z.enum(["cold", "warm", "hot"]).optional().nullable(),
+    assignedUserId: z.string().uuid().optional().nullable()
+  })
+  .refine(
+    (input) =>
+      input.source !== undefined ||
+      input.status !== undefined ||
+      input.temperature !== undefined ||
+      input.assignedUserId !== undefined,
+    { message: "At least one field must be provided" }
+  );
+
+const recordQuickReplyUsageSchema = z.object({
+  conversationId: z.string().uuid().optional().nullable()
+});
 
 function requireAuth(request: Request) {
   if (!request.auth) {
@@ -309,11 +361,159 @@ export async function getMobileV1Contact(request: Request, response: Response) {
   return response.json({ data: toMobileContactDto(contact) });
 }
 
+export async function updateMobileV1Contact(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = auth.organizationId ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const { contactId } = contactParamsSchema.parse(request.params);
+  const input = updateContactSchema.parse(request.body);
+
+  try {
+    await withTransaction((client) =>
+      contactCommandService.update(client, {
+        organizationId,
+        contactId,
+        displayName: input.displayName,
+        phoneNumber: input.phoneNumber,
+        email: input.email,
+        companyName: input.companyName,
+        notes: input.notes
+      })
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update contact";
+    const code =
+      message === "Contact not found"
+        ? "contact_not_found"
+        : message === "Another contact already uses this phone number"
+          ? "contact_phone_duplicate"
+          : "contact_update_failed";
+    throw new AppError(message, code === "contact_not_found" ? 404 : 400, code);
+  }
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "contact.updated",
+    entityType: "contact",
+    entityId: contactId,
+    metadata: {
+      mobile_api_version: "v1",
+      requested_changes: input
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  const contact = await queryService.getContact(auth, organizationId, contactId);
+  if (!contact || isMergedContact(contact)) {
+    throw new AppError("Contact not found", 404, "contact_not_found");
+  }
+
+  return response.json({ data: toMobileContactDto(contact) });
+}
+
 export async function getMobileV1Leads(request: Request, response: Response) {
   const auth = requireAuth(request);
   const organizationId = resolveReadOrganizationId(request);
   const leads = await leadService.list(auth, organizationId);
   return response.json({ data: leads.map(toMobileLeadDto) });
+}
+
+export async function getMobileV1Lead(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = resolveReadOrganizationId(request);
+  const { leadId } = leadParamsSchema.parse(request.params);
+  const lead = await leadService.getDetail(auth, organizationId, leadId);
+  return response.json({ data: toMobileLeadDto(lead) });
+}
+
+export async function updateMobileV1Lead(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = auth.organizationId ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const { leadId } = leadParamsSchema.parse(request.params);
+  const input = updateLeadSchema.parse(request.body);
+  const result = await leadService.updateInNewTransaction({
+    authUser: auth,
+    organizationId,
+    leadId,
+    source: input.source,
+    status: input.status,
+    temperature: input.temperature,
+    assignedUserId: input.assignedUserId
+  });
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "lead.updated",
+    entityType: "lead",
+    entityId: result.lead.id,
+    metadata: {
+      mobile_api_version: "v1",
+      previous_source: result.previousLead.source,
+      source: result.lead.source,
+      previous_status: result.previousLead.status,
+      status: result.lead.status,
+      previous_temperature: result.previousLead.temperature,
+      temperature: result.lead.temperature,
+      previous_assigned_user_id: result.previousLead.assigned_user_id,
+      assigned_user_id: result.lead.assigned_user_id
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: toMobileLeadDto(result.lead) });
+}
+
+export async function getMobileV1QuickReplies(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = resolveReadOrganizationId(request);
+  const templates = await quickReplyService.list(auth, {
+    organizationId,
+    activeOnly: true
+  });
+
+  return response.json({ data: templates.map(toMobileQuickReplyDto) });
+}
+
+export async function recordMobileV1QuickReplyUsage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const organizationId = auth.organizationId ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const { templateId } = quickReplyParamsSchema.parse(request.params);
+  const input = recordQuickReplyUsageSchema.parse(request.body ?? {});
+  const template = await quickReplyService.recordUsage(auth, {
+    organizationId,
+    templateId
+  });
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "quick_reply.used",
+    entityType: "quick_reply_template",
+    entityId: template.id,
+    metadata: {
+      title: template.title,
+      category: template.category,
+      conversation_id: input.conversationId ?? null,
+      usage_count: template.usage_count,
+      mobile_api_version: "v1"
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(202).json({ data: toMobileQuickReplyDto(template) });
 }
 
 export async function sendMobileV1Message(request: Request, response: Response) {
