@@ -196,16 +196,34 @@ export function WhatsAppNumberAccessPanel({
   }, [selectedAccount]);
 
   function updateDraft(userId: string, patch: Partial<AccessDraft>) {
-    setDrafts((current) =>
-      current.map((draft) =>
-        draft.organizationUserId === userId
-          ? {
-              ...draft,
-              ...patch
-            }
-          : draft
-      )
-    );
+    setDrafts((current) => {
+      const hasOtherActiveOwner = current.some((draft) =>
+        draft.organizationUserId !== userId && draft.isActive && draft.accessRole === "owner"
+      );
+
+      return current.map((draft) => {
+        if (draft.organizationUserId !== userId) {
+          return draft;
+        }
+
+        const nextDraft = {
+          ...draft,
+          ...patch
+        };
+
+        if (patch.accessRole === "owner") {
+          nextDraft.isActive = true;
+          nextDraft.canEditSales = true;
+        }
+
+        if (patch.isActive === true && !hasOtherActiveOwner && nextDraft.accessRole !== "owner") {
+          nextDraft.accessRole = "owner";
+          nextDraft.canEditSales = true;
+        }
+
+        return nextDraft;
+      });
+    });
   }
 
   return (
@@ -333,6 +351,13 @@ export function WhatsAppNumberAccessPanel({
                     </tr>
                   </thead>
                   <tbody>
+                    {detailUserPagination.visibleItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center text-sm text-text-muted">
+                          No assignable users found.
+                        </td>
+                      </tr>
+                    ) : null}
                     {detailUserPagination.visibleItems.map((user) => {
                       const draft = drafts.find((item) => item.organizationUserId === user.id);
 

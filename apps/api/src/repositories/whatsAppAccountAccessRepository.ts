@@ -199,6 +199,7 @@ export class WhatsAppAccountAccessRepository {
       organizationId: string;
       whatsappAccountId: string;
       accessList: WhatsAppAccountAccessInput[];
+      allowCrossOrganizationUsers?: boolean;
     }
   ) {
     const userIds = input.accessList.map((access) => access.organizationUserId);
@@ -212,15 +213,15 @@ export class WhatsAppAccountAccessRepository {
       `
         select count(*)::integer as count
         from organization_users
-        where organization_id = $1
+        where ($3::boolean = true or organization_id = $1)
           and id = any($2::uuid[])
           and coalesce(status, 'active') <> 'disabled'
       `,
-      [input.organizationId, userIds]
+      [input.organizationId, userIds, Boolean(input.allowCrossOrganizationUsers)]
     );
 
     if ((usersResult.rows[0]?.count ?? 0) !== userIds.length) {
-      throw new Error("All users must belong to the same organization");
+      throw new Error(input.allowCrossOrganizationUsers ? "All users must exist and be enabled" : "All users must belong to the same organization");
     }
 
     await client.query(

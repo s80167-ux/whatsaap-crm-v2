@@ -183,7 +183,12 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   const [isContactSheetOpen, setIsContactSheetOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const currentOrganizationUserId = currentUser?.organizationUserId ?? null;
-  const [filterMode, setFilterMode] = useState<ConversationFilterMode>(currentOrganizationUserId ? "mine" : "all");
+  const canReadAllConversations = Boolean(
+    currentUser?.permissionKeys.includes("conversations.read_all") || currentUser?.permissionKeys.includes("contacts.read_all")
+  );
+  const [filterMode, setFilterMode] = useState<ConversationFilterMode>(
+    currentOrganizationUserId && !canReadAllConversations ? "mine" : "all"
+  );
   const [messagesPagination, setMessagesPagination] = useState<MessagePagination | null>(null);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const handleMessagesPaginationChange = useCallback((pagination: MessagePagination | null) => {
@@ -344,11 +349,14 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
     }
 
     setSelectedConversation(requestedConversation);
+    if (filterMode === "mine" && requestedConversation.assigned_user_id !== currentOrganizationUserId) {
+      setFilterMode("all");
+    }
 
     if (isMobile) {
       setMobilePane("chat");
     }
-  }, [conversations, isMobile, requestedConversationId, selectedConversation?.id]);
+  }, [conversations, currentOrganizationUserId, filterMode, isMobile, requestedConversationId, selectedConversation?.id]);
 
   useEffect(() => {
     if (!isMobile) {

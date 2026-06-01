@@ -1659,7 +1659,9 @@ export class AdminService {
         organizationId: account.organization_id,
         whatsappAccountId
       });
-      const users = await this.userRepository.listByOrganization(client, account.organization_id);
+      const users = authUser.role === "super_admin"
+        ? await this.userRepository.listAll(client)
+        : await this.userRepository.listByOrganization(client, account.organization_id);
 
       return {
         account,
@@ -1691,7 +1693,8 @@ export class AdminService {
         await this.whatsappAccessRepository.replaceAccessForAccount(client, {
           organizationId: account.organization_id,
           whatsappAccountId,
-          accessList
+          accessList,
+          allowCrossOrganizationUsers: authUser.role === "super_admin"
         });
       } catch (error) {
         if (error instanceof Error && error.message === "At least one active owner is required") {
@@ -1700,6 +1703,10 @@ export class AdminService {
 
         if (error instanceof Error && error.message === "All users must belong to the same organization") {
           throw new AppError(error.message, 400, "whatsapp_account_access_user_scope_invalid");
+        }
+
+        if (error instanceof Error && error.message === "All users must exist and be enabled") {
+          throw new AppError(error.message, 400, "whatsapp_account_access_user_invalid");
         }
 
         throw error;
