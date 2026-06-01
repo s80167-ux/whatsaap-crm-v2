@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
@@ -22,7 +22,7 @@ import { inboxQueryKeys, patchConversationInCache } from "../lib/inboxCache";
 import { DEFAULT_CHAT_HISTORY_RANGE, getHistoryRangeLabel } from "../lib/historyRange";
 import { getStoredUser } from "../lib/auth";
 import type { Conversation, Message } from "../types/api";
-import type { InboxChannelFilter } from "../api/crm";
+import { fetchMessagesPage, type InboxChannelFilter, type MessagePagination } from "../api/crm";
 
 type ConversationSortMode = "alphabetical" | "latest";
 type MobileInboxPane = "list" | "chat";
@@ -31,6 +31,8 @@ type ConversationFilterMode = "mine" | "unread" | "unassigned" | "campaign_repli
 const OUTGOING_STATUS_POLL_INTERVAL_MS = 1000;
 const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
 const INBOX_FALLBACK_POLL_INTERVAL_MS = 15000;
+const INITIAL_MESSAGE_PAGE_SIZE = 5;
+const OLDER_MESSAGE_PAGE_SIZE = 12;
 
 type InboxPageProps = {
   channel?: InboxChannelFilter;
@@ -83,6 +85,58 @@ function getConversationIdentityLabel(conversation?: Conversation) {
     : "No phone available";
 }
 
+function sortMessages(messages: Message[]) {
+  return [...messages].sort((left, right) => {
+    const timeDelta = new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime();
+    return timeDelta || left.id.localeCompare(right.id);
+  });
+}
+
+function mergeMessages(existing: Message[] | undefined, incoming: Message[]) {
+  const messagesById = new Map<string, Message>();
+
+  for (const message of existing ?? []) {
+    messagesById.set(message.id, message);
+  }
+
+  for (const message of incoming) {
+    messagesById.set(message.id, {
+      ...messagesById.get(message.id),
+      ...message
+    });
+  }
+
+  return sortMessages([...messagesById.values()]);
+}
+
+function isOlderOrSameCursor(left: MessagePagination["nextBefore"], right: MessagePagination["nextBefore"]) {
+  if (!left) {
+    return false;
+  }
+
+  if (!right) {
+    return true;
+  }
+
+  const timeDelta = new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime();
+  return timeDelta < 0 || (timeDelta === 0 && left.id <= right.id);
+}
+
+function preserveOldestPaginationCursor(
+  current: MessagePagination | null,
+  incoming: MessagePagination | null
+): MessagePagination | null {
+  if (!incoming || !current) {
+    return incoming ?? current;
+  }
+
+  if (!current.hasMore || isOlderOrSameCursor(current.nextBefore, incoming.nextBefore)) {
+    return current;
+  }
+
+  return incoming;
+}
+
 export function InboxPage({ channel = "all" }: InboxPageProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -130,6 +184,11 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   const [searchText, setSearchText] = useState("");
   const currentOrganizationUserId = currentUser?.organizationUserId ?? null;
   const [filterMode, setFilterMode] = useState<ConversationFilterMode>(currentOrganizationUserId ? "mine" : "all");
+  const [messagesPagination, setMessagesPagination] = useState<MessagePagination | null>(null);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const handleMessagesPaginationChange = useCallback((pagination: MessagePagination | null) => {
+    setMessagesPagination((current) => preserveOldestPaginationCursor(current, pagination));
+  }, []);
   const queueCounts = useMemo(
     () => ({
       all: conversations.length,
@@ -209,6 +268,8 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
     {
+      pageSize: INITIAL_MESSAGE_PAGE_SIZE,
+      onPaginationChange: handleMessagesPaginationChange,
       refetchIntervalMs: cachedMessages.some((message) => {
         if (message.direction !== "outgoing") {
           return false;
@@ -229,6 +290,41 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   useRealtimeInbox(activeOrganizationId, stableSelectedConversation?.id);
 
   const conversationCountLabel = t("inbox.visibleConversations", { count: visibleConversations.length });
+
+  useEffect(() => {
+    setMessagesPagination(null);
+    setIsLoadingOlderMessages(false);
+  }, [messagesQueryKey]);
+
+  const handleLoadOlderMessages = useCallback(async () => {
+    if (!stableSelectedConversation?.id || !messagesPagination?.hasMore || !messagesPagination.nextBefore) {
+      return;
+    }
+
+    setIsLoadingOlderMessages(true);
+    try {
+      const page = await fetchMessagesPage(stableSelectedConversation.id, {
+        range: chatHistoryRange,
+        organizationId: isSuperAdmin ? activeOrganizationId : undefined,
+        limit: OLDER_MESSAGE_PAGE_SIZE,
+        before: messagesPagination.nextBefore
+      });
+
+      queryClient.setQueryData<Message[]>(messagesQueryKey, (current) => mergeMessages(current, page.data));
+      setMessagesPagination(page.pagination);
+    } finally {
+      setIsLoadingOlderMessages(false);
+    }
+  }, [
+    activeOrganizationId,
+    chatHistoryRange,
+    isSuperAdmin,
+    messagesPagination?.hasMore,
+    messagesPagination?.nextBefore,
+    messagesQueryKey,
+    queryClient,
+    stableSelectedConversation?.id
+  ]);
 
   useEffect(() => {
     if (isSuperAdmin && requestedOrganizationId && requestedOrganizationId !== selectedOrganizationId) {
@@ -455,6 +551,9 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                 historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
                 organizationId={activeOrganizationId}
                 channelContext={channel}
+                hasMoreMessages={Boolean(messagesPagination?.hasMore)}
+                isLoadingOlderMessages={isLoadingOlderMessages}
+                onLoadOlderMessages={handleLoadOlderMessages}
                 onOpenContact={() => setIsContactSheetOpen(true)}
               />
             </div>
@@ -473,6 +572,9 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
               historyRangeLabel={getHistoryRangeLabel(chatHistoryRange)}
               organizationId={activeOrganizationId}
               channelContext={channel}
+              hasMoreMessages={Boolean(messagesPagination?.hasMore)}
+              isLoadingOlderMessages={isLoadingOlderMessages}
+              onLoadOlderMessages={handleLoadOlderMessages}
               onOpenContact={() => setIsContactSheetOpen(true)}
             />
           </div>

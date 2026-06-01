@@ -1,6 +1,20 @@
 import type { PoolClient } from "pg";
 import type { MessageRecord } from "../types/domain.js";
 
+export interface MessagePaginationCursor {
+  sentAt: string;
+  id: string;
+}
+
+export interface MessagePaginationResult {
+  messages: MessageRecord[];
+  pagination: {
+    limit: number;
+    hasMore: boolean;
+    nextBefore: MessagePaginationCursor | null;
+  };
+}
+
 export class MessageRepository {
   async findByExternalMessageId(
     client: PoolClient,
@@ -476,6 +490,117 @@ export class MessageRepository {
     );
 
     return result.rows;
+  }
+
+  async listByConversationPage(
+    client: PoolClient,
+    organizationId: string | null,
+    conversationId: string,
+    options: {
+      assignedOnly?: boolean;
+      organizationUserId?: string | null;
+      activityRange?: {
+        since: string;
+      };
+      limit: number;
+      before?: MessagePaginationCursor | null;
+    }
+  ): Promise<MessagePaginationResult> {
+    const assignedOnly = options.assignedOnly ?? false;
+    const organizationUserId = options.organizationUserId ?? null;
+    const activitySince = options.activityRange?.since ?? null;
+    const beforeSentAt = options.before?.sentAt ?? null;
+    const beforeId = options.before?.id ?? null;
+    const fetchLimit = options.limit + 1;
+    const result = await client.query<MessageRecord>(
+      `
+        select
+          id,
+          organization_id,
+          conversation_id,
+          contact_id,
+          whatsapp_account_id,
+          social_channel_account_id,
+          channel,
+          external_message_id,
+          external_chat_id,
+          reply_to_message_id,
+          is_deleted,
+          direction,
+          message_type,
+          content_text,
+          content_json,
+          sent_at,
+          delivered_at,
+          read_at,
+          ack_status
+        from messages
+        where ($1::uuid is null or organization_id = $1)
+          and conversation_id = $2
+          and ($5::timestamptz is null or sent_at >= $5::timestamptz)
+          and (
+            $6::timestamptz is null
+            or sent_at < $6::timestamptz
+            or (sent_at = $6::timestamptz and id < $7::uuid)
+          )
+          and (
+            not $3::boolean
+            or exists (
+              select 1
+              from conversations c
+              where c.id = messages.conversation_id
+                and (
+                  c.assigned_user_id = $4
+                  or exists (
+                    select 1
+                    from conversation_assignments ca
+                    where ca.conversation_id = c.id
+                      and ca.organization_user_id = $4
+                  )
+                  or exists (
+                    select 1
+                    from whatsapp_account_user_access wau
+                    where wau.organization_id = c.organization_id
+                      and wau.whatsapp_account_id = c.whatsapp_account_id
+                      and wau.organization_user_id = $4
+                      and wau.is_active = true
+                      and wau.can_view = true
+                  )
+                )
+            )
+          )
+        order by sent_at desc, id desc
+        limit $8
+      `,
+      [
+        organizationId,
+        conversationId,
+        assignedOnly,
+        organizationUserId,
+        activitySince,
+        beforeSentAt,
+        beforeId,
+        fetchLimit
+      ]
+    );
+
+    const hasMore = result.rows.length > options.limit;
+    const pageRows = result.rows.slice(0, options.limit).reverse();
+    const oldestMessage = pageRows[0] ?? null;
+
+    return {
+      messages: pageRows,
+      pagination: {
+        limit: options.limit,
+        hasMore,
+        nextBefore: oldestMessage
+          ? {
+              sentAt: oldestMessage.sent_at,
+              id: oldestMessage.id
+            }
+          : null
+      }
+    };
   }
 
   async findById(

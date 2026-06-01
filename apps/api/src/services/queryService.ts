@@ -1,7 +1,7 @@
 import { pool } from "../config/database.js";
 import { ContactRepository } from "../repositories/contactRepository.js";
 import { ConversationService } from "./conversationService.js";
-import { MessageRepository } from "../repositories/messageRepository.js";
+import { MessageRepository, type MessagePaginationCursor } from "../repositories/messageRepository.js";
 import type { AuthUser } from "../types/auth.js";
 
 export interface ActivityRangeFilter {
@@ -89,6 +89,29 @@ export class QueryService {
       return await this.messageRepository.listByConversation(client, organizationId, conversationId, {
         ...this.getScope(authUser),
         activityRange
+      });
+    } finally {
+      client.release();
+    }
+  }
+
+  async listMessagesPage(
+    authUser: AuthUser,
+    organizationId: string | null,
+    conversationId: string,
+    input: {
+      activityRange?: ActivityRangeFilter;
+      limit: number;
+      before?: MessagePaginationCursor | null;
+    }
+  ) {
+    const client = await pool.connect();
+    try {
+      return await this.messageRepository.listByConversationPage(client, organizationId, conversationId, {
+        ...this.getScope(authUser),
+        activityRange: input.activityRange,
+        limit: input.limit,
+        before: input.before
       });
     } finally {
       client.release();

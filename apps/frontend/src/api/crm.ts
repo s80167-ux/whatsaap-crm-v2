@@ -25,6 +25,22 @@ type MessageApiRecord = Message;
 type ContactApiRecord = Contact;
 type ContactDetailApiRecord = ContactDetailResponse;
 
+export type MessagePaginationCursor = {
+  sentAt: string;
+  id: string;
+};
+
+export type MessagePagination = {
+  limit: number;
+  hasMore: boolean;
+  nextBefore: MessagePaginationCursor | null;
+};
+
+export type MessagePageResponse = {
+  data: MessageApiRecord[];
+  pagination: MessagePagination;
+};
+
 function buildHistoryRangeQuery(range?: HistoryRange, organizationId?: string | null, channel?: InboxChannelFilter) {
   const searchParams = new URLSearchParams();
 
@@ -59,6 +75,29 @@ export async function fetchMessages(conversationId: string, range?: HistoryRange
     `/inbox/threads/${conversationId}/messages${buildHistoryRangeQuery(range, organizationId)}`
   );
   return response.data;
+}
+
+export async function fetchMessagesPage(
+  conversationId: string,
+  input: {
+    range?: HistoryRange;
+    organizationId?: string | null;
+    limit: number;
+    before?: MessagePaginationCursor | null;
+  }
+) {
+  const searchParams = new URLSearchParams(buildHistoryRangeQuery(input.range, input.organizationId).replace(/^\?/, ""));
+  searchParams.set("limit", String(input.limit));
+
+  if (input.before) {
+    searchParams.set("before_sent_at", input.before.sentAt);
+    searchParams.set("before_id", input.before.id);
+  }
+
+  const response = await apiGet<MessagePageResponse>(
+    `/inbox/threads/${conversationId}/messages?${searchParams.toString()}`
+  );
+  return response;
 }
 
 export async function fetchContacts(range?: HistoryRange, organizationId?: string | null) {

@@ -76,27 +76,37 @@ const MESSAGE_TYPE_PRIORITY = [
 
 export function normalizeMessageType(messageType: string | null | undefined): string {
   switch (messageType) {
+    case "text":
     case "conversation":
     case "extendedTextMessage":
       return "text";
+    case "image":
     case "imageMessage":
       return "image";
+    case "video":
     case "videoMessage":
       return "video";
+    case "audio":
     case "audioMessage":
     case "pttMessage":
       return "audio";
+    case "document":
     case "documentMessage":
       return "document";
+    case "sticker":
     case "stickerMessage":
       return "sticker";
+    case "location":
     case "locationMessage":
       return "location";
+    case "contact":
     case "contactMessage":
     case "contactsArrayMessage":
       return "contact";
+    case "reaction":
     case "reactionMessage":
       return "reaction";
+    case "system":
     case "protocolMessage":
     case "unknown":
     case null:

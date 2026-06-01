@@ -313,11 +313,33 @@ export class RawEventProcessorService {
 
   async processPendingBatch(limit = 20) {
     const staleBefore = new Date(Date.now() - env.RAW_EVENT_WORKER_STALE_AFTER_MS);
+    const transientRecoveryBefore = new Date(Date.now() - env.RAW_EVENT_WORKER_TRANSIENT_RECOVERY_COOLDOWN_MS);
 
     await withTransaction((client) => this.rawEventRepository.resetStaleProcessing(client, staleBefore));
-    const claimed = await withTransaction((client) =>
+    let claimed = await withTransaction((client) =>
       this.rawEventRepository.claimPendingBatch(client, limit, env.RAW_EVENT_WORKER_MAX_RETRIES)
     );
+
+    if (claimed.length === 0) {
+      claimed = await withTransaction((client) =>
+        this.rawEventRepository.claimTransientRecoveryBatch(
+          client,
+          limit,
+          env.RAW_EVENT_WORKER_MAX_RETRIES,
+          transientRecoveryBefore
+        )
+      );
+
+      if (claimed.length > 0) {
+        logger.warn(
+          {
+            recovered: claimed.length,
+            cooldownMs: env.RAW_EVENT_WORKER_TRANSIENT_RECOVERY_COOLDOWN_MS
+          },
+          "Claimed exhausted transient raw events for automatic recovery"
+        );
+      }
+    }
 
     for (const event of claimed) {
       await this.processEvent(event);

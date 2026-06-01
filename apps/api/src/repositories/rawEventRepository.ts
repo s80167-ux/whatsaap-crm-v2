@@ -12,8 +12,18 @@ export interface RawChannelEventRecord {
   payload: unknown;
   processing_status: "pending" | "processing" | "processed" | "failed" | "ignored";
   retry_count: number;
+  last_attempt_at: string | null;
   error_message: string | null;
 }
+
+const TRANSIENT_RAW_EVENT_ERROR_SQL = `(
+  position('timeout exceeded when trying to connect' in lower(coalesce(error_message, ''))) > 0
+  or position('etimedout' in lower(coalesce(error_message, ''))) > 0
+  or position('econnreset' in lower(coalesce(error_message, ''))) > 0
+  or position('econnrefused' in lower(coalesce(error_message, ''))) > 0
+  or position('connection terminated unexpectedly' in lower(coalesce(error_message, ''))) > 0
+  or position('too many clients already' in lower(coalesce(error_message, ''))) > 0
+)`;
 
 export class RawEventRepository {
   async list(
@@ -107,7 +117,7 @@ export class RawEventRepository {
           set processing_status = 'pending',
               error_message = coalesce(error_message, 'Reset from stale processing state')
           where processing_status = 'processing'
-            and received_at < $1
+            and coalesce(last_attempt_at, received_at) < $1
           returning 1
         )
         select count(*)::text as count
@@ -134,12 +144,45 @@ export class RawEventRepository {
           for update skip locked
         )
         update raw_channel_events rce
-        set processing_status = 'processing'
+        set processing_status = 'processing',
+            last_attempt_at = timezone('utc', now())
         from claimed
         where rce.id = claimed.id
         returning rce.*
       `,
       [limit, maxRetries]
+    );
+
+    return result.rows;
+  }
+
+  async claimTransientRecoveryBatch(
+    client: PoolClient,
+    limit: number,
+    maxRetries: number,
+    cooldownBefore: Date
+  ): Promise<RawChannelEventRecord[]> {
+    const result = await client.query<RawChannelEventRecord>(
+      `
+        with claimed as (
+          select id
+          from raw_channel_events
+          where processing_status = 'failed'
+            and retry_count >= $2
+            and coalesce(last_attempt_at, received_at) < $3
+            and ${TRANSIENT_RAW_EVENT_ERROR_SQL}
+          order by coalesce(last_attempt_at, received_at) asc, received_at asc
+          limit $1
+          for update skip locked
+        )
+        update raw_channel_events rce
+        set processing_status = 'processing',
+            last_attempt_at = timezone('utc', now())
+        from claimed
+        where rce.id = claimed.id
+        returning rce.*
+      `,
+      [limit, maxRetries, cooldownBefore.toISOString()]
     );
 
     return result.rows;

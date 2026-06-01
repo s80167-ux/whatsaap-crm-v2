@@ -26,6 +26,16 @@ const inboxChannelQuerySchema = z.object({
   channel: z.enum(["all", "whatsapp", "social", "facebook", "instagram"]).optional()
 });
 
+const messagePaginationQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().positive().max(100).optional(),
+    before_sent_at: z.string().datetime({ offset: true }).optional(),
+    before_id: z.string().uuid().optional()
+  })
+  .refine((input) => Boolean(input.before_sent_at) === Boolean(input.before_id), {
+    message: "before_sent_at and before_id must be provided together"
+  });
+
 function resolveReadOrganizationId(request: Request) {
   const { organization_id } = organizationQuerySchema.parse(request.query);
   const organizationId =
@@ -90,6 +100,27 @@ export async function getInboxThreadMessages(request: Request, response: Respons
   const organizationId = resolveReadOrganizationId(request);
   const { conversationId } = conversationParamsSchema.parse(request.params);
   const activityRange = resolveActivityRange(request);
+  const { limit, before_sent_at, before_id } = messagePaginationQuerySchema.parse(request.query);
+
+  if (limit) {
+    const page = await queryService.listMessagesPage(auth, organizationId, conversationId, {
+      activityRange,
+      limit,
+      before:
+        before_sent_at && before_id
+          ? {
+              sentAt: before_sent_at,
+              id: before_id
+            }
+          : null
+    });
+
+    return response.json({
+      data: page.messages,
+      pagination: page.pagination
+    });
+  }
+
   const messages = await queryService.listMessages(auth, organizationId, conversationId, activityRange);
   return response.json({ data: messages });
 }

@@ -51,6 +51,7 @@ const envSchema = z.object({
   RAW_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(500),
   RAW_EVENT_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),
   RAW_EVENT_WORKER_MAX_RETRIES: z.coerce.number().int().min(1).default(10),
+  RAW_EVENT_WORKER_TRANSIENT_RECOVERY_COOLDOWN_MS: z.coerce.number().int().positive().default(300000),
   MESSAGE_OUTBOX_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
   MESSAGE_OUTBOX_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   MESSAGE_OUTBOX_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),

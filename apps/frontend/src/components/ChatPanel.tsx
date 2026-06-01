@@ -56,7 +56,6 @@ import { InboxAiAssistantCard } from "./inbox/InboxAiAssistantCard";
 import type { AiInboxAssistAction } from "../api/aiInbox";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
-const INITIAL_VISIBLE_MESSAGES = 12;
 const LOAD_OLDER_MESSAGES_STEP = 12;
 const SOCIAL_INBOX_ON_HOLD_MESSAGE = "Facebook and Instagram replies are coming soon. Social messaging is paused while platform restrictions are cleared.";
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
@@ -249,6 +248,9 @@ export function ChatPanel({
   historyRangeLabel,
   organizationId,
   channelContext,
+  hasMoreMessages = false,
+  isLoadingOlderMessages = false,
+  onLoadOlderMessages,
   onOpenContact
 }: {
   conversation?: Conversation;
@@ -257,6 +259,9 @@ export function ChatPanel({
   historyRangeLabel: string;
   organizationId?: string | null;
   channelContext?: InboxChannelFilter;
+  hasMoreMessages?: boolean;
+  isLoadingOlderMessages?: boolean;
+  onLoadOlderMessages?: () => void | Promise<void>;
   onOpenContact?: () => void;
 }) {
   const { t } = useTranslation();
@@ -286,7 +291,6 @@ export function ChatPanel({
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [createSalesMessage, setCreateSalesMessage] = useState<Message | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [visibleMessageCount, setVisibleMessageCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageScrollRef = useRef<HTMLDivElement | null>(null);
   const messageEndRef = useRef<HTMLDivElement | null>(null);
@@ -299,12 +303,7 @@ export function ChatPanel({
   const messagesById = new Map(messages.map((message) => [message.id, message]));
   const forwardableConversations = conversations.filter((item) => item.id !== conversation?.id);
   const selectedMessages = selectedMessageIds.map((messageId) => messagesById.get(messageId)).filter((message): message is Message => Boolean(message));
-  const visibleMessages = useMemo(
-    () => messages.slice(Math.max(0, messages.length - visibleMessageCount)),
-    [messages, visibleMessageCount]
-  );
-  const hiddenMessageCount = Math.max(0, messages.length - visibleMessages.length);
-  const latestVisibleMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
+  const latestVisibleMessageId = messages[messages.length - 1]?.id ?? null;
   const { toast: copyToast, copyText } = useCopyFeedback();
   const resolvedOrganizationId = organizationId ?? (conversation as (Conversation & { organization_id?: string | null }) | undefined)?.organization_id ?? null;
   const { data: organizationQuickReplies = [], isLoading: quickRepliesLoading } = useQuickReplies({
@@ -977,7 +976,6 @@ export function ChatPanel({
     setReplyDraft(null);
     setForwardSourceMessage(null);
     setForwardTargetConversationId("");
-    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
     closeSlashMenu();
     slashInsertionBaseRef.current = null;
   }, [conversation?.id]);
@@ -1160,20 +1158,23 @@ export function ChatPanel({
             </div>
           </div>
         ) : null}
-        {hiddenMessageCount > 0 ? (
+        {hasMoreMessages ? (
           <div className="sticky top-0 z-[1] flex justify-center">
             <Button
               type="button"
               variant="secondary"
               className="rounded-full border border-border bg-card/90 px-3.5 py-1 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur hover:border-primary/20 hover:bg-card hover:text-primary"
-              onClick={() => setVisibleMessageCount((current) => Math.min(messages.length, current + LOAD_OLDER_MESSAGES_STEP))}
+              onClick={() => {
+                void onLoadOlderMessages?.();
+              }}
+              disabled={isLoadingOlderMessages || !onLoadOlderMessages}
             >
-              {Math.min(hiddenMessageCount, LOAD_OLDER_MESSAGES_STEP)} earlier messages
+              {isLoadingOlderMessages ? "Loading..." : `${LOAD_OLDER_MESSAGES_STEP} earlier messages`}
             </Button>
           </div>
         ) : null}
         {messages.length > 0 ? (
-          visibleMessages.map((message) => (
+          messages.map((message) => (
             <MessageBubble
               key={message.id}
               message={message}
