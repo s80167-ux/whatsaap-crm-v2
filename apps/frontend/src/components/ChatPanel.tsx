@@ -1660,6 +1660,7 @@ function MessageBubble({
                 icon={Icon}
                 messageType={normalizedMessageType}
                 previewUrl={presentation.previewUrl}
+                openUrl={presentation.previewUrl ?? presentation.downloadUrl}
                 title={presentation.title}
               />
               <div className="min-w-0">
@@ -1941,24 +1942,63 @@ function MessageAttachmentThumbnail({
   icon: Icon,
   messageType,
   previewUrl,
+  openUrl,
   title
 }: {
   icon: ComponentType<{ className?: string }> | null;
   messageType: string;
   previewUrl: string | null;
+  openUrl: string | null;
   title: string;
 }) {
+  const thumbnailClassName =
+    "h-16 w-16 shrink-0 rounded-xl border border-border/80 bg-card object-cover transition hover:border-primary/30";
+
   if (messageType === "image" && previewUrl) {
-    return <img src={previewUrl} alt={title} className="h-16 w-16 shrink-0 rounded-xl border border-border/80 bg-card object-cover" />;
+    const image = <img src={previewUrl} alt={title} className={thumbnailClassName} />;
+
+    if (openUrl) {
+      return (
+        <a
+          href={openUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${title}`}
+          title={`Open ${title}`}
+          className="shrink-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {image}
+        </a>
+      );
+    }
+
+    return image;
   }
 
   // Only show the icon if there is a previewUrl (media) or a known media type icon
   if (previewUrl || Icon) {
-    return (
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card">
+    const content = (
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card transition hover:border-primary/30">
         {Icon ? <Icon className="h-5 w-5 text-text-soft" /> : <Paperclip className="h-5 w-5 text-text-soft" />}
       </div>
     );
+
+    if (openUrl) {
+      return (
+        <a
+          href={openUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${title}`}
+          title={`Open ${title}`}
+          className="shrink-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {content}
+        </a>
+      );
+    }
+
+    return content;
   }
 
   // No attachment, render nothing
