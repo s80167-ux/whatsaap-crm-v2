@@ -88,7 +88,7 @@ function isAllowedFrontendRedirectOrigin(origin: string, request?: Request) {
     return true;
   }
 
-  if (isProjectVercelOrigin(origin)) {
+    if (env.NODE_ENV === "production" && isProjectVercelOrigin(origin)) {
     return true;
   }
 

@@ -1630,7 +1630,9 @@ export class AdminService {
     const client = await pool.connect();
     try {
       const accounts = await this.whatsappAccessRepository.listAccountSummaries(client, resolvedOrganizationId);
-      const users = await this.userRepository.listByOrganization(client, resolvedOrganizationId);
+      const users = authUser.role === "super_admin"
+        ? await this.userRepository.listAll(client)
+        : await this.userRepository.listByOrganization(client, resolvedOrganizationId);
 
       return {
         organizationId: resolvedOrganizationId,

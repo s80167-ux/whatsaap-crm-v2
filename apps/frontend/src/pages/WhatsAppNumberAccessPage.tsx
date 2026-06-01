@@ -27,6 +27,8 @@ type AccessDraft = {
 };
 
 const ROLE_OPTIONS: WhatsAppAccountAccessRole[] = ["owner", "manager", "agent", "viewer"];
+const EMPTY_ACCOUNTS: WhatsAppAccountAccessAccount[] = [];
+const EMPTY_USERS: UserSummary[] = [];
 
 function formatConnectionStatus(status: string) {
   return status
@@ -99,8 +101,8 @@ export function WhatsAppNumberAccessPanel({
   const [drafts, setDrafts] = useState<AccessDraft[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const accounts = overview?.accounts ?? [];
-  const overviewUsers = overview?.users ?? [];
+  const accounts = overview?.accounts ?? EMPTY_ACCOUNTS;
+  const overviewUsers = overview?.users ?? EMPTY_USERS;
   const selectedAccount = useMemo(() => {
     if (selectedAccountId) {
       return accounts.find((account) => account.id === selectedAccountId) ?? internalSelectedAccount;
@@ -158,11 +160,17 @@ export function WhatsAppNumberAccessPanel({
   });
 
   useEffect(() => {
-    if (!selectedAccount || !detailQuery.data) {
+    if (!selectedAccount) {
+      setDrafts([]);
       return;
     }
 
-    const nextAccessList = detailQuery.data.accessList.map<AccessDraft>((access) => ({
+    if (detailUsers.length === 0) {
+      setDrafts([]);
+      return;
+    }
+
+    const nextAccessList = (detailQuery.data?.accessList ?? []).map<AccessDraft>((access) => ({
       organizationUserId: access.organization_user_id,
       accessRole: access.access_role,
       canView: access.can_view,
@@ -172,8 +180,8 @@ export function WhatsAppNumberAccessPanel({
       isActive: access.is_active
     }));
 
-    setDrafts(buildAccessDrafts(detailQuery.data.account, detailQuery.data.users, nextAccessList));
-  }, [detailQuery.data, selectedAccount]);
+    setDrafts(buildAccessDrafts(detailQuery.data?.account ?? selectedAccount, detailUsers, nextAccessList));
+  }, [detailQuery.data, detailUsers, selectedAccount]);
 
   useEffect(() => {
     if (!selectedAccountId) {
@@ -343,7 +351,7 @@ export function WhatsAppNumberAccessPanel({
                     <tr>
                       <th>User</th>
                       <th>Active</th>
-                      <th>Role</th>
+                      <th>Access role</th>
                       <th>View</th>
                       <th>Reply</th>
                       <th>Create sales</th>
@@ -380,7 +388,7 @@ export function WhatsAppNumberAccessPanel({
                           <td>
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-text">{userLabel}</p>
-                              <p className="text-xs text-text-muted">{user.role}</p>
+                              <p className="text-xs text-text-muted">User role: {user.role}</p>
                             </div>
                           </td>
                           <td>
