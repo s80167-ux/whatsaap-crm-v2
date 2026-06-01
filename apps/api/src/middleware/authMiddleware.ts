@@ -13,9 +13,17 @@ function getCookieValue(request: Request, name: string): string | null {
   return typeof cookieValue === "string" && cookieValue.length > 0 ? cookieValue : null;
 }
 
+function getBearerToken(request: Request): string | null {
+  const authorization = request.header("Authorization");
+  if (!authorization) return null;
+
+  const [scheme, token] = authorization.split(" ");
+  return scheme?.toLowerCase() === "bearer" && token ? token : null;
+}
+
 function getAuthSessionState(request: Request) {
   return {
-    accessToken: getCookieValue(request, env.SESSION_COOKIE_NAME),
+    accessToken: getBearerToken(request) ?? getCookieValue(request, env.SESSION_COOKIE_NAME),
     refreshToken: getCookieValue(request, env.REFRESH_COOKIE_NAME),
     csrfToken: getCookieValue(request, env.CSRF_COOKIE_NAME)
   };
@@ -89,6 +97,10 @@ export async function requireAuth(request: Request, response: Response, next: Ne
 
 export function requireCsrf(request: Request, _response: Response, next: NextFunction) {
   if (SAFE_METHODS.has(request.method.toUpperCase())) {
+    return next();
+  }
+
+  if (getBearerToken(request)) {
     return next();
   }
 

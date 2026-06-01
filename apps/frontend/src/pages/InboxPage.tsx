@@ -30,6 +30,7 @@ type ConversationFilterMode = "mine" | "unread" | "unassigned" | "campaign_repli
 
 const OUTGOING_STATUS_POLL_INTERVAL_MS = 1000;
 const OUTGOING_STATUS_POLL_WINDOW_MS = 2 * 60 * 1000;
+const INBOX_FALLBACK_POLL_INTERVAL_MS = 15000;
 
 type InboxPageProps = {
   channel?: InboxChannelFilter;
@@ -121,7 +122,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
     chatHistoryRange,
     isSuperAdmin ? activeOrganizationId : undefined,
     true,
-    { refetchIntervalMs: false, channel }
+    { refetchIntervalMs: INBOX_FALLBACK_POLL_INTERVAL_MS, channel }
   );
   const [selectedConversation, setSelectedConversation] = useState<Conversation | undefined>();
   const [mobilePane, setMobilePane] = useState<MobileInboxPane>("list");
@@ -221,7 +222,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
         return Number.isFinite(sentAt) && sentAt >= unresolvedOutgoingCutoff;
       })
         ? OUTGOING_STATUS_POLL_INTERVAL_MS
-        : false
+        : INBOX_FALLBACK_POLL_INTERVAL_MS
     }
   );
 

@@ -239,14 +239,15 @@ function getDocumentDownloadUrl(
 
 function buildFallbackPresentation(message: Message): MessagePresentation {
   const normalizedMessageType = resolveMessageType(message);
-  const label = normalizedMessageType !== "text" ? normalizedMessageType.toUpperCase() : null;
+  const isPlainTextFallback = normalizedMessageType === "text" || normalizedMessageType === "system";
+  const label = isPlainTextFallback ? null : normalizedMessageType.toUpperCase();
   const contentText = message.content_text ?? getRawMessageText(message.content_json);
   return {
     label,
-    title: contentText ?? (normalizedMessageType === "text" ? "Message" : `${normalizedMessageType} message`),
+    title: contentText ?? (isPlainTextFallback ? "Message" : `${normalizedMessageType} message`),
     caption: contentText,
     details: [],
-    isMedia: normalizedMessageType !== "text",
+    isMedia: !isPlainTextFallback,
     previewUrl: null,
     downloadUrl: null,
     mimeType: null,

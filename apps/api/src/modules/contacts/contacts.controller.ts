@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
+import { emitMobileInboxUpdate } from "../mobile/mobileInboxEvents.bus.js";
 import { ContactAssignmentService } from "../../services/contactAssignmentService.js";
 import { ContactCommandService } from "../../services/contactCommandService.js";
 import { ContactRepairProposalService } from "../../services/contactRepairProposalService.js";
@@ -322,6 +323,12 @@ export async function startContactConversation(request: Request, response: Respo
       whatsappAccountId,
       contactId
     });
+  });
+
+  emitMobileInboxUpdate({
+    type: "conversation_created",
+    conversationId: conversation.id,
+    organizationId: auth.organizationId
   });
 
   return response.status(201).json({ data: conversation });

@@ -79,7 +79,7 @@ export class ContactService {
       contact = await this.contactRepository.findById(client, input.organizationId, existingPhoneIdentity.contact_id);
     }
 
-    if (!existingIdentity && existingPhoneContact && (!contact || contact.id !== existingPhoneContact.id)) {
+    if (existingPhoneContact && (!contact || contact.id !== existingPhoneContact.id)) {
       contact = existingPhoneContact;
     }
 

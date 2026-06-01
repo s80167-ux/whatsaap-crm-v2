@@ -3,6 +3,7 @@ import { pool } from "./config/database.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { app } from "./app.js";
+import { startMobileInboxEventListener } from "./modules/mobile/mobileInboxEvents.bus.js";
 import { RawEventProcessorService } from "./services/rawEventProcessorService.js";
 
 function startEmbeddedRawEventWorker() {
@@ -37,6 +38,7 @@ async function bootstrap() {
   await pool.query("select 1");
   await pool.query("alter table organization_users add column if not exists avatar_url text");
   logger.info("Database connection established");
+  await startMobileInboxEventListener();
 
   if (env.EMBED_RAW_EVENT_WORKER) {
     if (env.NODE_ENV === "production") {

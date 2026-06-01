@@ -99,6 +99,29 @@ export class AuthService {
     return this.buildLoginResult(data.session.access_token, data.session.refresh_token, resolvedUser);
   }
 
+  async loginWithGoogleIdToken(idToken: string) {
+    const supabasePublic = createSupabasePublicClient();
+    const { data, error } = await supabasePublic.auth.signInWithIdToken({
+      provider: "google",
+      token: idToken
+    });
+
+    if (error || !data.session || !data.user) {
+      throw new AppError("Google sign-in failed", 401, "google_login_failed");
+    }
+
+    const resolvedUser = await this.resolveAuthUser({
+      authUserId: data.user.id,
+      email: data.user.email ?? "",
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) ?? null,
+      allowSignupRequest: true,
+      isEmailVerified: Boolean(data.user.email_confirmed_at)
+    });
+
+    return this.buildLoginResult(data.session.access_token, data.session.refresh_token, resolvedUser);
+  }
+
   async refreshSession(refreshToken: string) {
     const supabasePublic = createSupabasePublicClient();
     const { data, error } = await supabasePublic.auth.refreshSession({

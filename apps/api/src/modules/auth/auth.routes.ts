@@ -6,6 +6,7 @@ import {
   getRealtimeToken,
   handleGoogleCallback,
   login,
+  loginWithGoogleMobile,
   logout,
   startGoogleLogin,
   updateMe,
@@ -15,6 +16,7 @@ import {
 export const authRoutes = Router();
 
 authRoutes.post("/login", asyncHandler(login));
+authRoutes.post("/google/mobile", asyncHandler(loginWithGoogleMobile));
 authRoutes.get("/google/start", asyncHandler(startGoogleLogin));
 authRoutes.get("/google/callback", asyncHandler(handleGoogleCallback));
 authRoutes.get("/me", requireAuth, asyncHandler(getMe));

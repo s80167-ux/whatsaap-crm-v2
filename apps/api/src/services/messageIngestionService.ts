@@ -1,5 +1,6 @@
 import { withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
+import { emitMobileInboxUpdate } from "../modules/mobile/mobileInboxEvents.bus.js";
 import { NotificationsService } from "../modules/notifications/notifications.service.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
@@ -75,7 +76,7 @@ export class MessageIngestionService {
   ) {}
 
   async ingest(input: InboundMessageInput) {
-    return withTransaction(async (client) => {
+    const result = await withTransaction(async (client) => {
       const { contact, identity } = await this.contactService.findOrCreateCanonicalContact(client, {
         organizationId: input.organizationId,
         whatsappAccountId: input.whatsappAccountId,
@@ -367,5 +368,13 @@ export class MessageIngestionService {
 
       return { contact, identity, conversation, message, inserted };
     });
+
+    emitMobileInboxUpdate({
+      type: result.inserted ? "message_created" : "message_updated",
+      conversationId: result.conversation.id,
+      organizationId: input.organizationId
+    });
+
+    return result;
   }
 }

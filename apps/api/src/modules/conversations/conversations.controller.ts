@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
+import { emitMobileInboxUpdate } from "../mobile/mobileInboxEvents.bus.js";
 import { ConversationService } from "../../services/conversationService.js";
 import { QueryService } from "../../services/queryService.js";
 
@@ -65,6 +66,12 @@ export async function assignConversation(request: Request, response: Response) {
       organizationUserId
     })
   );
+
+  emitMobileInboxUpdate({
+    type: "conversation_updated",
+    conversationId,
+    organizationId
+  });
 
   return response.status(201).json({ data: assignment });
 }

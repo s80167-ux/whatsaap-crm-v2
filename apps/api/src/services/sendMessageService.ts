@@ -4,6 +4,7 @@ import { withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
+import { emitMobileInboxUpdate } from "../modules/mobile/mobileInboxEvents.bus.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { WhatsAppAccountAccessRepository } from "../repositories/whatsAppAccountAccessRepository.js";
@@ -249,6 +250,11 @@ export class SendMessageService {
     });
 
     if (env.OUTBOUND_DISPATCH_MODE === "worker_only" && !options.waitForDispatch) {
+      emitMobileInboxUpdate({
+        type: "message_created",
+        conversationId: input.conversationId,
+        organizationId: input.organizationId
+      });
       return message;
     }
 
@@ -266,6 +272,12 @@ export class SendMessageService {
         logger.error({ error, outboxId, messageId: message.id }, "Immediate outbound dispatch failed");
       });
     }
+
+    emitMobileInboxUpdate({
+      type: "message_created",
+      conversationId: input.conversationId,
+      organizationId: input.organizationId
+    });
 
     return message;
   }

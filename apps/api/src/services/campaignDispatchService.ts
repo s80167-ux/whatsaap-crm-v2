@@ -176,7 +176,7 @@ export class CampaignDispatchService {
           and cr.send_status in ('pending', 'failed')
           and cr.attempt_count < $1
           and coalesce(cr.next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
-        group by c.id
+        group by c.id, css.min_delay_seconds, css.max_delay_seconds
         order by c.updated_at asc, c.created_at asc
         limit 50
       `,

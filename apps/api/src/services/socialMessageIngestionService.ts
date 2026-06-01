@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
+import { emitMobileInboxUpdate } from "../modules/mobile/mobileInboxEvents.bus.js";
 import { NotificationsService } from "../modules/notifications/notifications.service.js";
 import { ContactRepository } from "../repositories/contactRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
@@ -119,21 +120,31 @@ export class SocialMessageIngestionService {
     }
 
     const eventKey = `${normalized.source}:${normalized.socialChannelAccountId}:${normalized.externalMessageId}`;
-
     try {
-      await withTransaction(async (client) => {
+      const inboxUpdate = await withTransaction(async (client) => {
         const insertedKey = await this.insertProcessedKey(client, event.organization_id, normalized.source, eventKey);
 
         if (!insertedKey) {
           await this.markEvent(client, event.id, "ignored", "Duplicate social event");
-          return;
+          return null;
         }
 
         const contact = await this.findOrCreateSocialContact(client, event.organization_id, normalized);
         const conversation = await this.findOrCreateSocialConversation(client, event.organization_id, contact.id, normalized);
         const insertedMessage = await this.insertSocialMessageIfAbsent(client, event.organization_id, contact.id, conversation.id, normalized);
+        let update:
+          | {
+              organizationId: string;
+              conversationId: string;
+            }
+          | null = null;
 
         if (insertedMessage) {
+          update = {
+            organizationId: event.organization_id,
+            conversationId: conversation.id
+          };
+
           await this.conversationRepository.bumpLastMessage(client, {
             conversationId: conversation.id,
             direction: normalized.direction,
@@ -154,7 +165,16 @@ export class SocialMessageIngestionService {
         }
 
         await this.markEvent(client, event.id, "processed", null);
+        return update;
       });
+
+      if (inboxUpdate) {
+        emitMobileInboxUpdate({
+          type: "message_created",
+          organizationId: inboxUpdate.organizationId,
+          conversationId: inboxUpdate.conversationId
+        });
+      }
 
       return "processed";
     } catch (error) {

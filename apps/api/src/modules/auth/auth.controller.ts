@@ -24,6 +24,10 @@ const loginSchema = z.object({
   password: z.string().min(8)
 });
 
+const googleMobileLoginSchema = z.object({
+  idToken: z.string().min(1)
+});
+
 const updatePasswordSchema = z.object({
   password: z.string().min(8)
 });
@@ -39,6 +43,8 @@ const updateProfileSchema = z.object({
   fullName: z.string().min(1).optional().nullable(),
   avatarUrl: avatarUrlSchema
 });
+
+type GoogleLoginErrorCode = "google_login_failed" | "google_account_not_linked" | "google_signup_pending";
 
 function getOrigin(input: string) {
   try {
@@ -99,6 +105,25 @@ function getRequestedFrontendOrigin(request: Request) {
   return origin && isAllowedFrontendRedirectOrigin(origin, request) ? origin : null;
 }
 
+function isAllowedMobileRedirectUrl(input: string) {
+  try {
+    const parsedUrl = new URL(input);
+    return parsedUrl.protocol === "com.example.rezeki_dashboard_app:" && parsedUrl.hostname === "login-callback";
+  } catch {
+    return false;
+  }
+}
+
+function getRequestedMobileRedirectUrl(request: Request) {
+  const redirectTo = typeof request.query.mobile_redirect_to === "string" ? request.query.mobile_redirect_to : null;
+  return redirectTo && isAllowedMobileRedirectUrl(redirectTo) ? redirectTo : null;
+}
+
+function getStoredMobileRedirectUrl(request: Request) {
+  const returnTo = getGoogleOAuthReturnToCookie(request.cookies);
+  return returnTo && isAllowedMobileRedirectUrl(returnTo) ? returnTo : null;
+}
+
 function clearGoogleOAuthCookies(response: Response) {
   clearGoogleOAuthVerifierCookie(response);
   clearGoogleOAuthReturnToCookie(response);
@@ -121,11 +146,38 @@ function getFrontendRedirectBase(request: Request) {
 
 function buildFrontendLoginUrl(
   request: Request,
-  errorCode: "google_login_failed" | "google_account_not_linked" | "google_signup_pending"
+  errorCode: GoogleLoginErrorCode
 ) {
   const loginUrl = new URL("/login", getFrontendRedirectBase(request));
   loginUrl.searchParams.set("error", errorCode);
   return loginUrl.toString();
+}
+
+function buildMobileCallbackUrl(
+  redirectTo: string,
+  input:
+    | {
+        status: "success";
+        accessToken: string;
+        refreshToken: string;
+        csrfToken: string;
+        user: unknown;
+      }
+    | { status: "error"; errorCode: GoogleLoginErrorCode }
+) {
+  const callbackUrl = new URL(redirectTo);
+  callbackUrl.searchParams.set("status", input.status);
+
+  if (input.status === "success") {
+    callbackUrl.searchParams.set("access_token", input.accessToken);
+    callbackUrl.searchParams.set("refresh_token", input.refreshToken);
+    callbackUrl.searchParams.set("csrf_token", input.csrfToken);
+    callbackUrl.searchParams.set("user", JSON.stringify(input.user));
+  } else {
+    callbackUrl.searchParams.set("error", input.errorCode);
+  }
+
+  return callbackUrl.toString();
 }
 
 export async function login(request: Request, response: Response) {
@@ -141,12 +193,35 @@ export async function login(request: Request, response: Response) {
   return response.json({ data: { user: result.user }, csrfToken });
 }
 
+export async function loginWithGoogleMobile(request: Request, response: Response) {
+  const input = googleMobileLoginSchema.parse(request.body);
+  const result = await authService.loginWithGoogleIdToken(input.idToken);
+  const csrfToken = issueCsrfToken();
+  setSessionCookies(response, {
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    csrfToken
+  });
+  setNoStore(response);
+  return response.json({
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
+    },
+    csrfToken
+  });
+}
+
 export async function startGoogleLogin(request: Request, response: Response) {
   const { url, codeVerifier } = await authService.getGoogleOAuthUrl();
+  const requestedMobileRedirectUrl = getRequestedMobileRedirectUrl(request);
   const requestedFrontendOrigin = getRequestedFrontendOrigin(request);
 
   setGoogleOAuthVerifierCookie(response, codeVerifier);
-  if (requestedFrontendOrigin) {
+  if (requestedMobileRedirectUrl) {
+    setGoogleOAuthReturnToCookie(response, requestedMobileRedirectUrl);
+  } else if (requestedFrontendOrigin) {
     setGoogleOAuthReturnToCookie(response, requestedFrontendOrigin);
   }
   setNoStore(response);
@@ -156,11 +231,18 @@ export async function startGoogleLogin(request: Request, response: Response) {
 export async function handleGoogleCallback(request: Request, response: Response) {
   const code = typeof request.query.code === "string" ? request.query.code : null;
   const codeVerifier = getGoogleOAuthVerifierCookie(request.cookies);
+  const mobileRedirectTo = getStoredMobileRedirectUrl(request);
 
   if (!code || !codeVerifier) {
     clearGoogleOAuthCookies(response);
     clearSessionCookies(response);
     setNoStore(response);
+    if (mobileRedirectTo) {
+      return response.redirect(buildMobileCallbackUrl(mobileRedirectTo, {
+        status: "error",
+        errorCode: "google_login_failed"
+      }));
+    }
     return response.redirect(buildFrontendLoginUrl(request, "google_login_failed"));
   }
 
@@ -175,6 +257,15 @@ export async function handleGoogleCallback(request: Request, response: Response)
       csrfToken
     });
     setNoStore(response);
+    if (mobileRedirectTo) {
+      return response.redirect(buildMobileCallbackUrl(mobileRedirectTo, {
+        status: "success",
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        csrfToken,
+        user: result.user
+      }));
+    }
     return response.redirect(new URL("/dashboard", frontendRedirectBase).toString());
   } catch (error) {
     clearGoogleOAuthCookies(response);
@@ -186,6 +277,12 @@ export async function handleGoogleCallback(request: Request, response: Response)
         : isAppError(error) && error.code === "crm_account_not_linked"
           ? "google_account_not_linked"
           : "google_login_failed";
+    if (mobileRedirectTo) {
+      return response.redirect(buildMobileCallbackUrl(mobileRedirectTo, {
+        status: "error",
+        errorCode
+      }));
+    }
     return response.redirect(buildFrontendLoginUrl(request, errorCode));
   }
 }
