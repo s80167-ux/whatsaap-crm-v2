@@ -56,7 +56,7 @@ import { InboxAiAssistantCard } from "./inbox/InboxAiAssistantCard";
 import type { AiInboxAssistAction } from "../api/aiInbox";
 
 const MAX_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024;
-const LOAD_OLDER_MESSAGES_STEP = 12;
+const LOAD_OLDER_MESSAGES_STEP = 5;
 const SOCIAL_INBOX_ON_HOLD_MESSAGE = "Facebook and Instagram replies are coming soon. Social messaging is paused while platform restrictions are cleared.";
 const EMOJI_CHOICES = ["😊", "👍", "🙏", "✅", "🔥", "🎉", "📌", "📞", "💬", "🚚", "💳", "✨"];
 const MAX_SLASH_SUGGESTIONS = 8;
