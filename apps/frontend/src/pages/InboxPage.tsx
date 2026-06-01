@@ -284,7 +284,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
           return false;
         }
 
-        const sentAt = new Date(message.sent_at).getTime();
+        const sentAt = new Date(message.sort_at ?? message.sent_at).getTime();
         return Number.isFinite(sentAt) && sentAt >= unresolvedOutgoingCutoff;
       })
         ? OUTGOING_STATUS_POLL_INTERVAL_MS

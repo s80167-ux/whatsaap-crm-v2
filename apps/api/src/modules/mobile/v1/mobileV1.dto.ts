@@ -60,6 +60,8 @@ export function toMobileMessageDto(message: MessageRecord) {
     contentText: stringOrFallback(message.content_text, ""),
     contentJson: (message.content_json ?? null) as JsonObject | null,
     sentAt: stringOrNull(message.sent_at),
+    createdAt: stringOrNull(message.created_at),
+    sortAt: stringOrNull(message.sort_at) ?? stringOrNull(message.sent_at),
     externalMessageId: stringOrNull(message.external_message_id),
     ackStatus: stringOrNull(message.ack_status)
   };

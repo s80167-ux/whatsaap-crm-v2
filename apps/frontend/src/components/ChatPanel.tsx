@@ -1710,7 +1710,7 @@ function MessageBubble({
           </button>
         ) : null}
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-text-soft">
-          <p>{new Date(message.sent_at).toLocaleString()}</p>
+          <p>{new Date(message.sort_at ?? message.sent_at).toLocaleString()}</p>
           {message.direction === "outgoing" && !isDeleted ? (
             <span className={`rounded-full border px-2 py-1 font-medium ${getAckTone(message.ack_status)}`}>
               {formatAckStatus(message.ack_status) ?? "Queued"}
@@ -1903,7 +1903,7 @@ function formatMessagesForCopy(messages: Message[]) {
       const directionLabel =
         message.direction === "outgoing" ? "Outbound" : message.direction === "incoming" ? "Inbound" : "System";
 
-      return `[${new Date(message.sent_at).toLocaleString()}] ${directionLabel}: ${getBubblePreviewText(message)}`;
+      return `[${new Date(message.sort_at ?? message.sent_at).toLocaleString()}] ${directionLabel}: ${getBubblePreviewText(message)}`;
     })
     .join("\n\n");
 }

@@ -6,7 +6,8 @@ import type { Message } from "../types/api";
 
 function sortMessages(messages: Message[]) {
   return [...messages].sort((left, right) => {
-    const timeDelta = new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime();
+    const timeDelta =
+      new Date(left.sort_at ?? left.sent_at).getTime() - new Date(right.sort_at ?? right.sent_at).getTime();
     return timeDelta || left.id.localeCompare(right.id);
   });
 }

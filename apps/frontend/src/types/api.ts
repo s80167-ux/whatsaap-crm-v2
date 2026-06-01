@@ -39,6 +39,8 @@ export interface Message {
   content_text: string | null;
   content_json: unknown;
   sent_at: string;
+  created_at?: string;
+  sort_at?: string;
   delivered_at?: string | null;
   read_at?: string | null;
   ack_status?: string;

@@ -42,7 +42,8 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          coalesce(sent_at, created_at) as sent_at,
+          sent_at,
+          created_at,
           delivered_at,
           read_at,
           ack_status
@@ -110,7 +111,9 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          coalesce(sent_at, created_at) as sent_at,
+          sent_at,
+          created_at,
+          coalesce(sent_at, created_at) as sort_at,
           delivered_at,
           read_at,
           ack_status
@@ -450,7 +453,9 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          coalesce(sent_at, created_at) as sent_at,
+          sent_at,
+          created_at,
+          coalesce(sent_at, created_at) as sort_at,
           delivered_at,
           read_at,
           ack_status
@@ -530,7 +535,9 @@ export class MessageRepository {
           message_type,
           content_text,
           content_json,
-          coalesce(sent_at, created_at) as sent_at,
+          sent_at,
+          created_at,
+          coalesce(sent_at, created_at) as sort_at,
           delivered_at,
           read_at,
           ack_status
@@ -595,7 +602,7 @@ export class MessageRepository {
         hasMore,
         nextBefore: oldestMessage
           ? {
-              sentAt: oldestMessage.sent_at,
+              sentAt: oldestMessage.sort_at ?? oldestMessage.sent_at,
               id: oldestMessage.id
             }
           : null
