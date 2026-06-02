@@ -8,25 +8,47 @@ const processor = new RawEventProcessorService();
 const runOnce = process.argv.includes("--once");
 
 async function main() {
+  let consecutiveFailures = 0;
+
   do {
-    let totalProcessed = 0;
-    let processed = 0;
+    try {
+      let totalProcessed = 0;
+      let processed = 0;
 
-    do {
-      processed = await processor.processPendingBatch(env.RAW_EVENT_WORKER_BATCH_SIZE);
-      totalProcessed += processed;
-    } while (processed === env.RAW_EVENT_WORKER_BATCH_SIZE);
+      do {
+        processed = await processor.processPendingBatch(env.RAW_EVENT_WORKER_BATCH_SIZE);
+        totalProcessed += processed;
+      } while (processed === env.RAW_EVENT_WORKER_BATCH_SIZE);
 
-    if (totalProcessed > 0) {
-      logger.info({ processed: totalProcessed }, "Processed pending raw events");
+      consecutiveFailures = 0;
+
+      if (totalProcessed > 0) {
+        logger.info({ processed: totalProcessed }, "Processed pending raw events");
+      }
+
+      if (runOnce) {
+        break;
+      }
+    } catch (error) {
+      logger.error({ err: error }, "Raw event worker iteration failed");
+
+      if (runOnce) {
+        throw error;
+      }
+
+      consecutiveFailures += 1;
     }
 
-    if (runOnce) {
-      break;
-    }
-
-    await sleep(env.RAW_EVENT_WORKER_POLL_INTERVAL_MS);
+    await sleep(getDelayMs(consecutiveFailures, env.RAW_EVENT_WORKER_POLL_INTERVAL_MS));
   } while (true);
+}
+
+function getDelayMs(consecutiveFailures: number, baseDelayMs: number) {
+  if (consecutiveFailures === 0) {
+    return baseDelayMs;
+  }
+
+  return Math.min(baseDelayMs * 2 ** Math.min(consecutiveFailures, 5), 60000);
 }
 
 main()
