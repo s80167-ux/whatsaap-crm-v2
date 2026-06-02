@@ -11,6 +11,7 @@ export interface LeadRow {
   created_at: string;
   updated_at: string;
   contact_name: string | null;
+  primary_phone_e164: string | null;
   primary_phone_normalized: string | null;
 }
 
@@ -45,6 +46,7 @@ export class LeadRepository {
           l.created_at,
           l.updated_at,
           coalesce(ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
+          ct.primary_phone_e164,
           ct.primary_phone_normalized
         from leads l
         join contacts ct on ct.id = l.contact_id
@@ -126,6 +128,7 @@ export class LeadRepository {
           created_at,
           updated_at,
           null::text as contact_name,
+          null::text as primary_phone_e164,
           null::text as primary_phone_normalized
       `,
       [
@@ -163,6 +166,7 @@ export class LeadRepository {
           l.created_at,
           l.updated_at,
           coalesce(ct.display_name, ct.primary_phone_e164, ct.primary_phone_normalized, 'Unknown') as contact_name,
+          ct.primary_phone_e164,
           ct.primary_phone_normalized
         from leads l
         join contacts ct on ct.id = l.contact_id

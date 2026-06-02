@@ -105,7 +105,7 @@ export function toMobileContactDto(contact: ContactRecord) {
 
 export function toMobileLeadDto(lead: LeadRow) {
   const status = stringOrFallback(lead.status, "new_lead");
-  const phone = stringOrNull(lead.primary_phone_normalized) ?? "";
+  const phone = stringOrNull(lead.primary_phone_e164) ?? stringOrNull(lead.primary_phone_normalized) ?? "";
 
   return {
     id: lead.id,
