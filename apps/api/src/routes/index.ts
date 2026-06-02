@@ -3,6 +3,7 @@ import { requireAuth, requireCsrf, requireOrganizationContext } from "../middlew
 import { adminRoutes } from "../modules/admin/admin.routes.js";
 import { aiRoutes } from "../modules/ai/ai.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
+import { autoReplyRoutes } from "../modules/autoReplies/autoReplies.routes.js";
 import { campaignSafetyRoutes } from "../modules/campaignSafety/campaignSafety.routes.js";
 import { contactRoutes } from "../modules/contacts/contacts.routes.js";
 import { contactReliabilityRoutes } from "../modules/contactReliability/contactReliability.routes.js";
@@ -65,6 +66,7 @@ apiRouter.use((req, res, next) => {
 
 apiRouter.use("/inbox", inboxRoutes);
 apiRouter.use("/ai", aiRoutes);
+apiRouter.use("/auto-replies", autoReplyRoutes);
 apiRouter.use("/campaigns", campaignsRoutes);
 apiRouter.use("/email", emailSetupRoutes);
 apiRouter.use("/email-campaigns", emailCampaignRoutes);

@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "../lib/http";
 import type { HistoryRange } from "../lib/historyRange";
 import type {
   AuditHistoryEntry,
@@ -8,6 +8,7 @@ import type {
   Lead,
   Message,
   OutboundAttachmentInput,
+  AutoReplySettings,
   QuickReplyVariableDefinition,
   QuickReplyTemplate,
   QuickReplyAnalyticsResponse,
@@ -263,6 +264,31 @@ export async function recordQuickReplyUsage(payload: {
     organizationId: payload.organizationId,
     conversationId: payload.conversationId
   });
+  return response.data;
+}
+
+export async function fetchAutoReplySettings(input?: { organizationId?: string | null }) {
+  const suffix = input?.organizationId ? `?organization_id=${encodeURIComponent(input.organizationId)}` : "";
+  const response = await apiGet<{ data: AutoReplySettings }>(`/auto-replies/settings${suffix}`);
+  return response.data;
+}
+
+export async function updateAutoReplySettings(payload: {
+  organizationId?: string | null;
+  isEnabled: boolean;
+  quickReplyTemplateId?: string | null;
+  timezone: string;
+  businessHoursEnabled: boolean;
+  businessHoursStart: string;
+  businessHoursEnd: string;
+  businessDays: number[];
+  outsideHoursEnabled: boolean;
+  noReplyEnabled: boolean;
+  noReplyDelayMinutes: number;
+  firstMessageEnabled: boolean;
+  cooldownMinutes: number;
+}) {
+  const response = await apiPut<{ data: AutoReplySettings }>("/auto-replies/settings", payload);
   return response.data;
 }
 

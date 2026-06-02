@@ -18,6 +18,7 @@ import { ConversationService } from "./conversationService.js";
 import { ProfilePictureRecoveryService } from "./profilePictureRecoveryService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
+import { AutoReplyService } from "./autoReplyService.js";
 
 function buildStoredMessageContent(rawPayload: unknown, mediaAttachment: InboundMessageInput["mediaAttachment"]) {
   if (!mediaAttachment) {
@@ -72,7 +73,8 @@ export class MessageIngestionService {
     private readonly notificationsService = new NotificationsService(),
     private readonly enrichmentCacheService = new ContactEnrichmentCacheService(),
     private readonly recoveryAuditService = new ContactRecoveryAuditService(),
-    private readonly profilePictureRecoveryService = new ProfilePictureRecoveryService()
+    private readonly profilePictureRecoveryService = new ProfilePictureRecoveryService(),
+    private readonly autoReplyService = new AutoReplyService()
   ) {}
 
   async ingest(input: InboundMessageInput) {
@@ -374,6 +376,17 @@ export class MessageIngestionService {
       conversationId: result.conversation.id,
       organizationId: input.organizationId
     });
+
+    if (result.inserted && input.direction === "incoming") {
+      void this.autoReplyService.evaluateInboundMessage({
+        organizationId: input.organizationId,
+        whatsappAccountId: input.whatsappAccountId,
+        conversationId: result.conversation.id,
+        contactId: result.contact.id,
+        inboundMessageId: result.message.id,
+        inboundSentAt: input.sentAt
+      });
+    }
 
     return result;
   }

@@ -162,6 +162,79 @@ export class MessageDispatchService {
 
   async processJob(job: MessageDispatchOutboxRecord): Promise<{ ok: true } | { ok: false; errorMessage: string }> {
     try {
+      const skipAutoReply = await this.shouldSkipAutoReply(job);
+      if (skipAutoReply) {
+        await withTransaction(async (client) => {
+          await this.messageRepository.appendStatusEvent(client, {
+            messageId: job.message_id,
+            status: "skipped",
+            payload: { reason: skipAutoReply.reason, auto_reply: true }
+          });
+
+          await this.messageRepository.updateAckStatus(client, {
+            messageId: job.message_id,
+            ackStatus: "failed",
+            failedAt: new Date()
+          });
+
+          await client.query(
+            `
+              update messages
+              set is_deleted = true,
+                  content_json = coalesce(content_json, '{}'::jsonb) || $3::jsonb,
+                  updated_at = timezone('utc', now())
+              where organization_id = $1
+                and id = $2
+            `,
+            [
+              job.organization_id,
+              job.message_id,
+              JSON.stringify({
+                autoReply: {
+                  skipped: true,
+                  reason: skipAutoReply.reason
+                }
+              })
+            ]
+          );
+
+          await client.query(
+            `
+              update auto_reply_events
+              set status = 'skipped',
+                  metadata = coalesce(metadata, '{}'::jsonb) || $4::jsonb
+              where organization_id = $1
+                and outbound_message_id = $2
+                and inbound_message_id = $3
+            `,
+            [
+              job.organization_id,
+              job.message_id,
+              skipAutoReply.inboundMessageId,
+              JSON.stringify({ skipped_reason: skipAutoReply.reason })
+            ]
+          );
+
+          await this.projectionService.refreshForMessage(client, {
+            organizationId: job.organization_id,
+            conversationId: job.conversation_id,
+            contactId: job.contact_id,
+            sentAt: new Date()
+          });
+
+          await this.outboxRepository.markDispatched(client, {
+            outboxId: job.id,
+            connectorMessageId: null,
+            payload: {
+              ...(job.payload && typeof job.payload === "object" && !Array.isArray(job.payload) ? job.payload : {}),
+              autoReplySkipped: skipAutoReply.reason
+            }
+          });
+        });
+
+        return { ok: true };
+      }
+
       const outbound = await this.connectorClient.sendMessage({
         accountId: job.whatsapp_account_id,
         recipientJid: job.recipient_jid,
@@ -221,6 +294,26 @@ export class MessageDispatchService {
           connectorMessageId,
           payload: outbound ?? null
         });
+
+        const autoReplyContext = this.extractAutoReplyContext(job.payload);
+        if (autoReplyContext) {
+          await client.query(
+            `
+              update auto_reply_events
+              set status = 'sent',
+                  metadata = coalesce(metadata, '{}'::jsonb) || $4::jsonb
+              where organization_id = $1
+                and outbound_message_id = $2
+                and inbound_message_id = $3
+            `,
+            [
+              job.organization_id,
+              job.message_id,
+              autoReplyContext.inboundMessageId,
+              JSON.stringify({ connector_message_id: connectorMessageId })
+            ]
+          );
+        }
 
         await this.markCampaignRecipientSent(client, job, sentAt);
       });
@@ -557,6 +650,74 @@ export class MessageDispatchService {
       displayName: candidate.displayName,
       vcard: candidate.vcard
     };
+  }
+
+  private extractAutoReplyContext(payload: unknown) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const meta = (payload as { meta?: unknown }).meta;
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+      return null;
+    }
+
+    const autoReply = (meta as { autoReply?: unknown }).autoReply;
+    if (!autoReply || typeof autoReply !== "object" || Array.isArray(autoReply)) {
+      return null;
+    }
+
+    const candidate = autoReply as {
+      inboundMessageId?: unknown;
+      skipIfOutgoingAfter?: unknown;
+      triggerType?: unknown;
+    };
+
+    if (typeof candidate.inboundMessageId !== "string" || typeof candidate.skipIfOutgoingAfter !== "string") {
+      return null;
+    }
+
+    return {
+      inboundMessageId: candidate.inboundMessageId,
+      skipIfOutgoingAfter: candidate.skipIfOutgoingAfter,
+      triggerType: typeof candidate.triggerType === "string" ? candidate.triggerType : null
+    };
+  }
+
+  private async shouldSkipAutoReply(job: MessageDispatchOutboxRecord) {
+    const autoReplyContext = this.extractAutoReplyContext(job.payload);
+    if (!autoReplyContext) {
+      return null;
+    }
+
+    const client = await pool.connect();
+    try {
+      const manualReplyResult = await client.query<{ id: string }>(
+        `
+          select id
+          from messages
+          where organization_id = $1
+            and conversation_id = $2
+            and direction = 'outgoing'
+            and id <> $3
+            and is_deleted = false
+            and coalesce(sent_at, created_at) > $4::timestamptz
+          limit 1
+        `,
+        [job.organization_id, job.conversation_id, job.message_id, autoReplyContext.skipIfOutgoingAfter]
+      );
+
+      if (manualReplyResult.rows[0]) {
+        return {
+          reason: "outgoing_reply_exists",
+          inboundMessageId: autoReplyContext.inboundMessageId
+        };
+      }
+
+      return null;
+    } finally {
+      client.release();
+    }
   }
 
   private extractCampaignContext(payload: unknown) {

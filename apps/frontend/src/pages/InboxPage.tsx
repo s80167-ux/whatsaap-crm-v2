@@ -512,7 +512,8 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                   { to: "/inbox", label: "Conversations" },
                   { to: "/inbox/facebook", label: "FB Messenger (Soon)" },
                   { to: "/inbox/instagram", label: "IG Messenger (Soon)" },
-                  { to: "/inbox/replies", label: "Template library" }
+                  { to: "/inbox/replies", label: "Template library" },
+                  { to: "/inbox/auto-replies", label: "Auto replies" }
                 ]}
               />
             </div>

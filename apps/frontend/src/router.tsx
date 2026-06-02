@@ -39,6 +39,9 @@ const InboxChannelPlaceholderPage = lazy(() =>
 const InboxReplyLibraryPage = lazy(() =>
   import("./pages/InboxReplyLibraryPage").then((module) => ({ default: module.InboxReplyLibraryPage }))
 );
+const InboxAutoReplyPage = lazy(() =>
+  import("./pages/InboxAutoReplyPage").then((module) => ({ default: module.InboxAutoReplyPage }))
+);
 const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const PublicCompliancePage = lazy(() =>
   import("./pages/PublicCompliancePage").then((module) => ({ default: module.PublicCompliancePage }))
@@ -160,6 +163,7 @@ export const router = createBrowserRouter([
           { path: "inbox/instagram", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="instagram" /></ModuleRouteGuard>) },
           { path: "inbox/ecommerce", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxChannelPlaceholderPage variant="ecommerce" /></ModuleRouteGuard>) },
           { path: "inbox/replies", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxReplyLibraryPage /></ModuleRouteGuard>) },
+          { path: "inbox/auto-replies", element: withRouteFallback(<ModuleRouteGuard moduleKey="inbox" moduleName="Inbox"><InboxAutoReplyPage /></ModuleRouteGuard>) },
           { path: "contacts", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactsPage /></ModuleRouteGuard>) },
           { path: "contacts/reliability", element: withRouteFallback(<ModuleRouteGuard moduleKey="crm" moduleName="CRM"><ContactReliabilityPage /></ModuleRouteGuard>) },
           { path: "sales", element: withRouteFallback(<ModuleRouteGuard moduleKey="sales" moduleName="Sales"><SalesPage /></ModuleRouteGuard>) },

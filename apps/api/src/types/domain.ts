@@ -136,6 +136,11 @@ export interface SendMessageInput {
   attachment?: OutboundMediaAttachmentInput | null;
   contactCard?: OutboundContactCardInput | null;
   outboxAvailableAt?: string | null;
+  autoReplyContext?: {
+    triggerType: "outside_hours" | "no_reply" | "first_message";
+    inboundMessageId: UUID;
+    skipIfOutgoingAfter: string;
+  } | null;
   campaignContext?: {
     campaignId: UUID;
     campaignRecipientId: UUID;

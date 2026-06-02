@@ -296,7 +296,8 @@ function SidebarContent({
               { to: "/inbox/facebook", icon: <SocialChannelBrandLogo channel="facebook" className="h-4 w-4" />, label: t("nav.facebookMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
               { to: "/inbox/instagram", icon: <SocialChannelBrandLogo channel="instagram" className="h-4 w-4" />, label: t("nav.instagramMessenger"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
               { to: "/inbox/ecommerce", icon: <ShoppingBag size={16} />, label: t("nav.ecommerceDm"), badge: <ModuleBadge tone="primary">{t("common.soon")}</ModuleBadge> },
-              { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") }
+              { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") },
+              { to: "/inbox/auto-replies", icon: <MessageSquare size={16} />, label: t("nav.autoReplies") }
             ]}
             onNavigate={onNavigate}
             compact={mobile}
@@ -471,7 +472,13 @@ export function DashboardLayout() {
             label: "Follow-up",
             icon: <MessageSquare size={18} />,
             items: [
-              ...(showInbox ? [{ to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.inbox") }] : []),
+              ...(showInbox
+                ? [
+                    { to: "/inbox", icon: <MessageSquare size={16} />, label: t("nav.inbox") },
+                    { to: "/inbox/replies", icon: <Settings2 size={16} />, label: t("nav.templateLibrary") },
+                    { to: "/inbox/auto-replies", icon: <MessageSquare size={16} />, label: t("nav.autoReplies") }
+                  ]
+                : []),
               ...(showCrm ? [{ to: "/contacts", icon: <Users size={16} />, label: "CRM Contacts" }] : []),
               ...(showSales ? [{ to: "/sales", icon: <TrendingUp size={16} />, label: t("nav.salesPipeline") }] : [])
             ]

@@ -133,6 +133,16 @@ export class SendMessageService {
               }
             }
           : {}),
+        ...(input.autoReplyContext
+          ? {
+              source: "auto_reply",
+              autoReply: {
+                triggerType: input.autoReplyContext.triggerType,
+                inboundMessageId: input.autoReplyContext.inboundMessageId,
+                skipIfOutgoingAfter: input.autoReplyContext.skipIfOutgoingAfter
+              }
+            }
+          : {}),
         ...(input.campaignContext
           ? {
               source: "campaign",
@@ -192,6 +202,15 @@ export class SendMessageService {
         meta: {
           source: dispatchSource,
           priority: dispatchPriority,
+          ...(input.autoReplyContext
+            ? {
+                autoReply: {
+                  triggerType: input.autoReplyContext.triggerType,
+                  inboundMessageId: input.autoReplyContext.inboundMessageId,
+                  skipIfOutgoingAfter: input.autoReplyContext.skipIfOutgoingAfter
+                }
+              }
+            : {}),
           ...(input.campaignContext
             ? {
                 campaign: {

@@ -236,3 +236,21 @@ export interface QuickReplyAnalyticsResponse {
   summary: QuickReplyAnalyticsSummary;
   templates: QuickReplyAnalyticsTemplate[];
 }
+
+export interface AutoReplySettings {
+  organization_id: string;
+  is_enabled: boolean;
+  quick_reply_template_id: string | null;
+  timezone: string;
+  business_hours_enabled: boolean;
+  business_hours_start: string;
+  business_hours_end: string;
+  business_days: number[];
+  outside_hours_enabled: boolean;
+  no_reply_enabled: boolean;
+  no_reply_delay_minutes: number;
+  first_message_enabled: boolean;
+  cooldown_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
