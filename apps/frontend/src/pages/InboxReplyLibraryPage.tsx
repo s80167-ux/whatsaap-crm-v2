@@ -226,8 +226,7 @@ export function InboxReplyLibraryPage() {
             <InboxSubTabs
               tabs={[
                 { to: "/inbox", label: "Conversations" },
-                { to: "/inbox/replies", label: "Template library" },
-                { to: "/inbox/auto-replies", label: "Auto replies" }
+                { to: "/inbox/replies", label: "Template library" }
               ]}
             />
           </div>

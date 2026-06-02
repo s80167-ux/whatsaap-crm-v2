@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowDownAZ, ChevronLeft, Clock3, Info, Search } from "lucide-react";
+import { ArrowDownAZ, Bot, ChevronLeft, Clock3, Info, Search } from "lucide-react";
 import { Button } from "../components/Button";
 import { ChatPanel } from "../components/ChatPanel";
 import { Card } from "../components/Card";
@@ -142,6 +142,7 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobileViewport();
   const location = useLocation();
+  const navigate = useNavigate();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const dashboardContext = useOutletContext<DashboardOutletContext>();
@@ -512,10 +513,19 @@ export function InboxPage({ channel = "all" }: InboxPageProps) {
                   { to: "/inbox", label: "Conversations" },
                   { to: "/inbox/facebook", label: "FB Messenger (Soon)" },
                   { to: "/inbox/instagram", label: "IG Messenger (Soon)" },
-                  { to: "/inbox/replies", label: "Template library" },
-                  { to: "/inbox/auto-replies", label: "Auto replies" }
+                  { to: "/inbox/replies", label: "Template library" }
                 ]}
               />
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-10 w-10 shrink-0 border border-border bg-card p-0 text-text-muted hover:border-primary/25 hover:text-primary"
+                aria-label="Auto replies"
+                title="Auto replies"
+                onClick={() => navigate("/inbox/auto-replies")}
+              >
+                <Bot size={18} />
+              </Button>
             </div>
           </div>
         </Card>
