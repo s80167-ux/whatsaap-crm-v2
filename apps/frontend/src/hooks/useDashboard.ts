@@ -9,7 +9,7 @@ import {
   fetchDynamicDashboard
 } from "../api/dashboard";
 import { getStoredUser } from "../lib/auth";
-import type { DashboardRouteRole } from "../types/dashboard";
+import type { DashboardDateRangeDays, DashboardRouteRole } from "../types/dashboard";
 
 function resolveDashboardPath(): DashboardRouteRole {
   const role = getStoredUser()?.role;
@@ -25,13 +25,14 @@ function resolveDashboardPath(): DashboardRouteRole {
   return "agent" as const;
 }
 
-export function useRoleDashboard(input?: { organizationId?: string | null }) {
+export function useRoleDashboard(input?: { organizationId?: string | null; dateRangeDays?: DashboardDateRangeDays }) {
   const dashboardRole = resolveDashboardPath();
   const organizationId = dashboardRole === "super-admin" ? input?.organizationId ?? null : null;
+  const dateRangeDays = input?.dateRangeDays ?? 30;
 
   return useQuery({
-    queryKey: ["dynamic-dashboard", dashboardRole, organizationId],
-    queryFn: () => fetchDynamicDashboard(dashboardRole, organizationId)
+    queryKey: ["dynamic-dashboard", dashboardRole, organizationId, dateRangeDays],
+    queryFn: () => fetchDynamicDashboard(dashboardRole, { organizationId, dateRangeDays })
   });
 }
 

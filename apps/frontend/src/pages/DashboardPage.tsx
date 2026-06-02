@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Activity, AlertCircle, ArrowRight, Bot, BriefcaseBusiness, CheckCircle2, ChevronDown, Medal, MessageSquare, ShieldAlert, Sparkles, Target, Trophy, Zap } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useOutletContext } from "react-router-dom";
 import { recordSalesShareLinkAudit } from "../api/crm";
@@ -19,6 +19,7 @@ function getWidthClass(percent: number) {
 }
 
 import { Card } from "../components/Card";
+import { DashboardAnalyticsPanel } from "../components/dashboard/DashboardCharts";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { Toast } from "../components/Toast";
 import { useCopyFeedback } from "../hooks/useCopyFeedback";
@@ -26,7 +27,7 @@ import { useRoleDashboard } from "../hooks/useDashboard";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser } from "../lib/auth";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
-import type { DashboardMetric, DashboardSummary, DynamicDashboardWidget } from "../types/dashboard";
+import type { DashboardDateRangeDays, DashboardMetric, DashboardSummary, DynamicDashboardWidget } from "../types/dashboard";
 
 type SalesDashboard = NonNullable<DashboardSummary["sales"]>;
 type StoredUserRole = NonNullable<ReturnType<typeof getStoredUser>>["role"];
@@ -42,8 +43,9 @@ export function DashboardPage() {
   const user = getStoredUser();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const isMobile = useIsMobileViewport();
+  const [dateRangeDays, setDateRangeDays] = useState<DashboardDateRangeDays>(30);
   const selectedOrganizationId = user?.role === "super_admin" ? outletContext.selectedOrganizationId : null;
-  const { data, isLoading, isError, error } = useRoleDashboard({ organizationId: selectedOrganizationId });
+  const { data, isLoading, isError, error } = useRoleDashboard({ organizationId: selectedOrganizationId, dateRangeDays });
   const { toast: copyToast, copyText } = useCopyFeedback();
   const canShowSalesPerformance = user?.role === "org_admin" || user?.role === "user";
   const title = titleForRole(user?.role, t);
@@ -91,7 +93,13 @@ export function DashboardPage() {
       {isError ? <DashboardErrorCard message={error instanceof Error ? error.message : "Unable to load dashboard widgets."} /> : null}
 
       {!isError && hasDynamicDashboard && visibleDashboard ? (
-        <DynamicDashboard title={title} dashboard={visibleDashboard} isLoading={isLoading} />
+        <DynamicDashboard
+          title={title}
+          dashboard={visibleDashboard}
+          isLoading={isLoading}
+          dateRangeDays={dateRangeDays}
+          onDateRangeChange={setDateRangeDays}
+        />
       ) : data?.sales ? (
         <SalesCommandCenter title={title} sales={data.sales} operationalMetrics={data.metrics} isLoading={isLoading} />
       ) : (
@@ -195,10 +203,12 @@ function buildLoadingDashboard(title: string): DashboardSummary {
 
 function DashboardErrorCard({ message }: { message: string }) {
   return (
-    <Card elevated className="workspace-block border-destructive/20 p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-destructive">Dashboard unavailable</p>
-      <h2 className="mt-2 text-xl font-semibold text-text">Unable to load dashboard widgets</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-text-muted">{message}</p>
+    <Card elevated className="dashboard-empty border-destructive/25">
+      <span className="dashboard-empty-icon border-destructive/20 bg-destructive/10 text-destructive">
+        <AlertCircle size={20} />
+      </span>
+      <h2 className="mt-3 text-lg font-semibold text-text">Unable to load dashboard widgets</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-text-muted">{message}</p>
     </Card>
   );
 }
@@ -397,11 +407,15 @@ function SalesCommandCenter({
 function DynamicDashboard({
   title,
   dashboard,
-  isLoading
+  isLoading,
+  dateRangeDays,
+  onDateRangeChange
 }: {
   title: string;
   dashboard: DashboardSummary;
   isLoading: boolean;
+  dateRangeDays: DashboardDateRangeDays;
+  onDateRangeChange: (value: DashboardDateRangeDays) => void;
 }) {
   const widgets = (dashboard.widgets ?? []).slice().sort((left, right) => left.priority - right.priority);
   const alerts = widgets.flatMap((widget) => widget.alerts.map((alert) => ({ ...alert, widgetTitle: widget.title })));
@@ -442,6 +456,14 @@ function DynamicDashboard({
         <SummaryStripCard icon={<Activity size={16} />} label="Today activity" value={String(todayActivity)} />
         <SummaryStripCard icon={<CheckCircle2 size={16} />} label="Organization health" value={formatHealthLabel(dashboard.summary?.healthStatus ?? "unknown")} tone={dashboard.summary?.healthStatus ?? "neutral"} />
       </div>
+
+      <DashboardAnalyticsPanel
+        analytics={dashboard.analytics}
+        dateRangeDays={dateRangeDays}
+        isLoading={isLoading}
+        isError={false}
+        onDateRangeChange={onDateRangeChange}
+      />
 
       {quickActions.length ? (
         <Card elevated className="workspace-block p-4">
@@ -513,14 +535,30 @@ function DynamicDashboard({
 function DynamicWidgetCard({ widget }: { widget: DynamicDashboardWidget | null }) {
   if (!widget) {
     return (
-      <Card elevated className="min-h-[260px] p-5">
-        <div className="h-full animate-pulse rounded-xl bg-background-tint" />
+      <Card elevated className="flex min-h-[280px] flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="dashboard-skeleton h-5 w-32" />
+            <div className="dashboard-skeleton h-4 w-48" />
+          </div>
+          <div className="dashboard-skeleton h-6 w-16 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="dashboard-skeleton h-16 rounded-lg" />
+          <div className="dashboard-skeleton h-16 rounded-lg" />
+          <div className="dashboard-skeleton h-16 rounded-lg" />
+          <div className="dashboard-skeleton h-16 rounded-lg" />
+        </div>
+        <div className="mt-auto flex gap-2">
+          <div className="dashboard-skeleton h-9 w-20 rounded-lg" />
+          <div className="dashboard-skeleton h-9 w-20 rounded-lg" />
+        </div>
       </Card>
     );
   }
 
   return (
-    <Card elevated className="workspace-block flex min-h-[280px] flex-col p-4">
+    <Card elevated className="workspace-block flex min-h-[280px] flex-col">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Link to={widget.href} className="text-lg font-semibold tracking-tight text-text hover:text-primary">
@@ -536,7 +574,7 @@ function DynamicWidgetCard({ widget }: { widget: DynamicDashboardWidget | null }
           <Link
             key={metric.label}
             to={metric.href ?? widget.href}
-            className="rounded-xl border border-border bg-background-tint px-3 py-2.5 transition hover:border-primary/30 hover:bg-primary/5"
+            className="dashboard-hover rounded-lg bg-background-tint px-3 py-2.5"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">{metric.label}</p>
             <p className={`mt-1 text-xl font-semibold tracking-tight ${getMetricTone(metric.tone)}`}>{metric.value}</p>
@@ -546,15 +584,16 @@ function DynamicWidgetCard({ widget }: { widget: DynamicDashboardWidget | null }
       </div>
 
       {widget.metrics.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-dashed border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
-          No activity is visible yet. Use the quick action below to finish setup or create the first record for this module.
+        <div className="dashboard-empty mt-4 py-5">
+          <p className="text-sm font-medium text-text">No activity is visible yet</p>
+          <p className="mt-1 text-xs text-text-muted">Use the quick action below to finish setup or create the first record for this module.</p>
         </div>
       ) : null}
 
       {widget.alerts.length ? (
         <div className="mt-4 space-y-2">
           {widget.alerts.slice(0, 2).map((alert) => (
-            <Link key={alert.message} to={alert.href ?? widget.href} className={`block rounded-xl border px-3 py-2 text-xs leading-5 ${getAlertTone(alert.severity)}`}>
+            <Link key={alert.message} to={alert.href ?? widget.href} className={`block rounded-lg px-3 py-2 text-xs leading-5 ${getAlertTone(alert.severity)}`}>
               {alert.message}
             </Link>
           ))}
@@ -665,7 +704,7 @@ function SignalRow({ label, value, delta, currency = false }: { label: string; v
   const deltaTone = !hasDelta || deltaValue === 0 ? "text-text-muted" : deltaValue > 0 ? "text-success" : "text-destructive";
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background-tint px-3 py-2.5">
+    <div className="metric-strip">
       <span className="text-sm font-medium text-text-muted">{label}</span>
       <span className="text-right">
         <span className="block text-sm font-semibold text-text">{value}</span>
@@ -677,15 +716,19 @@ function SignalRow({ label, value, delta, currency = false }: { label: string; v
 
 function DashboardMetricCard({ metric, compact = false }: { metric: DashboardMetric | null; compact?: boolean }) {
   return (
-    <Card elevated className={`metric-card ${compact ? "min-h-[112px] p-4" : "min-h-[138px] p-5"}`}>
+    <Card elevated className={`metric-card ${compact ? "min-h-[112px]" : "min-h-[138px]"}`}>
       {metric ? (
         <>
-          <p className="pr-8 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{metric.label}</p>
+          <p className="pr-8 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">{metric.label}</p>
           <p className={`${compact ? "mt-3 text-2xl" : "mt-4 text-3xl"} font-semibold tracking-tight text-text`}>{metric.value}</p>
           <p className={`${compact ? "mt-2" : "mt-3"} line-clamp-2 text-sm leading-6 text-text-muted`}>{metric.hint}</p>
         </>
       ) : (
-        <div className="h-full animate-pulse rounded-xl bg-background-tint" />
+        <div className="flex h-full flex-col justify-center gap-3">
+          <div className="dashboard-skeleton h-3 w-20" />
+          <div className={`dashboard-skeleton ${compact ? "h-7 w-24" : "h-9 w-28"}`} />
+          <div className="dashboard-skeleton h-4 w-full" />
+        </div>
       )}
     </Card>
   );
@@ -799,7 +842,7 @@ function DashboardGraphPanel({
   return (
     <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen={defaultOpen}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
-        <div className="workspace-subtle bg-gradient-to-br from-background-tint to-card p-4">
+        <div className="chart-container">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-text">Orders and won revenue</p>
@@ -893,9 +936,9 @@ function DashboardGraphPanel({
                     <span className="font-medium text-text">{formatPipelineStatus(stage.status)}</span>
                     <span className="text-text-muted">{stage.count} orders, {share}%</span>
                   </div>
-                  <div className="h-6 overflow-hidden rounded-full bg-background-tint">
+                  <div className="progress-track">
                     <div
-                      className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
+                      className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
                     />
                   </div>
                 </div>
@@ -917,9 +960,9 @@ function DashboardGraphPanel({
                     <span className="font-medium text-text">{formatPipelineStatus(stage.status)}</span>
                     <span className="font-semibold text-text">{formatCompactCurrency(value)}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-background-tint">
+                  <div className="progress-track">
                     <div
-                      className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
+                      className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
                     />
                   </div>
                 </div>
@@ -941,9 +984,9 @@ function DashboardGraphPanel({
                       <span className="truncate font-medium text-text">{leader.name}</span>
                       <span className="font-semibold text-text">{winRate}%</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-background-tint">
+                    <div className="progress-track">
                       <div
-                        className={`h-full rounded-full bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                        className={`progress-fill bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
                       />
                     </div>
                   </div>
@@ -957,8 +1000,8 @@ function DashboardGraphPanel({
               />
             </div>
           ) : (
-            <div className="mt-3 rounded-xl border border-dashed border-border bg-background-tint p-3 text-xs leading-5 text-text-muted">
-              Win-rate graph appears after orders are assigned.
+            <div className="dashboard-empty mt-3 py-4">
+              <p className="text-xs text-text-muted">Win-rate graph appears after orders are assigned.</p>
             </div>
           )}
         </div>
@@ -1045,10 +1088,10 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
                 </div>
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(parseNumericValue(stage.value))}</p>
               </div>
-              <div className="mt-3 h-9 overflow-hidden rounded-full bg-background-tint">
+              <div className="progress-track mt-3 h-7">
                 <div
-                  className={`flex h-full items-center justify-end rounded-full px-3 text-xs font-semibold ${getPipelineBarTone(stage.status)}`}
-                  
+                  className={`progress-fill flex items-center justify-end px-3 text-xs font-semibold ${getPipelineBarTone(stage.status)}`}
+                  style={{ width: `${Math.max(width, stage.count > 0 ? 12 : 4)}%` }}
                 >
                   {stage.count}
                 </div>
@@ -1080,9 +1123,9 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
             const rank = (leaderPagination.page - 1) * leaderPagination.pageSize + index;
 
             return (
-              <div key={leader.id} className="grid gap-2 rounded-2xl border border-border bg-background-tint p-3 sm:grid-cols-[160px,minmax(0,1fr),72px] sm:items-center">
+              <div key={leader.id} className="grid gap-2 rounded-xl border border-border bg-background-tint p-3 sm:grid-cols-[160px,minmax(0,1fr),72px] sm:items-center">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-none border text-xs font-bold ${getRankTone(rank)}`}>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-bold ${getRankTone(rank)}`}>
                     {rank + 1}
                   </span>
                   <div className="min-w-0">
@@ -1090,9 +1133,9 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
                     <p className="text-xs text-text-muted">{leader.won_count}/{leader.order_count} won</p>
                   </div>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-card">
+                <div className="progress-track">
                   <div
-                    className={`h-full rounded-full bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
+                    className={`progress-fill bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
                   />
                 </div>
                 <p className="text-right text-lg font-semibold text-text">{winRate}%</p>
@@ -1107,8 +1150,8 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
           />
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-border bg-background-tint p-5 text-sm leading-6 text-text-muted">
-          Win-rate graph will appear after orders are assigned to team members.
+        <div className="dashboard-empty py-5">
+          <p className="text-sm text-text-muted">Win-rate graph will appear after orders are assigned to team members.</p>
         </div>
       )}
     </CompactSection>
@@ -1135,7 +1178,7 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-border bg-gradient-to-br from-background-tint to-card p-3">
+      <div className="chart-container mt-3">
         <svg viewBox="0 0 100 44" role="img" aria-label="Orders and won revenue sparkline" className="h-28 w-full overflow-visible">
           <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
           <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -1197,9 +1240,9 @@ function PipelineAnalysis({ pipeline }: { pipeline: SalesDashboard["pipeline"] }
                 </div>
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(value)}</p>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-background-tint">
+              <div className="progress-track">
                 <div
-                  className={`h-full rounded-full ${getPipelineBarTone(stage.status)} ${getWidthClass(Math.max(percent, value > 0 ? 8 : 2))}`}
+                  className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(Math.max(percent, value > 0 ? 8 : 2))}`}
                 />
               </div>
             </div>
@@ -1301,7 +1344,9 @@ function PerformancePanel({
               averageWonCount={averageWonCount}
             />
           )) : (
-            <div className="rounded-2xl border border-dashed border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">{emptyText}</div>
+            <div className="dashboard-empty py-5">
+              <p className="text-sm text-text-muted">{emptyText}</p>
+            </div>
           )}
         </div>
         <PanelPagination
@@ -1388,16 +1433,16 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
                 </div>
                 <p className="text-sm font-semibold text-text">{formatCompactCurrency(wonValue)}</p>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-card">
+              <div className="progress-track mt-3">
                 <div
-                  className={`h-full rounded-full bg-primary ${getWidthClass(Math.max((wonValue / maxWonValue) * 100, wonValue > 0 ? 8 : 2))}`}
+                  className={`progress-fill bg-primary ${getWidthClass(Math.max((wonValue / maxWonValue) * 100, wonValue > 0 ? 8 : 2))}`}
                 />
               </div>
             </div>
           );
         }) : (
-          <div className="rounded-2xl border border-dashed border-border bg-background-tint p-5 text-sm leading-6 text-text-muted">
-            No assigned sales orders yet. Once orders are assigned and closed, top performers will appear here.
+          <div className="dashboard-empty py-5">
+            <p className="text-sm text-text-muted">No assigned sales orders yet. Once orders are assigned and closed, top performers will appear here.</p>
           </div>
         )}
       </div>
@@ -1414,8 +1459,8 @@ function Leaderboard({ leaders }: { leaders: NonNullable<SalesDashboard["leaderb
 
 function InsightTile({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <Card elevated className="workspace-block min-h-[118px] p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-soft">{label}</p>
+    <Card elevated className="workspace-block min-h-[118px]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-soft">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight text-text">{value}</p>
       <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-muted">{hint}</p>
     </Card>

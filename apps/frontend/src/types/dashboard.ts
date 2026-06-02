@@ -7,8 +7,60 @@ export interface DashboardMetric {
 }
 
 export type DashboardRouteRole = "agent" | "admin" | "super-admin";
+export type DashboardDateRangeDays = 7 | 30 | 90;
 
 export type DashboardWidgetStatus = "healthy" | "warning" | "critical" | "locked" | "empty";
+
+export interface DashboardTrendPoint {
+  key: string;
+  label: string;
+  value: number;
+  secondaryValue?: number;
+  href?: string;
+}
+
+export interface DashboardBreakdownSegment {
+  key: string;
+  label: string;
+  value: number;
+  href?: string;
+  tone?: "neutral" | "success" | "warning" | "danger" | "primary";
+}
+
+export interface DashboardAnalytics {
+  dateRangeDays: DashboardDateRangeDays;
+  availableDateRanges: DashboardDateRangeDays[];
+  campaignPerformanceTrend?: {
+    title: string;
+    description: string;
+    points: DashboardTrendPoint[];
+  };
+  contactGrowthTrend?: {
+    title: string;
+    description: string;
+    points: DashboardTrendPoint[];
+  };
+  conversationStatusBreakdown?: {
+    title: string;
+    description: string;
+    segments: DashboardBreakdownSegment[];
+  };
+  campaignFunnel?: {
+    title: string;
+    description: string;
+    segments: DashboardBreakdownSegment[];
+  };
+  followUpHealth?: {
+    title: string;
+    description: string;
+    segments: DashboardBreakdownSegment[];
+  };
+  moduleUsageOverview?: {
+    title: string;
+    description: string;
+    segments: DashboardBreakdownSegment[];
+  };
+}
 
 export interface DynamicDashboardWidget {
   id: string;
@@ -37,6 +89,7 @@ export interface DashboardSummary {
   organizationId?: string | null;
   generatedAt?: string;
   enabledModules?: string[];
+  analytics?: DashboardAnalytics;
   summary?: {
     title: string;
     subtitle: string;

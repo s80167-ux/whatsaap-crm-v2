@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from "../lib/http";
 import type {
+  DashboardDateRangeDays,
   DashboardRouteRole,
   DashboardSummary,
   PlatformAuditLog,
@@ -10,14 +11,27 @@ import type {
   PlatformUsageSummary
 } from "../types/dashboard";
 
-export async function fetchRoleDashboard(role: DashboardRouteRole, organizationId?: string | null) {
-  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+export async function fetchRoleDashboard(
+  role: DashboardRouteRole,
+  options?: { organizationId?: string | null; dateRangeDays?: DashboardDateRangeDays }
+) {
+  const params = new URLSearchParams();
+  if (options?.organizationId) {
+    params.set("organization_id", options.organizationId);
+  }
+  if (options?.dateRangeDays) {
+    params.set("range_days", String(options.dateRangeDays));
+  }
+  const suffix = params.size ? `?${params.toString()}` : "";
   const response = await apiGet<{ data: DashboardSummary }>(`/dashboard/${role}${suffix}`);
   return response.data;
 }
 
-export async function fetchDynamicDashboard(role: DashboardRouteRole, organizationId?: string | null): Promise<DashboardSummary> {
-  const dashboard = await fetchRoleDashboard(role, organizationId);
+export async function fetchDynamicDashboard(
+  role: DashboardRouteRole,
+  options?: { organizationId?: string | null; dateRangeDays?: DashboardDateRangeDays }
+): Promise<DashboardSummary> {
+  const dashboard = await fetchRoleDashboard(role, options);
   return {
     ...dashboard,
     widgets: dashboard.widgets ?? [],
