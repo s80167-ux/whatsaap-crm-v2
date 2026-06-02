@@ -668,4 +668,48 @@ export class SalesRepository {
       ]
     );
   }
+
+  async deleteOrder(
+    client: PoolClient,
+    input: {
+      orderId: string;
+      organizationId: string;
+    }
+  ): Promise<SalesOrderRow | null> {
+    const result = await client.query<SalesOrderRow>(
+      `
+        delete from sales_orders
+        where id = $1
+          and organization_id = $2
+        returning
+          id,
+          organization_id,
+          contact_id,
+          lead_id,
+          assigned_user_id,
+          status,
+          total_amount::text,
+          currency,
+          closed_at,
+          source_message_id,
+          source_conversation_id,
+          premise_address,
+          business_type,
+          contact_person,
+          email_address,
+          expected_close_date::text,
+          coverage_status,
+          document_status,
+          notes,
+          created_at,
+          updated_at,
+          null::text as contact_name,
+          null::text as primary_phone_normalized,
+          null::text as lead_status
+      `,
+      [input.orderId, input.organizationId]
+    );
+
+    return result.rows[0] ?? null;
+  }
 }

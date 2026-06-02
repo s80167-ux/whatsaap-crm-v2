@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import {
   convertLeadToOrder,
   createLead,
   createSalesOrderItem,
+  deleteSalesOrder,
   recordSalesShareLinkAudit,
   updateLead,
   updateSalesOrder
 } from "../api/crm";
+import { inboxQueryKeys } from "../lib/inboxCache";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { CreateSalesDrawer } from "../components/CreateSalesModal";
@@ -184,6 +186,7 @@ export function SalesPage() {
 
   const [orderNotice, setOrderNotice] = useState<string | null>(null);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
   const [leadContactId, setLeadContactId] = useState("");
   const [leadSource, setLeadSource] = useState("");
@@ -433,6 +436,61 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
       queryClient.invalidateQueries({ queryKey: ["sales-summary"] })
     ]);
+  }
+
+  async function refreshSalesLinkedQueries(order: SalesOrder) {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] }),
+      queryClient.invalidateQueries({ queryKey: ["sales-summary"] }),
+      queryClient.invalidateQueries({ queryKey: ["sales-order", order.id] }),
+      queryClient.invalidateQueries({ queryKey: ["sales-order-history", order.id] }),
+      queryClient.invalidateQueries({ queryKey: ["dynamic-dashboard"] }),
+      queryClient.invalidateQueries({ queryKey: ["daily-report"] }),
+      queryClient.invalidateQueries({ queryKey: ["contacts"] }),
+      queryClient.invalidateQueries({ queryKey: ["contact", order.contact_id] }),
+      queryClient.invalidateQueries({ queryKey: inboxQueryKeys.conversationsRoot }),
+      order.source_conversation_id
+        ? queryClient.invalidateQueries({ queryKey: inboxQueryKeys.conversationMessagesRoot(order.source_conversation_id) })
+        : Promise.resolve(),
+      order.lead_id ? queryClient.invalidateQueries({ queryKey: ["lead", order.lead_id] }) : Promise.resolve(),
+      order.lead_id ? queryClient.invalidateQueries({ queryKey: ["lead-history", order.lead_id] }) : Promise.resolve()
+    ]);
+  }
+
+  async function handleDeleteOrder(order: SalesOrder) {
+    const confirmed = window.confirm(
+      `Delete this sales order for ${order.contact_name ?? "this customer"}? Linked inbox sales tags and sales analytics will be refreshed.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingOrderId(order.id);
+    setOrderNotice(null);
+
+    try {
+      const response = await deleteSalesOrder({ orderId: order.id });
+      const deletedOrder = response.data ?? order;
+      if (selectedOrderId === order.id) {
+        const nextLeadId = selectedLeadId ?? order.lead_id ?? null;
+        setSelectedOrderId(null);
+        if (nextLeadId) {
+          setSelectedLeadId(nextLeadId);
+        }
+        updateSelectionSearch({
+          orderId: null,
+          leadId: nextLeadId ?? null,
+          section: nextLeadId ? "lead-detail" : null
+        });
+      }
+      setNotice("Sales order deleted. Linked conversation cards, chat bubbles and sales summaries were refreshed.");
+      await refreshSalesLinkedQueries(deletedOrder);
+    } catch (error) {
+      setOrderNotice(error instanceof Error ? error.message : "Unable to delete sales order");
+    } finally {
+      setDeletingOrderId(null);
+    }
   }
 
   async function copyShareLink(input: {
@@ -970,16 +1028,31 @@ export function SalesPage() {
                       <td className="px-4 py-4">{getOwnerName(order.assigned_user_id)}</td>
                       <td className="px-4 py-4">{new Date(order.updated_at).toLocaleString()}</td>
                       <td className="px-4 py-4 text-right">
-                        <Button
-                          variant="secondary"
-                          className="px-3 py-2 text-xs"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            focusOrder(order.id, order.lead_id ?? null, "order-detail");
-                          }}
-                        >
-                          Open
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            className="px-3 py-2 text-xs"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              focusOrder(order.id, order.lead_id ?? null, "order-detail");
+                            }}
+                          >
+                            Open
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label="Delete sales order"
+                            disabled={!canWriteSales || deletingOrderId === order.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteOrder(order);
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1369,34 +1442,45 @@ export function SalesPage() {
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-soft">Order Actions</p>
                         <h4 className="mt-1 text-base font-semibold text-text">Status and ownership</h4>
                       </div>
-                      <Button
-                        variant="secondary"
-                        className="px-3 py-2 text-xs"
-                        disabled={!canWriteSales || isUpdatingOrder || !currentUser?.organizationUserId}
-                        onClick={async () => {
-                          setIsUpdatingOrder(true);
-                          setOrderNotice(null);
+                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          className="px-3 py-2 text-xs"
+                          disabled={!canWriteSales || isUpdatingOrder || !currentUser?.organizationUserId}
+                          onClick={async () => {
+                            setIsUpdatingOrder(true);
+                            setOrderNotice(null);
 
-                          try {
-                            await updateSalesOrder({
-                              orderId: selectedOrderDetail.order.id,
-                              assignedUserId: currentUser?.organizationUserId ?? null
-                            });
+                            try {
+                              await updateSalesOrder({
+                                orderId: selectedOrderDetail.order.id,
+                                assignedUserId: currentUser?.organizationUserId ?? null
+                              });
 
-                            setOrderNotice("Sales order assigned to you.");
-                            await Promise.all([
-                              queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
-                              queryClient.invalidateQueries({ queryKey: ["sales-orders"] })
-                            ]);
-                          } catch (error) {
-                            setOrderNotice(error instanceof Error ? error.message : "Unable to reassign sales order");
-                          } finally {
-                            setIsUpdatingOrder(false);
-                          }
-                        }}
-                      >
-                        Assign to me
-                      </Button>
+                              setOrderNotice("Sales order assigned to you.");
+                              await Promise.all([
+                                queryClient.invalidateQueries({ queryKey: ["sales-order", selectedOrderDetail.order.id] }),
+                                queryClient.invalidateQueries({ queryKey: ["sales-orders"] })
+                              ]);
+                            } catch (error) {
+                              setOrderNotice(error instanceof Error ? error.message : "Unable to reassign sales order");
+                            } finally {
+                              setIsUpdatingOrder(false);
+                            }
+                          }}
+                        >
+                          Assign to me
+                        </Button>
+                        <Button
+                          variant="danger"
+                          className="px-3 py-2 text-xs"
+                          disabled={!canWriteSales || deletingOrderId === selectedOrderDetail.order.id}
+                          onClick={() => void handleDeleteOrder(selectedOrderDetail.order)}
+                        >
+                          <Trash2 size={14} />
+                          {deletingOrderId === selectedOrderDetail.order.id ? "Deleting..." : "Delete"}
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="mt-3 grid gap-3 sm:grid-cols-3">

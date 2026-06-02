@@ -309,6 +309,41 @@ export async function updateSalesOrder(request: Request, response: Response) {
   return response.json({ data: order });
 }
 
+export async function deleteSalesOrder(request: Request, response: Response) {
+  const auth = requireAuth(request);
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const { orderId } = orderParamsSchema.parse(request.params);
+  const order = await salesService.deleteOrderInNewTransaction({
+    authUser: auth,
+    organizationId: auth.organizationId,
+    orderId
+  });
+
+  await auditLogService.record(auth, {
+    organizationId: auth.organizationId,
+    action: "sales.order_deleted",
+    entityType: "sales_order",
+    entityId: order.id,
+    metadata: {
+      contact_id: order.contact_id,
+      lead_id: order.lead_id,
+      assigned_user_id: order.assigned_user_id,
+      status: order.status,
+      total_amount: order.total_amount,
+      currency: order.currency,
+      source_message_id: order.source_message_id,
+      source_conversation_id: order.source_conversation_id
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({ data: order });
+}
+
 export async function recordSalesShareLink(request: Request, response: Response) {
   const auth = requireAuth(request);
   const input = recordSalesShareLinkSchema.parse(request.body);

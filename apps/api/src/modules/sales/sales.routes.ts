@@ -4,6 +4,7 @@ import { requireAnyPermission, requirePermission } from "../../middleware/authMi
 import {
   createSalesOrder,
   createSalesOrderItem,
+  deleteSalesOrder,
   getSalesOrderDetail,
   getSalesOrderHistory,
   getSalesOrders,
@@ -36,6 +37,7 @@ salesRoutes.get(
 );
 salesRoutes.post("/orders", requirePermission("sales.write"), asyncHandler(createSalesOrder));
 salesRoutes.patch("/orders/:orderId", requirePermission("sales.write"), asyncHandler(updateSalesOrder));
+salesRoutes.delete("/orders/:orderId", requirePermission("sales.write"), asyncHandler(deleteSalesOrder));
 salesRoutes.post("/orders/:orderId/items", requirePermission("sales.write"), asyncHandler(createSalesOrderItem));
 salesRoutes.post(
   "/share-links/audit",

@@ -63,4 +63,14 @@ export class QuickReplyOutcomeService {
   ) {
     await this.repository.markOrderClosed(client, input);
   }
+
+  async clearSalesOrderLink(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      salesOrderId: string;
+    }
+  ) {
+    await this.repository.clearSalesOrderLink(client, input);
+  }
 }

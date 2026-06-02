@@ -382,4 +382,48 @@ export class SalesService {
   }) {
     return withTransaction((client) => this.updateOrder(client, input));
   }
+
+  async deleteOrder(
+    client: PoolClient,
+    input: {
+      authUser: AuthUser;
+      organizationId: string;
+      orderId: string;
+    }
+  ) {
+    const scope = this.getScope(input.authUser);
+    const order = await this.salesRepository.findOrderById(client, {
+      organizationId: input.organizationId,
+      orderId: input.orderId,
+      ...scope
+    });
+
+    if (!order) {
+      throw new AppError("Sales order not found", 404, "sales_order_not_found");
+    }
+
+    await this.quickReplyOutcomeService.clearSalesOrderLink(client, {
+      organizationId: input.organizationId,
+      salesOrderId: input.orderId
+    });
+
+    const deletedOrder = await this.salesRepository.deleteOrder(client, {
+      organizationId: input.organizationId,
+      orderId: input.orderId
+    });
+
+    if (!deletedOrder) {
+      throw new AppError("Sales order not found", 404, "sales_order_not_found");
+    }
+
+    return deletedOrder;
+  }
+
+  async deleteOrderInNewTransaction(input: {
+    authUser: AuthUser;
+    organizationId: string;
+    orderId: string;
+  }) {
+    return withTransaction((client) => this.deleteOrder(client, input));
+  }
 }

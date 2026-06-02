@@ -423,6 +423,10 @@ export async function updateSalesOrder(payload: {
   });
 }
 
+export async function deleteSalesOrder(payload: { orderId: string }) {
+  return apiDelete<{ data: SalesOrder }>(`/sales/orders/${payload.orderId}`);
+}
+
 export async function createSalesOrderItem(payload: {
   orderId: string;
   productType?: string | null;

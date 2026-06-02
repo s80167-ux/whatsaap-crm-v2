@@ -139,4 +139,28 @@ export class QuickReplyOutcomeRepository {
       [input.organizationId, input.salesOrderId, input.outcomeStatus]
     );
   }
+
+  async clearSalesOrderLink(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      salesOrderId: string;
+    }
+  ) {
+    await client.query(
+      `
+        update quick_reply_message_events
+        set sales_order_id = null,
+            outcome_status = case
+              when lead_id is not null then 'lead_created'
+              when first_response_message_id is not null then 'customer_replied'
+              else 'sent'
+            end,
+            outcome_updated_at = timezone('utc', now())
+        where organization_id = $1
+          and sales_order_id = $2
+      `,
+      [input.organizationId, input.salesOrderId]
+    );
+  }
 }
