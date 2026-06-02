@@ -78,6 +78,7 @@ const LEAD_TEMPERATURES = [
 
 type TimelineEntityType = "lead" | "sales_order" | "sales_order_item";
 type SalesSection = "order-detail" | "lead-detail" | "timeline";
+type SalesDetailPopup = "order" | "lead" | null;
 type SalesShareSource =
   | "sales_order_row"
   | "sales_lead_row"
@@ -114,6 +115,7 @@ export function SalesPage() {
   const canManageUsers = Boolean(currentUser?.permissionKeys.includes("org.manage_users"));
   const [isCreateSalesModalOpen, setIsCreateSalesModalOpen] = useState(false);
   const [isCreateLeadPopupOpen, setIsCreateLeadPopupOpen] = useState(false);
+  const [activeSalesDetailPopup, setActiveSalesDetailPopup] = useState<SalesDetailPopup>(null);
   const [salesQuery, setSalesQuery] = useState("");
 
   const salesFilters = useMemo(
@@ -412,6 +414,7 @@ export function SalesPage() {
     if (leadId) {
       setSelectedLeadId(leadId);
     }
+    setActiveSalesDetailPopup(section === "order-detail" ? "order" : "lead");
     updateSelectionSearch({
       orderId,
       leadId: leadId ?? undefined,
@@ -424,6 +427,7 @@ export function SalesPage() {
     if (orderId !== undefined) {
       setSelectedOrderId(orderId);
     }
+    setActiveSalesDetailPopup(section === "order-detail" ? "order" : "lead");
     updateSelectionSearch({
       leadId,
       orderId: orderId ?? undefined,
@@ -546,6 +550,11 @@ export function SalesPage() {
       return;
     }
 
+    const nextPopup = salesFilters.section === "order-detail" ? "order" : "lead";
+    if (activeSalesDetailPopup !== nextPopup) {
+      setActiveSalesDetailPopup(nextPopup);
+    }
+
     const target =
       salesFilters.section === "order-detail"
         ? orderDetailRef.current
@@ -562,7 +571,14 @@ export function SalesPage() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [salesFilters.section, selectedOrderId, activeLeadId, selectedOrderHistory.length, selectedLeadHistory.length]);
+  }, [
+    activeSalesDetailPopup,
+    salesFilters.section,
+    selectedOrderId,
+    activeLeadId,
+    selectedOrderHistory.length,
+    selectedLeadHistory.length
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -689,6 +705,11 @@ export function SalesPage() {
       leadId: null,
       section: salesFilters.orderId ? "order-detail" : null
     });
+  }
+
+  function closeSalesDetailPopup() {
+    setActiveSalesDetailPopup(null);
+    updateSelectionSearch({ section: null });
   }
 
   function setSalesStatusFilter(nextStatus: "all" | SalesOrder["status"]) {
@@ -1385,8 +1406,15 @@ export function SalesPage() {
           />
         </Card>
 
+      <PopupOverlay
+        open={activeSalesDetailPopup === "order"}
+        onClose={closeSalesDetailPopup}
+        title="Order Detail"
+        description="Inspect item lines, status, ownership and pricing entries for the selected sales order."
+        panelClassName="max-w-6xl"
+      >
       <section ref={orderDetailRef}>
-        <Card elevated className="workspace-block !p-4 sm:!p-5">
+        <div>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Order Detail</p>
@@ -1653,11 +1681,19 @@ export function SalesPage() {
               Select a sales order from the table above to inspect item lines and add new pricing entries.
             </p>
           )}
-        </Card>
+        </div>
       </section>
+      </PopupOverlay>
 
+      <PopupOverlay
+        open={activeSalesDetailPopup === "lead"}
+        onClose={closeSalesDetailPopup}
+        title="Lead Detail"
+        description="Review lead snapshot, linked order context and unified sales activity timeline."
+        panelClassName="max-w-6xl"
+      >
       <section ref={leadDetailRef}>
-        <Card elevated className="workspace-block !p-4 sm:!p-5">
+        <div>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-soft">Lead Detail</p>
@@ -1870,8 +1906,9 @@ export function SalesPage() {
               Select a lead from the conversion queue, or select an order that already has a linked lead, to inspect its detail and timeline.
             </p>
           )}
-        </Card>
+        </div>
       </section>
+      </PopupOverlay>
 
       <Toast message={notice ?? copyToast?.message ?? null} variant={copyToast?.variant ?? "success"} onClose={() => setNotice(null)} />
     </section>
