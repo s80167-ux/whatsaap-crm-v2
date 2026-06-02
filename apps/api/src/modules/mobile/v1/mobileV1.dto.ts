@@ -35,6 +35,8 @@ function displayStatus(status: string) {
 export function toMobileConversationDto(conversation: ConversationSummaryRow) {
   const contactName = stringOrFallback(conversation.contact_name, "Unknown");
   const hasSalesTag = conversation.has_sales_lead_tag === true || conversation.has_sales === true;
+  const salesStatus = stringOrNull(conversation.sales_status);
+  const salesLabel = stringOrNull(conversation.sales_label) ?? (salesStatus ? displayStatus(salesStatus) : null);
 
   return {
     id: conversation.id,
@@ -48,7 +50,11 @@ export function toMobileConversationDto(conversation: ConversationSummaryRow) {
     channel: stringOrNull(conversation.channel),
     avatarUrl: stringOrNull(conversation.contact_avatar_url),
     leadStatus: hasSalesTag ? "sales" : null,
-    tag: hasSalesTag ? "Sales" : null
+    tag: hasSalesTag ? "Sales" : null,
+    hasSales: hasSalesTag,
+    salesId: stringOrNull(conversation.sales_id),
+    salesStatus,
+    salesLabel
   };
 }
 
@@ -63,7 +69,13 @@ export function toMobileMessageDto(message: MessageRecord) {
     createdAt: stringOrNull(message.created_at),
     sortAt: stringOrNull(message.sort_at) ?? stringOrNull(message.sent_at),
     externalMessageId: stringOrNull(message.external_message_id),
-    ackStatus: stringOrNull(message.ack_status)
+    ackStatus: stringOrNull(message.ack_status),
+    replyToMessageId: stringOrNull(message.reply_to_message_id),
+    replyPreviewText: stringOrNull(message.reply_preview_text),
+    hasSales: message.has_sales === true,
+    salesId: stringOrNull(message.sales_id),
+    salesStatus: stringOrNull(message.sales_status),
+    salesLabel: stringOrNull(message.sales_label)
   };
 }
 

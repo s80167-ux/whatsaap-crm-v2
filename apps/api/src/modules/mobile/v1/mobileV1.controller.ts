@@ -11,7 +11,10 @@ import { ContactCommandService } from "../../../services/contactCommandService.j
 import { LeadService } from "../../../services/leadService.js";
 import { QuickReplyService } from "../../../services/quickReplyService.js";
 import { QueryService, type ActivityRangeFilter } from "../../../services/queryService.js";
+import { SalesService } from "../../../services/salesService.js";
 import { SendMessageService } from "../../../services/sendMessageService.js";
+import { MessageRepository } from "../../../repositories/messageRepository.js";
+import { SalesRepository, type SalesOrderRow } from "../../../repositories/salesRepository.js";
 import { onMobileInboxUpdate, type MobileInboxUpdateEvent } from "../mobileInboxEvents.bus.js";
 import {
   toMobileContactDto,
@@ -28,7 +31,10 @@ const contactCommandService = new ContactCommandService();
 const leadService = new LeadService();
 const quickReplyService = new QuickReplyService();
 const sendMessageService = new SendMessageService();
+const salesService = new SalesService();
 const auditLogService = new AuditLogService();
+const messageRepository = new MessageRepository();
+const salesRepository = new SalesRepository();
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
 const contactParamsSchema = z.object({
@@ -45,6 +51,10 @@ const leadParamsSchema = z.object({
 
 const quickReplyParamsSchema = z.object({
   templateId: z.string().uuid()
+});
+
+const messageParamsSchema = z.object({
+  messageId: z.string().uuid()
 });
 
 const organizationQuerySchema = z.object({
@@ -132,6 +142,15 @@ const recordQuickReplyUsageSchema = z.object({
   conversationId: z.string().uuid().optional().nullable()
 });
 
+const forwardMessageSchema = z.object({
+  targetConversationId: z.string().uuid()
+});
+
+const createSalesFromMessageSchema = z.object({
+  status: z.enum(["new_lead", "processing", "open", "closed_won", "closed_lost"]).default("new_lead"),
+  notes: z.string().trim().max(2000).optional().nullable()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -196,8 +215,68 @@ function buildRefetchEvent(event: MobileInboxUpdateEvent | null, organizationId:
   };
 }
 
+function toSalesOrderStatus(status: string) {
+  switch (status) {
+    case "closed_won":
+    case "closed_lost":
+      return status;
+    default:
+      return "open";
+  }
+}
+
+function toMobileSalesLinkDto(order: SalesOrderRow) {
+  const status = order.status;
+  const displayStatus =
+    status === "open"
+      ? "Open"
+      : status === "closed_won"
+        ? "Closed Won"
+        : status === "closed_lost"
+          ? "Closed Lost"
+          : status
+              .split("_")
+              .filter(Boolean)
+              .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+              .join(" ");
+
+  return {
+    id: order.id,
+    sourceMessageId: order.source_message_id,
+    conversationId: order.source_conversation_id,
+    contactId: order.contact_id,
+    status,
+    displayStatus,
+    label: displayStatus
+  };
+}
+
+function buildForwardAttachment(sourceMessage: Awaited<ReturnType<MessageRepository["findById"]>>) {
+  if (!sourceMessage?.content_json || typeof sourceMessage.content_json !== "object") {
+    return null;
+  }
+
+  const sourceContent = sourceMessage.content_json as Record<string, unknown>;
+  const outboundMedia =
+    sourceContent.outboundMedia && typeof sourceContent.outboundMedia === "object"
+      ? (sourceContent.outboundMedia as Record<string, unknown>)
+      : null;
+
+  if (!outboundMedia) {
+    return null;
+  }
+
+  return {
+    kind: outboundMedia.kind as "image" | "video" | "audio" | "document",
+    fileName: String(outboundMedia.fileName ?? sourceMessage.content_text ?? "attachment"),
+    mimeType: String(outboundMedia.mimeType ?? "application/octet-stream"),
+    dataBase64: String(outboundMedia.dataBase64 ?? ""),
+    fileSizeBytes: Number(outboundMedia.fileSizeBytes ?? 1)
+  };
+}
+
 async function buildMobileV1InboxEvent(auth: NonNullable<Request["auth"]>, event: MobileInboxUpdateEvent) {
-  const conversations = await queryService.listConversations(auth, event.organizationId, {
+  const conversations = await queryService.listMobileConversations(auth, event.organizationId, {
     channel: "all"
   });
   const conversation = conversations.find((item) => item.id === event.conversationId);
@@ -207,7 +286,7 @@ async function buildMobileV1InboxEvent(auth: NonNullable<Request["auth"]>, event
   }
 
   const messages = event.type.startsWith("message_")
-    ? await queryService.listMessages(auth, event.organizationId, event.conversationId)
+    ? await queryService.listMobileMessages(auth, event.organizationId, event.conversationId)
     : [];
   const latestMessage = messages.at(-1) ?? null;
 
@@ -299,7 +378,7 @@ export function getMobileV1InboxEvents(request: Request, response: Response) {
 export async function getMobileV1Inbox(request: Request, response: Response) {
   const auth = requireAuth(request);
   const organizationId = resolveReadOrganizationId(request);
-  const conversations = await queryService.listConversations(auth, organizationId, {
+  const conversations = await queryService.listMobileConversations(auth, organizationId, {
     activityRange: resolveActivityRange(request),
     channel: "all"
   });
@@ -315,7 +394,7 @@ export async function getMobileV1InboxMessages(request: Request, response: Respo
   const activityRange = resolveActivityRange(request);
 
   if (limit) {
-    const page = await queryService.listMessagesPage(auth, organizationId, conversationId, {
+    const page = await queryService.listMobileMessagesPage(auth, organizationId, conversationId, {
       activityRange,
       limit,
       before:
@@ -333,7 +412,7 @@ export async function getMobileV1InboxMessages(request: Request, response: Respo
     });
   }
 
-  const messages = await queryService.listMessages(auth, organizationId, conversationId, activityRange);
+  const messages = await queryService.listMobileMessages(auth, organizationId, conversationId, activityRange);
   return response.json({ data: messages.map(toMobileMessageDto) });
 }
 
@@ -556,4 +635,146 @@ export async function sendMobileV1Message(request: Request, response: Response) 
   });
 
   return response.status(201).json({ data: toMobileMessageDto(message) });
+}
+
+export async function forwardMobileV1Message(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { messageId } = messageParamsSchema.parse(request.params);
+  const input = forwardMessageSchema.parse(request.body);
+  const organizationId = auth.organizationId ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const sourceMessage = await withTransaction((client) =>
+    messageRepository.findById(client, {
+      organizationId,
+      messageId
+    })
+  );
+
+  if (!sourceMessage) {
+    throw new AppError("Message not found", 404, "message_not_found");
+  }
+
+  const targetConversation = await withTransaction(async (client) => {
+    const result = await client.query<{ id: string; whatsapp_account_id: string }>(
+      `
+        select id, whatsapp_account_id
+        from conversations
+        where organization_id = $1
+          and id = $2
+        limit 1
+      `,
+      [organizationId, input.targetConversationId]
+    );
+
+    return result.rows[0] ?? null;
+  });
+
+  if (!targetConversation) {
+    throw new AppError("Target conversation not found", 404, "conversation_not_found");
+  }
+
+  const attachment = buildForwardAttachment(sourceMessage);
+
+  if (sourceMessage.message_type !== "text" && (!attachment || !attachment.dataBase64)) {
+    throw new AppError("This message cannot be forwarded because its media payload is unavailable", 400, "forward_unavailable");
+  }
+
+  const forwardedMessage = await sendMessageService.send({
+    organizationId,
+    authUser: auth,
+    organizationUserId: auth.organizationUserId ?? null,
+    whatsappAccountId: targetConversation.whatsapp_account_id,
+    conversationId: input.targetConversationId,
+    forwardedFromMessageId: sourceMessage.id,
+    text: sourceMessage.message_type === "text" ? sourceMessage.content_text : undefined,
+    attachment
+  });
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "message.forwarded",
+    entityType: "message",
+    entityId: forwardedMessage.id,
+    metadata: {
+      source_message_id: sourceMessage.id,
+      source_conversation_id: sourceMessage.conversation_id,
+      target_conversation_id: input.targetConversationId,
+      whatsapp_account_id: forwardedMessage.whatsapp_account_id,
+      mobile_api_version: "v1"
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(201).json({ data: toMobileMessageDto(forwardedMessage) });
+}
+
+export async function createMobileV1SalesFromMessage(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { messageId } = messageParamsSchema.parse(request.params);
+  const input = createSalesFromMessageSchema.parse(request.body ?? {});
+  const organizationId = auth.organizationId ?? "";
+
+  if (!organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  const order = await withTransaction(async (client) => {
+    const sourceMessage = await messageRepository.findById(client, {
+      organizationId,
+      messageId
+    });
+
+    if (!sourceMessage) {
+      throw new AppError("Message not found", 404, "message_not_found");
+    }
+
+    const existingOrder = await salesRepository.findOrderBySourceMessageId(client, {
+      organizationId,
+      messageId
+    });
+
+    if (existingOrder) {
+      throw new AppError(
+        "This message is already linked to a sales record",
+        409,
+        "duplicate_sales_source_message"
+      );
+    }
+
+    return salesService.createOrder(client, {
+      authUser: auth,
+      organizationId,
+      contactId: sourceMessage.contact_id,
+      status: toSalesOrderStatus(input.status),
+      totalAmount: 0,
+      currency: "MYR",
+      sourceMessageId: sourceMessage.id,
+      sourceConversationId: sourceMessage.conversation_id,
+      notes: input.notes ?? null
+    });
+  });
+
+  await auditLogService.record(auth, {
+    organizationId,
+    action: "sales.order_created",
+    entityType: "sales_order",
+    entityId: order.id,
+    metadata: {
+      contact_id: order.contact_id,
+      assigned_user_id: order.assigned_user_id,
+      status: order.status,
+      total_amount: order.total_amount,
+      currency: order.currency,
+      source_message_id: order.source_message_id,
+      source_conversation_id: order.source_conversation_id,
+      mobile_api_version: "v1"
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.status(201).json({ data: toMobileSalesLinkDto(order) });
 }

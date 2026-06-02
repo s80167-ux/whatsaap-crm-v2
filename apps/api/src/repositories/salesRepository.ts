@@ -56,6 +56,14 @@ export interface SalesOrderHistoryRow {
   created_at: string;
 }
 
+export interface MobileSalesSummaryRow {
+  conversation_id?: string | null;
+  message_id?: string | null;
+  sales_id: string;
+  sales_status: string;
+  sales_label: string;
+}
+
 const salesOrderSelectColumns = `
   so.id,
   so.organization_id,
@@ -84,6 +92,112 @@ const salesOrderSelectColumns = `
 `;
 
 export class SalesRepository {
+  async findOrderBySourceMessageId(
+    client: PoolClient,
+    input: {
+      organizationId: string;
+      messageId: string;
+    }
+  ): Promise<SalesOrderRow | null> {
+    const result = await client.query<SalesOrderRow>(
+      `
+        select
+          ${salesOrderSelectColumns}
+        from sales_orders so
+        join contacts ct on ct.id = so.contact_id
+        left join leads ld on ld.id = so.lead_id
+        where so.organization_id = $1
+          and so.source_message_id = $2
+        order by so.updated_at desc, so.created_at desc, so.id desc
+        limit 1
+      `,
+      [input.organizationId, input.messageId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listMobileSummariesForMessages(
+    client: PoolClient,
+    input: {
+      organizationId: string | null;
+      messageIds: string[];
+    }
+  ): Promise<MobileSalesSummaryRow[]> {
+    if (input.messageIds.length === 0) {
+      return [];
+    }
+
+    const result = await client.query<MobileSalesSummaryRow>(
+      `
+        select distinct on (so.source_message_id)
+          so.source_message_id as message_id,
+          so.id as sales_id,
+          so.status as sales_status,
+          case so.status
+            when 'open' then 'Open'
+            when 'closed_won' then 'Closed Won'
+            when 'closed_lost' then 'Closed Lost'
+            else initcap(replace(so.status, '_', ' '))
+          end as sales_label
+        from sales_orders so
+        where ($1::uuid is null or so.organization_id = $1)
+          and so.source_message_id = any($2::uuid[])
+        order by so.source_message_id,
+          case so.status when 'open' then 0 else 1 end,
+          so.updated_at desc,
+          so.created_at desc,
+          so.id desc
+      `,
+      [input.organizationId, input.messageIds]
+    );
+
+    return result.rows;
+  }
+
+  async listMobileSummariesForConversations(
+    client: PoolClient,
+    input: {
+      organizationId: string | null;
+      conversationIds: string[];
+    }
+  ): Promise<MobileSalesSummaryRow[]> {
+    if (input.conversationIds.length === 0) {
+      return [];
+    }
+
+    const result = await client.query<MobileSalesSummaryRow>(
+      `
+        select distinct on (c.id)
+          c.id as conversation_id,
+          so.id as sales_id,
+          so.status as sales_status,
+          case so.status
+            when 'open' then 'Open'
+            when 'closed_won' then 'Closed Won'
+            when 'closed_lost' then 'Closed Lost'
+            else initcap(replace(so.status, '_', ' '))
+          end as sales_label
+        from conversations c
+        join sales_orders so on so.organization_id = c.organization_id
+          and (
+            so.source_conversation_id = c.id
+            or (so.source_conversation_id is null and so.contact_id = c.contact_id)
+          )
+        where ($1::uuid is null or c.organization_id = $1)
+          and c.id = any($2::uuid[])
+        order by c.id,
+          case so.status when 'open' then 0 else 1 end,
+          so.updated_at desc,
+          so.created_at desc,
+          so.id desc
+      `,
+      [input.organizationId, input.conversationIds]
+    );
+
+    return result.rows;
+  }
+
   async listOrders(
     client: PoolClient,
     input: {

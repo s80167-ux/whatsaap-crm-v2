@@ -4,6 +4,8 @@ import { ZodError } from "zod";
 import { isAppError } from "../../../lib/errors.js";
 import { asyncHandler } from "../../../middleware/asyncHandler.js";
 import {
+  createMobileV1SalesFromMessage,
+  forwardMobileV1Message,
   getMobileV1Contact,
   getMobileV1Contacts,
   getMobileV1Inbox,
@@ -114,6 +116,16 @@ mobileV1Routes.post(
   "/messages/send",
   requireMobilePermission("messages.send"),
   asyncHandler(sendMobileV1Message)
+);
+mobileV1Routes.post(
+  "/messages/:messageId/forward",
+  requireMobilePermission("messages.send"),
+  asyncHandler(forwardMobileV1Message)
+);
+mobileV1Routes.post(
+  "/messages/:messageId/create-sales",
+  requireMobilePermission("sales.write"),
+  asyncHandler(createMobileV1SalesFromMessage)
 );
 
 mobileV1Routes.use((error: unknown, _request: Request, response: Response, next: NextFunction) => {

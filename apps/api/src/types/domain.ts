@@ -77,6 +77,11 @@ export interface MessageRecord {
   delivered_at?: string | null;
   read_at?: string | null;
   ack_status?: string;
+  reply_preview_text?: string | null;
+  has_sales?: boolean;
+  sales_id?: UUID | null;
+  sales_status?: string | null;
+  sales_label?: string | null;
 }
 
 export interface WhatsAppAccountRecord {

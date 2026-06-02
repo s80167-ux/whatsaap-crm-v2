@@ -23,6 +23,9 @@ export interface ConversationSummaryRow {
   last_message_type: string | null;
   last_message_direction: string | null;
   has_sales: boolean;
+  sales_id?: string | null;
+  sales_status?: string | null;
+  sales_label?: string | null;
   has_sales_lead_tag?: boolean;
 }
 

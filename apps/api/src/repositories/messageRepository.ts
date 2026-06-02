@@ -15,6 +15,11 @@ export interface MessagePaginationResult {
   };
 }
 
+export interface MessageReplyPreviewRow {
+  id: string;
+  preview_text: string | null;
+}
+
 export class MessageRepository {
   async findByExternalMessageId(
     client: PoolClient,
@@ -492,6 +497,33 @@ export class MessageRepository {
         order by coalesce(sent_at, created_at) asc, id asc
       `,
       [organizationId, conversationId, assignedOnly, organizationUserId, activitySince]
+    );
+
+    return result.rows;
+  }
+
+  async listReplyPreviews(
+    client: PoolClient,
+    input: {
+      organizationId: string | null;
+      messageIds: string[];
+    }
+  ): Promise<MessageReplyPreviewRow[]> {
+    if (input.messageIds.length === 0) {
+      return [];
+    }
+
+    const result = await client.query<MessageReplyPreviewRow>(
+      `
+        select
+          id,
+          left(coalesce(nullif(content_text, ''), message_type, 'message'), 160) as preview_text
+        from messages
+        where ($1::uuid is null or organization_id = $1)
+          and id = any($2::uuid[])
+          and is_deleted = false
+      `,
+      [input.organizationId, input.messageIds]
     );
 
     return result.rows;
