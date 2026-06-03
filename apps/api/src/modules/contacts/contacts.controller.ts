@@ -252,14 +252,11 @@ export async function assignContact(request: Request, response: Response) {
 
 export async function mergeContacts(request: Request, response: Response) {
   const auth = requireAuth(request);
-
-  if (!auth.organizationId) {
-    throw new AppError("organization_id is required", 400, "organization_required");
-  }
-
+  const { organization_id } = organizationQuerySchema.parse(request.query);
   const input = mergeContactsBodySchema.parse(request.body);
 
   const result = await ContactRepairProposalService.mergeContactsManually({
+    organizationId: auth.organizationId ?? organization_id ?? null,
     sourceContactId: input.sourceContactId,
     targetContactId: input.targetContactId,
     note: input.note ?? null,
@@ -321,14 +318,16 @@ export async function startContactConversation(request: Request, response: Respo
     return conversationService.findOrCreateConversation(client, {
       organizationId: auth.organizationId!,
       whatsappAccountId,
-      contactId
+      contactId,
+      channel: "whatsapp",
+      externalThreadKey: recipientJid
     });
   });
 
-  emitMobileInboxUpdate({
-    type: "conversation_created",
-    conversationId: conversation.id,
-    organizationId: auth.organizationId
+  await emitMobileInboxUpdate(auth.organizationId, "conversation_updated", {
+    conversation_id: conversation.id,
+    contact_id: contactId,
+    whatsapp_account_id: whatsappAccountId
   });
 
   return response.status(201).json({ data: conversation });
