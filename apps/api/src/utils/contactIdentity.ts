@@ -2,6 +2,7 @@ import type { WhatsAppJidType } from "./phone.js";
 
 const WEAK_DISPLAY_NAMES = new Set([
   "unknown",
+  "unknown contact",
   "customer",
   "no name",
   "noname",
@@ -28,7 +29,17 @@ export function normalizeDisplayName(value: string | null | undefined): string |
   return normalized.length > 0 ? normalized : null;
 }
 
-export function isWeakDisplayName(value: string | null | undefined): boolean {
+function normalizeComparableDigits(value: string | null | undefined): string | null {
+  const normalized = normalizeDisplayName(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const digits = normalized.replace(/\D/g, "");
+  return digits.length > 0 ? digits : null;
+}
+
+export function isWeakDisplayName(value: string | null | undefined, phone?: string | null): boolean {
   const normalized = normalizeDisplayName(value);
 
   if (!normalized) {
@@ -49,7 +60,18 @@ export function isWeakDisplayName(value: string | null | undefined): boolean {
     return true;
   }
 
+  if (/(@s\.whatsapp\.net|@c\.us|@g\.us|@lid)$/i.test(normalized)) {
+    return true;
+  }
+
   if (/^\+?\d{6,15}$/.test(normalized.replace(/\s+/g, ""))) {
+    return true;
+  }
+
+  const nameDigits = normalizeComparableDigits(normalized);
+  const phoneDigits = normalizeComparableDigits(phone);
+
+  if (phoneDigits && nameDigits && nameDigits === phoneDigits) {
     return true;
   }
 
@@ -73,17 +95,17 @@ export function isBlockedDisplayName(
 export function isBetterDisplayName(
   candidate: string | null | undefined,
   existing: string | null | undefined,
-  context: { blockedNames?: Array<string | null | undefined>; candidateScore?: number; existingScore?: number } = {}
+  context: { blockedNames?: Array<string | null | undefined>; candidateScore?: number; existingScore?: number; phone?: string | null } = {}
 ): boolean {
   const candidateName = normalizeDisplayName(candidate);
 
-  if (!candidateName || isWeakDisplayName(candidateName) || isBlockedDisplayName(candidateName, context.blockedNames)) {
+  if (!candidateName || isWeakDisplayName(candidateName, context.phone) || isBlockedDisplayName(candidateName, context.blockedNames)) {
     return false;
   }
 
   const existingName = normalizeDisplayName(existing);
 
-  if (!existingName || isWeakDisplayName(existingName) || isBlockedDisplayName(existingName, context.blockedNames)) {
+  if (!existingName || isWeakDisplayName(existingName, context.phone) || isBlockedDisplayName(existingName, context.blockedNames)) {
     return true;
   }
 
@@ -92,10 +114,33 @@ export function isBetterDisplayName(
 
 export function sanitizeWhatsAppDisplayName(
   value: string | null | undefined,
-  blockedNames: Array<string | null | undefined> = []
+  blockedNames: Array<string | null | undefined> = [],
+  phone?: string | null
 ): string | null {
   const normalized = normalizeDisplayName(value);
-  return normalized && !isWeakDisplayName(normalized) && !isBlockedDisplayName(normalized, blockedNames) ? normalized : null;
+  return normalized && !isWeakDisplayName(normalized, phone) && !isBlockedDisplayName(normalized, blockedNames) ? normalized : null;
+}
+
+export function chooseBestDisplayName(input: {
+  existingName: string | null | undefined;
+  incomingName: string | null | undefined;
+  phone?: string | null;
+  blockedNames?: Array<string | null | undefined>;
+  incomingScore?: number;
+  existingScore?: number;
+}): string | null {
+  const existingName = normalizeDisplayName(input.existingName);
+  const incomingName = normalizeDisplayName(input.incomingName);
+
+  if (!incomingName || isWeakDisplayName(incomingName, input.phone) || isBlockedDisplayName(incomingName, input.blockedNames)) {
+    return existingName;
+  }
+
+  if (!existingName || isWeakDisplayName(existingName, input.phone) || isBlockedDisplayName(existingName, input.blockedNames)) {
+    return incomingName;
+  }
+
+  return (input.incomingScore ?? 0) > (input.existingScore ?? 0) ? incomingName : existingName;
 }
 
 export function scoreContactIdentity(input: {
@@ -106,7 +151,7 @@ export function scoreContactIdentity(input: {
 }) {
   const hasPhone = Boolean(input.normalizedPhone);
   const hasAvatar = Boolean(normalizeDisplayName(input.profileAvatarUrl ?? null));
-  const weakName = isWeakDisplayName(input.displayName);
+  const weakName = isWeakDisplayName(input.displayName, input.normalizedPhone);
   let score = 0;
 
   if (hasPhone) score += 50;
