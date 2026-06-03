@@ -842,7 +842,7 @@ function DashboardGraphPanel({
   return (
     <CompactSection title="Analysis panel" eyebrow="Compact Graphs" summary="Trends, stage mix, funnel, value, and team win rate in one view" defaultOpen={defaultOpen}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr),minmax(320px,0.85fr)]">
-        <div className="chart-container">
+        <div className="rounded-xl border border-border/40 bg-background-tint/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-text">Orders and won revenue</p>
@@ -853,35 +853,46 @@ function DashboardGraphPanel({
               <MetricPill label="won" value={formatCompactCurrency(latest?.wonRevenue ?? 0)} />
             </div>
           </div>
-          <svg viewBox="0 0 100 38" role="img" aria-label="Orders and won revenue sparkline" className="mt-3 h-24 w-full overflow-visible">
-            <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          <svg viewBox="0 0 100 52" role="img" aria-label="Orders and won revenue sparkline" className="mt-3 h-44 w-full">
+            {[0, maxCreated * 0.5, maxCreated].map((val) => {
+              const y = 40 - (val / Math.max(maxCreated, 1)) * 32;
+              return (
+                <g key={val}>
+                  <line x1="12" y1={y} x2="96" y2={y} stroke="rgb(var(--border) / 0.3)" strokeWidth="0.5" />
+                  <text x="10" y={y + 1} textAnchor="end" className="fill-current text-[5.5px] font-medium text-text-soft">{formatCompactCurrency(val)}</text>
+                </g>
+              );
+            })}
+            <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.8)" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
             {trendDays.map((day, index) => {
               const x = getSparklineX(index, trendDays.length);
-
+              const createdY = getSparklineY(day.createdOrders, maxCreated);
+              const wonY = getSparklineY(day.wonRevenue, maxWon);
               return (
                 <g key={day.key}>
-                  <circle cx={x} cy={getSparklineY(day.createdOrders, maxCreated)} r="1.5" fill="rgb(var(--primary) / 1)">
+                  <circle cx={x} cy={createdY} r="2.5" fill="rgb(var(--card))" stroke="rgb(var(--primary))" strokeWidth="1.5">
                     <title>{`${day.label}: ${day.createdOrders} created orders`}</title>
                   </circle>
-                  <circle cx={x} cy={getSparklineY(day.wonRevenue, maxWon)} r="1.5" fill="rgb(var(--success) / 1)">
+                  <circle cx={x} cy={wonY} r="2.5" fill="rgb(var(--card))" stroke="rgb(var(--success))" strokeWidth="1.5">
                     <title>{`${day.label}: ${formatCompactCurrency(day.wonRevenue)} won revenue`}</title>
                   </circle>
+                  <text x={x} y="48" textAnchor="middle" className="fill-current text-[5.5px] font-medium text-text-soft">{day.label}</text>
                 </g>
               );
             })}
           </svg>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs font-medium text-text-muted">
+          <div className="mt-1 flex flex-wrap gap-3 text-xs font-medium text-text-muted">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" />Created</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" />Won MYR</span>
           </div>
         </div>
 
-        <div className="workspace-block p-4">
-          <div className="grid items-center gap-3 sm:grid-cols-[116px,minmax(0,1fr)]">
+        <div className="rounded-xl border border-border/40 bg-background-tint/40 p-4">
+          <div className="grid items-center gap-4 sm:grid-cols-[120px,minmax(0,1fr)]">
             <div className="relative mx-auto h-28 w-28">
               <svg viewBox="0 0 120 120" role="img" aria-label="Pipeline order stage share donut" className="h-full w-full rotate-[-90deg]">
-                <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.9)" strokeWidth="18" />
+                <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.35)" strokeWidth="12" />
                 {donutSegments.map((segment) => (
                   <circle
                     key={segment.status}
@@ -893,27 +904,25 @@ function DashboardGraphPanel({
                     strokeDasharray={`${segment.length} ${segment.gap}`}
                     strokeDashoffset={segment.offset}
                     strokeLinecap="round"
-                    strokeWidth="18"
+                    strokeWidth="12"
                   />
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-2xl font-semibold tracking-tight text-text">{pipelineTotal}</p>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-text-soft">Orders</p>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-soft">Total</p>
+                <p className="text-xl font-semibold tracking-tight text-text">{pipelineTotal}</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-text">Order stage share</p>
+            <div className="space-y-2.5">
               {sales.pipeline.map((stage) => {
                 const percent = pipelineTotal > 0 ? Math.round((stage.count / pipelineTotal) * 100) : 0;
-
                 return (
-                  <div key={stage.status} className="flex items-center justify-between gap-2 rounded-xl bg-background-tint px-3 py-1.5">
-                    <span className="inline-flex items-center gap-2 text-xs font-medium text-text">
+                  <div key={stage.status} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className={`h-2 w-2 rounded-full ${getPipelineDotTone(stage.status)}`} />
-                      {formatPipelineStatus(stage.status)}
-                    </span>
-                    <span className="text-xs font-semibold text-text">{percent}%</span>
+                      <span className="truncate font-medium text-text">{formatPipelineStatus(stage.status)}</span>
+                    </div>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{percent}%</span>
                   </div>
                 );
               })}
@@ -925,21 +934,22 @@ function DashboardGraphPanel({
       <div className="mt-3 grid gap-3 xl:grid-cols-3">
         <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Conversion funnel</p>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-3">
             {orderedStages.map((stage) => {
               const width = Math.max((stage.count / maxPipelineCount) * 100, stage.count > 0 ? 12 : 4);
               const share = pipelineTotal > 0 ? Math.round((stage.count / pipelineTotal) * 100) : 0;
 
               return (
                 <div key={stage.status}>
-                  <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-medium text-text">{formatPipelineStatus(stage.status)}</span>
-                    <span className="text-text-muted">{stage.count} orders, {share}%</span>
+                    <span className="font-semibold text-text">{stage.count} orders</span>
                   </div>
-                  <div className="progress-track">
-                    <div
-                      className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
-                    />
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div className="progress-track flex-1">
+                      <div className={`progress-fill ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
+                    </div>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{share}%</span>
                   </div>
                 </div>
               );
@@ -949,21 +959,22 @@ function DashboardGraphPanel({
 
         <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Pipeline value mix</p>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-3">
             {sales.pipeline.map((stage) => {
               const value = parseNumericValue(stage.value);
               const width = Math.max((value / maxPipelineValue) * 100, value > 0 ? 10 : 3);
 
               return (
                 <div key={stage.status}>
-                  <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-medium text-text">{formatPipelineStatus(stage.status)}</span>
                     <span className="font-semibold text-text">{formatCompactCurrency(value)}</span>
                   </div>
-                  <div className="progress-track">
-                    <div
-                      className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(width)}`}
-                    />
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div className="progress-track flex-1">
+                      <div className={`progress-fill ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
+                    </div>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{Math.round(width)}%</span>
                   </div>
                 </div>
               );
@@ -974,20 +985,21 @@ function DashboardGraphPanel({
         <div className="workspace-subtle p-3">
           <p className="text-sm font-semibold text-text">Team win rate</p>
           {showPerformance && rankedLeaders.length ? (
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-3">
               {teamWinRatePagination.visibleItems.map((leader) => {
                 const winRate = leader.order_count > 0 ? Math.round((leader.won_count / leader.order_count) * 100) : 0;
 
                 return (
                   <div key={leader.id}>
-                    <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center justify-between gap-2 text-xs">
                       <span className="truncate font-medium text-text">{leader.name}</span>
                       <span className="font-semibold text-text">{winRate}%</span>
                     </div>
-                    <div className="progress-track">
-                      <div
-                        className={`progress-fill bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
-                      />
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <div className="progress-track flex-1">
+                        <div className="progress-fill bg-gradient-to-r from-primary to-success" style={{ width: `${Math.max(winRate, winRate > 0 ? 8 : 2)}%` }} />
+                      </div>
+                      <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{winRate}%</span>
                     </div>
                   </div>
                 );
@@ -1013,14 +1025,13 @@ function DashboardGraphPanel({
 function PipelineDonutGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"] }) {
   const totalCount = pipeline.reduce((total, stage) => total + stage.count, 0);
   const segments = buildDonutSegments(pipeline, totalCount);
-  const largestStage = [...pipeline].sort((left, right) => right.count - left.count)[0];
 
   return (
     <CompactSection title="Order stage share" eyebrow="Analysis Graph" summary="Pipeline order distribution" defaultOpen>
-      <div className="grid items-center gap-5 sm:grid-cols-[170px,minmax(0,1fr)]">
-        <div className="relative mx-auto h-40 w-40">
+      <div className="grid items-center gap-5 sm:grid-cols-[140px,minmax(0,1fr)]">
+        <div className="relative mx-auto h-28 w-28">
           <svg viewBox="0 0 120 120" role="img" aria-label="Pipeline order stage share donut" className="h-full w-full rotate-[-90deg]">
-            <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.9)" strokeWidth="18" />
+            <circle cx="60" cy="60" r="42" fill="none" stroke="rgb(var(--border) / 0.35)" strokeWidth="12" />
             {segments.map((segment) => (
               <circle
                 key={segment.status}
@@ -1032,32 +1043,29 @@ function PipelineDonutGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"]
                 strokeDasharray={`${segment.length} ${segment.gap}`}
                 strokeDashoffset={segment.offset}
                 strokeLinecap="round"
-                strokeWidth="18"
+                strokeWidth="12"
               >
                 <title>{`${formatPipelineStatus(segment.status)}: ${segment.count} orders`}</title>
               </circle>
             ))}
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full text-center">
-            <p className="text-3xl font-semibold tracking-tight text-text">{totalCount}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-soft">Orders</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-soft">Total</p>
+            <p className="text-xl font-semibold tracking-tight text-text">{totalCount}</p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm leading-6 text-text-muted">
-            {largestStage ? `${formatPipelineStatus(largestStage.status)} currently holds the largest order share.` : "No pipeline orders yet."}
-          </p>
+        <div className="space-y-2.5">
           {pipeline.map((stage) => {
             const percent = totalCount > 0 ? Math.round((stage.count / totalCount) * 100) : 0;
 
             return (
-              <div key={stage.status} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background-tint px-3 py-2">
-                <span className="inline-flex items-center gap-2 text-sm font-medium text-text">
-                  <span className={`h-2.5 w-2.5 rounded-full ${getPipelineDotTone(stage.status)}`} />
-                  {formatPipelineStatus(stage.status)}
-                </span>
-                <span className="text-sm font-semibold text-text">{percent}%</span>
+              <div key={stage.status} className="flex items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`h-2 w-2 rounded-full ${getPipelineDotTone(stage.status)}`} />
+                  <span className="truncate font-medium text-text">{formatPipelineStatus(stage.status)}</span>
+                </div>
+                <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{percent}%</span>
               </div>
             );
           })}
@@ -1074,27 +1082,22 @@ function PipelineFunnelGraph({ pipeline }: { pipeline: SalesDashboard["pipeline"
 
   return (
     <CompactSection title="Pipeline conversion funnel" eyebrow="Analysis Graph" summary="Count and value by stage" defaultOpen>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {orderedStages.map((stage) => {
           const width = Math.max((stage.count / maxCount) * 100, stage.count > 0 ? 12 : 4);
           const share = totalCount > 0 ? Math.round((stage.count / totalCount) * 100) : 0;
 
           return (
-            <div key={stage.status} className="workspace-subtle p-3 shadow-soft">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-text">{formatPipelineStatus(stage.status)}</p>
-                  <p className="text-xs text-text-muted">{stage.count} orders - {share}% of total</p>
-                </div>
-                <p className="text-sm font-semibold text-text">{formatCompactCurrency(parseNumericValue(stage.value))}</p>
+            <div key={stage.status}>
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="font-semibold text-text">{formatPipelineStatus(stage.status)}</span>
+                <span className="font-semibold text-text">{formatCompactCurrency(parseNumericValue(stage.value))}</span>
               </div>
-              <div className="progress-track mt-3 h-7">
-                <div
-                  className={`progress-fill flex items-center justify-end px-3 text-xs font-semibold ${getPipelineBarTone(stage.status)}`}
-                  style={{ width: `${Math.max(width, stage.count > 0 ? 12 : 4)}%` }}
-                >
-                  {stage.count}
+              <div className="mt-2 flex items-center gap-3">
+                <div className="progress-track flex-1">
+                  <div className={`progress-fill ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
                 </div>
+                <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{share}%</span>
               </div>
             </div>
           );
@@ -1117,28 +1120,25 @@ function TeamWinRateGraph({ leaders }: { leaders: NonNullable<SalesDashboard["le
   return (
     <CompactSection title="Team win-rate graph" eyebrow="Performance Graph" summary="Closed-won rate by assignee">
       {rankedLeaders.length ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {leaderPagination.visibleItems.map((leader, index) => {
             const winRate = leader.order_count > 0 ? Math.round((leader.won_count / leader.order_count) * 100) : 0;
             const rank = (leaderPagination.page - 1) * leaderPagination.pageSize + index;
 
             return (
-              <div key={leader.id} className="grid gap-2 rounded-xl border border-border bg-background-tint p-3 sm:grid-cols-[160px,minmax(0,1fr),72px] sm:items-center">
+              <div key={leader.id} className="grid gap-2 sm:grid-cols-[auto,minmax(0,1fr),auto] sm:items-center">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-bold ${getRankTone(rank)}`}>
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[10px] font-bold ${getRankTone(rank)}`}>
                     {rank + 1}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-text">{leader.name}</p>
-                    <p className="text-xs text-text-muted">{leader.won_count}/{leader.order_count} won</p>
                   </div>
                 </div>
                 <div className="progress-track">
-                  <div
-                    className={`progress-fill bg-gradient-to-r from-primary to-success ${getWidthClass(Math.max(winRate, winRate > 0 ? 8 : 2))}`}
-                  />
+                  <div className="progress-fill bg-gradient-to-r from-primary to-success" style={{ width: `${Math.max(winRate, winRate > 0 ? 8 : 2)}%` }} />
                 </div>
-                <p className="text-right text-lg font-semibold text-text">{winRate}%</p>
+                <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{winRate}%</span>
               </div>
             );
           })}
@@ -1178,10 +1178,19 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
         </div>
       </div>
 
-      <div className="chart-container mt-3">
-        <svg viewBox="0 0 100 44" role="img" aria-label="Orders and won revenue sparkline" className="h-28 w-full overflow-visible">
-          <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.9)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <div className="rounded-xl border border-border/40 bg-background-tint/40 p-4 mt-3">
+        <svg viewBox="0 0 100 52" role="img" aria-label="Orders and won revenue sparkline" className="h-44 w-full">
+          {[0, maxCreated * 0.5, maxCreated].map((val) => {
+            const y = 40 - (val / Math.max(maxCreated, 1)) * 32;
+            return (
+              <g key={val}>
+                <line x1="12" y1={y} x2="96" y2={y} stroke="rgb(var(--border) / 0.3)" strokeWidth="0.5" />
+                <text x="10" y={y + 1} textAnchor="end" className="fill-current text-[5.5px] font-medium text-text-soft">{formatCompactCurrency(val)}</text>
+              </g>
+            );
+          })}
+          <polyline points={createdPath} fill="none" stroke="rgb(var(--primary) / 0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={wonPath} fill="none" stroke="rgb(var(--success) / 0.8)" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
           {trendDays.map((day, index) => {
             const x = getSparklineX(index, trendDays.length);
             const createdY = getSparklineY(day.createdOrders, maxCreated);
@@ -1189,24 +1198,17 @@ function PerformanceGraph({ trendDays }: { trendDays: TrendDay[] }) {
 
             return (
               <g key={day.key}>
-                <circle cx={x} cy={createdY} r="1.5" fill="rgb(var(--primary) / 1)">
+                <circle cx={x} cy={createdY} r="2.5" fill="rgb(var(--card))" stroke="rgb(var(--primary))" strokeWidth="1.5">
                   <title>{`${day.label}: ${day.createdOrders} created orders`}</title>
                 </circle>
-                <circle cx={x} cy={wonY} r="1.5" fill="rgb(var(--success) / 1)">
+                <circle cx={x} cy={wonY} r="2.5" fill="rgb(var(--card))" stroke="rgb(var(--success))" strokeWidth="1.5">
                   <title>{`${day.label}: ${formatCompactCurrency(day.wonRevenue)} won revenue`}</title>
                 </circle>
+                <text x={x} y="48" textAnchor="middle" className="fill-current text-[5.5px] font-medium text-text-soft">{day.label}</text>
               </g>
             );
           })}
         </svg>
-        <div className="mt-2 grid gap-2 sm:grid-cols-4">
-          {trendDays.slice(-4).map((day) => (
-            <div key={day.key} className="rounded-xl bg-card px-3 py-2 text-xs shadow-soft">
-              <p className="font-semibold text-text">{day.label}</p>
-              <p className="mt-1 text-text-muted">{day.createdOrders} / {formatCompactCurrency(day.wonRevenue)}</p>
-            </div>
-          ))}
-        </div>
       </div>
     </CompactSection>
   );
@@ -1222,28 +1224,25 @@ function MetricPill({ label, value }: { label: string; value: string }) {
 
 function PipelineAnalysis({ pipeline }: { pipeline: SalesDashboard["pipeline"] }) {
   const maxValue = Math.max(...pipeline.map((stage) => parseNumericValue(stage.value)), 1);
-  const totalCount = pipeline.reduce((total, stage) => total + stage.count, 0);
 
   return (
-    <CompactSection title="Pipeline value mix" eyebrow="Analysis Graph" summary={`${totalCount} total orders`}>
-      <div className="space-y-3">
+    <CompactSection title="Pipeline value mix" eyebrow="Analysis Graph" summary="Value distribution by stage">
+      <div className="space-y-4">
         {pipeline.map((stage) => {
           const value = parseNumericValue(stage.value);
-          const percent = Math.round((value / maxValue) * 100);
+          const width = Math.max((value / maxValue) * 100, value > 0 ? 8 : 2);
 
           return (
             <div key={stage.status}>
-              <div className="mb-1.5 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-text">{formatPipelineStatus(stage.status)}</p>
-                  <p className="text-xs text-text-muted">{stage.count} orders</p>
-                </div>
-                <p className="text-sm font-semibold text-text">{formatCompactCurrency(value)}</p>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-text">{formatPipelineStatus(stage.status)}</span>
+                <span className="font-semibold text-text">{formatCompactCurrency(value)}</span>
               </div>
-              <div className="progress-track">
-                <div
-                  className={`progress-fill ${getPipelineBarTone(stage.status)} ${getWidthClass(Math.max(percent, value > 0 ? 8 : 2))}`}
-                />
+              <div className="mt-2 flex items-center gap-3">
+                <div className="progress-track flex-1">
+                  <div className={`progress-fill ${getPipelineBarTone(stage.status)}`} style={{ width: `${width}%` }} />
+                </div>
+                <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${getPipelineBadgeTone(stage.status)}`}>{Math.round(width)}%</span>
               </div>
             </div>
           );
@@ -1497,6 +1496,17 @@ function getPipelineBarTone(status: string) {
       return "bg-destructive text-destructive-foreground";
     default:
       return "bg-warning text-warning-foreground";
+  }
+}
+
+function getPipelineBadgeTone(status: string) {
+  switch (status) {
+    case "closed_won":
+      return "bg-success/10 text-success";
+    case "closed_lost":
+      return "bg-destructive/10 text-destructive";
+    default:
+      return "bg-warning/10 text-warning";
   }
 }
 
