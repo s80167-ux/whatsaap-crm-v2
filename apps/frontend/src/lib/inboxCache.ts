@@ -245,14 +245,21 @@ export function updateMessageAckInCache(queryClient: QueryClient, conversationId
       return current;
     }
 
-    return current.map((message) => {
+    const next = current.map((message) => {
       if (message.id !== messageId) {
         return message;
       }
 
       patched = true;
+
+      if (ackStatus === "failed" && isTemporaryOutboundIdentifier(message.id)) {
+        return { ...message, ack_status: "pending" };
+      }
+
       return { ...message, ack_status: ackStatus };
     });
+
+    return compactOutgoingEchoDuplicates(next);
   });
 
   return patched;
