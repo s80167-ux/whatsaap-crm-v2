@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchMessages, fetchMessagesPage, type MessagePagination } from "../api/crm";
-import { inboxQueryKeys } from "../lib/inboxCache";
+import { compactOutgoingEchoDuplicates, inboxQueryKeys } from "../lib/inboxCache";
 import type { HistoryRange } from "../lib/historyRange";
 import type { Message } from "../types/api";
 
@@ -15,7 +15,7 @@ function sortMessages(messages: Message[]) {
 function mergeMessages(existing: Message[] | undefined, incoming: Message[]) {
   const messagesById = new Map<string, Message>();
 
-  for (const message of existing ?? []) {
+  for (const message of compactOutgoingEchoDuplicates(existing ?? [])) {
     messagesById.set(message.id, message);
   }
 
@@ -26,7 +26,7 @@ function mergeMessages(existing: Message[] | undefined, incoming: Message[]) {
     });
   }
 
-  return sortMessages([...messagesById.values()]);
+  return compactOutgoingEchoDuplicates(sortMessages([...messagesById.values()]));
 }
 
 export function useMessages(
@@ -48,7 +48,7 @@ export function useMessages(
       if (!options?.pageSize) {
         const messages = await fetchMessages(conversationId!, range, organizationId);
         options?.onPaginationChange?.(null);
-        return messages;
+        return compactOutgoingEchoDuplicates(messages);
       }
 
       const page = await fetchMessagesPage(conversationId!, {
