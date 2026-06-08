@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { logger } from "../config/logger.js";
 import { getRequestAuditContext } from "../lib/requestAudit.js";
 import { AuditLogService } from "../services/auditLogService.js";
 import { QueryService } from "../services/queryService.js";
@@ -59,20 +60,27 @@ export async function sendWhatsAppMessage(req: Request, res: Response) {
     organizationId: req.auth.organizationId
   });
 
-  await auditLogService.record(req.auth, {
-    organizationId: req.auth.organizationId,
-    action: "message.sent",
-    entityType: "message",
-    entityId: message.id,
-    metadata: {
-      conversation_id: input.conversationId,
-      whatsapp_account_id: input.whatsappAccountId,
-      external_message_id: message.external_message_id,
-      message_type: input.attachment?.kind ?? "text",
-      attachment_file_name: input.attachment?.fileName ?? null
-    },
-    request: getRequestAuditContext(req)
-  });
+  try {
+    await auditLogService.record(req.auth, {
+      organizationId: req.auth.organizationId,
+      action: "message.sent",
+      entityType: "message",
+      entityId: message.id,
+      metadata: {
+        conversation_id: input.conversationId,
+        whatsapp_account_id: input.whatsappAccountId,
+        external_message_id: message.external_message_id,
+        message_type: input.attachment?.kind ?? "text",
+        attachment_file_name: input.attachment?.fileName ?? null
+      },
+      request: getRequestAuditContext(req)
+    });
+  } catch (error) {
+    logger.warn(
+      { error, messageId: message.id, conversationId: input.conversationId },
+      "Message was queued, but audit logging failed after send"
+    );
+  }
 
   return res.status(201).json({ data: message });
 }
