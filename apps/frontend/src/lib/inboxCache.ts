@@ -5,6 +5,16 @@ import type { InboxChannelFilter } from "../api/crm";
 import { getConversationPreview, resolveMessageType } from "./messageContent";
 
 const CURRENT_ORGANIZATION_SCOPE = "current";
+const OUTGOING_ECHO_MERGE_WINDOW_MS = 2 * 60 * 1000;
+const OUTGOING_STATUS_RANK: Record<string, number> = {
+  failed: 0,
+  pending: 1,
+  queued: 1,
+  server_ack: 2,
+  device_delivered: 3,
+  read: 4,
+  played: 5
+};
 
 export const inboxQueryKeys = {
   conversationsRoot: ["conversations"] as const,
@@ -20,27 +30,140 @@ function hasMessageIdentity(message: Partial<Message>): message is Message {
   return Boolean(message.id && message.conversation_id);
 }
 
+function getMessageTime(message: Message) {
+  const timestamp = new Date(message.sort_at ?? message.sent_at ?? message.created_at ?? 0).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function normalizeMessageText(value: string | null | undefined) {
+  const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
+  return normalized.length > 0 ? normalized : null;
+}
+
+function getAckRank(status?: string | null) {
+  return OUTGOING_STATUS_RANK[status ?? "pending"] ?? 1;
+}
+
+function isTemporaryOutboundIdentifier(value: string | null | undefined) {
+  return Boolean(value?.startsWith("optimistic-") || value?.startsWith("queued:"));
+}
+
+function isUnresolvedOutbound(message: Message) {
+  return (
+    message.direction === "outgoing" &&
+    (isTemporaryOutboundIdentifier(message.id) ||
+      isTemporaryOutboundIdentifier(message.external_message_id) ||
+      ["pending", "queued", "failed"].includes(message.ack_status ?? "pending"))
+  );
+}
+
+function hasConfirmedOutboundIdentity(message: Message) {
+  return (
+    message.direction === "outgoing" &&
+    !isTemporaryOutboundIdentifier(message.id) &&
+    !isTemporaryOutboundIdentifier(message.external_message_id) &&
+    Boolean(message.external_message_id || getAckRank(message.ack_status) >= OUTGOING_STATUS_RANK.server_ack)
+  );
+}
+
+function isLikelySameOutgoingEcho(left: Message, right: Message) {
+  if (left.direction !== "outgoing" || right.direction !== "outgoing") {
+    return false;
+  }
+
+  if (left.conversation_id !== right.conversation_id) {
+    return false;
+  }
+
+  if (left.whatsapp_account_id && right.whatsapp_account_id && left.whatsapp_account_id !== right.whatsapp_account_id) {
+    return false;
+  }
+
+  if (left.contact_id && right.contact_id && left.contact_id !== right.contact_id) {
+    return false;
+  }
+
+  const leftText = normalizeMessageText(left.content_text);
+  const rightText = normalizeMessageText(right.content_text);
+
+  if (!leftText || !rightText || leftText !== rightText) {
+    return false;
+  }
+
+  const timeDelta = Math.abs(getMessageTime(left) - getMessageTime(right));
+  if (timeDelta > OUTGOING_ECHO_MERGE_WINDOW_MS) {
+    return false;
+  }
+
+  return (
+    (isUnresolvedOutbound(left) && (isUnresolvedOutbound(right) || hasConfirmedOutboundIdentity(right))) ||
+    (isUnresolvedOutbound(right) && (isUnresolvedOutbound(left) || hasConfirmedOutboundIdentity(left)))
+  );
+}
+
 function messageMatches(left: Message, right: Message) {
   return (
     left.id === right.id ||
     (Boolean(left.external_message_id) &&
       Boolean(right.external_message_id) &&
-      left.external_message_id === right.external_message_id)
+      left.external_message_id === right.external_message_id) ||
+    isLikelySameOutgoingEcho(left, right)
   );
 }
 
 function sortMessages(messages: Message[]) {
-  return [...messages].sort((left, right) => new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime());
+  return [...messages].sort((left, right) => getMessageTime(left) - getMessageTime(right));
+}
+
+function shouldPreferIncomingIdentity(existing: Message, incoming: Message) {
+  if (isUnresolvedOutbound(existing) && hasConfirmedOutboundIdentity(incoming)) {
+    return true;
+  }
+
+  if (hasConfirmedOutboundIdentity(existing) && isUnresolvedOutbound(incoming)) {
+    return false;
+  }
+
+  return getAckRank(incoming.ack_status) >= getAckRank(existing.ack_status);
+}
+
+function resolveMergedAckStatus(existing: Message, incoming: Message) {
+  return getAckRank(incoming.ack_status) >= getAckRank(existing.ack_status)
+    ? incoming.ack_status ?? existing.ack_status
+    : existing.ack_status ?? incoming.ack_status;
 }
 
 function mergeMessage(existing: Message, incoming: Message): Message {
+  const preferIncoming = shouldPreferIncomingIdentity(existing, incoming);
+  const primary = preferIncoming ? incoming : existing;
+  const secondary = preferIncoming ? existing : incoming;
+
   return {
-    ...existing,
-    ...incoming,
-    ack_status: incoming.ack_status ?? existing.ack_status,
+    ...secondary,
+    ...primary,
+    content_text: primary.content_text ?? secondary.content_text,
+    content_json: primary.content_json ?? secondary.content_json,
+    ack_status: resolveMergedAckStatus(existing, incoming),
     delivered_at: incoming.delivered_at ?? existing.delivered_at,
     read_at: incoming.read_at ?? existing.read_at
   };
+}
+
+export function compactOutgoingEchoDuplicates(messages: Message[]) {
+  const compacted: Message[] = [];
+
+  for (const message of sortMessages(messages)) {
+    const existingIndex = compacted.findIndex((item) => messageMatches(item, message));
+
+    if (existingIndex === -1) {
+      compacted.push(message);
+      continue;
+    }
+
+    compacted[existingIndex] = mergeMessage(compacted[existingIndex], message);
+  }
+
+  return sortMessages(compacted);
 }
 
 function isMessageArray(value: unknown): value is Message[] {
@@ -68,12 +191,12 @@ export function upsertMessageInCache(queryClient: QueryClient, message: Message)
       patched = true;
 
       if (existingIndex === -1) {
-        return sortMessages([...current, message]);
+        return compactOutgoingEchoDuplicates([...current, message]);
       }
 
       const next = [...current];
       next[existingIndex] = mergeMessage(next[existingIndex], message);
-      return sortMessages(next);
+      return compactOutgoingEchoDuplicates(next);
     }
   );
 
@@ -91,7 +214,7 @@ export function replaceOptimisticMessageInCache(queryClient: QueryClient, optimi
 
       const next = current.filter((message) => message.id !== optimisticId && !messageMatches(message, realMessage));
       patched = true;
-      return sortMessages([...next, realMessage]);
+      return compactOutgoingEchoDuplicates([...next, realMessage]);
     }
   );
 
