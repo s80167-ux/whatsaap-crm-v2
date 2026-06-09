@@ -43,7 +43,7 @@ adminRoutes.get("/organization-modules/:moduleKey/status", asyncHandler(getCampa
 adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
 adminRoutes.patch(
   "/organizations/:organizationId/access-limits",
-  requirePermission("org.manage_settings"),
+  requirePermission("platform.manage_organizations"),
   asyncHandler(updateOrganizationAccessLimits)
 );
 adminRoutes.get("/google-signup-requests", requirePermission("platform.manage_organizations"), asyncHandler(listGoogleSignupRequests));
