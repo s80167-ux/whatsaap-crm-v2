@@ -103,14 +103,16 @@ export function WhatsAppNumberAccessPanel({
 
   const accounts = overview?.accounts ?? EMPTY_ACCOUNTS;
   const overviewUsers = overview?.users ?? EMPTY_USERS;
-  const selectedAccount = useMemo(() => {
+  const selectedOverviewAccount = useMemo(() => {
     if (selectedAccountId) {
       return accounts.find((account) => account.id === selectedAccountId) ?? internalSelectedAccount;
     }
 
     return internalSelectedAccount;
   }, [accounts, internalSelectedAccount, selectedAccountId]);
-  const detailQuery = useWhatsAppAccountAccessDetail(selectedAccount?.id ?? null, Boolean(selectedAccount));
+  const detailAccountId = selectedAccountId ?? selectedOverviewAccount?.id ?? null;
+  const detailQuery = useWhatsAppAccountAccessDetail(detailAccountId, Boolean(detailAccountId));
+  const selectedAccount = detailQuery.data?.account ?? selectedOverviewAccount;
   const detailUsers = detailQuery.data?.users?.length ? detailQuery.data.users : overviewUsers;
   const accountPagination = usePanelPagination(accounts);
   const detailUserPagination = usePanelPagination(detailUsers);
