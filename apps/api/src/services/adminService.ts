@@ -1630,9 +1630,7 @@ export class AdminService {
     const client = await pool.connect();
     try {
       const accounts = await this.whatsappAccessRepository.listAccountSummaries(client, resolvedOrganizationId);
-      const users = authUser.role === "super_admin"
-        ? await this.userRepository.listAll(client)
-        : await this.userRepository.listByOrganization(client, resolvedOrganizationId);
+      const users = await this.userRepository.listByOrganization(client, resolvedOrganizationId);
 
       return {
         organizationId: resolvedOrganizationId,
@@ -1661,9 +1659,7 @@ export class AdminService {
         organizationId: account.organization_id,
         whatsappAccountId
       });
-      const users = authUser.role === "super_admin"
-        ? await this.userRepository.listAll(client)
-        : await this.userRepository.listByOrganization(client, account.organization_id);
+      const users = await this.userRepository.listByOrganization(client, account.organization_id);
 
       return {
         account,
@@ -1696,7 +1692,7 @@ export class AdminService {
           organizationId: account.organization_id,
           whatsappAccountId,
           accessList,
-          allowCrossOrganizationUsers: authUser.role === "super_admin"
+          allowCrossOrganizationUsers: false
         });
       } catch (error) {
         if (error instanceof Error && error.message === "At least one active owner is required") {
