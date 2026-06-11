@@ -185,6 +185,10 @@ function getMissingModuleDefault(moduleKey: OrganizationModuleKey) {
   return moduleKey === INBOX_MODULE_KEY || moduleKey === CRM_MODULE_KEY || moduleKey === SALES_MODULE_KEY;
 }
 
+function resolveOrganizationIdForModuleStatus(authUser: AuthUser, organizationId?: string | null) {
+  return authUser.role === "super_admin" ? organizationId ?? null : authUser.organizationId;
+}
+
 function slugifyOrganizationName(name: string) {
   return name
     .toLowerCase()
@@ -295,7 +299,7 @@ export class AdminService {
   }
 
   async getOrganizationModuleStatus(authUser: AuthUser, moduleKey: OrganizationModuleKey, organizationId?: string | null) {
-    const resolvedOrganizationId = authUser.role === "super_admin" ? organizationId ?? null : authUser.organizationId;
+    const resolvedOrganizationId = resolveOrganizationIdForModuleStatus(authUser, organizationId);
 
     if (!resolvedOrganizationId) {
       return {
@@ -307,24 +311,7 @@ export class AdminService {
 
     const client = await pool.connect();
     try {
-      const lookupKeys = getModuleLookupKeys(moduleKey);
-      const result = await client.query<{ is_enabled: boolean }>(
-        `
-          select is_enabled
-          from organization_modules
-          where organization_id = $1
-            and module_key = any($2::text[])
-          order by case when module_key = $3 then 0 else 1 end
-          limit 1
-        `,
-        [resolvedOrganizationId, lookupKeys, moduleKey]
-      );
-
-      return {
-        organizationId: resolvedOrganizationId,
-        moduleKey,
-        isEnabled: result.rows[0]?.is_enabled ?? getMissingModuleDefault(moduleKey)
-      };
+      return this.getOrganizationModuleStatusWithClient(client, resolvedOrganizationId, moduleKey);
     } finally {
       client.release();
     }
@@ -412,6 +399,43 @@ export class AdminService {
     return withTransaction((client) =>
       this.updateOrganizationModuleWithClient(client, authUser, organizationId, AI_MESSAGE_ASSIST_MODULE_KEY, isEnabled)
     );
+  }
+
+  private async getOrganizationModuleStatusWithClient(
+    client: PoolClient,
+    organizationId: string,
+    moduleKey: OrganizationModuleKey
+  ) {
+    const lookupKeys = getModuleLookupKeys(moduleKey);
+    const result = await client.query<{ is_enabled: boolean }>(
+      `
+        select is_enabled
+        from organization_modules
+        where organization_id = $1
+          and module_key = any($2::text[])
+        order by case when module_key = $3 then 0 else 1 end
+        limit 1
+      `,
+      [organizationId, lookupKeys, moduleKey]
+    );
+
+    return {
+      organizationId,
+      moduleKey,
+      isEnabled: result.rows[0]?.is_enabled ?? getMissingModuleDefault(moduleKey)
+    };
+  }
+
+  private async getOrganizationModuleStatusesWithClient(
+    client: PoolClient,
+    organizationId: string,
+    moduleKeys: readonly OrganizationModuleKey[]
+  ) {
+    const moduleStatuses = await Promise.all(
+      moduleKeys.map(async (moduleKey) => [moduleKey, await this.getOrganizationModuleStatusWithClient(client, organizationId, moduleKey)] as const)
+    );
+
+    return new Map(moduleStatuses);
   }
 
   private async updateOrganizationModuleWithClient(
@@ -784,13 +808,15 @@ export class AdminService {
 
     const client = await pool.connect();
     try {
-      const campaignStatus = await this.getCampaignModuleStatus(authUser, organizationId);
-      const campaignWhatsAppStatus = await this.getCampaignWhatsAppModuleStatus(authUser, organizationId);
-      const campaignEmailStatus = await this.getCampaignEmailModuleStatus(authUser, organizationId);
-      const aiMessageAssistStatus = await this.getAiMessageAssistModuleStatus(authUser, organizationId);
-      const inboxStatus = await this.getInboxModuleStatus(authUser, organizationId);
-      const crmStatus = await this.getCrmModuleStatus(authUser, organizationId);
-      const salesStatus = await this.getSalesModuleStatus(authUser, organizationId);
+      const moduleStatuses = await this.getOrganizationModuleStatusesWithClient(client, organizationId, [
+        CAMPAIGN_MODULE_KEY,
+        CAMPAIGN_WHATSAPP_MODULE_KEY,
+        CAMPAIGN_EMAIL_MODULE_KEY,
+        AI_MESSAGE_ASSIST_MODULE_KEY,
+        INBOX_MODULE_KEY,
+        CRM_MODULE_KEY,
+        SALES_MODULE_KEY
+      ]);
       const maxWhatsappAccounts = await this.getOrganizationLimitValueWithClient(
         client,
         organizationId,
@@ -930,31 +956,33 @@ export class AdminService {
         modules: [
           {
             moduleKey: CAMPAIGN_MODULE_KEY,
-            isEnabled: campaignStatus.isEnabled
+            isEnabled: moduleStatuses.get(CAMPAIGN_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(CAMPAIGN_MODULE_KEY)
           },
           {
             moduleKey: CAMPAIGN_WHATSAPP_MODULE_KEY,
-            isEnabled: campaignWhatsAppStatus.isEnabled
+            isEnabled:
+              moduleStatuses.get(CAMPAIGN_WHATSAPP_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(CAMPAIGN_WHATSAPP_MODULE_KEY)
           },
           {
             moduleKey: CAMPAIGN_EMAIL_MODULE_KEY,
-            isEnabled: campaignEmailStatus.isEnabled
+            isEnabled: moduleStatuses.get(CAMPAIGN_EMAIL_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(CAMPAIGN_EMAIL_MODULE_KEY)
           },
           {
             moduleKey: AI_MESSAGE_ASSIST_MODULE_KEY,
-            isEnabled: aiMessageAssistStatus.isEnabled
+            isEnabled:
+              moduleStatuses.get(AI_MESSAGE_ASSIST_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(AI_MESSAGE_ASSIST_MODULE_KEY)
           },
           {
             moduleKey: INBOX_MODULE_KEY,
-            isEnabled: inboxStatus.isEnabled
+            isEnabled: moduleStatuses.get(INBOX_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(INBOX_MODULE_KEY)
           },
           {
             moduleKey: CRM_MODULE_KEY,
-            isEnabled: crmStatus.isEnabled
+            isEnabled: moduleStatuses.get(CRM_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(CRM_MODULE_KEY)
           },
           {
             moduleKey: SALES_MODULE_KEY,
-            isEnabled: salesStatus.isEnabled
+            isEnabled: moduleStatuses.get(SALES_MODULE_KEY)?.isEnabled ?? getMissingModuleDefault(SALES_MODULE_KEY)
           }
         ],
         limits: {

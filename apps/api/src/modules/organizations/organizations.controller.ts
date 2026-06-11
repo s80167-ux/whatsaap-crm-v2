@@ -23,7 +23,7 @@ const updateCampaignsModuleSchema = z.object({
 
 const organizationModuleParamsSchema = z.object({
   organizationId: z.string().uuid(),
-  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist"])
+  moduleKey: z.enum(["campaigns", "campaign", "campaign.whatsapp", "campaign.email", "ai_message_assist", "inbox", "crm", "sales"])
 });
 
 export async function listOrganizations(_request: Request, response: Response) {

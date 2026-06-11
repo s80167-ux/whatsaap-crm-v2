@@ -16,6 +16,23 @@ export type AudienceCsvField =
 
 export type AudienceColumnMapping = Partial<Record<AudienceCsvField, string>>;
 
+export type AudienceColumnSuggestionConfidence = "high" | "medium" | "low";
+
+export type AudienceColumnSuggestionReason =
+  | "exact_alias"
+  | "token_match"
+  | "sample_phone"
+  | "sample_gender"
+  | "unmatched";
+
+export interface AudienceColumnMappingSuggestion {
+  field: AudienceCsvField;
+  sourceHeader?: string;
+  confidence: AudienceColumnSuggestionConfidence;
+  score: number;
+  reason: AudienceColumnSuggestionReason;
+}
+
 export interface AudienceGroup {
   id: string;
   organization_id?: string | null;

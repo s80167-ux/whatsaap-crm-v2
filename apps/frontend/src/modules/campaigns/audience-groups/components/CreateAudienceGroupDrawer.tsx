@@ -5,14 +5,17 @@ import { Input } from "../../../../components/Input";
 import { PopupOverlay } from "../../../../components/PopupOverlay";
 import type {
   AudienceColumnMapping,
+  AudienceColumnMappingSuggestion,
+  AudienceCsvField,
   AudienceGroup,
   AudienceValidationResult
 } from "../types/audienceGroup.types";
 import {
-  autoMapAudienceColumns,
   parseAudienceCsv,
+  suggestAudienceColumnMapping,
   validateAudienceRows
 } from "../utils/audienceCsvValidation";
+import { buildAudienceMappingFromSuggestions, resolveAudienceMappingChange } from "../utils/audienceColumnMapping";
 import {
   createAudienceGroup,
   fetchCrmPhoneLookup,
@@ -54,6 +57,8 @@ export function CreateAudienceGroupDrawer({
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<ReturnType<typeof parseAudienceCsv>["rows"]>([]);
   const [mapping, setMapping] = useState<AudienceColumnMapping>({});
+  const [mappingSuggestions, setMappingSuggestions] = useState<AudienceColumnMappingSuggestion[]>([]);
+  const [manuallyChangedFields, setManuallyChangedFields] = useState<Set<AudienceCsvField>>(new Set());
   const [result, setResult] = useState<AudienceValidationResult | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
@@ -89,6 +94,8 @@ export function CreateAudienceGroupDrawer({
     setHeaders([]);
     setRows([]);
     setMapping({});
+    setMappingSuggestions([]);
+    setManuallyChangedFields(new Set());
     setResult(null);
     setIsBusy(false);
   }
@@ -106,11 +113,29 @@ export function CreateAudienceGroupDrawer({
       return;
     }
 
+    const suggested = suggestAudienceColumnMapping(parsed.headers, parsed.rows);
+
     setFileName(nextFileName);
     setHeaders(parsed.headers);
     setRows(parsed.rows);
-    setMapping(autoMapAudienceColumns(parsed.headers));
+    setMapping(buildAudienceMappingFromSuggestions(suggested.suggestions));
+    setMappingSuggestions(suggested.suggestions);
+    setManuallyChangedFields(new Set());
     setResult(null);
+  }
+
+  function handleMappingChange(field: AudienceCsvField, sourceHeader?: string) {
+    const resolved = resolveAudienceMappingChange(mapping, field, sourceHeader);
+    setMapping(resolved.mapping);
+    setManuallyChangedFields((current) => new Set(current).add(field));
+    setResult(null);
+
+    if (resolved.clearedField) {
+      onNotice(
+        `Moved "${sourceHeader}" to ${field.replace(/_/g, " ")} and cleared it from ${resolved.clearedField.replace(/_/g, " ")}.`,
+        "success"
+      );
+    }
   }
 
   async function runValidation() {
@@ -237,10 +262,13 @@ export function CreateAudienceGroupDrawer({
         {stepIndex === 1 ? <AudienceCsvUploadStep fileName={fileName} onCsvLoaded={handleCsvLoaded} /> : null}
 
         {stepIndex === 2 ? (
-          <AudienceColumnMappingStep headers={headers} mapping={mapping} onChange={(nextMapping) => {
-            setMapping(nextMapping);
-            setResult(null);
-          }} />
+          <AudienceColumnMappingStep
+            headers={headers}
+            mapping={mapping}
+            suggestions={mappingSuggestions}
+            manuallyChangedFields={manuallyChangedFields}
+            onChange={handleMappingChange}
+          />
         ) : null}
 
         {stepIndex === 3 ? (
