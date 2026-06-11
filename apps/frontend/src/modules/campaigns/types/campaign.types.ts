@@ -25,6 +25,7 @@ export type Campaign = {
   audienceGroupName?: string | null;
   audienceValidCount?: number;
   senderWhatsAppAccountId?: string | null;
+  senderWhatsAppAccountIds?: string[];
   senderWhatsAppLabel?: string | null;
   senderPhoneNumber?: string | null;
   messageTemplate?: string | null;

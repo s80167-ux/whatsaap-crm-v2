@@ -1,16 +1,15 @@
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
 import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
 import { Button } from "../../../components/Button";
 import { Input, Select } from "../../../components/Input";
 import { PopupOverlay } from "../../../components/PopupOverlay";
-import { getGovernedTemplates, getTemplateGovernanceSettings } from "../../../api/templateGovernance";
 import type { WhatsAppAccountSummary } from "../../../types/admin";
 import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types";
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
 import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
+import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
 import type { CampaignAttachment, CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
@@ -72,10 +71,11 @@ export function CreateCampaignDrawer({
 }) {
   const { t } = useTranslation();
   const [campaignName, setCampaignName] = useState("");
-  const [senderWhatsAppAccountId, setSenderWhatsAppAccountId] = useState("");
+  const [selectedSenderWhatsAppAccountIds, setSelectedSenderWhatsAppAccountIds] = useState<string[]>([]);
+  const [primarySenderWhatsAppAccountId, setPrimarySenderWhatsAppAccountId] = useState("");
   const [audienceGroupId, setAudienceGroupId] = useState("");
+  const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
   const [messageTemplate, setMessageTemplate] = useState(defaultTemplate);
-  const [templateGovernanceVersionId, setTemplateGovernanceVersionId] = useState("");
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
   const [attachment, setAttachment] = useState<CampaignAttachment | null>(null);
@@ -86,41 +86,30 @@ export function CreateCampaignDrawer({
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
   const [identityHintDismissed, setIdentityHintDismissed] = useState(false);
+  const { data: savedMessageTemplates = [], isLoading: isLoadingSavedTemplates } = useMessageTemplates(organizationId, open);
 
-  const connectedAccounts = useMemo(
-    () => whatsappAccounts.filter((account) => isSenderConnected(account)),
+  const connectedAccounts = useMemo(() => whatsappAccounts.filter((account) => isSenderConnected(account)), [whatsappAccounts]);
+  const availableMessageTemplates = useMemo(
+    () => savedMessageTemplates.filter((template) => template.status !== "Archived"),
+    [savedMessageTemplates]
+  );
+  const disconnectedAccounts = useMemo(
+    () => whatsappAccounts.filter((account) => !isSenderConnected(account)),
     [whatsappAccounts]
   );
-  const governanceSettingsQuery = useQuery({
-    queryKey: ["template-governance", "campaign-settings", organizationId],
-    queryFn: () => getTemplateGovernanceSettings({ organizationId }),
-    enabled: open
-  });
-  const governedTemplatesQuery = useQuery({
-    queryKey: ["template-governance", "campaign-message-templates", organizationId],
-    queryFn: () =>
-      getGovernedTemplates({
-        organizationId,
-        templateType: "campaign_message",
-        status: "approved",
-        limit: 200
-      }),
-    enabled: open
-  });
-  const unavailableSenderCount = whatsappAccounts.length - connectedAccounts.length;
 
   const readyAudienceGroups = useMemo(
     () => audienceGroups.filter((group) => group.status === "imported" && group.valid_count > 0),
     [audienceGroups]
   );
 
-  const selectedSender = whatsappAccounts.find((account) => account.id === senderWhatsAppAccountId) ?? null;
-  const approvedCampaignTemplates = useMemo(
-    () => (governedTemplatesQuery.data ?? []).filter((template) => template.current_status === "approved" && template.active_version_id),
-    [governedTemplatesQuery.data]
+  const selectedSenders = useMemo(
+    () => selectedSenderWhatsAppAccountIds
+      .map((senderId) => whatsappAccounts.find((account) => account.id === senderId) ?? null)
+      .filter((account): account is NonNullable<typeof account> => Boolean(account)),
+    [selectedSenderWhatsAppAccountIds, whatsappAccounts]
   );
-  const governanceApprovalRequired = Boolean(governanceSettingsQuery.data?.approval_required);
-  const selectedGovernedTemplate = approvedCampaignTemplates.find((template) => template.active_version_id === templateGovernanceVersionId) ?? null;
+  const selectedSender = whatsappAccounts.find((account) => account.id === primarySenderWhatsAppAccountId) ?? null;
   const selectedSenderIsConnected = selectedSender ? isSenderConnected(selectedSender) : false;
   const selectedAudienceGroup = readyAudienceGroups.find((group) => group.id === audienceGroupId) ?? null;
   const selectedAudienceSyncedCount = selectedAudienceGroup
@@ -134,7 +123,17 @@ export function CreateCampaignDrawer({
     selectedAudienceSyncedCount < selectedAudienceGroup.valid_count
   );
   const preview = useMemo(() => renderCampaignTemplate(messageTemplate, sampleContact), [messageTemplate, sampleContact]);
-  const senderLabel = selectedSender ? formatSenderLabel(selectedSender) : null;
+  const senderLabel = useMemo(() => {
+    if (selectedSenders.length === 0) {
+      return null;
+    }
+
+    if (selectedSenders.length === 1) {
+      return formatSenderLabel(selectedSenders[0]);
+    }
+
+    return `${selectedSenders.length} senders selected - Primary: ${selectedSender ? formatSenderLabel(selectedSender) : formatSenderLabel(selectedSenders[0])}`;
+  }, [selectedSender, selectedSenders]);
   const tempoLabel = formatTempoLabel(tempo);
 
   if (!open) {
@@ -151,21 +150,46 @@ export function CreateCampaignDrawer({
   }
 
   function validateSender() {
-    if (!senderWhatsAppAccountId || !selectedSender) {
-      showError("Select a Sender WhatsApp Number first.");
+    if (selectedSenderWhatsAppAccountIds.length === 0) {
+      showError("Select at least one connected Sender WhatsApp Number first.");
       return false;
     }
 
-    if (!selectedSenderIsConnected) {
+    const firstUnavailableSender = selectedSenders.find((sender) => !isSenderConnected(sender));
+    if (firstUnavailableSender) {
       showError(
-        selectedSender.live_status_error
-          ? "The selected sender could not be verified with the live WhatsApp connector. Reconnect it and try again."
-          : `The selected sender is currently ${formatSenderStatus(selectedSender)}. Reconnect it and try again.`
+        firstUnavailableSender.live_status_error
+          ? "One selected sender could not be verified with the live WhatsApp connector. Reconnect it and try again."
+          : `${firstUnavailableSender.name} is currently ${formatSenderStatus(firstUnavailableSender)}. Reconnect it and try again.`
       );
       return false;
     }
 
+    if (!primarySenderWhatsAppAccountId || !selectedSender) {
+      showError("Choose the primary sender for test sends and campaign ownership.");
+      return false;
+    }
+
     return true;
+  }
+
+  function handleSenderToggle(senderId: string, checked: boolean) {
+    setSelectedSenderWhatsAppAccountIds((current) => {
+      const next = checked
+        ? current.includes(senderId)
+          ? current
+          : [...current, senderId]
+        : current.filter((value) => value !== senderId);
+
+      setPrimarySenderWhatsAppAccountId((currentPrimary) => {
+        if (next.length === 0) return "";
+        if (currentPrimary && next.includes(currentPrimary)) return currentPrimary;
+        return next[0];
+      });
+
+      return next;
+    });
+    setTestSendNotice(null);
   }
 
   function validateAudience() {
@@ -188,20 +212,7 @@ export function CreateCampaignDrawer({
       return false;
     }
 
-    if (governanceApprovalRequired && !templateGovernanceVersionId) {
-      showError("Template is not approved for campaign use.");
-      return false;
-    }
-
     return true;
-  }
-
-  function handleGovernedTemplateChange(versionId: string) {
-    setTemplateGovernanceVersionId(versionId);
-    const template = approvedCampaignTemplates.find((item) => item.active_version_id === versionId);
-    if (template?.active_body) {
-      setMessageTemplate(template.active_body);
-    }
   }
 
   async function handleAudienceGroupChange(nextAudienceGroupId: string) {
@@ -242,6 +253,15 @@ export function CreateCampaignDrawer({
       speedPreset: "custom",
       [field]: Math.max(1, Number(value) || 1)
     }));
+  }
+
+  function handleMessageTemplateSelect(templateId: string) {
+    setSelectedMessageTemplateId(templateId);
+    const selectedTemplate = availableMessageTemplates.find((template) => template.id === templateId);
+
+    if (selectedTemplate) {
+      setMessageTemplate(selectedTemplate.content);
+    }
   }
 
   function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -301,10 +321,11 @@ export function CreateCampaignDrawer({
       const campaign = await createCampaign({
         organizationId,
         name: campaignName.trim(),
-        senderWhatsAppAccountId,
+        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
+        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
+        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
         audienceGroupId,
         messageTemplate,
-        templateGovernanceVersionId: templateGovernanceVersionId || null,
         tempo,
         attachment,
         attachContactCard
@@ -335,10 +356,9 @@ export function CreateCampaignDrawer({
     try {
       const result = await sendCampaignTest({
         organizationId,
-        senderWhatsAppAccountId,
+        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
         testPhoneNumber: testPhoneNumber.trim(),
         messageTemplate: preview,
-        templateGovernanceVersionId: templateGovernanceVersionId || null,
         attachment,
         attachContactCard
       });
@@ -361,10 +381,11 @@ export function CreateCampaignDrawer({
       const campaign = await createCampaign({
         organizationId,
         name: campaignName.trim(),
-        senderWhatsAppAccountId,
+        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
+        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
+        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
         audienceGroupId,
         messageTemplate,
-        templateGovernanceVersionId: templateGovernanceVersionId || null,
         tempo,
         attachment,
         attachContactCard
@@ -380,10 +401,11 @@ export function CreateCampaignDrawer({
       const result = await startCampaign({
         campaignId: campaign.id,
         organizationId,
-        senderWhatsAppAccountId,
+        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
+        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
+        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
         audienceGroupId,
         messageTemplate,
-        templateGovernanceVersionId: templateGovernanceVersionId || null,
         speedPreset: tempo.speedPreset,
         attachment,
         attachContactCard
@@ -398,8 +420,8 @@ export function CreateCampaignDrawer({
     }
   }
 
-  const actionDisabled = !selectedSender || !selectedSenderIsConnected;
-  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign || (governanceApprovalRequired && !templateGovernanceVersionId);
+  const actionDisabled = selectedSenderWhatsAppAccountIds.length === 0 || !selectedSender || !selectedSenderIsConnected;
+  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign;
 
   return (
     <PopupOverlay
@@ -425,21 +447,69 @@ export function CreateCampaignDrawer({
                 <Input value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder="May promo campaign" />
               </label>
 
+              <div className="block">
+                <span className="workspace-label">Sender WhatsApp Numbers</span>
+                <div className="mt-2 space-y-2 rounded-2xl border border-border bg-background px-3 py-3">
+                  {whatsappAccounts.length === 0 ? (
+                    <p className="text-sm text-text-muted">No WhatsApp numbers available yet.</p>
+                  ) : (
+                    whatsappAccounts.map((account) => {
+                      const connected = isSenderConnected(account);
+                      const checked = selectedSenderWhatsAppAccountIds.includes(account.id);
+
+                      return (
+                        <label
+                          key={account.id}
+                          className={connected
+                            ? "flex items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3"
+                            : "flex items-start gap-3 rounded-2xl border border-border bg-background-tint px-3 py-3 opacity-70"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!connected}
+                            onChange={(event) => handleSenderToggle(account.id, event.target.checked)}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-text">{account.name}</p>
+                            <p className="text-xs text-text-muted">{formatSenderLabel(account)}</p>
+                            {!connected ? (
+                              <p className="mt-1 text-xs text-amber-800">
+                                Not connected. Reconnect this number before it can join the campaign sender pool.
+                              </p>
+                            ) : null}
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-text-muted">
+                  Choose one or more connected senders. When more than one sender is selected, the campaign will rotate them automatically.
+                </p>
+              </div>
+
               <label className="block">
-                <span className="workspace-label">Sender WhatsApp Number</span>
-                <Select value={senderWhatsAppAccountId} onChange={(event) => {
-                  setSenderWhatsAppAccountId(event.target.value);
-                  setTestSendNotice(null);
-                }}>
-                  <option value="">Select live connected sender</option>
-                  {connectedAccounts.map((account) => (
+                <span className="workspace-label">Primary Sender</span>
+                <Select
+                  value={primarySenderWhatsAppAccountId}
+                  onChange={(event) => {
+                    setPrimarySenderWhatsAppAccountId(event.target.value);
+                    setTestSendNotice(null);
+                  }}
+                  disabled={selectedSenders.length === 0}
+                >
+                  <option value="">{selectedSenders.length === 0 ? "Select sender(s) first" : "Choose primary sender"}</option>
+                  {selectedSenders.map((account) => (
                     <option key={account.id} value={account.id}>
                       {formatSenderLabel(account)}
                     </option>
                   ))}
                 </Select>
                 {selectedSender ? (
-                  <p className="mt-2 text-xs text-text-muted">Live status: {formatSenderStatus(selectedSender)}</p>
+                  <p className="mt-2 text-xs text-text-muted">
+                    Primary sender handles test sends and becomes the campaign's main sender label.
+                  </p>
                 ) : null}
               </label>
 
@@ -462,9 +532,9 @@ export function CreateCampaignDrawer({
               </div>
             ) : null}
 
-            {unavailableSenderCount > 0 ? (
+            {disconnectedAccounts.length > 0 ? (
               <div className="mt-4 rounded-2xl border border-dashed border-border bg-background-tint px-4 py-3 text-sm leading-6 text-text-muted">
-                Showing {connectedAccounts.length} live connected sender{connectedAccounts.length === 1 ? "" : "s"}. {unavailableSenderCount} sender{unavailableSenderCount === 1 ? " is" : "s are"} hidden because the live WhatsApp connection is disconnected or could not be verified.
+                {connectedAccounts.length} connected sender{connectedAccounts.length === 1 ? "" : "s"} can be selected now. {disconnectedAccounts.length} sender{disconnectedAccounts.length === 1 ? " is" : "s are"} shown as disabled because the live WhatsApp connection is disconnected or could not be verified.
               </div>
             ) : null}
 
@@ -505,27 +575,41 @@ export function CreateCampaignDrawer({
           <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
             <div className="mb-4">
               <p className="text-sm font-semibold text-text">Message Template</p>
-              <p className="mt-1 text-sm text-text-muted">Use variables to personalise the message automatically for each contact.</p>
+              <p className="mt-1 text-sm text-text-muted">Choose a saved template from Create Template, or write the campaign message directly and personalise it for each contact.</p>
             </div>
 
             <label className="block">
-              <span className="workspace-label">Approved Template</span>
-              <Select value={templateGovernanceVersionId} onChange={(event) => handleGovernedTemplateChange(event.target.value)}>
-                <option value="">{governanceApprovalRequired ? "Select approved governed template" : "Optional approved governed template"}</option>
-                {approvedCampaignTemplates.map((template) => (
-                  <option key={template.template_id} value={template.active_version_id ?? ""}>
-                    {template.title} {template.active_version_number ? `(v${template.active_version_number})` : ""}
+              <span className="workspace-label">Choose Saved Template</span>
+              <Select
+                value={selectedMessageTemplateId}
+                onChange={(event) => handleMessageTemplateSelect(event.target.value)}
+                disabled={isLoadingSavedTemplates}
+              >
+                <option value="">
+                  {isLoadingSavedTemplates
+                    ? "Loading saved templates..."
+                    : availableMessageTemplates.length > 0
+                      ? "Select a created template"
+                      : "No saved templates yet"}
+                </option>
+                {availableMessageTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} ({template.category})
                   </option>
                 ))}
               </Select>
-              {governanceApprovalRequired ? (
-                <p className="mt-2 text-xs text-text-muted">Approval is enabled. Campaign start requires an approved governed template.</p>
-              ) : selectedGovernedTemplate ? (
-                <p className="mt-2 text-xs text-text-muted">Using governed snapshot from {selectedGovernedTemplate.title}.</p>
-              ) : null}
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-muted">
+                <span>Saved templates come from the WhatsApp template library.</span>
+                <Link className="font-semibold text-primary hover:text-primary-dark" to="/campaigns/whatsapp/templates/create">
+                  Create Template
+                </Link>
+                <Link className="font-semibold text-primary hover:text-primary-dark" to="/campaigns/whatsapp/templates">
+                  Manage Templates
+                </Link>
+              </div>
             </label>
 
-            <label className="mt-4 block">
+            <label className="block">
               <span className="workspace-label">Template Content</span>
               <textarea
                 value={messageTemplate}

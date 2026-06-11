@@ -90,7 +90,9 @@ export function getCampaignStats(campaigns: Campaign[]): CampaignStats {
 export type CreateCampaignInput = {
   organizationId?: string | null;
   name: string;
-  senderWhatsAppAccountId: string;
+  senderWhatsAppAccountId?: string;
+  senderWhatsAppAccountIds?: string[];
+  senderMode?: "single" | "round_robin";
   audienceGroupId: string;
   messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
@@ -214,6 +216,8 @@ export async function startCampaign(input: {
   campaignId?: string;
   organizationId?: string | null;
   senderWhatsAppAccountId?: string;
+  senderWhatsAppAccountIds?: string[];
+  senderMode?: "single" | "round_robin";
   audienceGroupId?: string;
   messageTemplate?: string;
   templateGovernanceVersionId?: string | null;

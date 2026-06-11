@@ -16,7 +16,6 @@ import { CampaignListTable } from "../components/CampaignListTable";
 import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignReviewDrawer } from "../components/CampaignReviewDrawer";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
-import { CreateCampaignDrawer } from "../components/CreateCampaignDrawer";
 import { cancelCampaign, deleteCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign, startCampaign } from "../services/campaignService";
 import type { Campaign, CampaignStatus } from "../types/campaign.types";
 
@@ -32,20 +31,17 @@ const campaignListPageSize = 5;
 const whatsappWorkflowStepKeys = [
   "campaign.whatsapp.workflow.audience",
   "campaign.whatsapp.workflow.template",
-  "campaign.whatsapp.workflow.governance",
   "campaign.whatsapp.workflow.setup",
-  "campaign.whatsapp.workflow.safety",
   "campaign.whatsapp.workflow.launch"
 ];
 
-export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overview" | "create" | "history" }) {
+export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overview" | "history" }) {
   const { t } = useTranslation();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const navigate = useNavigate();
   const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : null;
   const shouldFetchOrganizationData = !outletContext.isSuperAdmin || Boolean(organizationId);
   const queryClient = useQueryClient();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(activeTab === "create");
   const [reviewCampaign, setReviewCampaign] = useState<Campaign | null>(null);
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | "all">("all");
@@ -91,10 +87,6 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
   useEffect(() => {
     setCampaignPage(1);
   }, [campaignQuery, setCampaignPage, statusFilter]);
-
-  useEffect(() => {
-    setIsDrawerOpen(activeTab === "create");
-  }, [activeTab]);
 
   function showPlaceholderNotice(message: string, variant: "success" | "error" = "success") {
     setNotice({ message, variant });
@@ -179,14 +171,21 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     () => audienceGroups.reduce((total, group) => total + group.valid_count, 0),
     [audienceGroups]
   );
-  const recentCampaigns = filteredCampaigns.slice(0, 3);
+  const connectedAccountCount = useMemo(
+    () => whatsappAccounts.filter((account) => {
+      if (typeof account.live_connected === "boolean") {
+        return account.live_connected;
+      }
 
-  function handleCloseDrawer() {
-    setIsDrawerOpen(false);
-    if (activeTab === "create") {
-      navigate("/campaigns/whatsapp", { replace: true });
-    }
-  }
+      return ["connected", "open", "ready"].includes(account.status.toLowerCase());
+    }).length,
+    [whatsappAccounts]
+  );
+  const readyAudienceGroupsCount = useMemo(
+    () => audienceGroups.filter((group) => group.status === "imported" && group.valid_count > 0).length,
+    [audienceGroups]
+  );
+  const recentCampaigns = filteredCampaigns.slice(0, 3);
 
   return (
     <section className="space-y-5">
@@ -238,60 +237,82 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
           </div>
 
           {activeTab === "overview" ? (
-            <Card elevated className="space-y-4 p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+              <Card elevated className="space-y-4 p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
+                    <p className="mt-2 text-sm text-text-muted">
+                      {t("campaign.whatsapp.launchMonitorCopy")}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/history")}>
+                    View History
+                  </Button>
+                </div>
+
+                {recentCampaigns.length > 0 ? (
+                  <CampaignListTable
+                    campaigns={recentCampaigns}
+                    onAction={showPlaceholderNotice}
+                    onReview={setReviewCampaign}
+                    onStart={handleStartCampaign}
+                    onPause={(campaign) => pauseMutation.mutate(campaign)}
+                    onResume={(campaign) => resumeMutation.mutate(campaign)}
+                    onCancel={(campaign) => cancelMutation.mutate(campaign)}
+                    onDelete={handleDeleteCampaign}
+                  />
+                ) : (
+                  <CampaignEmptyStateCard
+                    title="No broadcasts yet"
+                    description="Create your first WhatsApp broadcast to start pacing outbound campaign delivery."
+                    actionLabel="Create Broadcast"
+                    onAction={() => navigate("/campaigns/whatsapp/create")}
+                  />
+                )}
+              </Card>
+
+              <Card elevated className="space-y-4 p-4 sm:p-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Launch Review</p>
                   <p className="mt-2 text-sm text-text-muted">
-                    {t("campaign.whatsapp.launchMonitorCopy")}
+                    Safety is now part of launch review so teams can check readiness in one place before sending.
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/history")}>
-                  View History
-                </Button>
-              </div>
 
-              {recentCampaigns.length > 0 ? (
-                <CampaignListTable
-                  campaigns={recentCampaigns}
-                  onAction={showPlaceholderNotice}
-                  onReview={setReviewCampaign}
-                  onStart={handleStartCampaign}
-                  onPause={(campaign) => pauseMutation.mutate(campaign)}
-                  onResume={(campaign) => resumeMutation.mutate(campaign)}
-                  onCancel={(campaign) => cancelMutation.mutate(campaign)}
-                  onDelete={handleDeleteCampaign}
-                />
-              ) : (
-                <CampaignEmptyStateCard
-                  title="No broadcasts yet"
-                  description="Create your first WhatsApp broadcast to start pacing outbound campaign delivery."
-                  actionLabel="Create Broadcast"
-                  onAction={() => navigate("/campaigns/whatsapp/create")}
-                />
-              )}
-            </Card>
-          ) : null}
-
-          {activeTab === "create" ? (
-            <Card elevated className="space-y-4 p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Create Broadcast</p>
-                  <p className="mt-2 text-sm text-text-muted">Use the existing broadcast drawer to compose, preview, and schedule a WhatsApp campaign.</p>
+                <div className="space-y-3">
+                  <ReviewCheckRow
+                    label="Connected sender"
+                    description={connectedAccountCount > 0 ? `${connectedAccountCount} live sender available for campaigns.` : "Reconnect a WhatsApp sender before sending."}
+                    status={connectedAccountCount > 0 ? "ready" : "attention"}
+                  />
+                  <ReviewCheckRow
+                    label="Audience ready"
+                    description={readyAudienceGroupsCount > 0 ? `${readyAudienceGroupsCount} audience group ready with valid contacts.` : "Create or import an audience group first."}
+                    status={readyAudienceGroupsCount > 0 ? "ready" : "attention"}
+                  />
+                  <ReviewCheckRow
+                    label="Message review"
+                    description="Preview the message, send a test, and confirm opt-out wording before launch."
+                    status="info"
+                  />
+                  <ReviewCheckRow
+                    label="System safety checks"
+                    description="Recipient validation and campaign safety checks still run when a campaign starts."
+                    status="info"
+                  />
                 </div>
-                <Button size="sm" onClick={() => setIsDrawerOpen(true)}>Open Composer</Button>
-              </div>
-              <CampaignEmptyStateCard
-                title="Broadcast composer ready"
-                description="The existing broadcast drawer opens automatically on this tab. Audience groups and templates remain under their own page tabs so the flow stays familiar."
-                secondaryAction={
-                  <Link className="text-sm font-semibold text-primary hover:text-primary-dark" to="/campaigns/whatsapp/audience">
-                    Manage Audience
-                  </Link>
-                }
-              />
-            </Card>
+
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                  Send only to customers who have given permission to receive WhatsApp messages, and make opting out easy in every campaign.
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => navigate("/campaigns/whatsapp/create")}>Open Composer</Button>
+                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/audience")}>Manage Audience</Button>
+                </div>
+              </Card>
+            </div>
           ) : null}
 
           {activeTab === "history" ? (
@@ -355,15 +376,6 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
         </>
       )}
 
-      <CreateCampaignDrawer
-        open={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        onPlaceholderAction={showPlaceholderNotice}
-        whatsappAccounts={whatsappAccounts}
-        audienceGroups={audienceGroups}
-        organizationId={organizationId}
-        onCampaignChanged={() => void refreshCampaigns()}
-      />
       <CampaignReviewDrawer
         open={Boolean(reviewCampaign)}
         campaign={reviewCampaign}
@@ -397,6 +409,30 @@ function CampaignEmptyStateCard({
         {actionLabel && onAction ? <Button size="sm" onClick={onAction}>{actionLabel}</Button> : null}
         {secondaryAction}
       </div>
+    </div>
+  );
+}
+
+function ReviewCheckRow({
+  description,
+  label,
+  status
+}: {
+  description: string;
+  label: string;
+  status: "ready" | "attention" | "info";
+}) {
+  const tone =
+    status === "ready"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : status === "attention"
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : "border-border bg-background-tint text-text";
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
+      <p className="text-sm font-semibold">{label}</p>
+      <p className="mt-1 text-sm leading-6">{description}</p>
     </div>
   );
 }

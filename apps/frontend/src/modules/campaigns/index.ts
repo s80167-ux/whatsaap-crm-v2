@@ -1,5 +1,6 @@
 export { CampaignsRouteGuard } from "./components/CampaignsRouteGuard";
 export { CampaignsPage } from "./pages/CampaignsPage";
+export { CreateCampaignPage } from "./pages/CreateCampaignPage";
 export { EmailCampaignPage } from "./pages/EmailCampaignPage";
 export { AudienceGroupsPage } from "./audience-groups/pages/AudienceGroupsPage";
 export { MessageTemplatesPage } from "./templates/pages/MessageTemplatesPage";

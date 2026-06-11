@@ -24,12 +24,6 @@ const ContactsPage = lazy(() => import("./pages/ContactsPage").then((module) => 
 const ContactReliabilityPage = lazy(() =>
   import("./pages/ContactReliabilityPage").then((module) => ({ default: module.ContactReliabilityPage }))
 );
-const TemplateGovernancePage = lazy(() =>
-  import("./pages/TemplateGovernancePage").then((module) => ({ default: module.TemplateGovernancePage }))
-);
-const CampaignSafetyPage = lazy(() =>
-  import("./pages/CampaignSafetyPage").then((module) => ({ default: module.CampaignSafetyPage }))
-);
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const DataExportPage = lazy(() => import("./pages/DataExportPage").then((module) => ({ default: module.DataExportPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((module) => ({ default: module.InboxPage })));
@@ -81,6 +75,9 @@ const OrganizationAccessLimitsPage = lazy(() =>
 );
 const CampaignsPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.CampaignsPage }))
+);
+const CreateCampaignPage = lazy(() =>
+  import("./modules/campaigns").then((module) => ({ default: module.CreateCampaignPage }))
 );
 const EmailCampaignPage = lazy(() =>
   import("./modules/campaigns").then((module) => ({ default: module.EmailCampaignPage }))
@@ -185,7 +182,7 @@ export const router = createBrowserRouter([
             path: "campaigns/whatsapp/create",
             element: withRouteFallback(
               <CampaignsRouteGuard moduleKey="campaign.whatsapp">
-                <CampaignsPage activeTab="create" />
+                <CreateCampaignPage />
               </CampaignsRouteGuard>
             )
           },
@@ -223,19 +220,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "campaigns/whatsapp/templates/governance",
-            element: withRouteFallback(
-              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
-                <TemplateGovernancePage />
-              </CampaignsRouteGuard>
-            )
+            element: <Navigate to="/campaigns/whatsapp/templates" replace />
           },
           {
             path: "campaigns/whatsapp/safety",
-            element: withRouteFallback(
-              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
-                <CampaignSafetyPage />
-              </CampaignsRouteGuard>
-            )
+            element: <Navigate to="/campaigns/whatsapp" replace />
           },
           { path: "campaigns/audience-groups", element: <Navigate to="/campaigns/whatsapp/audience" replace /> },
           { path: "campaigns/templates", element: <Navigate to="/campaigns/whatsapp/templates" replace /> },
