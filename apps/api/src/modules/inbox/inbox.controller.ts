@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { AppError } from "../../lib/errors.js";
 import { QueryService, type ActivityRangeFilter } from "../../services/queryService.js";
+import { sanitizeInboxConversationNames } from "../../utils/contactDisplayNameGuard.js";
 
 const queryService = new QueryService();
 
@@ -92,7 +93,8 @@ export async function getInboxThreads(request: Request, response: Response) {
     activityRange,
     channel: channel ?? "all"
   });
-  return response.json({ data: conversations });
+  const safeConversations = await sanitizeInboxConversationNames(conversations, organizationId);
+  return response.json({ data: safeConversations });
 }
 
 export async function getInboxThreadMessages(request: Request, response: Response) {
