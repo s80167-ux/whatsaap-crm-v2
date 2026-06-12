@@ -17,6 +17,7 @@ import {
   saveAudienceAsCrmContacts
 } from "../services/audienceGroupService";
 import { AudienceGroupListTable } from "../components/AudienceGroupListTable";
+import { AudienceGroupViewModal } from "../components/AudienceGroupViewModal";
 import { AudienceImportSuccessModal } from "../components/AudienceImportSuccessModal";
 import { CreateAudienceGroupDrawer } from "../components/CreateAudienceGroupDrawer";
 import { CampaignModuleTabs } from "../../components/CampaignModuleTabs";
@@ -29,6 +30,7 @@ export function AudienceGroupsPage() {
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [successGroup, setSuccessGroup] = useState<AudienceGroup | null>(null);
   const [successResult, setSuccessResult] = useState<AudienceValidationResult | null>(null);
+  const [viewGroup, setViewGroup] = useState<AudienceGroup | null>(null);
   const [storageFilter, setStorageFilter] = useState<"active" | "archived" | "deleted_details" | "all">("active");
   const [savePreviewGroup, setSavePreviewGroup] = useState<AudienceGroup | null>(null);
   const [savePreview, setSavePreview] = useState<SaveAudiencePreviewSummary | null>(null);
@@ -186,7 +188,7 @@ export function AudienceGroupsPage() {
           <AudienceGroupListTable
             groups={groups}
             loading={isLoading}
-            onView={(group) => showNotice(`${group.name} contact detail view will be expanded after Phase 1.`)}
+            onView={setViewGroup}
             onDelete={handleDelete}
             onSaveAsCrm={handleSaveAsCrm}
             onArchive={handleArchive}
@@ -210,10 +212,18 @@ export function AudienceGroupsPage() {
         result={successResult}
         onClose={() => setSuccessGroup(null)}
         onViewGroup={() => {
+          if (successGroup) {
+            setViewGroup(successGroup);
+          }
           setSuccessGroup(null);
-          showNotice("Audience Group is visible in the list.");
         }}
         onPhaseTwoNotice={() => showNotice("Open Campaigns to create a campaign with this Audience Group.")}
+      />
+      <AudienceGroupViewModal
+        open={Boolean(viewGroup)}
+        group={viewGroup}
+        organizationId={organizationId}
+        onClose={() => setViewGroup(null)}
       />
       <PopupOverlay
         open={Boolean(savePreviewGroup && savePreview)}
