@@ -168,7 +168,6 @@ function mapGovernedTemplateToMessageTemplate(template: GovernedTemplate, organi
     category,
     description: null,
     content,
-    attachments: [],
     variables,
     status: mapGovernanceStatus(template.current_status),
     created_by: template.created_by ?? null,

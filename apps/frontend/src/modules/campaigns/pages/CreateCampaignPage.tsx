@@ -1,5 +1,5 @@
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
@@ -9,20 +9,16 @@ import { Input, Select } from "../../../components/Input";
 import { Toast } from "../../../components/Toast";
 import { useWhatsAppAccounts } from "../../../hooks/useAdmin";
 import type { DashboardOutletContext } from "../../../layouts/DashboardLayout";
-import { fetchAudienceGroups, fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
+import { fetchAudienceGroups } from "../audience-groups/services/audienceGroupService";
+import { useAudienceTemplateVariables } from "../hooks/useAudienceTemplateVariables";
 import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignPreviewCard } from "../components/CampaignPreviewCard";
+import { DynamicVariablePanel } from "../components/DynamicVariablePanel";
 import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
-import type { CampaignAttachment, CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import type { CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
-
-const fallbackSampleContact: CampaignContact = {
-  name: "Ahmad",
-  phone: "60123456789",
-  tag: "VIP",
-  gender: "male"
-};
+import { findInvalidTemplateVariables, formatVariableToken, insertVariableIntoTemplate } from "../utils/templateVariables";
 
 const defaultTemplate = "Salam {{salutation}} {{name}}, kami ada promosi khas untuk anda.";
 
@@ -71,13 +67,14 @@ export function CreateCampaignPage() {
   const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
   const [attachment, setAttachment] = useState<CampaignAttachment | null>(null);
   const [attachContactCard, setAttachContactCard] = useState(false);
-  const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
   const [testSendNotice, setTestSendNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
   const [identityHintDismissed, setIdentityHintDismissed] = useState(false);
+  const messageTemplateRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCursorPositionRef = useRef<number | null>(null);
 
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(organizationId, shouldFetchOrganizationData);
   const { data: audienceGroups = [] } = useQuery({
@@ -86,6 +83,13 @@ export function CreateCampaignPage() {
     enabled: shouldFetchOrganizationData
   });
   const { data: savedMessageTemplates = [], isLoading: isLoadingSavedTemplates } = useMessageTemplates(organizationId, shouldFetchOrganizationData);
+  const {
+    availableVariables,
+    sampleValues: audienceSampleValues,
+    isLoading: isLoadingAudienceVariables,
+    error: audienceVariablesError,
+    retry: retryAudienceVariables
+  } = useAudienceTemplateVariables(audienceGroupId, organizationId);
 
   const connectedAccounts = useMemo(() => whatsappAccounts.filter((account) => isSenderConnected(account)), [whatsappAccounts]);
   const availableMessageTemplates = useMemo(
@@ -121,7 +125,24 @@ export function CreateCampaignPage() {
     selectedAudienceGroup.valid_count > 0 &&
     selectedAudienceSyncedCount < selectedAudienceGroup.valid_count
   );
-  const preview = useMemo(() => renderCampaignTemplate(messageTemplate, sampleContact), [messageTemplate, sampleContact]);
+  const previewValues = useMemo(
+    () => selectedAudienceGroup
+      ? audienceSampleValues
+      : {
+          name: "Ahmad",
+          phone: "60123456789",
+          gender: "male",
+          salutation: "Encik",
+          tag: "VIP"
+        },
+    [audienceSampleValues, selectedAudienceGroup]
+  );
+  const availableVariableKeys = useMemo(() => availableVariables.map((variable) => variable.key), [availableVariables]);
+  const invalidTemplateVariables = useMemo(
+    () => selectedAudienceGroup ? findInvalidTemplateVariables(messageTemplate, availableVariableKeys) : [],
+    [availableVariableKeys, messageTemplate, selectedAudienceGroup]
+  );
+  const preview = useMemo(() => renderCampaignTemplate(messageTemplate, previewValues), [messageTemplate, previewValues]);
   const senderLabel = useMemo(() => {
     if (selectedSenders.length === 0) {
       return null;
@@ -134,6 +155,17 @@ export function CreateCampaignPage() {
     return `${selectedSenders.length} senders selected - Primary: ${selectedSender ? formatSenderLabel(selectedSender) : formatSenderLabel(selectedSenders[0])}`;
   }, [selectedSender, selectedSenders]);
   const tempoLabel = formatTempoLabel(tempo);
+
+  useLayoutEffect(() => {
+    if (pendingCursorPositionRef.current === null || !messageTemplateRef.current) {
+      return;
+    }
+
+    const nextCursorPosition = pendingCursorPositionRef.current;
+    pendingCursorPositionRef.current = null;
+    messageTemplateRef.current.focus();
+    messageTemplateRef.current.setSelectionRange(nextCursorPosition, nextCursorPosition);
+  }, [messageTemplate]);
 
   function showNotice(message: string, variant: "success" | "error" = "success") {
     setNotice({ message, variant });
@@ -214,6 +246,17 @@ export function CreateCampaignPage() {
     return true;
   }
 
+  function validateAvailableVariables() {
+    if (invalidTemplateVariables.length === 0) {
+      return true;
+    }
+
+    showError(
+      `This message contains variables that are not available in the selected audience: ${invalidTemplateVariables.map((key) => formatVariableToken(key)).join(", ")}.`
+    );
+    return false;
+  }
+
   function validateCampaignName() {
     if (!campaignName.trim()) {
       showError("Campaign Name is required.");
@@ -227,28 +270,20 @@ export function CreateCampaignPage() {
     setAudienceGroupId(nextAudienceGroupId);
     setTestSendNotice(null);
     setIdentityHintDismissed(false);
+  }
 
-    if (!nextAudienceGroupId) {
-      setSampleContact(fallbackSampleContact);
-      return;
-    }
+  function handleInsertVariable(token: string) {
+    const textarea = messageTemplateRef.current;
+    const { nextValue, nextCursorPosition } = insertVariableIntoTemplate(
+      messageTemplate,
+      token,
+      textarea?.selectionStart ?? messageTemplate.length,
+      textarea?.selectionEnd ?? messageTemplate.length
+    );
 
-    try {
-      const contacts = await fetchAudienceGroupContacts(nextAudienceGroupId, organizationId);
-      const sample = contacts.find((contact) => contact.validation_status === "valid" && contact.phone_normalized);
-      setSampleContact(
-        sample
-          ? {
-              name: sample.name ?? "Ahmad",
-              phone: sample.phone_normalized ?? "60123456789",
-              gender: sample.gender,
-              tag: sample.tag
-            }
-          : fallbackSampleContact
-      );
-    } catch {
-      setSampleContact(fallbackSampleContact);
-    }
+    pendingCursorPositionRef.current = nextCursorPosition;
+    setMessageTemplate(nextValue);
+    setTestSendNotice(null);
   }
 
   function handleTempoPresetChange(speedPreset: CampaignSpeedPreset) {
@@ -339,7 +374,7 @@ export function CreateCampaignPage() {
   }
 
   async function handleSendTest() {
-    if (!validateSender() || !validateTemplate()) {
+    if (!validateSender() || !validateTemplate() || !validateAvailableVariables()) {
       return;
     }
 
@@ -369,7 +404,7 @@ export function CreateCampaignPage() {
   }
 
   async function handleStartCampaign(action: "Schedule Later" | "Start Campaign") {
-    if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate()) {
+    if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate() || !validateAvailableVariables()) {
       return;
     }
 
@@ -417,7 +452,9 @@ export function CreateCampaignPage() {
   }
 
   const actionDisabled = selectedSenderWhatsAppAccountIds.length === 0 || !selectedSender || !selectedSenderIsConnected;
-  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign;
+  const hasInvalidTemplateVariables = invalidTemplateVariables.length > 0;
+  const sendTestDisabled = actionDisabled || isSendingTest || hasInvalidTemplateVariables;
+  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign || hasInvalidTemplateVariables;
 
   return (
     <section className="space-y-5">
@@ -622,6 +659,7 @@ export function CreateCampaignPage() {
               <label className="block">
                 <span className="workspace-label">Template Content</span>
                 <textarea
+                  ref={messageTemplateRef}
                   value={messageTemplate}
                   onChange={(event) => setMessageTemplate(event.target.value)}
                   className="input-base min-h-44 w-full resize-y"
@@ -666,19 +704,19 @@ export function CreateCampaignPage() {
                 onChange={setMessageTemplate}
                 source="campaign"
                 organizationId={organizationId}
-                variables={["first_name", "name", "business_name", "phone", "salutation", "tag"]}
+                variables={availableVariableKeys}
                 campaignObjective={campaignName}
               />
 
-              <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dynamic variables</p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-text-muted">
-                  <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{name}}"}</span>
-                  <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{phone}}"}</span>
-                  <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{salutation}}"}</span>
-                  <span className="rounded-full border border-primary/10 bg-card px-3 py-1">{"{{tag}}"}</span>
-                </div>
-              </div>
+              <DynamicVariablePanel
+                audienceSelected={Boolean(selectedAudienceGroup)}
+                isLoading={isLoadingAudienceVariables}
+                error={audienceVariablesError}
+                variables={availableVariables}
+                invalidVariables={invalidTemplateVariables}
+                onInsert={handleInsertVariable}
+                onRetry={retryAudienceVariables}
+              />
             </section>
 
             <section className="rounded-3xl border border-border bg-background-tint p-5">
@@ -765,7 +803,7 @@ export function CreateCampaignPage() {
                 <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
                   {isSavingDraft ? t("common.loading") : t("campaign.saveDraft")}
                 </Button>
-                <Button variant="secondary" disabled={actionDisabled || isSendingTest} onClick={() => void handleSendTest()}>
+                <Button variant="secondary" disabled={sendTestDisabled} onClick={() => void handleSendTest()}>
                   {isSendingTest ? t("common.loading") : t("campaign.sendTest")}
                 </Button>
                 <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>

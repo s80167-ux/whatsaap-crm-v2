@@ -5,6 +5,7 @@ import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
+import { assertCampaignTemplateVariablesAvailable } from "./campaignTemplateVariables.js";
 
 const connectorClient = new ConnectorClient();
 const campaignSafetyService = new CampaignSafetyService();
@@ -128,6 +129,11 @@ export async function startExistingCampaign(request: Request, response: Response
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, audienceGroupId);
+  await assertCampaignTemplateVariablesAvailable({
+    organizationId,
+    audienceGroupId,
+    template: messageTemplate
+  });
   await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
 
   const snapshot = await snapshotCampaignRecipients({

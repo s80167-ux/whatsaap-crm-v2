@@ -4,6 +4,7 @@ import type { Contact } from "../../../../types/api";
 import type {
   AudienceGroup,
   AudienceValidatedContact,
+  AudienceTemplateVariablesResponse,
   CreateAudienceGroupInput,
   ImportAudienceGroupInput,
   SaveAudiencePreviewSummary,
@@ -53,6 +54,14 @@ export async function fetchAudienceGroupContacts(audienceGroupId: string, organi
   const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
   const response = await apiGet<{ data: AudienceValidatedContact[] }>(
     `/campaigns/audience-groups/${audienceGroupId}/contacts${suffix}`
+  );
+  return response.data;
+}
+
+export async function fetchAudienceGroupTemplateVariables(audienceGroupId: string, organizationId?: string | null) {
+  const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
+  const response = await apiGet<{ data: AudienceTemplateVariablesResponse }>(
+    `/campaigns/audience-groups/${audienceGroupId}/template-variables${suffix}`
   );
   return response.data;
 }

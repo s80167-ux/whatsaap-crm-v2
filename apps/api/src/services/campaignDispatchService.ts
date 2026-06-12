@@ -5,6 +5,7 @@ import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { SendMessageService } from "./sendMessageService.js";
+import { renderCampaignTemplateVariables } from "../modules/campaigns/campaignTemplateVariables.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 
 type CampaignDispatchCandidate = {
@@ -787,23 +788,17 @@ function renderCampaignMessage(template: string, recipient: {
   customer_type: string | null;
   notes: string | null;
 }) {
-  const salutation =
-    recipient.salutation ??
-    (recipient.gender === "male" ? "Encik" : recipient.gender === "female" ? "Puan" : "");
-
-  const values: Record<string, string> = {
-    name: recipient.name ?? "",
-    phone: recipient.phone ?? "",
-    gender: recipient.gender ?? "",
-    salutation,
-    tag: recipient.tag ?? "",
-    location: recipient.location ?? "",
-    product_interest: recipient.product_interest ?? "",
-    customer_type: recipient.customer_type ?? "",
-    notes: recipient.notes ?? ""
-  };
-
-  const withVariables = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
+  const withVariables = renderCampaignTemplateVariables(template, {
+    name: recipient.name,
+    phone: recipient.phone,
+    gender: recipient.gender,
+    salutation: recipient.salutation,
+    tag: recipient.tag,
+    location: recipient.location,
+    product_interest: recipient.product_interest,
+    customer_type: recipient.customer_type,
+    notes: recipient.notes
+  });
   return renderSpintax(withVariables);
 }
 

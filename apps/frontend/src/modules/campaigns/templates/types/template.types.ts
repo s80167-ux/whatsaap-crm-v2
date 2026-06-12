@@ -15,17 +15,6 @@ export type MessageTemplateVariable = {
   sampleValue: string;
 };
 
-export type TemplateAttachmentKind = "image" | "document" | "video" | "audio" | "file";
-
-export type TemplateAttachment = {
-  id: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  kind: TemplateAttachmentKind;
-  dataUrl?: string;
-};
-
 export type MessageTemplate = {
   id: string;
   organization_id: string | null;
@@ -33,7 +22,6 @@ export type MessageTemplate = {
   category: MessageTemplateCategory;
   description?: string | null;
   content: string;
-  attachments?: TemplateAttachment[];
   variables: string[];
   status: MessageTemplateStatus;
   created_by?: string | null;
@@ -47,7 +35,6 @@ export type TemplateFormDraft = {
   category: MessageTemplateCategory;
   description: string;
   content: string;
-  attachments: TemplateAttachment[];
   status: MessageTemplateStatus;
 };
 

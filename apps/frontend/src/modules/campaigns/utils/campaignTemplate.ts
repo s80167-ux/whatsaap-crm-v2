@@ -1,23 +1,51 @@
-import type { CampaignContact } from "../types/campaign.types";
+import { deriveCampaignSalutation } from "./campaignVariableDefinitions";
 
-function getSalutation(contact: CampaignContact) {
-  if (contact.gender === "male") {
-    return "Encik";
-  }
+type CampaignTemplatePreviewValues = {
+  name?: string | null;
+  phone?: string | null;
+  salutation?: string | null;
+  gender?: string | null;
+  tag?: string | null;
+  location?: string | null;
+  product_interest?: string | null;
+  customer_type?: string | null;
+  notes?: string | null;
+};
 
-  if (contact.gender === "female") {
-    return "Puan";
-  }
+const knownVariableKeys = new Set([
+  "name",
+  "phone",
+  "salutation",
+  "gender",
+  "tag",
+  "location",
+  "product_interest",
+  "customer_type",
+  "notes"
+]);
 
-  return "Tuan/Puan";
-}
+export function renderCampaignTemplate<T extends CampaignTemplatePreviewValues>(template: string, values: T) {
+  const resolvedValues: Record<string, string> = {
+    name: values.name ?? "",
+    phone: values.phone ?? "",
+    gender: values.gender ?? "",
+    salutation: values.salutation ?? deriveCampaignSalutation(values.gender),
+    tag: values.tag ?? "",
+    location: values.location ?? "",
+    product_interest: values.product_interest ?? "",
+    customer_type: values.customer_type ?? "",
+    notes: values.notes ?? ""
+  };
 
-export function renderCampaignTemplate(template: string, contact: CampaignContact) {
-  return template
-    .split("{{name}}").join(contact.name)
-    .split("{{phone}}").join(contact.phone)
-    .split("{{tag}}").join(contact.tag ?? "")
-    .split("{{salutation}}").join(getSalutation(contact));
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key: string) => {
+    const normalizedKey = key.trim();
+
+    if (!knownVariableKeys.has(normalizedKey)) {
+      return match;
+    }
+
+    return resolvedValues[normalizedKey] ?? "";
+  });
 }
 
 /**

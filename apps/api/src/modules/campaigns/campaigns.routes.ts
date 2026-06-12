@@ -11,6 +11,7 @@ import {
   deleteCampaign,
   exportCampaignRecipients,
   getAudienceGroup,
+  getAudienceGroupTemplateVariables,
   getAudienceGroupContacts,
   getCampaign,
   importAudienceGroupContacts,
@@ -40,6 +41,7 @@ campaignsRoutes.post("/preview/start", asyncHandler(startCampaignPreview));
 campaignsRoutes.get("/audience-groups", asyncHandler(listAudienceGroups));
 campaignsRoutes.post("/audience-groups", asyncHandler(createAudienceGroup));
 campaignsRoutes.get("/audience-groups/:audienceGroupId", asyncHandler(getAudienceGroup));
+campaignsRoutes.get("/audience-groups/:audienceGroupId/template-variables", asyncHandler(getAudienceGroupTemplateVariables));
 campaignsRoutes.post("/audience-groups/:audienceGroupId/import", asyncHandler(importAudienceGroupContacts));
 campaignsRoutes.get("/audience-groups/:audienceGroupId/contacts", asyncHandler(getAudienceGroupContacts));
 campaignsRoutes.get("/audience-groups/:audienceGroupId/save-as-crm-contacts/preview", asyncHandler(previewSaveAudienceAsCrmContacts));

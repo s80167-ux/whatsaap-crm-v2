@@ -143,3 +143,27 @@ export interface SaveAudienceResult extends SaveAudiencePreviewSummary {
   crmSaveStatus: AudienceCrmSaveStatus;
   group: AudienceGroup | null;
 }
+
+export type AudienceTemplateVariableKey =
+  | "name"
+  | "phone"
+  | "salutation"
+  | "gender"
+  | "tag"
+  | "location"
+  | "product_interest"
+  | "customer_type"
+  | "notes";
+
+export interface AudienceTemplateVariable {
+  key: AudienceTemplateVariableKey;
+  label: string;
+  sampleValue: string;
+  source: "mapped" | "derived";
+}
+
+export interface AudienceTemplateVariablesResponse {
+  audienceGroupId: string;
+  variables: AudienceTemplateVariable[];
+  sampleValues: Partial<Record<AudienceTemplateVariableKey, string>>;
+}

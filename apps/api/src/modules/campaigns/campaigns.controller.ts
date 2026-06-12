@@ -10,6 +10,11 @@ import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
 import { TemplateGovernanceService } from "../../services/templateGovernanceService.js";
 import { normalizePhoneNumber } from "../../utils/phone.js";
+import {
+  assertCampaignTemplateVariablesAvailable,
+  getAudienceTemplateVariableMetadata,
+  renderCampaignTemplateVariables
+} from "./campaignTemplateVariables.js";
 
 const contactService = new ContactService();
 const connectorClient = new ConnectorClient();
@@ -846,6 +851,11 @@ export async function startCampaign(request: Request, response: Response) {
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, input.audienceGroupId);
+  await assertCampaignTemplateVariablesAvailable({
+    organizationId,
+    audienceGroupId: input.audienceGroupId,
+    template: input.messageTemplate
+  });
   await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
   const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
     organizationId,
@@ -1067,6 +1077,14 @@ export async function getAudienceGroup(request: Request, response: Response) {
   }
 
   return response.json({ data: group });
+}
+
+export async function getAudienceGroupTemplateVariables(request: Request, response: Response) {
+  const organizationId = resolveOrganizationId(request);
+  const { audienceGroupId } = audienceGroupParamsSchema.parse(request.params);
+  const data = await getAudienceTemplateVariableMetadata(organizationId, audienceGroupId);
+
+  return response.json({ data });
 }
 
 export async function importAudienceGroupContacts(request: Request, response: Response) {
@@ -2192,21 +2210,15 @@ function renderCampaignMessage(template: string, recipient: {
   customer_type: string | null;
   notes: string | null;
 }) {
-  const salutation =
-    recipient.salutation ??
-    (recipient.gender === "male" ? "Encik" : recipient.gender === "female" ? "Puan" : "");
-
-  const values: Record<string, string> = {
-    name: recipient.name ?? "",
-    phone: recipient.phone ?? "",
-    gender: recipient.gender ?? "",
-    salutation,
-    tag: recipient.tag ?? "",
-    location: recipient.location ?? "",
-    product_interest: recipient.product_interest ?? "",
-    customer_type: recipient.customer_type ?? "",
-    notes: recipient.notes ?? ""
-  };
-
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
+  return renderCampaignTemplateVariables(template, {
+    name: recipient.name,
+    phone: recipient.phone,
+    gender: recipient.gender,
+    salutation: recipient.salutation,
+    tag: recipient.tag,
+    location: recipient.location,
+    product_interest: recipient.product_interest,
+    customer_type: recipient.customer_type,
+    notes: recipient.notes
+  });
 }
