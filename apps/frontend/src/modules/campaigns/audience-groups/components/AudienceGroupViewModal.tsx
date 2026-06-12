@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "../../../../components/Button";
 import { PanelPagination, usePanelPagination } from "../../../../components/PanelPagination";
@@ -15,12 +16,7 @@ type AudienceGroupViewModalProps = {
   onClose: () => void;
 };
 
-export function AudienceGroupViewModal({
-  open,
-  group,
-  organizationId,
-  onClose
-}: AudienceGroupViewModalProps) {
+export function AudienceGroupViewModal({ open, group, organizationId, onClose }: AudienceGroupViewModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<AudienceContactFilter>("all");
   const detailsDeleted = group?.storage_status === "deleted_details";
@@ -42,18 +38,11 @@ export function AudienceGroupViewModal({
   }, [group?.id, open]);
 
   const filteredContacts = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
 
     return contacts.filter((contact) => {
-      if (!matchesFilter(contact, filter)) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const validationIssues = Array.isArray(contact.validation_issues) ? contact.validation_issues : [];
+      if (!matchesFilter(contact, filter)) return false;
+      if (!query) return true;
 
       return [
         contact.name,
@@ -65,22 +54,20 @@ export function AudienceGroupViewModal({
         contact.product_interest,
         contact.customer_type,
         contact.notes,
-        ...validationIssues
+        ...getValidationIssues(contact)
       ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+        .some((value) => String(value).toLowerCase().includes(query));
     });
   }, [contacts, filter, searchQuery]);
 
-  const contactPagination = usePanelPagination(filteredContacts, 10);
+  const pagination = usePanelPagination(filteredContacts, 10);
 
   useEffect(() => {
-    contactPagination.setPage(1);
-  }, [contactPagination.setPage, filter, searchQuery]);
+    pagination.setPage(1);
+  }, [pagination.setPage, filter, searchQuery]);
 
-  if (!group) {
-    return null;
-  }
+  if (!group) return null;
 
   return (
     <PopupOverlay
@@ -102,12 +89,10 @@ export function AudienceGroupViewModal({
         </div>
 
         {detailsDeleted ? (
-          <div className="border border-dashed border-border bg-background-tint p-8 text-center">
-            <p className="text-sm font-semibold text-text">Audience details have been deleted</p>
-            <p className="mt-1 text-sm text-text-muted">
-              The group summary and campaign reports remain available, but individual uploaded rows can no longer be viewed.
-            </p>
-          </div>
+          <EmptyState
+            title="Audience details have been deleted"
+            description="The group summary and campaign reports remain available, but individual uploaded rows can no longer be viewed."
+          />
         ) : (
           <>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -140,18 +125,13 @@ export function AudienceGroupViewModal({
             </p>
 
             {isLoading ? (
-              <div className="border border-border bg-background-tint p-8 text-center text-sm text-text-muted">
-                Loading audience contacts...
-              </div>
+              <EmptyState title="Loading audience contacts..." />
             ) : isError ? (
               <div className="border border-coral/30 bg-coral/10 p-5 text-sm text-coral">
                 {error instanceof Error ? error.message : "Unable to load audience contacts."}
               </div>
             ) : filteredContacts.length === 0 ? (
-              <div className="border border-dashed border-border bg-background-tint p-8 text-center">
-                <p className="text-sm font-semibold text-text">No matching contacts</p>
-                <p className="mt-1 text-sm text-text-muted">Try another search term or identity filter.</p>
-              </div>
+              <EmptyState title="No matching contacts" description="Try another search term or identity filter." />
             ) : (
               <>
                 <div className="workspace-table-wrap">
@@ -171,14 +151,12 @@ export function AudienceGroupViewModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {contactPagination.visibleItems.map((contact, index) => {
-                        const validationIssues = Array.isArray(contact.validation_issues) ? contact.validation_issues : [];
+                      {pagination.visibleItems.map((contact, index) => {
+                        const validationIssues = getValidationIssues(contact);
 
                         return (
                           <tr key={`${contact.phone_normalized ?? contact.phone_raw}-${contact.rowNumber ?? index}`} className="border-b border-border">
-                            <Td>
-                              <p className="font-semibold text-text">{contact.name || "Unnamed contact"}</p>
-                            </Td>
+                            <Td><p className="font-semibold text-text">{contact.name || "Unnamed contact"}</p></Td>
                             <Td>
                               <p className="font-medium text-text">{contact.phone_normalized || contact.phone_raw}</p>
                               {contact.phone_normalized && contact.phone_raw !== contact.phone_normalized ? (
@@ -191,10 +169,7 @@ export function AudienceGroupViewModal({
                             <Td>{contact.product_interest || "—"}</Td>
                             <Td>{contact.customer_type || "—"}</Td>
                             <Td>
-                              <StatusBadge
-                                label={contact.validation_status}
-                                tone={contact.validation_status === "valid" ? "success" : "danger"}
-                              />
+                              <StatusBadge label={contact.validation_status} tone={contact.validation_status === "valid" ? "success" : "danger"} />
                               {validationIssues.length > 0 ? (
                                 <p className="mt-2 max-w-56 text-xs leading-5 text-coral">{validationIssues.join(", ")}</p>
                               ) : null}
@@ -205,9 +180,7 @@ export function AudienceGroupViewModal({
                                 tone={contact.crm_contact_id ? "success" : "muted"}
                               />
                             </Td>
-                            <Td>
-                              <p className="max-w-72 whitespace-normal text-sm leading-5 text-text-muted">{contact.notes || "—"}</p>
-                            </Td>
+                            <Td><p className="max-w-72 whitespace-normal text-sm leading-5 text-text-muted">{contact.notes || "—"}</p></Td>
                           </tr>
                         );
                       })}
@@ -215,11 +188,11 @@ export function AudienceGroupViewModal({
                   </table>
                 </div>
                 <PanelPagination
-                  page={contactPagination.page}
-                  pageCount={contactPagination.pageCount}
-                  pageSize={contactPagination.pageSize}
-                  totalItems={contactPagination.totalItems}
-                  onPageChange={contactPagination.setPage}
+                  page={pagination.page}
+                  pageCount={pagination.pageCount}
+                  pageSize={pagination.pageSize}
+                  totalItems={pagination.totalItems}
+                  onPageChange={pagination.setPage}
                 />
               </>
             )}
@@ -246,6 +219,19 @@ function matchesFilter(contact: AudienceValidatedContact, filter: AudienceContac
   return true;
 }
 
+function getValidationIssues(contact: AudienceValidatedContact) {
+  return Array.isArray(contact.validation_issues) ? contact.validation_issues : [];
+}
+
+function EmptyState({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="border border-dashed border-border bg-background-tint p-8 text-center">
+      <p className="text-sm font-semibold text-text">{title}</p>
+      {description ? <p className="mt-1 text-sm text-text-muted">{description}</p> : null}
+    </div>
+  );
+}
+
 function SummaryMetric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="border border-border bg-background-tint px-3 py-3">
@@ -256,24 +242,23 @@ function SummaryMetric({ label, value }: { label: string; value: string | number
 }
 
 function StatusBadge({ label, tone }: { label: string; tone: "muted" | "success" | "danger" }) {
-  const toneClass =
-    tone === "success"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
-      : tone === "danger"
-        ? "border-coral/30 bg-coral/10 text-coral"
-        : "border-border bg-background-tint text-text-muted";
+  const toneClass = tone === "success"
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+    : tone === "danger"
+      ? "border-coral/30 bg-coral/10 text-coral"
+      : "border-border bg-background-tint text-text-muted";
 
   return <span className={`inline-flex border px-2 py-1 text-xs font-semibold capitalize ${toneClass}`}>{formatLabel(label)}</span>;
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children }: { children: ReactNode }) {
   return <th>{children}</th>;
 }
 
-function Td({ children }: { children: React.ReactNode }) {
+function Td({ children }: { children: ReactNode }) {
   return <td>{children}</td>;
 }
 
 function formatLabel(value: string) {
-  return value.replaceAll("_", " ");
+  return value.split("_").join(" ");
 }
