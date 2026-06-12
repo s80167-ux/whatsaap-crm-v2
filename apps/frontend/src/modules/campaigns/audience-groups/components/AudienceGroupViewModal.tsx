@@ -6,7 +6,7 @@ import { PopupOverlay } from "../../../../components/PopupOverlay";
 import { fetchAudienceGroupContacts } from "../services/audienceGroupService";
 import type { AudienceGroup, AudienceValidatedContact } from "../types/audienceGroup.types";
 
-type AudienceContactFilter = "all" | "valid" | "invalid" | "duplicate" | "opted_out";
+type AudienceContactFilter = "all" | "linked" | "not_linked";
 
 type AudienceGroupViewModalProps = {
   open: boolean;
@@ -53,6 +53,8 @@ export function AudienceGroupViewModal({
         return true;
       }
 
+      const validationIssues = Array.isArray(contact.validation_issues) ? contact.validation_issues : [];
+
       return [
         contact.name,
         contact.phone_raw,
@@ -63,8 +65,7 @@ export function AudienceGroupViewModal({
         contact.product_interest,
         contact.customer_type,
         contact.notes,
-        ...contact.validation_issues,
-        ...contact.warnings
+        ...validationIssues
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
@@ -86,7 +87,7 @@ export function AudienceGroupViewModal({
       open={open}
       onClose={onClose}
       title={group.name}
-      description={group.description || "View imported audience contact details and validation status."}
+      description={group.description || "View imported audience recipients and contact identity status."}
       panelClassName="max-w-[min(96rem,calc(100vw-2rem))]"
     >
       <div className="space-y-5">
@@ -134,6 +135,10 @@ export function AudienceGroupViewModal({
               </div>
             </div>
 
+            <p className="border border-border bg-background-tint px-4 py-3 text-xs leading-5 text-text-muted">
+              The contact table contains valid recipients stored for campaign use. Invalid, duplicate and opted-out rows are shown in the summary above but are not retained as sendable recipients.
+            </p>
+
             {isLoading ? (
               <div className="border border-border bg-background-tint p-8 text-center text-sm text-text-muted">
                 Loading audience contacts...
@@ -145,7 +150,7 @@ export function AudienceGroupViewModal({
             ) : filteredContacts.length === 0 ? (
               <div className="border border-dashed border-border bg-background-tint p-8 text-center">
                 <p className="text-sm font-semibold text-text">No matching contacts</p>
-                <p className="mt-1 text-sm text-text-muted">Try another search term or status filter.</p>
+                <p className="mt-1 text-sm text-text-muted">Try another search term or identity filter.</p>
               </div>
             ) : (
               <>
@@ -166,43 +171,46 @@ export function AudienceGroupViewModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {contactPagination.visibleItems.map((contact, index) => (
-                        <tr key={`${contact.phone_normalized ?? contact.phone_raw}-${contact.rowNumber ?? index}`} className="border-b border-border">
-                          <Td>
-                            <p className="font-semibold text-text">{contact.name || "Unnamed contact"}</p>
-                          </Td>
-                          <Td>
-                            <p className="font-medium text-text">{contact.phone_normalized || contact.phone_raw}</p>
-                            {contact.phone_normalized && contact.phone_raw !== contact.phone_normalized ? (
-                              <p className="mt-1 text-xs text-text-muted">Original: {contact.phone_raw}</p>
-                            ) : null}
-                          </Td>
-                          <Td>{formatLabel(contact.gender)}</Td>
-                          <Td>{contact.tag || "—"}</Td>
-                          <Td>{contact.location || "—"}</Td>
-                          <Td>{contact.product_interest || "—"}</Td>
-                          <Td>{contact.customer_type || "—"}</Td>
-                          <Td>
-                            <div className="flex max-w-56 flex-wrap gap-1">
-                              <ContactStatusBadges contact={contact} />
-                            </div>
-                            {contact.validation_issues.length > 0 ? (
-                              <p className="mt-2 text-xs leading-5 text-coral">{contact.validation_issues.join(", ")}</p>
-                            ) : contact.warnings.length > 0 ? (
-                              <p className="mt-2 text-xs leading-5 text-amber-700">{contact.warnings.join(", ")}</p>
-                            ) : null}
-                          </Td>
-                          <Td>
-                            <StatusBadge
-                              label={contact.crm_contact_id ? "Linked" : "Not linked"}
-                              tone={contact.crm_contact_id ? "success" : "muted"}
-                            />
-                          </Td>
-                          <Td>
-                            <p className="max-w-72 whitespace-normal text-sm leading-5 text-text-muted">{contact.notes || "—"}</p>
-                          </Td>
-                        </tr>
-                      ))}
+                      {contactPagination.visibleItems.map((contact, index) => {
+                        const validationIssues = Array.isArray(contact.validation_issues) ? contact.validation_issues : [];
+
+                        return (
+                          <tr key={`${contact.phone_normalized ?? contact.phone_raw}-${contact.rowNumber ?? index}`} className="border-b border-border">
+                            <Td>
+                              <p className="font-semibold text-text">{contact.name || "Unnamed contact"}</p>
+                            </Td>
+                            <Td>
+                              <p className="font-medium text-text">{contact.phone_normalized || contact.phone_raw}</p>
+                              {contact.phone_normalized && contact.phone_raw !== contact.phone_normalized ? (
+                                <p className="mt-1 text-xs text-text-muted">Original: {contact.phone_raw}</p>
+                              ) : null}
+                            </Td>
+                            <Td>{formatLabel(contact.gender)}</Td>
+                            <Td>{contact.tag || "—"}</Td>
+                            <Td>{contact.location || "—"}</Td>
+                            <Td>{contact.product_interest || "—"}</Td>
+                            <Td>{contact.customer_type || "—"}</Td>
+                            <Td>
+                              <StatusBadge
+                                label={contact.validation_status}
+                                tone={contact.validation_status === "valid" ? "success" : "danger"}
+                              />
+                              {validationIssues.length > 0 ? (
+                                <p className="mt-2 max-w-56 text-xs leading-5 text-coral">{validationIssues.join(", ")}</p>
+                              ) : null}
+                            </Td>
+                            <Td>
+                              <StatusBadge
+                                label={contact.crm_contact_id ? "Linked" : "Not linked"}
+                                tone={contact.crm_contact_id ? "success" : "muted"}
+                              />
+                            </Td>
+                            <Td>
+                              <p className="max-w-72 whitespace-normal text-sm leading-5 text-text-muted">{contact.notes || "—"}</p>
+                            </Td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -228,31 +236,14 @@ export function AudienceGroupViewModal({
 
 const CONTACT_FILTERS: Array<{ value: AudienceContactFilter; label: string }> = [
   { value: "all", label: "All" },
-  { value: "valid", label: "Valid" },
-  { value: "invalid", label: "Invalid" },
-  { value: "duplicate", label: "Duplicate" },
-  { value: "opted_out", label: "Opted Out" }
+  { value: "linked", label: "Linked Identity" },
+  { value: "not_linked", label: "Not Linked" }
 ];
 
 function matchesFilter(contact: AudienceValidatedContact, filter: AudienceContactFilter) {
-  if (filter === "valid") return contact.validation_status === "valid";
-  if (filter === "invalid") return contact.validation_status === "invalid";
-  if (filter === "duplicate") return contact.is_duplicate;
-  if (filter === "opted_out") return contact.is_opted_out;
+  if (filter === "linked") return Boolean(contact.crm_contact_id);
+  if (filter === "not_linked") return !contact.crm_contact_id;
   return true;
-}
-
-function ContactStatusBadges({ contact }: { contact: AudienceValidatedContact }) {
-  return (
-    <>
-      <StatusBadge
-        label={contact.validation_status}
-        tone={contact.validation_status === "valid" ? "success" : "danger"}
-      />
-      {contact.is_duplicate ? <StatusBadge label="Duplicate" tone="warning" /> : null}
-      {contact.is_opted_out ? <StatusBadge label="Opted out" tone="danger" /> : null}
-    </>
-  );
 }
 
 function SummaryMetric({ label, value }: { label: string; value: string | number }) {
@@ -264,15 +255,13 @@ function SummaryMetric({ label, value }: { label: string; value: string | number
   );
 }
 
-function StatusBadge({ label, tone }: { label: string; tone: "muted" | "success" | "warning" | "danger" }) {
+function StatusBadge({ label, tone }: { label: string; tone: "muted" | "success" | "danger" }) {
   const toneClass =
     tone === "success"
       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
-      : tone === "warning"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
-        : tone === "danger"
-          ? "border-coral/30 bg-coral/10 text-coral"
-          : "border-border bg-background-tint text-text-muted";
+      : tone === "danger"
+        ? "border-coral/30 bg-coral/10 text-coral"
+        : "border-border bg-background-tint text-text-muted";
 
   return <span className={`inline-flex border px-2 py-1 text-xs font-semibold capitalize ${toneClass}`}>{formatLabel(label)}</span>;
 }
