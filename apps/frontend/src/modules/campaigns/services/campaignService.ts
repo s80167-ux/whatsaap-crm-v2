@@ -96,7 +96,7 @@ export type CreateCampaignInput = {
   senderMode?: "single" | "round_robin";
   audienceGroupId: string;
   selectedMessageTemplateId?: string | null;
-  messageTemplate?: string;
+  messageTemplate?: string | null;
   templateGovernanceVersionId?: string | null;
   tempo: CampaignTempo;
   attachment?: CampaignAttachment | null;
@@ -106,6 +106,24 @@ export type CreateCampaignInput = {
 export type UpdateCampaignInput = Partial<CreateCampaignInput> & {
   campaignId: string;
 };
+
+function normalizeOptionalUuid(value: string | null | undefined) {
+  return value && value.trim().length > 0 ? value : null;
+}
+
+function normalizeOptionalText(value: string | null | undefined) {
+  return value && value.trim().length > 0 ? value : null;
+}
+
+function normalizeCampaignMutationInput<T extends Partial<CreateCampaignInput>>(input: T): T {
+  return {
+    ...input,
+    senderWhatsAppAccountId: input.senderWhatsAppAccountId?.trim() || undefined,
+    selectedMessageTemplateId: normalizeOptionalUuid(input.selectedMessageTemplateId),
+    templateGovernanceVersionId: normalizeOptionalUuid(input.templateGovernanceVersionId),
+    messageTemplate: normalizeOptionalText(input.messageTemplate)
+  };
+}
 
 export async function fetchCampaigns(organizationId?: string | null) {
   const suffix = organizationId ? `?organization_id=${encodeURIComponent(organizationId)}` : "";
@@ -208,12 +226,12 @@ export async function downloadCampaignRecipients(input: {
 }
 
 export async function createCampaign(input: CreateCampaignInput) {
-  const response = await apiPost<{ data: Campaign }>("/campaigns", input);
+  const response = await apiPost<{ data: Campaign }>("/campaigns", normalizeCampaignMutationInput(input));
   return response.data;
 }
 
 export async function updateCampaign(input: UpdateCampaignInput) {
-  const response = await apiPatch<{ data: Campaign }>(`/campaigns/${input.campaignId}`, input);
+  const response = await apiPatch<{ data: Campaign }>(`/campaigns/${input.campaignId}`, normalizeCampaignMutationInput(input));
   return response.data;
 }
 
@@ -222,7 +240,7 @@ export async function sendCampaignTest(input: {
   organizationId?: string | null;
   senderWhatsAppAccountId: string;
   testPhoneNumber: string;
-  messageTemplate?: string;
+  messageTemplate?: string | null;
   templateGovernanceVersionId?: string | null;
   attachment?: CampaignAttachment | null;
   attachContactCard?: boolean;
@@ -239,7 +257,7 @@ export async function startCampaign(input: {
   senderWhatsAppAccountIds?: string[];
   senderMode?: "single" | "round_robin";
   audienceGroupId?: string;
-  messageTemplate?: string;
+  messageTemplate?: string | null;
   templateGovernanceVersionId?: string | null;
   speedPreset?: CampaignSpeedPreset;
   delayPerMessageSeconds?: number;
