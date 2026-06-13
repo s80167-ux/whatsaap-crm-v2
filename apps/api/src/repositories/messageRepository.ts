@@ -42,6 +42,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
@@ -74,6 +75,7 @@ export class MessageRepository {
       externalMessageId: string;
       externalChatId?: string | null;
       replyToMessageId?: string | null;
+      mediaId?: string | null;
       contentText?: string | null;
       messageType?: string;
       contentJson?: unknown;
@@ -91,6 +93,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           channel,
           direction,
           message_type,
@@ -99,7 +102,7 @@ export class MessageRepository {
           ack_status,
           sent_at
         )
-        values ($1, $2, $3, $4, null, $5, $6, $7, 'whatsapp', 'outgoing', $8, nullif($9, ''), $10, 'pending', $11)
+        values ($1, $2, $3, $4, null, $5, $6, $7, $8, 'whatsapp', 'outgoing', $9, nullif($10, ''), $11, 'pending', $12)
         returning
           id,
           organization_id,
@@ -111,11 +114,12 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
           content_text,
-          content_json,
+          sanitize_message_content_json(content_json) as content_json,
           sent_at,
           created_at,
           coalesce(sent_at, created_at) as sort_at,
@@ -131,6 +135,7 @@ export class MessageRepository {
         input.externalMessageId,
         input.externalChatId ?? null,
         input.replyToMessageId ?? null,
+        input.mediaId ?? null,
         input.messageType ?? "text",
         input.contentText ?? null,
         input.contentJson ?? null,
@@ -382,6 +387,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
@@ -453,6 +459,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
@@ -562,11 +569,12 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
           content_text,
-          content_json,
+          sanitize_message_content_json(content_json) as content_json,
           sent_at,
           created_at,
           coalesce(sent_at, created_at) as sort_at,
@@ -662,6 +670,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
@@ -702,6 +711,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,
@@ -748,6 +758,7 @@ export class MessageRepository {
           external_message_id,
           external_chat_id,
           reply_to_message_id,
+          media_id,
           is_deleted,
           direction,
           message_type,

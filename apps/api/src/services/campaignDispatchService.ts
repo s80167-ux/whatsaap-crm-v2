@@ -1,6 +1,7 @@
 import { pool, query, withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import type { StoredMediaReference } from "../lib/mediaAttachments.js";
 import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
@@ -21,13 +22,7 @@ type CampaignDispatchCandidate = {
   sender_mode: "single" | "round_robin";
   message_template: string;
   message_body_type: string;
-  attachment: {
-    kind: "image" | "video" | "audio" | "document";
-    fileName: string;
-    mimeType: string;
-    dataBase64: string;
-    fileSizeBytes: number;
-  } | null;
+  attachment: StoredMediaReference | null;
   speed_preset: CampaignSpeedPreset | null;
   delay_per_message_seconds: number | null;
   batch_size: number | null;
@@ -65,13 +60,7 @@ type ClaimedCampaignRecipient = {
   sender_mode: "single" | "round_robin";
   message_template: string;
   message_body_type: string;
-  attachment: {
-    kind: "image" | "video" | "audio" | "document";
-    fileName: string;
-    mimeType: string;
-    dataBase64: string;
-    fileSizeBytes: number;
-  } | null;
+  attachment: StoredMediaReference | null;
   speed_preset: CampaignSpeedPreset | null;
   delay_per_message_seconds: number | null;
   batch_size: number | null;
@@ -568,8 +557,13 @@ export class CampaignDispatchService {
       kind: "image" | "video" | "audio" | "document";
       fileName: string;
       mimeType: string;
-      dataBase64: string;
       fileSizeBytes: number;
+      dataBase64?: string;
+      mediaId?: string | null;
+      storageBucket?: string | null;
+      storagePath?: string | null;
+      mediaUrl?: string | null;
+      legacyInline?: boolean;
     } | null;
     attachContactCard?: boolean;
   }) {

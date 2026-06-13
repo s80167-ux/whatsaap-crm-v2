@@ -270,8 +270,12 @@ function buildForwardAttachment(sourceMessage: Awaited<ReturnType<MessageReposit
     kind: outboundMedia.kind as "image" | "video" | "audio" | "document",
     fileName: String(outboundMedia.fileName ?? sourceMessage.content_text ?? "attachment"),
     mimeType: String(outboundMedia.mimeType ?? "application/octet-stream"),
-    dataBase64: String(outboundMedia.dataBase64 ?? ""),
-    fileSizeBytes: Number(outboundMedia.fileSizeBytes ?? 1)
+    dataBase64: typeof outboundMedia.dataBase64 === "string" ? outboundMedia.dataBase64 : undefined,
+    fileSizeBytes: Number(outboundMedia.fileSizeBytes ?? 1),
+    mediaId: sourceMessage.media_id ?? (typeof outboundMedia.mediaId === "string" ? outboundMedia.mediaId : null),
+    storageBucket: typeof outboundMedia.storageBucket === "string" ? outboundMedia.storageBucket : null,
+    storagePath: typeof outboundMedia.storagePath === "string" ? outboundMedia.storagePath : null,
+    mediaUrl: typeof outboundMedia.mediaUrl === "string" ? outboundMedia.mediaUrl : null
   };
 }
 
@@ -679,7 +683,10 @@ export async function forwardMobileV1Message(request: Request, response: Respons
 
   const attachment = buildForwardAttachment(sourceMessage);
 
-  if (sourceMessage.message_type !== "text" && (!attachment || !attachment.dataBase64)) {
+  if (
+    sourceMessage.message_type !== "text" &&
+    (!attachment || (!attachment.dataBase64 && !attachment.mediaId && !attachment.storagePath))
+  ) {
     throw new AppError("This message cannot be forwarded because its media payload is unavailable", 400, "forward_unavailable");
   }
 

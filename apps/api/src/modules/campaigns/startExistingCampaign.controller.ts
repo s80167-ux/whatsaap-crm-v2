@@ -2,10 +2,17 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "../../config/database.js";
+import { logger } from "../../config/logger.js";
 import { AppError } from "../../lib/errors.js";
+import {
+  CAMPAIGN_INLINE_MEDIA_MIGRATION_THRESHOLD_BYTES,
+  estimateBase64Bytes,
+  parseInlineMediaAttachment
+} from "../../lib/mediaAttachments.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { CampaignRiskGuardService } from "../../services/campaignRiskGuardService.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
+import { MediaAssetService } from "../../services/mediaAssetService.js";
 import { snapshotCampaignRecipientsSafely } from "../../services/campaignRecoveryService.js";
 import { assertCampaignTemplateVariablesAvailable } from "./campaignTemplateVariables.js";
 import { campaignSpeedPresetSchema, resolveCampaignTempo, type CampaignSpeedPreset, type CampaignTempo } from "./campaignTempo.js";
@@ -13,6 +20,7 @@ import { campaignSpeedPresetSchema, resolveCampaignTempo, type CampaignSpeedPres
 const connectorClient = new ConnectorClient();
 const campaignSafetyService = new CampaignSafetyService();
 const campaignRiskGuardService = new CampaignRiskGuardService();
+const mediaAssetService = new MediaAssetService();
 
 const campaignParamsSchema = z.object({
   campaignId: z.string().uuid()
@@ -52,6 +60,7 @@ type CampaignRecord = {
   sender_whatsapp_account_id: string | null;
   message_template: string | null;
   message_body_type: string;
+  media_id: string | null;
   attachment: unknown | null;
   speed_preset: CampaignSpeedPreset | null;
   delay_per_message_seconds: number | null;
@@ -147,6 +156,12 @@ export async function startExistingCampaign(request: Request, response: Response
     audienceGroupId,
     template: effectiveMessageTemplate
   });
+  const storedAttachment = await ensureCampaignAttachmentStored({
+    organizationId,
+    campaignId,
+    attachment: campaign.attachment,
+    status: campaign.status
+  });
   await saveCampaignStartConfiguration({
     organizationId,
     campaignId,
@@ -155,6 +170,8 @@ export async function startExistingCampaign(request: Request, response: Response
     primarySenderWhatsAppAccountId: senderSelection.primarySenderWhatsAppAccountId,
     senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
     messageTemplate: baseMessageTemplate ?? effectiveMessageTemplate,
+    mediaId: storedAttachment?.mediaId ?? campaign.media_id ?? null,
+    attachment: storedAttachment ? JSON.stringify(storedAttachment) : null,
     tempo
   });
 
@@ -328,6 +345,8 @@ async function saveCampaignStartConfiguration(input: {
   primarySenderWhatsAppAccountId: string;
   senderWhatsAppAccountIds: string[];
   messageTemplate: string;
+  mediaId: string | null;
+  attachment: string | null;
   tempo: CampaignTempo;
 }) {
   await withTransaction(async (client) => {
@@ -338,12 +357,14 @@ async function saveCampaignStartConfiguration(input: {
             sender_mode = $4,
             sender_whatsapp_account_id = $5,
             message_template = $6,
-            speed_preset = $7,
-            delay_per_message_seconds = $8,
-            batch_size = $9,
-            batch_pause_seconds = $10,
-            daily_limit = $11,
-            stop_on_high_failure = $12,
+            media_id = coalesce($7, media_id),
+            attachment = coalesce($8, attachment),
+            speed_preset = $9,
+            delay_per_message_seconds = $10,
+            batch_size = $11,
+            batch_pause_seconds = $12,
+            daily_limit = $13,
+            stop_on_high_failure = $14,
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -355,6 +376,8 @@ async function saveCampaignStartConfiguration(input: {
         input.senderMode,
         input.primarySenderWhatsAppAccountId,
         input.messageTemplate,
+        input.mediaId,
+        input.attachment,
         input.tempo.speedPreset,
         input.tempo.delayPerMessageSeconds,
         input.tempo.batchSize,
@@ -412,4 +435,55 @@ async function syncCampaignSenderAccounts(
     `,
     [input.organizationId, input.campaignId, input.senderWhatsAppAccountIds]
   );
+}
+
+async function ensureCampaignAttachmentStored(input: {
+  organizationId: string;
+  campaignId: string;
+  attachment: unknown;
+  status: string;
+}) {
+  const inline = parseInlineMediaAttachment(input.attachment);
+  if (!inline) {
+    return null;
+  }
+
+  const inlineBytes = inline.fileSizeBytes || estimateBase64Bytes(inline.dataBase64);
+  if (input.status === "paused" && inlineBytes > CAMPAIGN_INLINE_MEDIA_MIGRATION_THRESHOLD_BYTES) {
+    throw new AppError(
+      "Campaign media must be stored as a media asset before sending.",
+      409,
+      "campaign_media_migration_required"
+    );
+  }
+
+  const stored = await mediaAssetService.ensureStoredReference({
+    organizationId: input.organizationId,
+    source: "campaign-media",
+    attachment: inline
+  });
+
+  await query(
+    `
+      update campaigns
+      set media_id = $3,
+          attachment = $4,
+          updated_at = timezone('utc', now())
+      where organization_id = $1
+        and id = $2
+    `,
+    [input.organizationId, input.campaignId, stored.mediaId ?? null, JSON.stringify(stored)]
+  );
+
+  logger.warn(
+    {
+      organizationId: input.organizationId,
+      campaignId: input.campaignId,
+      originalInlineBytes: inlineBytes,
+      mediaId: stored.mediaId ?? null
+    },
+    "Migrated legacy inline campaign attachment to media asset storage before start"
+  );
+
+  return stored;
 }

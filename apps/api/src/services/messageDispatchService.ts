@@ -19,6 +19,7 @@ import { ConversationRepository } from "../repositories/conversationRepository.j
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
 import { ConnectorClient } from "./connectorClient.js";
 import { ProjectionService } from "./projectionService.js";
+import { MediaAssetService } from "./mediaAssetService.js";
 
 export class MessageDispatchService {
   constructor(
@@ -27,7 +28,8 @@ export class MessageDispatchService {
     private readonly conversationRepository = new ConversationRepository(),
     private readonly rawEventRepository = new RawEventRepository(),
     private readonly connectorClient = new ConnectorClient(),
-    private readonly projectionService = new ProjectionService()
+    private readonly projectionService = new ProjectionService(),
+    private readonly mediaAssetService = new MediaAssetService()
   ) {}
 
   async enqueue(
@@ -244,7 +246,7 @@ export class MessageDispatchService {
         accountId: job.whatsapp_account_id,
         recipientJid: job.recipient_jid,
         text: job.message_text,
-        attachment: this.extractAttachmentPayload(job.payload),
+        attachment: await this.resolveAttachmentPayload(job.payload),
         contactCard: this.extractContactCardPayload(job.payload)
       });
 
@@ -572,26 +574,7 @@ export class MessageDispatchService {
 
     const outboundMedia = content.outboundMedia;
     if (outboundMedia && typeof outboundMedia === "object" && !Array.isArray(outboundMedia)) {
-      const attachment = outboundMedia as {
-        kind?: unknown;
-        fileName?: unknown;
-        mimeType?: unknown;
-        dataBase64?: unknown;
-      };
-
-      if (
-        typeof attachment.kind === "string" &&
-        typeof attachment.fileName === "string" &&
-        typeof attachment.mimeType === "string" &&
-        typeof attachment.dataBase64 === "string"
-      ) {
-        payload.attachment = {
-          kind: attachment.kind,
-          fileName: attachment.fileName,
-          mimeType: attachment.mimeType,
-          dataBase64: attachment.dataBase64
-        };
-      }
+      payload.attachment = outboundMedia;
     }
 
     const campaign = content.campaign;
@@ -602,34 +585,13 @@ export class MessageDispatchService {
     return payload;
   }
 
-  private extractAttachmentPayload(payload: unknown) {
+  private async resolveAttachmentPayload(payload: unknown) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
     }
 
     const attachment = (payload as { attachment?: unknown }).attachment;
-
-    if (!attachment || typeof attachment !== "object" || Array.isArray(attachment)) {
-      return null;
-    }
-
-    const candidate = attachment as {
-      kind?: "image" | "video" | "audio" | "document";
-      fileName?: string;
-      mimeType?: string;
-      dataBase64?: string;
-    };
-
-    if (!candidate.kind || !candidate.fileName || !candidate.mimeType || !candidate.dataBase64) {
-      return null;
-    }
-
-    return {
-      kind: candidate.kind,
-      fileName: candidate.fileName,
-      mimeType: candidate.mimeType,
-      dataBase64: candidate.dataBase64
-    };
+    return this.mediaAssetService.resolveAttachmentForDispatch(attachment);
   }
 
   private extractContactCardPayload(payload: unknown) {

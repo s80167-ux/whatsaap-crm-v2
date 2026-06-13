@@ -2,11 +2,20 @@ import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { query, withTransaction } from "../../config/database.js";
+import { logger } from "../../config/logger.js";
 import { AppError } from "../../lib/errors.js";
+import {
+  CAMPAIGN_INLINE_MEDIA_MIGRATION_THRESHOLD_BYTES,
+  CAMPAIGN_ROW_WARNING_THRESHOLD_BYTES,
+  estimateBase64Bytes,
+  parseInlineMediaAttachment,
+  type StoredMediaReference
+} from "../../lib/mediaAttachments.js";
 import { ContactService } from "../../services/contactService.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { ConversationService } from "../../services/conversationService.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
+import { MediaAssetService } from "../../services/mediaAssetService.js";
 import {
   assessCampaignSenderAvailability,
   isSenderIssueFailureCode,
@@ -30,6 +39,7 @@ const conversationService = new ConversationService();
 const campaignSafetyService = new CampaignSafetyService();
 const sendMessageService = new SendMessageService();
 const templateGovernanceService = new TemplateGovernanceService();
+const mediaAssetService = new MediaAssetService();
 
 const audienceGroupParamsSchema = z.object({
   audienceGroupId: z.string().uuid()
@@ -98,8 +108,15 @@ const attachmentSchema = z.object({
   kind: z.enum(["image", "video", "audio", "document"]),
   fileName: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(255),
-  dataBase64: z.string().min(1),
-  fileSizeBytes: z.number().int().positive().max(4 * 1024 * 1024)
+  fileSizeBytes: z.number().int().positive().max(4 * 1024 * 1024),
+  dataBase64: z.string().min(1).optional(),
+  mediaId: z.string().uuid().optional().nullable(),
+  storageBucket: z.string().min(1).max(255).optional().nullable(),
+  storagePath: z.string().min(1).max(2000).optional().nullable(),
+  mediaUrl: z.string().url().optional().nullable(),
+  legacyInline: z.boolean().optional()
+}).refine((value) => Boolean(value.dataBase64) || Boolean(value.mediaId) || Boolean(value.storagePath), {
+  message: "Attachment must include inline media data or a stored media reference"
 });
 
 const createCampaignBodySchema = z.object({
@@ -263,6 +280,7 @@ type CampaignRecord = {
   active_message_override_id: string | null;
   message_template: string | null;
   message_body_type: string;
+  media_id: string | null;
   attachment: unknown | null;
   speed_preset: string | null;
   delay_per_message_seconds: number | null;
@@ -421,7 +439,14 @@ export async function createCampaign(request: Request, response: Response) {
     messageTemplate: input.messageTemplate
   });
 
-  const bodyType = input.attachment?.kind ?? 'text';
+  const storedAttachment = await prepareCampaignAttachmentForStorage(organizationId, input.attachment ?? null);
+  const bodyType = storedAttachment?.kind ?? 'text';
+  logLargeCampaignRowWarning({
+    organizationId,
+    campaignId: null,
+    attachment: storedAttachment,
+    source: "createCampaign"
+  });
 
   const result = await withTransaction(async (client) => {
     const inserted = await client.query<CampaignRecord>(
@@ -436,6 +461,7 @@ export async function createCampaign(request: Request, response: Response) {
           selected_message_template_id,
           message_template,
           message_body_type,
+          media_id,
           attachment,
           speed_preset,
           delay_per_message_seconds,
@@ -446,7 +472,7 @@ export async function createCampaign(request: Request, response: Response) {
           attach_contact_card,
           created_by
         )
-        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         returning *
       `,
       [
@@ -458,7 +484,8 @@ export async function createCampaign(request: Request, response: Response) {
         input.selectedMessageTemplateId ?? null,
         governedTemplate.body,
         bodyType,
-        input.attachment ? JSON.stringify(input.attachment) : null,
+        storedAttachment?.mediaId ?? null,
+        storedAttachment ? JSON.stringify(storedAttachment) : null,
         input.tempo.speedPreset,
         input.tempo.delayPerMessageSeconds,
         input.tempo.batchSize,
@@ -705,7 +732,18 @@ export async function updateCampaign(request: Request, response: Response) {
 
   const nextTempo = input.tempo;
   const shouldClearAttachment = Object.prototype.hasOwnProperty.call(input, "attachment") && input.attachment === null;
-  const nextBodyType = input.attachment?.kind ?? (input.attachment === null ? 'text' : undefined);
+  const storedAttachment = shouldClearAttachment
+    ? null
+    : input.attachment
+      ? await prepareCampaignAttachmentForStorage(organizationId, input.attachment)
+      : null;
+  const nextBodyType = storedAttachment?.kind ?? (input.attachment === null ? 'text' : undefined);
+  logLargeCampaignRowWarning({
+    organizationId,
+    campaignId,
+    attachment: storedAttachment,
+    source: "updateCampaign"
+  });
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
       `
@@ -717,8 +755,13 @@ export async function updateCampaign(request: Request, response: Response) {
             selected_message_template_id = coalesce($7, selected_message_template_id),
             message_template = coalesce($8, message_template),
             message_body_type = coalesce($9, message_body_type),
+            media_id = case
+              when $19 then null
+              when $10 is not null then $20
+              else media_id
+            end,
             attachment = case
-              when $18 then null
+              when $19 then null
               when $10 is not null then $10
               else attachment
             end,
@@ -744,7 +787,7 @@ export async function updateCampaign(request: Request, response: Response) {
         input.selectedMessageTemplateId ?? null,
         input.messageTemplate ?? null,
         nextBodyType ?? null,
-        input.attachment ? JSON.stringify(input.attachment) : null,
+        storedAttachment ? JSON.stringify(storedAttachment) : null,
         nextTempo?.speedPreset ?? null,
         nextTempo?.delayPerMessageSeconds ?? null,
         nextTempo?.batchSize ?? null,
@@ -752,7 +795,8 @@ export async function updateCampaign(request: Request, response: Response) {
         nextTempo?.dailyLimit ?? null,
         nextTempo?.stopOnHighFailure ?? null,
         input.attachContactCard ?? null,
-        shouldClearAttachment
+        shouldClearAttachment,
+        storedAttachment?.mediaId ?? null
       ]
     );
 
@@ -925,7 +969,8 @@ export async function startCampaign(request: Request, response: Response) {
     templateGovernanceVersionId: input.templateGovernanceVersionId,
     messageTemplate: input.messageTemplate
   });
-  const bodyType = input.attachment?.kind ?? 'text';
+  const storedAttachment = await prepareCampaignAttachmentForStorage(organizationId, input.attachment ?? null);
+  const bodyType = storedAttachment?.kind ?? 'text';
   const tempo = resolveCampaignTempo({
     speedPreset: input.speedPreset ?? campaign.speed_preset ?? undefined,
     delayPerMessageSeconds: input.delayPerMessageSeconds ?? campaign.delay_per_message_seconds ?? undefined,
@@ -944,7 +989,8 @@ export async function startCampaign(request: Request, response: Response) {
     senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
     messageTemplate: governedTemplate.body,
     messageBodyType: bodyType,
-    attachment: input.attachment ? JSON.stringify(input.attachment) : null,
+    mediaId: storedAttachment?.mediaId ?? null,
+    attachment: storedAttachment ? JSON.stringify(storedAttachment) : null,
     tempo,
     attachContactCard: input.attachContactCard ?? null
   });
@@ -1027,6 +1073,14 @@ export async function resumeCampaign(request: Request, response: Response) {
     throw new AppError("Only paused campaigns can be resumed", 409, "campaign_not_resumable", {
       status: existing.status
     });
+  }
+
+  if (getLegacyInlineAttachmentBytes(existing.attachment) > CAMPAIGN_INLINE_MEDIA_MIGRATION_THRESHOLD_BYTES) {
+    throw new AppError(
+      "Campaign media must be stored as a media asset before sending.",
+      409,
+      "campaign_media_migration_required"
+    );
   }
 
   const senderAvailability = await assessCampaignSenderAvailability({
@@ -1999,7 +2053,7 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     activeSafetyReviewId: row.active_safety_review_id,
     activeMessageOverrideId: row.active_message_override_id,
     messageTemplate: row.message_template,
-    attachment: parseCampaignAttachment(row.attachment),
+    attachment: parseCampaignAttachment(row.attachment, row.media_id),
     attachContactCard: row.attach_contact_card,
     speedPreset: row.speed_preset,
     delayPerMessageSeconds: row.delay_per_message_seconds,
@@ -2101,24 +2155,93 @@ async function listCampaignWarmupAdvisory(organizationId: string, campaignId: st
   });
 }
 
-function parseCampaignAttachment(value: unknown) {
-  if (!value) {
+async function prepareCampaignAttachmentForStorage(
+  organizationId: string,
+  attachment: {
+    kind: "image" | "video" | "audio" | "document";
+    fileName: string;
+    mimeType: string;
+    fileSizeBytes: number;
+    dataBase64?: string;
+    mediaId?: string | null;
+    storageBucket?: string | null;
+    storagePath?: string | null;
+    mediaUrl?: string | null;
+    legacyInline?: boolean;
+  } | null
+) {
+  if (!attachment) {
     return null;
   }
 
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
+  return mediaAssetService.ensureStoredReference({
+    organizationId,
+    source: "campaign-media",
+    attachment
+  });
+}
+
+function logLargeCampaignRowWarning(input: {
+  organizationId: string;
+  campaignId: string | null;
+  attachment: StoredMediaReference | null;
+  source: string;
+}) {
+  if (!input.attachment || input.attachment.fileSizeBytes < CAMPAIGN_ROW_WARNING_THRESHOLD_BYTES) {
+    return;
+  }
+
+  logger.warn(
+    {
+      organizationId: input.organizationId,
+      campaignId: input.campaignId,
+      source: input.source,
+      fileSizeBytes: input.attachment.fileSizeBytes,
+      mediaId: input.attachment.mediaId ?? null,
+      storagePath: input.attachment.storagePath ?? null
+    },
+    "Campaign attachment exceeds large-row warning threshold"
+  );
+}
+
+function getLegacyInlineAttachmentBytes(value: unknown) {
+  const inline = parseInlineMediaAttachment(value);
+  if (!inline) {
+    return 0;
+  }
+
+  return inline.fileSizeBytes || estimateBase64Bytes(inline.dataBase64);
+}
+
+function parseCampaignAttachment(value: unknown, mediaId?: string | null) {
+  const normalized = (() => {
+    if (!value) {
       return null;
     }
+
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value) as StoredMediaReference;
+      } catch {
+        return null;
+      }
+    }
+
+    if (typeof value === "object") {
+      return value as StoredMediaReference;
+    }
+
+    return null;
+  })();
+
+  if (!normalized) {
+    return null;
   }
 
-  if (typeof value === "object") {
-    return value;
-  }
-
-  return null;
+  return {
+    ...normalized,
+    ...(mediaId && !normalized.mediaId ? { mediaId } : {})
+  };
 }
 
 function toCampaignRecipient(row: CampaignRecipientRecord) {
@@ -2371,8 +2494,13 @@ async function sendCampaignTestMessage(input: {
     kind: "image" | "video" | "audio" | "document";
     fileName: string;
     mimeType: string;
-    dataBase64: string;
     fileSizeBytes: number;
+    dataBase64?: string;
+    mediaId?: string | null;
+    storageBucket?: string | null;
+    storagePath?: string | null;
+    mediaUrl?: string | null;
+    legacyInline?: boolean;
   } | null;
   attachContactCard?: boolean;
 }) {
@@ -2400,8 +2528,13 @@ async function sendCampaignRecipientMessage(input: {
     kind: "image" | "video" | "audio" | "document";
     fileName: string;
     mimeType: string;
-    dataBase64: string;
     fileSizeBytes: number;
+    dataBase64?: string;
+    mediaId?: string | null;
+    storageBucket?: string | null;
+    storagePath?: string | null;
+    mediaUrl?: string | null;
+    legacyInline?: boolean;
   } | null;
   attachContactCard?: boolean;
   waitForDispatch?: boolean;
@@ -2475,6 +2608,7 @@ async function saveExistingCampaignStartConfiguration(input: {
   senderWhatsAppAccountIds: string[];
   messageTemplate: string;
   messageBodyType: string;
+  mediaId: string | null;
   attachment: string | null;
   tempo: CampaignTempo;
   attachContactCard: boolean | null;
@@ -2488,14 +2622,15 @@ async function saveExistingCampaignStartConfiguration(input: {
             sender_whatsapp_account_id = $5,
             message_template = $6,
             message_body_type = $7,
-            attachment = coalesce($8, attachment),
-            speed_preset = $9,
-            delay_per_message_seconds = $10,
-            batch_size = $11,
-            batch_pause_seconds = $12,
-            daily_limit = $13,
-            stop_on_high_failure = $14,
-            attach_contact_card = coalesce($15, attach_contact_card),
+            media_id = coalesce($8, media_id),
+            attachment = coalesce($9, attachment),
+            speed_preset = $10,
+            delay_per_message_seconds = $11,
+            batch_size = $12,
+            batch_pause_seconds = $13,
+            daily_limit = $14,
+            stop_on_high_failure = $15,
+            attach_contact_card = coalesce($16, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -2508,6 +2643,7 @@ async function saveExistingCampaignStartConfiguration(input: {
         input.primarySenderWhatsAppAccountId,
         input.messageTemplate,
         input.messageBodyType,
+        input.mediaId,
         input.attachment,
         input.tempo.speedPreset,
         input.tempo.delayPerMessageSeconds,

@@ -79,7 +79,11 @@ export class MessageDispatchOutboxRepository {
           source = excluded.source,
           priority = excluded.priority,
           available_at = excluded.available_at,
-          payload = excluded.payload
+          payload = case
+            when excluded.payload is null then message_dispatch_outbox.payload
+            when message_dispatch_outbox.payload is null then excluded.payload
+            else message_dispatch_outbox.payload || excluded.payload
+          end
         returning *
       `,
       [
@@ -234,7 +238,11 @@ export class MessageDispatchOutboxRepository {
             dispatched_at = timezone('utc', now()),
             claimed_at = null,
             connector_message_id = coalesce($2, connector_message_id),
-            payload = coalesce($3, payload),
+            payload = case
+              when $3::jsonb is null then payload
+              when payload is null then $3::jsonb
+              else payload || $3::jsonb
+            end,
             last_error = null,
             updated_at = timezone('utc', now())
         where id = $1
@@ -259,7 +267,11 @@ export class MessageDispatchOutboxRepository {
             claimed_at = null,
             next_attempt_at = $2,
             last_error = $3,
-            payload = coalesce($4, payload),
+            payload = case
+              when $4::jsonb is null then payload
+              when payload is null then $4::jsonb
+              else payload || $4::jsonb
+            end,
             updated_at = timezone('utc', now())
         where id = $1
       `,

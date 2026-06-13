@@ -66,6 +66,7 @@ export interface MessageRecord {
   external_message_id: string | null;
   external_chat_id?: string | null;
   reply_to_message_id?: UUID | null;
+  media_id?: UUID | null;
   is_deleted?: boolean;
   direction: "incoming" | "outgoing" | "system";
   message_type: string;
@@ -160,8 +161,13 @@ export interface OutboundMediaAttachmentInput {
   kind: "image" | "video" | "audio" | "document";
   fileName: string;
   mimeType: string;
-  dataBase64: string;
   fileSizeBytes: number;
+  dataBase64?: string;
+  mediaId?: UUID | null;
+  storageBucket?: string | null;
+  storagePath?: string | null;
+  mediaUrl?: string | null;
+  legacyInline?: boolean;
 }
 
 export interface OutboundContactCardInput {

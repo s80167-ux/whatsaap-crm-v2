@@ -4,11 +4,13 @@ import { withTransaction } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
+import { sanitizeOutboundMediaReference } from "../lib/mediaAttachments.js";
 import { emitMobileInboxUpdate } from "../modules/mobile/mobileInboxEvents.bus.js";
 import { MessageRepository } from "../repositories/messageRepository.js";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
 import { WhatsAppAccountAccessRepository } from "../repositories/whatsAppAccountAccessRepository.js";
 import type { SendMessageInput, SendMessageOptions } from "../types/domain.js";
+import { MediaAssetService } from "./mediaAssetService.js";
 import { MessageDispatchService } from "./messageDispatchService.js";
 import { ProjectionService } from "./projectionService.js";
 import { QuickReplyOutcomeService } from "./quickReplyOutcomeService.js";
@@ -18,6 +20,7 @@ export class SendMessageService {
     private readonly messageRepository = new MessageRepository(),
     private readonly conversationRepository = new ConversationRepository(),
     private readonly whatsappAccessRepository = new WhatsAppAccountAccessRepository(),
+    private readonly mediaAssetService = new MediaAssetService(),
     private readonly messageDispatchService = new MessageDispatchService(),
     private readonly projectionService = new ProjectionService(),
     private readonly quickReplyOutcomeService = new QuickReplyOutcomeService()
@@ -35,6 +38,13 @@ export class SendMessageService {
 
     const dispatchSource = resolveDispatchSource(input);
     const dispatchPriority = resolveDispatchPriority(dispatchSource);
+    const storedAttachment = input.attachment
+      ? await this.mediaAssetService.ensureStoredReference({
+          organizationId: input.organizationId,
+          source: input.campaignContext ? "campaign-outbound" : "message-outbound",
+          attachment: input.attachment
+        })
+      : null;
 
     const { message, outboxId } = await withTransaction(async (client) => {
       const conversationResult = await client.query<{ contact_id: string; contact_jid: string }>(
@@ -98,15 +108,9 @@ export class SendMessageService {
 
       const queuedAt = new Date();
       const contentJson = {
-        ...(input.attachment
+        ...(storedAttachment
           ? {
-              outboundMedia: {
-                kind: input.attachment.kind,
-                fileName: input.attachment.fileName,
-                mimeType: input.attachment.mimeType,
-                fileSizeBytes: input.attachment.fileSizeBytes,
-                dataBase64: input.attachment.dataBase64
-              }
+              outboundMedia: sanitizeOutboundMediaReference(storedAttachment)
             }
           : {}),
         ...(input.contactCard
@@ -154,9 +158,9 @@ export class SendMessageService {
           : {})
       };
 
-      const messageType = input.attachment?.kind ?? "text";
+      const messageType = storedAttachment?.kind ?? "text";
       const contentText =
-        normalizedText || (input.attachment ? `${input.attachment.kind.toUpperCase()}: ${input.attachment.fileName}` : "");
+        normalizedText || (storedAttachment ? `${storedAttachment.kind.toUpperCase()}: ${storedAttachment.fileName}` : "");
 
       const draft = await this.messageRepository.createOutboundDraft(client, {
         organizationId: input.organizationId,
@@ -168,6 +172,7 @@ export class SendMessageService {
         replyToMessageId: input.replyToMessageId ?? null,
         contentText,
         messageType,
+        mediaId: storedAttachment?.mediaId ?? null,
         contentJson: Object.keys(contentJson).length > 0 ? contentJson : null,
         sentAt: queuedAt
       });
@@ -181,14 +186,9 @@ export class SendMessageService {
       });
 
       const outboxPayload = {
-        ...(input.attachment
+        ...(storedAttachment
           ? {
-              attachment: {
-                kind: input.attachment.kind,
-                fileName: input.attachment.fileName,
-                mimeType: input.attachment.mimeType,
-                dataBase64: input.attachment.dataBase64
-              }
+              attachment: sanitizeOutboundMediaReference(storedAttachment)
             }
           : {}),
         ...(input.contactCard
@@ -229,7 +229,7 @@ export class SendMessageService {
         contactId: conversationRow.contact_id,
         whatsappAccountId: input.whatsappAccountId,
         recipientJid,
-        messageText: normalizedText || input.attachment?.fileName || draft.content_text || "",
+        messageText: normalizedText || storedAttachment?.fileName || draft.content_text || "",
         source: dispatchSource,
         priority: dispatchPriority,
         availableAt: input.outboxAvailableAt ?? null,

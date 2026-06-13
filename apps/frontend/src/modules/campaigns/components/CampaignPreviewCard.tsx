@@ -38,6 +38,11 @@ export function CampaignPreviewCard({
           <span className="text-text-muted">{attachment.fileName}</span>
         </div>
       ) : null}
+      {attachment?.legacyInline ? (
+        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Legacy inline attachment detected. Save the campaign again to migrate media before sending.
+        </div>
+      ) : null}
       {attachContactCard ? (
         <div className="mt-2 rounded-xl border border-success/10 bg-success/5 px-3 py-2 text-xs text-success">
           Contact card will be attached

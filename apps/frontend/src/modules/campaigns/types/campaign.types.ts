@@ -13,8 +13,13 @@ export type CampaignAttachment = {
   kind: "image" | "video" | "audio" | "document";
   fileName: string;
   mimeType: string;
-  dataBase64: string;
   fileSizeBytes: number;
+  dataBase64?: string;
+  mediaId?: string | null;
+  storageBucket?: string | null;
+  storagePath?: string | null;
+  mediaUrl?: string | null;
+  legacyInline?: boolean;
 };
 
 export type Campaign = {

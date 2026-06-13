@@ -33,6 +33,7 @@ export interface Message {
   external_message_id: string | null;
   external_chat_id?: string | null;
   reply_to_message_id?: string | null;
+  media_id?: string | null;
   is_deleted?: boolean;
   direction: "incoming" | "outgoing" | "system";
   message_type: string;
