@@ -46,6 +46,7 @@ export function CreateCampaignPage() {
   const isEditMode = Boolean(editCampaignId);
   const [campaignName, setCampaignName] = useState("");
   const [selectedSenderWhatsAppAccountIds, setSelectedSenderWhatsAppAccountIds] = useState<string[]>([]);
+  const [originalSenderWhatsAppAccountIds, setOriginalSenderWhatsAppAccountIds] = useState<string[]>([]);
   const [primarySenderWhatsAppAccountId, setPrimarySenderWhatsAppAccountId] = useState("");
   const [audienceGroupId, setAudienceGroupId] = useState("");
   const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
@@ -180,7 +181,9 @@ export function CreateCampaignPage() {
     }
 
     setCampaignName(isEditMode ? sourceCampaign.name : `${sourceCampaign.name} Copy`);
-    setSelectedSenderWhatsAppAccountIds(sourceCampaign.senderWhatsAppAccountIds ?? (sourceCampaign.senderWhatsAppAccountId ? [sourceCampaign.senderWhatsAppAccountId] : []));
+    const sourceSenderIds = sourceCampaign.senderWhatsAppAccountIds ?? (sourceCampaign.senderWhatsAppAccountId ? [sourceCampaign.senderWhatsAppAccountId] : []);
+    setSelectedSenderWhatsAppAccountIds(sourceSenderIds);
+    setOriginalSenderWhatsAppAccountIds(sourceSenderIds);
     setPrimarySenderWhatsAppAccountId(
       sourceCampaign.senderWhatsAppAccountId
       ?? sourceCampaign.senderWhatsAppAccountIds?.[0]
@@ -229,8 +232,10 @@ export function CreateCampaignPage() {
   }
 
   function validateSender() {
-    if (selectedSenderWhatsAppAccountIds.length === 0) {
-      showError("Select at least one connected Sender WhatsApp Number first.");
+    const hasConnectedSelectedSender = selectedSenders.some((sender) => isSenderConnected(sender));
+
+    if (selectedSenderWhatsAppAccountIds.length === 0 || !hasConnectedSelectedSender) {
+      showError("Please select at least one connected WhatsApp sender.");
       return false;
     }
 
@@ -238,14 +243,14 @@ export function CreateCampaignPage() {
     if (firstUnavailableSender) {
       showError(
         firstUnavailableSender.live_status_error
-          ? "One selected sender could not be verified with the live WhatsApp connector. Reconnect it and try again."
-          : `${firstUnavailableSender.name} is currently ${formatSenderStatus(firstUnavailableSender)}. Reconnect it and try again.`
+          ? "One selected sender could not be verified with the live WhatsApp connector. Remove it or reconnect it and try again."
+          : `${firstUnavailableSender.name} is currently ${formatSenderStatus(firstUnavailableSender)}. Remove it or reconnect it and try again.`
       );
       return false;
     }
 
-    if (!primarySenderWhatsAppAccountId || !selectedSender) {
-      showError("Choose the primary sender for test sends and campaign ownership.");
+    if (!primarySenderWhatsAppAccountId || !selectedSender || !isSenderConnected(selectedSender)) {
+      showError("Choose a connected primary sender for test sends and campaign ownership.");
       return false;
     }
 
@@ -263,7 +268,11 @@ export function CreateCampaignPage() {
       setPrimarySenderWhatsAppAccountId((currentPrimary) => {
         if (next.length === 0) return "";
         if (currentPrimary && next.includes(currentPrimary)) return currentPrimary;
-        return next[0];
+        const firstConnectedId = next.find((id) => {
+          const account = whatsappAccounts.find((account) => account.id === id);
+          return account && isSenderConnected(account);
+        });
+        return firstConnectedId ?? "";
       });
 
       return next;
@@ -637,6 +646,9 @@ export function CreateCampaignPage() {
                       whatsappAccounts.map((account) => {
                         const connected = isSenderConnected(account);
                         const checked = selectedSenderWhatsAppAccountIds.includes(account.id);
+                        const wasOriginalCampaignSender = originalSenderWhatsAppAccountIds.includes(account.id);
+                        const canToggle = connected || (wasOriginalCampaignSender && checked);
+                        const isRemovableDisconnectedSender = !connected && wasOriginalCampaignSender && checked;
 
                         return (
                           <label
@@ -648,13 +660,17 @@ export function CreateCampaignPage() {
                             <input
                               type="checkbox"
                               checked={checked}
-                              disabled={!connected}
+                              disabled={!canToggle}
                               onChange={(event) => handleSenderToggle(account.id, event.target.checked)}
                             />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-text">{account.name}</p>
                               <p className="text-xs text-text-muted">{formatSenderLabel(account)}</p>
-                              {!connected ? (
+                              {isRemovableDisconnectedSender ? (
+                                <p className="mt-1 text-xs text-amber-800">
+                                  This sender is no longer connected. You can remove it from this campaign.
+                                </p>
+                              ) : !connected ? (
                                 <p className="mt-1 text-xs text-amber-800">
                                   Not connected. Reconnect this number before it can join the campaign sender pool.
                                 </p>

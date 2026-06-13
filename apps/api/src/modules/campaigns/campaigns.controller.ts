@@ -103,6 +103,7 @@ const importAudienceContactsBodySchema = z.object({
 
 const senderModeSchema = z.enum(["single", "round_robin"]);
 const senderPoolSchema = z.array(z.string().uuid()).min(1).max(32);
+const updateSenderPoolSchema = z.array(z.string().uuid()).max(32).optional();
 
 const attachmentSchema = z.object({
   kind: z.enum(["image", "video", "audio", "document"]),
@@ -141,7 +142,7 @@ const updateCampaignBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().trim().min(1).max(160).optional(),
   senderWhatsAppAccountId: z.string().uuid().optional(),
-  senderWhatsAppAccountIds: senderPoolSchema.optional(),
+  senderWhatsAppAccountIds: updateSenderPoolSchema,
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
   selectedMessageTemplateId: z.string().uuid().optional().nullable(),
@@ -718,8 +719,22 @@ export async function updateCampaign(request: Request, response: Response) {
     Boolean(input.senderWhatsAppAccountIds?.length) ||
     Boolean(input.senderMode);
 
+  const submittedSenderIds = hasSenderSelectionInput
+    ? Array.from(
+        new Set(
+          [
+            ...(input.senderWhatsAppAccountIds ?? []),
+            input.senderWhatsAppAccountId
+          ].filter((value): value is string => Boolean(value))
+        )
+      )
+    : [];
+  const connectedSenderIds = submittedSenderIds.length > 0
+    ? await getConnectedWhatsAppAccountIds(organizationId, submittedSenderIds)
+    : [];
+
   const senderSelection = hasSenderSelectionInput
-    ? resolveSenderSelection(input, existing.sender_whatsapp_account_id)
+    ? resolveSenderSelection(input, undefined, connectedSenderIds)
     : null;
 
   if (senderSelection) {
@@ -2405,13 +2420,33 @@ async function assertConnectedSenders(organizationId: string, senderWhatsAppAcco
   }
 }
 
+async function getConnectedWhatsAppAccountIds(organizationId: string, senderWhatsAppAccountIds: string[]) {
+  if (senderWhatsAppAccountIds.length === 0) {
+    return [];
+  }
+
+  const result = await query(
+    `
+      select id
+      from whatsapp_accounts
+      where organization_id = $1
+        and id = any($2::uuid[])
+        and lower(coalesce(to_jsonb(whatsapp_accounts)->>'connection_status', to_jsonb(whatsapp_accounts)->>'status', '')) = any($3::text[])
+    `,
+    [organizationId, senderWhatsAppAccountIds, ["connected", "open", "ready"]]
+  );
+
+  return result.rows.map((row) => row.id as string);
+}
+
 function resolveSenderSelection(
   input: {
     senderWhatsAppAccountId?: string;
     senderWhatsAppAccountIds?: string[];
     senderMode?: "single" | "round_robin";
   },
-  fallbackSenderWhatsAppAccountId?: string | null
+  fallbackSenderWhatsAppAccountId?: string | null,
+  connectedSenderWhatsAppAccountIds?: string[]
 ) {
   const senderIds = Array.from(
     new Set(
@@ -2424,11 +2459,29 @@ function resolveSenderSelection(
   );
 
   if (senderIds.length === 0) {
-    throw new AppError("At least one connected WhatsApp sender is required", 400, "sender_not_connected");
+    throw new AppError("Please select at least one connected WhatsApp sender.", 400, "sender_not_connected");
+  }
+
+  let primarySenderWhatsAppAccountId = input.senderWhatsAppAccountId ?? senderIds[0];
+
+  if (connectedSenderWhatsAppAccountIds) {
+    const connectedSelectedIds = senderIds.filter((id) => connectedSenderWhatsAppAccountIds.includes(id));
+
+    if (connectedSelectedIds.length === 0) {
+      throw new AppError("Please select at least one connected WhatsApp sender.", 400, "sender_not_connected");
+    }
+
+    if (
+      !primarySenderWhatsAppAccountId ||
+      !senderIds.includes(primarySenderWhatsAppAccountId) ||
+      !connectedSenderWhatsAppAccountIds.includes(primarySenderWhatsAppAccountId)
+    ) {
+      primarySenderWhatsAppAccountId = connectedSelectedIds[0];
+    }
   }
 
   return {
-    primarySenderWhatsAppAccountId: input.senderWhatsAppAccountId ?? senderIds[0],
+    primarySenderWhatsAppAccountId,
     senderWhatsAppAccountIds: senderIds,
     senderMode: senderIds.length > 1 ? "round_robin" : (input.senderMode ?? "single")
   };
