@@ -7,8 +7,7 @@ const campaignModuleTabs = {
     { labelKey: "campaign.audience", to: "/campaigns/whatsapp/audience", icon: ListPlus, end: false },
     { labelKey: "campaign.templates", to: "/campaigns/whatsapp/templates", icon: FileText, end: false },
     { labelKey: "campaign.setup", to: "/campaigns/whatsapp/create", icon: PlusCircle, end: true },
-    { labelKey: "campaign.launchMonitor", to: "/campaigns/whatsapp", icon: Megaphone, end: true },
-    { labelKey: "campaign.history", to: "/campaigns/whatsapp/history", icon: History, end: true }
+    { labelKey: "campaign.launchMonitor", to: "/campaigns/whatsapp", icon: Megaphone, end: true }
   ],
   email: [
     { labelKey: "nav.campaigns", to: "/campaigns/email", icon: Mail, end: true, activePaths: ["/campaigns/email", "/campaigns/email/create"] },

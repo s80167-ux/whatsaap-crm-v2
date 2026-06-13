@@ -186,14 +186,7 @@ export const router = createBrowserRouter([
               </CampaignsRouteGuard>
             )
           },
-          {
-            path: "campaigns/whatsapp/history",
-            element: withRouteFallback(
-              <CampaignsRouteGuard moduleKey="campaign.whatsapp">
-                <CampaignsPage activeTab="history" />
-              </CampaignsRouteGuard>
-            )
-          },
+          { path: "campaigns/whatsapp/history", element: <Navigate to="/campaigns/whatsapp" replace /> },
           {
             path: "campaigns/whatsapp/audience",
             element: withRouteFallback(

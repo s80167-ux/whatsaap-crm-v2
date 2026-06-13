@@ -35,7 +35,7 @@ const whatsappWorkflowStepKeys = [
   "campaign.whatsapp.workflow.launch"
 ];
 
-export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overview" | "history" }) {
+export function CampaignsPage() {
   const { t } = useTranslation();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const navigate = useNavigate();
@@ -212,8 +212,6 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     () => audienceGroups.filter((group) => group.status === "imported" && group.valid_count > 0).length,
     [audienceGroups]
   );
-  const recentCampaigns = filteredCampaigns.slice(0, 3);
-
   return (
     <section className="space-y-5">
       <Card elevated className="workspace-page-header p-5 sm:p-6">
@@ -263,130 +261,87 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
             </Card>
           </div>
 
-          {activeTab === "overview" ? (
-            <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-              <Card elevated className="space-y-4 p-4 sm:p-5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
-                    <p className="mt-2 text-sm text-text-muted">
-                      {t("campaign.whatsapp.launchMonitorCopy")}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="w-full sm:w-auto"
-                    onClick={() => navigate("/campaigns/whatsapp/history")}
-                  >
-                    View History
-                  </Button>
-                </div>
-
-                {recentCampaigns.length > 0 ? (
-                  <CampaignListTable
-                    campaigns={recentCampaigns}
-                    onAction={showPlaceholderNotice}
-                    onEdit={handleEditCampaign}
-                    onDuplicate={handleDuplicateCampaign}
-                    onReview={setReviewCampaign}
-                    onStart={handleStartCampaign}
-                    onPause={(campaign) => pauseMutation.mutate(campaign)}
-                    onResume={handleResumeCampaign}
-                    onCancel={(campaign) => cancelMutation.mutate(campaign)}
-                    onDelete={handleDeleteCampaign}
-                  />
-                ) : (
-                  <CampaignEmptyStateCard
-                    title="No broadcasts yet"
-                    description="Create your first WhatsApp broadcast to start pacing outbound campaign delivery."
-                    actionLabel="Create Broadcast"
-                    onAction={() => navigate("/campaigns/whatsapp/create")}
-                  />
-                )}
-              </Card>
-
-              <Card elevated className="space-y-4 p-4 sm:p-5">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Launch Review</p>
-                  <p className="mt-2 text-sm text-text-muted">
-                    Safety is now part of launch review so teams can check readiness in one place before sending.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <ReviewCheckRow
-                    label="Connected sender"
-                    description={connectedAccountCount > 0 ? `${connectedAccountCount} live sender available for campaigns.` : "Reconnect a WhatsApp sender before sending."}
-                    status={connectedAccountCount > 0 ? "ready" : "attention"}
-                  />
-                  <ReviewCheckRow
-                    label="Audience ready"
-                    description={readyAudienceGroupsCount > 0 ? `${readyAudienceGroupsCount} audience group ready with valid contacts.` : "Create or import an audience group first."}
-                    status={readyAudienceGroupsCount > 0 ? "ready" : "attention"}
-                  />
-                  <ReviewCheckRow
-                    label="Message review"
-                    description="Preview the message, send a test, and confirm opt-out wording before launch."
-                    status="info"
-                  />
-                  <ReviewCheckRow
-                    label="System safety checks"
-                    description="Recipient validation and campaign safety checks still run when a campaign starts."
-                    status="info"
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-                  Send only to customers who have given permission to receive WhatsApp messages, and make opting out easy in every campaign.
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Button size="sm" className="w-full" onClick={() => navigate("/campaigns/whatsapp/create")}>Open Composer</Button>
-                  <Button size="sm" variant="secondary" className="w-full" onClick={() => navigate("/campaigns/whatsapp/audience")}>Manage Audience</Button>
-                </div>
-              </Card>
-            </div>
-          ) : null}
-
-          {activeTab === "history" ? (
-            <>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {campaignStatusFilters.map((filter) => (
-                    <button
-                      key={filter.value}
-                      type="button"
-                      className={`inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition ${
-                        statusFilter === filter.value
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-card text-text-muted hover:bg-background-tint hover:text-text"
-                      }`}
-                      onClick={() => setStatusFilter(filter.value)}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-                <label className="relative block sm:max-w-sm">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                  <Input
-                    value={campaignQuery}
-                    onChange={(event) => setCampaignQuery(event.target.value)}
-                    placeholder={t("campaign.searchPlaceholder")}
-                    className="pl-9"
-                  />
-                </label>
+          <div className="space-y-4">
+            <Card elevated className="space-y-4 p-4 sm:p-5">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Launch Review</p>
+                <p className="mt-2 text-sm text-text-muted">
+                  Safety is now part of launch review so teams can check readiness in one place before sending.
+                </p>
               </div>
 
-              <Card elevated className="space-y-4 p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Campaign history</p>
-                    <p className="mt-2 text-sm text-text-muted">Live campaign progress from paced dispatch.</p>
-                  </div>
-                  <p className="shrink-0 text-xs font-semibold text-text-muted">{t("campaign.shown", { count: filteredCampaigns.length })}</p>
+              <div className="space-y-3">
+                <ReviewCheckRow
+                  label="Connected sender"
+                  description={connectedAccountCount > 0 ? `${connectedAccountCount} live sender available for campaigns.` : "Reconnect a WhatsApp sender before sending."}
+                  status={connectedAccountCount > 0 ? "ready" : "attention"}
+                />
+                <ReviewCheckRow
+                  label="Audience ready"
+                  description={readyAudienceGroupsCount > 0 ? `${readyAudienceGroupsCount} audience group ready with valid contacts.` : "Create or import an audience group first."}
+                  status={readyAudienceGroupsCount > 0 ? "ready" : "attention"}
+                />
+                <ReviewCheckRow
+                  label="Message review"
+                  description="Preview the message, send a test, and confirm opt-out wording before launch."
+                  status="info"
+                />
+                <ReviewCheckRow
+                  label="System safety checks"
+                  description="Recipient validation and campaign safety checks still run when a campaign starts."
+                  status="info"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                Send only to customers who have given permission to receive WhatsApp messages, and make opting out easy in every campaign.
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button size="sm" className="w-full" onClick={() => navigate("/campaigns/whatsapp/create")}>Open Composer</Button>
+                <Button size="sm" variant="secondary" className="w-full" onClick={() => navigate("/campaigns/whatsapp/audience")}>Manage Audience</Button>
+              </div>
+            </Card>
+
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {campaignStatusFilters.map((filter) => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    className={`inline-flex min-h-[2.25rem] shrink-0 items-center border px-3 py-2 text-xs font-semibold transition ${
+                      statusFilter === filter.value
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border bg-card text-text-muted hover:bg-background-tint hover:text-text"
+                    }`}
+                    onClick={() => setStatusFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              <label className="relative block sm:max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <Input
+                  value={campaignQuery}
+                  onChange={(event) => setCampaignQuery(event.target.value)}
+                  placeholder={t("campaign.searchPlaceholder")}
+                  className="pl-9"
+                />
+              </label>
+            </div>
+
+            <Card elevated className="space-y-4 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
+                  <p className="mt-2 text-sm text-text-muted">
+                    Launch, monitor, and review past WhatsApp campaigns from one place.
+                  </p>
                 </div>
+                <p className="shrink-0 text-xs font-semibold text-text-muted">{t("campaign.shown", { count: filteredCampaigns.length })}</p>
+              </div>
+              {visibleCampaigns.length > 0 ? (
                 <CampaignListTable
                   campaigns={visibleCampaigns}
                   onAction={showPlaceholderNotice}
@@ -399,16 +354,23 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   onCancel={(campaign) => cancelMutation.mutate(campaign)}
                   onDelete={handleDeleteCampaign}
                 />
-                <PanelPagination
-                  page={campaignPage}
-                  pageCount={campaignPageCount}
-                  pageSize={pageSize}
-                  totalItems={totalItems}
-                  onPageChange={setCampaignPage}
+              ) : (
+                <CampaignEmptyStateCard
+                  title="No broadcasts yet"
+                  description="Create your first WhatsApp broadcast to start pacing outbound campaign delivery."
+                  actionLabel="Create Broadcast"
+                  onAction={() => navigate("/campaigns/whatsapp/create")}
                 />
-              </Card>
-            </>
-          ) : null}
+              )}
+              <PanelPagination
+                page={campaignPage}
+                pageCount={campaignPageCount}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={setCampaignPage}
+              />
+            </Card>
+          </div>
         </>
       )}
 
