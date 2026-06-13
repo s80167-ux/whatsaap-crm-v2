@@ -771,13 +771,13 @@ export async function updateCampaign(request: Request, response: Response) {
             message_template = coalesce($8, message_template),
             message_body_type = coalesce($9, message_body_type),
             media_id = case
-              when $19 then null
-              when $10 is not null then $20
+              when $18::boolean then null
+              when $10::jsonb is not null then $19::uuid
               else media_id
             end,
             attachment = case
-              when $19 then null
-              when $10 is not null then $10
+              when $18::boolean then null
+              when $10::jsonb is not null then $10::jsonb
               else attachment
             end,
             speed_preset = coalesce($11, speed_preset),

@@ -171,6 +171,21 @@ export function CampaignSafetyPage() {
     },
     onError: (error) => setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to retry sender-issue failures." })
   });
+  const retryAllFailedMutation = useMutation({
+    mutationFn: () =>
+      retryFailedCampaign({
+        campaignId: selectedCampaignId,
+        organizationId: selectedOrganizationId
+      }),
+    onSuccess: async (result) => {
+      setNotice({ type: "success", message: result.message });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaign-safety"] }),
+        failedRecipientsQuery.refetch()
+      ]);
+    },
+    onError: (error) => setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to retry all failed recipients." })
+  });
 
   function selectedCampaignMessage() {
     return selectedCampaign ? `${selectedCampaign.name} - ${selectedCampaign.status}` : "Select campaign";
@@ -351,10 +366,18 @@ export function CampaignSafetyPage() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  disabled={(selectedCampaign.failedSenderIssue ?? 0) === 0 || retryFailedMutation.isPending}
+                  disabled={(selectedCampaign.failedSenderIssue ?? 0) === 0 || retryFailedMutation.isPending || retryAllFailedMutation.isPending}
                   onClick={() => retryFailedMutation.mutate()}
                 >
                   Retry Failed Sender Issues
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={(selectedCampaign.failed ?? 0) === 0 || retryFailedMutation.isPending || retryAllFailedMutation.isPending}
+                  onClick={() => retryAllFailedMutation.mutate()}
+                >
+                  Retry All Failed
                 </Button>
               </div>
             </div>

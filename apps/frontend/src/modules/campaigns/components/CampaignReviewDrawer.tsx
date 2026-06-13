@@ -131,6 +131,21 @@ export function CampaignReviewDrawer({
     },
     onError: (error) => onNotice(error instanceof Error ? error.message : "Unable to retry failed recipients.", "error")
   });
+  const retryAllFailedMutation = useMutation({
+    mutationFn: () =>
+      retryFailedCampaign({
+        campaignId: campaign?.id ?? "",
+        organizationId
+      }),
+    onSuccess: async (result) => {
+      onNotice(result.message, "success");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-recipients", campaign?.id] })
+      ]);
+    },
+    onError: (error) => onNotice(error instanceof Error ? error.message : "Unable to retry all failed recipients.", "error")
+  });
 
   async function handleDownload() {
     if (!campaign) {
@@ -154,6 +169,10 @@ export function CampaignReviewDrawer({
       setIsDownloading(false);
     }
   }
+
+  const canRetryFailed = Boolean(campaign) && (campaign.status === "Paused" || campaign.status === "Failed");
+  const hasSenderIssueFailures = (campaign?.failedSenderIssue ?? 0) > 0;
+  const hasAnyFailedRecipients = (campaign?.failed ?? 0) > 0;
 
   return (
     <PopupOverlay
@@ -186,7 +205,7 @@ export function CampaignReviewDrawer({
             <p className="mt-2 leading-6 text-text-muted">{tempoSummary}</p>
           </div>
 
-          {campaign.status === "Paused" ? (
+          {canRetryFailed ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Recovery State</p>
               <p className="mt-2 leading-6 text-amber-900">
@@ -210,9 +229,17 @@ export function CampaignReviewDrawer({
                   size="sm"
                   variant="secondary"
                   onClick={() => retryFailedMutation.mutate()}
-                  disabled={retryFailedMutation.isPending || (campaign.failedSenderIssue ?? 0) === 0}
+                  disabled={retryFailedMutation.isPending || retryAllFailedMutation.isPending || !hasSenderIssueFailures}
                 >
                   Retry Failed Sender Issues
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => retryAllFailedMutation.mutate()}
+                  disabled={retryFailedMutation.isPending || retryAllFailedMutation.isPending || !hasAnyFailedRecipients}
+                >
+                  Retry All Failed
                 </Button>
               </div>
             </div>
