@@ -262,38 +262,38 @@ export function CampaignsPage() {
           </div>
 
           <div className="space-y-4">
-            <Card elevated className="space-y-4 p-4 sm:p-5">
+            <Card elevated className="space-y-3 p-3 sm:p-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Launch Review</p>
-                <p className="mt-2 text-sm text-text-muted">
-                  Safety is now part of launch review so teams can check readiness in one place before sending.
+                <p className="mt-1 text-xs text-text-muted">
+                  Check readiness in one place before sending.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <ReviewCheckRow
                   label="Connected sender"
-                  description={connectedAccountCount > 0 ? `${connectedAccountCount} live sender available for campaigns.` : "Reconnect a WhatsApp sender before sending."}
+                  description={connectedAccountCount > 0 ? `${connectedAccountCount} live sender available` : "Reconnect a WhatsApp sender"}
                   status={connectedAccountCount > 0 ? "ready" : "attention"}
                 />
                 <ReviewCheckRow
                   label="Audience ready"
-                  description={readyAudienceGroupsCount > 0 ? `${readyAudienceGroupsCount} audience group ready with valid contacts.` : "Create or import an audience group first."}
+                  description={readyAudienceGroupsCount > 0 ? `${readyAudienceGroupsCount} audience group ready` : "Create or import an audience"}
                   status={readyAudienceGroupsCount > 0 ? "ready" : "attention"}
                 />
                 <ReviewCheckRow
                   label="Message review"
-                  description="Preview the message, send a test, and confirm opt-out wording before launch."
+                  description="Preview message, send a test, confirm opt-out wording."
                   status="info"
                 />
                 <ReviewCheckRow
                   label="System safety checks"
-                  description="Recipient validation and campaign safety checks still run when a campaign starts."
+                  description="Recipient validation and safety checks run on launch."
                   status="info"
                 />
               </div>
 
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
                 Send only to customers who have given permission to receive WhatsApp messages, and make opting out easy in every campaign.
               </div>
 
@@ -428,9 +428,9 @@ function ReviewCheckRow({
         : "border-border bg-background-tint text-text";
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
-      <p className="text-sm font-semibold">{label}</p>
-      <p className="mt-1 text-sm leading-6">{description}</p>
+    <div className={`rounded-xl border px-3 py-2 ${tone}`}>
+      <p className="text-xs font-semibold">{label}</p>
+      <p className="mt-0.5 text-xs leading-5">{description}</p>
     </div>
   );
 }
