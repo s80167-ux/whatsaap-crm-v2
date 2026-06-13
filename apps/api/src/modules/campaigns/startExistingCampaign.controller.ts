@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
+import { CampaignRiskGuardService } from "../../services/campaignRiskGuardService.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 import { snapshotCampaignRecipientsSafely } from "../../services/campaignRecoveryService.js";
 import { assertCampaignTemplateVariablesAvailable } from "./campaignTemplateVariables.js";
@@ -11,6 +12,7 @@ import { campaignSpeedPresetSchema, resolveCampaignTempo, type CampaignSpeedPres
 
 const connectorClient = new ConnectorClient();
 const campaignSafetyService = new CampaignSafetyService();
+const campaignRiskGuardService = new CampaignRiskGuardService();
 
 const campaignParamsSchema = z.object({
   campaignId: z.string().uuid()
@@ -118,8 +120,13 @@ export async function startExistingCampaign(request: Request, response: Response
     throw new AppError("Audience Group is required", 400, "audience_group_required");
   }
 
-  const messageTemplate = input.messageTemplate?.trim() || campaign.message_template?.trim();
-  if (!messageTemplate) {
+  const baseMessageTemplate = input.messageTemplate?.trim() || campaign.message_template?.trim();
+  const effectiveMessageTemplate = await campaignRiskGuardService.getEffectiveMessageBody(
+    organizationId,
+    campaignId,
+    baseMessageTemplate ?? null
+  );
+  if (!effectiveMessageTemplate) {
     throw new AppError("Message template is required", 400, "message_template_required");
   }
 
@@ -138,7 +145,7 @@ export async function startExistingCampaign(request: Request, response: Response
   await assertCampaignTemplateVariablesAvailable({
     organizationId,
     audienceGroupId,
-    template: messageTemplate
+    template: effectiveMessageTemplate
   });
   await saveCampaignStartConfiguration({
     organizationId,
@@ -147,14 +154,15 @@ export async function startExistingCampaign(request: Request, response: Response
     senderMode: senderSelection.senderMode,
     primarySenderWhatsAppAccountId: senderSelection.primarySenderWhatsAppAccountId,
     senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
-    messageTemplate,
+    messageTemplate: baseMessageTemplate ?? effectiveMessageTemplate,
     tempo
   });
 
   const snapshot = await snapshotCampaignRecipients({
     organizationId,
     campaignId,
-    audienceGroupId
+    audienceGroupId,
+    messageTemplate: effectiveMessageTemplate
   });
 
   if (!snapshot.hasHistory && snapshot.affectedCount === 0) {
@@ -307,6 +315,7 @@ async function snapshotCampaignRecipients(input: {
   organizationId: string;
   campaignId: string;
   audienceGroupId: string;
+  messageTemplate?: string | null;
 }) {
   return snapshotCampaignRecipientsSafely(input);
 }

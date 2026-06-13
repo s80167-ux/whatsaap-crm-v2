@@ -218,7 +218,7 @@ export function validateAudienceRows(input: {
     }
 
     if (isOptedOut) {
-      issues.push("Contact is opted out");
+      issues.push("Contact is suppressed or opted out");
     }
 
     const gender = normalizeGender(getMappedValue(row, input.mapping.gender));
@@ -235,11 +235,13 @@ export function validateAudienceRows(input: {
       product_interest: emptyToNull(getMappedValue(row, input.mapping.product_interest)),
       customer_type: emptyToNull(getMappedValue(row, input.mapping.customer_type)),
       notes: emptyToNull(getMappedValue(row, input.mapping.notes)),
+      raw_data_json: row.values,
       validation_status: issues.length > 0 ? "invalid" : "valid",
       validation_issues: issues,
       warnings: rowWarnings,
       is_duplicate: isDuplicateInCsv || isDuplicateInAudienceGroup,
       is_opted_out: isOptedOut,
+      exclude_reason: issues[0] ?? null,
       crm_contact_id: crmContactId
     };
   });
@@ -257,6 +259,7 @@ export function validateAudienceRows(input: {
     ).length,
     linkedCrmContacts: contacts.filter((contact) => Boolean(contact.crm_contact_id)).length,
     optOutBlocked: contacts.filter((contact) => contact.is_opted_out).length,
+    suppressedContacts: contacts.filter((contact) => contact.is_opted_out).length,
     warnings: Array.from(warnings)
   };
 }

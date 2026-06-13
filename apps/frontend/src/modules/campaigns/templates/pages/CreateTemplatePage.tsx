@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { checkCampaignContentRisk } from "../../../../api/campaignSafety";
 import { AiMessageAssist } from "../../../../components/ai/AiMessageAssist";
 import { Button } from "../../../../components/Button";
 import { Card } from "../../../../components/Card";
@@ -58,6 +59,11 @@ export function CreateTemplatePage() {
     () => renderTemplateSample(finalTemplateContent, configurableTemplateVariables),
     [finalTemplateContent]
   );
+  const { data: safetyScan } = useQuery({
+    queryKey: ["template-safety-scan", finalTemplateContent],
+    queryFn: () => checkCampaignContentRisk({ message: finalTemplateContent }),
+    enabled: finalTemplateContent.trim().length > 0
+  });
 
   useEffect(() => {
     if (!editingTemplate) {
@@ -144,14 +150,6 @@ export function CreateTemplatePage() {
       return;
     }
 
-    if (!unsubscribeText.trim()) {
-      const message = "Sila masukkan Opt-out Message sebelum submit template. Contoh: Reply STOP untuk berhenti menerima mesej.";
-      window.alert(message);
-      showNotice(message, "error");
-      setStep(2);
-      return;
-    }
-
     saveMutation.mutate();
   }
 
@@ -221,7 +219,7 @@ export function CreateTemplatePage() {
                     />
                   </WizardField>
 
-                  <WizardField label="Opt-out Message" hint="Required. This footer will be appended to the saved template and helps campaign safety checks pass.">
+                  <WizardField label="Opt-out Message" hint="Optional but recommended. If left empty, Campaign Risk Guard can suggest a safer opt-out line later.">
                     <textarea
                       value={unsubscribeText}
                       onChange={(event) => setUnsubscribeText(event.target.value)}
@@ -244,6 +242,19 @@ export function CreateTemplatePage() {
                     ))}
                   </div>
                   <p className="text-xs font-semibold text-text-muted">{finalTemplateContent.length.toLocaleString()} characters including opt-out message</p>
+                  {safetyScan ? (
+                    <div className={`border p-4 text-sm leading-6 ${getSafetyTone(safetyScan.spam_risk_level)}`}>
+                      <p className="font-semibold">{getSafetyLabel(safetyScan.spam_risk_level)}</p>
+                      <p className="mt-1">
+                        Message length: {safetyScan.message_length} characters. Links: {safetyScan.link_count}. Emoji: {safetyScan.emoji_count ?? 0}.
+                      </p>
+                      {safetyScan.suggestions.length > 0 ? (
+                        <ul className="mt-2 space-y-1">
+                          {safetyScan.suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">WhatsApp Preview</p>
@@ -282,7 +293,19 @@ export function CreateTemplatePage() {
                   )}
                   {!unsubscribeText.trim() ? (
                     <div className="border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                      Opt-out Message is still empty. You will be reminded to add it before saving this template.
+                      Opt-out Message is still empty. You can still save this template, but Campaign Risk Guard will recommend a safer opt-out line before sending.
+                    </div>
+                  ) : null}
+                  {safetyScan ? (
+                    <div className={`border p-4 text-sm leading-6 ${getSafetyTone(safetyScan.spam_risk_level)}`}>
+                      <p className="font-semibold">{getSafetyLabel(safetyScan.spam_risk_level)}</p>
+                      {safetyScan.warnings.length > 0 ? (
+                        <ul className="mt-2 space-y-1">
+                          {safetyScan.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                        </ul>
+                      ) : (
+                        <p className="mt-2">No major template safety warnings detected.</p>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -314,9 +337,18 @@ export function CreateTemplatePage() {
                     {unsubscribeText.trim() ? (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-text">{unsubscribeText.trim()}</p>
                     ) : (
-                      <p className="mt-3 text-sm text-coral">Missing. You must add this before saving.</p>
+                      <p className="mt-3 text-sm text-amber-700">Missing. You can still save, but safer campaigns usually include a short opt-out line.</p>
                     )}
                   </div>
+                  {safetyScan ? (
+                    <div className={`app-card p-4 ${getSafetyTone(safetyScan.spam_risk_level)}`}>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em]">Template Safety</p>
+                      <p className="mt-2 text-sm font-semibold">{getSafetyLabel(safetyScan.spam_risk_level)}</p>
+                      <p className="mt-2 text-sm">
+                        {safetyScan.warnings[0] ?? "Template looks reasonable for a normal campaign review."}
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="app-card p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-soft">Detected Variables</p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -396,4 +428,16 @@ function stripUnsubscribeText(content: string, unsubscribeText: string) {
     .filter((line) => line.trim() !== footer)
     .join("\n")
     .trim();
+}
+
+function getSafetyLabel(level: "low" | "medium" | "high" | "critical") {
+  if (level === "low") return "Template Safety: Good";
+  if (level === "medium") return "Template Safety: Needs Review";
+  return "Template Safety: High Risk";
+}
+
+function getSafetyTone(level: "low" | "medium" | "high" | "critical") {
+  if (level === "low") return "border-emerald-200 bg-emerald-50 text-emerald-900";
+  if (level === "medium") return "border-amber-200 bg-amber-50 text-amber-900";
+  return "border-coral/30 bg-coral/10 text-coral";
 }

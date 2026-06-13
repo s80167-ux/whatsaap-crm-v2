@@ -1,5 +1,6 @@
 import type { PoolClient, QueryResult } from "pg";
 import { pool } from "../config/database.js";
+import { renderCampaignTemplateVariables } from "../modules/campaigns/campaignTemplateVariables.js";
 import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ConnectorClient } from "./connectorClient.js";
 
@@ -347,6 +348,7 @@ export async function snapshotCampaignRecipientsSafely(input: {
   organizationId: string;
   campaignId: string;
   audienceGroupId: string;
+  messageTemplate?: string | null;
   client?: PoolClient;
 }) {
   const executor = getQueryable(input.client);
@@ -454,9 +456,70 @@ export async function snapshotCampaignRecipientsSafely(input: {
     [input.organizationId, input.campaignId, input.audienceGroupId]
   );
 
+  const affectedCount = Number((result.rows[0] as { affected_count?: number })?.affected_count ?? 0);
+
+  if (input.messageTemplate?.trim()) {
+    const recipients = await executor.query<{
+      id: string;
+      name: string | null;
+      phone_normalized: string | null;
+      gender: string | null;
+      salutation: string | null;
+      tag: string | null;
+      location: string | null;
+      product_interest: string | null;
+      customer_type: string | null;
+      notes: string | null;
+    }>(
+      `
+        select
+          id,
+          name,
+          phone_normalized,
+          gender,
+          salutation,
+          tag,
+          location,
+          product_interest,
+          customer_type,
+          notes
+        from campaign_recipients
+        where organization_id = $1
+          and campaign_id = $2
+          and message_body_rendered is null
+      `,
+      [input.organizationId, input.campaignId]
+    );
+
+    for (const recipient of recipients.rows) {
+      const messageBodyRendered = renderCampaignTemplateVariables(input.messageTemplate, {
+        name: recipient.name,
+        phone: recipient.phone_normalized,
+        gender: recipient.gender,
+        salutation: recipient.salutation,
+        tag: recipient.tag,
+        location: recipient.location,
+        product_interest: recipient.product_interest,
+        customer_type: recipient.customer_type,
+        notes: recipient.notes
+      });
+
+      await executor.query(
+        `
+          update campaign_recipients
+          set message_body_rendered = $4
+          where organization_id = $1
+            and campaign_id = $2
+            and id = $3
+        `,
+        [input.organizationId, input.campaignId, recipient.id, messageBodyRendered]
+      );
+    }
+  }
+
   return {
     hasHistory,
-    affectedCount: Number((result.rows[0] as { affected_count?: number })?.affected_count ?? 0)
+    affectedCount
   };
 }
 

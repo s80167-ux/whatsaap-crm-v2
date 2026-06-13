@@ -2,8 +2,10 @@ import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { requireAnyPermission, requireRole } from "../../middleware/authMiddleware.js";
 import {
+  applyCampaignRiskGuardReview,
   checkContentRisk,
   createOptOut,
+  getCampaignRiskGuardReview,
   getCampaignPrecheck,
   getSafetySettings,
   listOptOuts,
@@ -18,6 +20,8 @@ export const campaignSafetyRoutes = Router();
 campaignSafetyRoutes.use(requireRole(["super_admin", "org_admin", "manager"]));
 
 campaignSafetyRoutes.get("/campaigns/:campaignId/precheck", asyncHandler(getCampaignPrecheck));
+campaignSafetyRoutes.get("/campaigns/:campaignId/risk-guard", asyncHandler(getCampaignRiskGuardReview));
+campaignSafetyRoutes.post("/campaigns/:campaignId/risk-guard/apply", asyncHandler(applyCampaignRiskGuardReview));
 campaignSafetyRoutes.post(
   "/campaigns/:campaignId/validate-recipients",
   requireAnyPermission(["org.manage_settings"]),

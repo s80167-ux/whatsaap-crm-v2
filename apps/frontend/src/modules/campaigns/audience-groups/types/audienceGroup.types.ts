@@ -1,6 +1,16 @@
 export type AudienceGroupStatus = "draft" | "imported" | "failed";
 export type AudienceCrmSaveStatus = "not_saved" | "partially_saved" | "saved" | "failed";
 export type AudienceStorageStatus = "active" | "archived" | "deleted_details";
+export type AudiencePermissionStatus = "not_verified_by_system" | "declared_by_user" | "crm_verified";
+export type AudienceRiskLevel = "low" | "medium" | "high";
+export type AudienceSourceType =
+  | "existing_customers"
+  | "form_or_register_leads"
+  | "event_booth_walkin"
+  | "previous_whatsapp_contact"
+  | "referral_partner_list"
+  | "cold_public_list"
+  | "not_sure";
 
 export type AudienceGender = "male" | "female" | "unknown";
 
@@ -39,12 +49,16 @@ export interface AudienceGroup {
   name: string;
   description?: string | null;
   source: "csv" | string;
+  source_type?: AudienceSourceType | null;
+  permission_status?: AudiencePermissionStatus;
+  risk_level?: AudienceRiskLevel;
   status: AudienceGroupStatus;
   total_rows: number;
   valid_count: number;
   invalid_count: number;
   duplicate_count: number;
   opt_out_count: number;
+  suppressed_count?: number;
   linked_crm_count: number;
   crm_save_status?: AudienceCrmSaveStatus;
   crm_saved_count?: number;
@@ -80,11 +94,13 @@ export interface AudienceValidatedContact {
   product_interest: string | null;
   customer_type: string | null;
   notes: string | null;
+  raw_data_json?: Record<string, string>;
   validation_status: "valid" | "invalid";
   validation_issues: string[];
   warnings: string[];
   is_duplicate: boolean;
   is_opted_out: boolean;
+  exclude_reason?: string | null;
   crm_contact_id?: string | null;
 }
 
@@ -99,6 +115,7 @@ export interface AudienceValidationResult {
   duplicatesInAudienceGroup: number;
   linkedCrmContacts: number;
   optOutBlocked: number;
+  suppressedContacts: number;
   warnings: string[];
 }
 
@@ -106,11 +123,15 @@ export interface CreateAudienceGroupInput {
   name: string;
   description?: string | null;
   organizationId?: string | null;
+  sourceType?: AudienceSourceType | null;
+  permissionStatus?: AudiencePermissionStatus;
+  riskLevel?: AudienceRiskLevel;
   totalRows?: number;
   validCount?: number;
   invalidCount?: number;
   duplicateCount?: number;
   optOutCount?: number;
+  suppressedCount?: number;
   linkedCrmCount?: number;
 }
 
@@ -167,3 +188,17 @@ export interface AudienceTemplateVariablesResponse {
   variables: AudienceTemplateVariable[];
   sampleValues: Partial<Record<AudienceTemplateVariableKey, string>>;
 }
+
+export const audienceSourceOptions: Array<{
+  value: AudienceSourceType;
+  label: string;
+  riskLevel: AudienceRiskLevel;
+}> = [
+  { value: "existing_customers", label: "Existing customers", riskLevel: "medium" },
+  { value: "form_or_register_leads", label: "Leads from form/register", riskLevel: "low" },
+  { value: "event_booth_walkin", label: "Event / booth / walk-in", riskLevel: "medium" },
+  { value: "previous_whatsapp_contact", label: "Previous WhatsApp conversation", riskLevel: "low" },
+  { value: "referral_partner_list", label: "Referral / partner list", riskLevel: "medium" },
+  { value: "cold_public_list", label: "Cold / public list", riskLevel: "high" },
+  { value: "not_sure", label: "Not sure", riskLevel: "high" }
+];

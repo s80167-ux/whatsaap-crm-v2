@@ -2,9 +2,11 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { query } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
+import { CampaignRiskGuardService } from "../../services/campaignRiskGuardService.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 
 const campaignSafetyService = new CampaignSafetyService();
+const campaignRiskGuardService = new CampaignRiskGuardService();
 
 const campaignParamsSchema = z.object({
   campaignId: z.string().uuid()
@@ -62,6 +64,15 @@ const overrideBodySchema = z.object({
   note: z.string().trim().max(1000).optional().nullable()
 });
 
+const riskGuardApplyBodySchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  organization_id: z.string().uuid().optional().nullable(),
+  review_id: z.string().uuid(),
+  apply_tempo: z.boolean().optional().default(false),
+  apply_message_override: z.boolean().optional().default(false),
+  mark_decision: z.enum(["applied_suggestions", "partially_applied", "ignored_warning", "saved_as_draft"]).optional().default("applied_suggestions")
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) throw new AppError("Authentication required", 401, "auth_required");
   return request.auth;
@@ -69,6 +80,28 @@ function requireAuth(request: Request) {
 
 function organizationId(input: { organizationId?: string | null; organization_id?: string | null }) {
   return input.organizationId ?? input.organization_id ?? null;
+}
+
+function resolveOrganizationScope(
+  request: Request,
+  input?: { organizationId?: string | null; organization_id?: string | null }
+) {
+  const auth = requireAuth(request);
+  const scopedId = organizationId(input ?? {});
+
+  if (auth.role === "super_admin") {
+    const fallback = scopedId ?? auth.organizationId ?? null;
+    if (!fallback) {
+      throw new AppError("organization_id is required", 400, "organization_required");
+    }
+    return fallback;
+  }
+
+  if (!auth.organizationId) {
+    throw new AppError("organization_id is required", 400, "organization_required");
+  }
+
+  return auth.organizationId;
 }
 
 async function ensureWhatsAppAccountsStatusCompat() {
@@ -177,4 +210,31 @@ export async function overrideCampaignWarnings(request: Request, response: Respo
     note: input.note
   });
   return response.status(201).json({ data: row });
+}
+
+export async function getCampaignRiskGuardReview(request: Request, response: Response) {
+  requireAuth(request);
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const queryInput = organizationQuerySchema.parse(request.query);
+  const review = await campaignRiskGuardService.generateReview({
+    organizationId: resolveOrganizationScope(request, { organization_id: queryInput.organization_id }),
+    campaignId
+  });
+  return response.json({ data: review });
+}
+
+export async function applyCampaignRiskGuardReview(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = riskGuardApplyBodySchema.parse(request.body);
+  const review = await campaignRiskGuardService.applySuggestedChanges({
+    organizationId: resolveOrganizationScope(request, input),
+    campaignId,
+    reviewId: input.review_id,
+    applyTempo: input.apply_tempo,
+    applyMessageOverride: input.apply_message_override,
+    approvedBy: auth.organizationUserId ?? null,
+    decision: input.mark_decision
+  });
+  return response.json({ data: review });
 }

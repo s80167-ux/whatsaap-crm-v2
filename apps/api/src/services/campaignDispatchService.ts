@@ -311,6 +311,7 @@ export class CampaignDispatchService {
               failure_reason = null
           from candidate
           join campaigns c on c.id = $1
+          left join campaign_message_overrides cmo on cmo.id = c.active_message_override_id
           left join campaign_safety_settings css on css.organization_id = c.organization_id
           where cr.id = candidate.id
             and c.id = cr.campaign_id
@@ -338,7 +339,7 @@ export class CampaignDispatchService {
             cr.sender_assigned_at,
             c.sender_whatsapp_account_id,
             c.sender_mode,
-            c.message_template,
+            coalesce(cmo.override_body, c.message_template) as message_template,
             c.message_body_type,
             c.attachment,
             c.speed_preset,
@@ -412,6 +413,18 @@ export class CampaignDispatchService {
         return;
       }
 
+      const renderedMessage = renderCampaignMessage(recipient.message_template, {
+        name: recipient.name,
+        phone: recipient.phone_normalized,
+        gender: recipient.gender,
+        salutation: recipient.salutation,
+        tag: recipient.tag,
+        location: recipient.location,
+        product_interest: recipient.product_interest,
+        customer_type: recipient.customer_type,
+        notes: recipient.notes
+      });
+
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
         campaignId: recipient.campaign_id,
@@ -419,17 +432,7 @@ export class CampaignDispatchService {
         senderAssignment,
         phoneNumber: recipient.phone_normalized,
         profileName: recipient.name,
-        text: renderCampaignMessage(recipient.message_template, {
-          name: recipient.name,
-          phone: recipient.phone_normalized,
-          gender: recipient.gender,
-          salutation: recipient.salutation,
-          tag: recipient.tag,
-          location: recipient.location,
-          product_interest: recipient.product_interest,
-          customer_type: recipient.customer_type,
-          notes: recipient.notes
-        }),
+        text: renderedMessage,
         attachment: recipient.attachment,
         attachContactCard: recipient.attach_contact_card
       });
@@ -439,6 +442,7 @@ export class CampaignDispatchService {
           update campaign_recipients
           set send_status = 'queued',
               message_id = $4,
+              message_body_rendered = $9,
               assigned_whatsapp_account_id = $5,
               sender_assignment_reason = $6,
               sender_assignment_index = $7,
@@ -461,7 +465,8 @@ export class CampaignDispatchService {
           senderAssignment.whatsappAccountId,
           senderAssignment.reason,
           senderAssignment.assignmentIndex,
-          senderAssignment.assignedAt
+          senderAssignment.assignedAt,
+          renderedMessage
         ]
       );
       await this.touchWarmupStarted(recipient.organization_id, senderAssignment.whatsappAccountId);

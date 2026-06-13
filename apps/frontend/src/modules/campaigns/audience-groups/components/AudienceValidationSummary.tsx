@@ -21,7 +21,7 @@ export function AudienceValidationSummary({ result }: AudienceValidationSummaryP
     { label: "Duplicates in CSV", value: result.duplicatesInCsv, icon: <AlertTriangle size={16} /> },
     { label: "Duplicates already in Audience Group", value: result.duplicatesInAudienceGroup, icon: <AlertTriangle size={16} /> },
     { label: "Linked CRM Contacts", value: result.linkedCrmContacts, icon: <Link2 size={16} /> },
-    { label: "Opt-out blocked", value: result.optOutBlocked, icon: <ShieldOff size={16} /> }
+    { label: "Suppressed / opted-out", value: result.suppressedContacts, icon: <ShieldOff size={16} /> }
   ];
 
   return (

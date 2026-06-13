@@ -28,6 +28,9 @@ export type Campaign = {
   senderWhatsAppAccountIds?: string[];
   senderWhatsAppLabel?: string | null;
   senderPhoneNumber?: string | null;
+  selectedMessageTemplateId?: string | null;
+  activeSafetyReviewId?: string | null;
+  activeMessageOverrideId?: string | null;
   messageTemplate?: string | null;
   attachment?: CampaignAttachment | null;
   attachContactCard?: boolean;
@@ -69,7 +72,7 @@ export type CampaignTempo = {
   stopOnHighFailure: boolean;
 };
 
-export type CampaignRecipientSendStatus = "pending" | "queued" | "sent" | "failed" | "skipped";
+export type CampaignRecipientSendStatus = "pending" | "queued" | "sending" | "sent" | "failed" | "skipped" | "opted_out";
 
 export type CampaignRecipient = {
   id: string;
@@ -93,6 +96,10 @@ export type CampaignRecipient = {
   failedAt?: string | null;
   nextAttemptAt?: string | null;
   errorMessage?: string | null;
+  messageBodyRendered?: string | null;
+  deliveredAt?: string | null;
+  repliedAt?: string | null;
+  optOutDetected?: boolean;
   validationStatus?: string | null;
   validationReason?: string | null;
   normalizedPhone?: string | null;
@@ -117,4 +124,85 @@ export type CampaignWarmupAdvisory = {
   suggestedDailyLimit: number;
   exceededBy: number;
   isAboveSuggestedLimit: boolean;
+};
+
+export type RiskLevel = "low" | "medium" | "high";
+export type SenderHealthStatus = "Good" | "Caution" | "Risky" | "Cooling Down";
+
+export type TemplateRiskSnapshot = {
+  riskLevel: RiskLevel;
+  statusLabel: "Template Safety: Good" | "Template Safety: Needs Review" | "Template Safety: High Risk";
+  issues: string[];
+  suggestions: string[];
+  metrics: {
+    hasOptOutLine: boolean;
+    messageLength: number;
+    linkCount: number;
+    emojiCount: number;
+    uppercaseRatio: number;
+    variableIssues: string[];
+  };
+  suggestedOverrideBody?: string | null;
+};
+
+export type AudienceRiskSnapshot = {
+  audienceGroupId: string | null;
+  permissionStatus: string;
+  sourceType: string | null;
+  riskLevel: RiskLevel;
+  totalRows: number;
+  validRows: number;
+  duplicateRows: number;
+  invalidRows: number;
+  suppressedRows: number;
+};
+
+export type SenderRiskSnapshot = {
+  senderHealth: SenderHealthStatus;
+  senderCount: number;
+  sentToday: number;
+  failedRecently: number;
+  optOutRepliesRecently: number;
+  disconnectedRecently: number;
+  reasons: string[];
+  recommendedMode: "Safe Start Mode" | "Conservative sending" | "Normal sending";
+};
+
+export type TempoRiskSnapshot = {
+  riskLevel: RiskLevel;
+  aggressive: boolean;
+  current: {
+    batchSize: number;
+    delayPerMessageSeconds: number;
+    batchPauseSeconds: number;
+    dailyLimit: number;
+  };
+  suggested: {
+    batchSize: number;
+    delayPerMessageSeconds: number;
+    batchPauseSeconds: number;
+    dailyLimit: number;
+    speedPreset: CampaignSpeedPreset;
+  };
+  recommendedTestBatchSize: number;
+  warnings: string[];
+};
+
+export type CampaignRiskGuardReview = {
+  reviewId: string;
+  overallRiskLevel: RiskLevel;
+  audience: AudienceRiskSnapshot;
+  template: TemplateRiskSnapshot;
+  sender: SenderRiskSnapshot;
+  tempo: TempoRiskSnapshot;
+  detectedIssues: string[];
+  suggestedActions: string[];
+  recommendedChanges: Array<{
+    type: "tempo" | "message_override" | "exclude_invalid" | "exclude_suppressed" | "test_batch";
+    label: string;
+    currentValue?: string | null;
+    suggestedValue?: string | null;
+  }>;
+  userDecision: "pending" | "applied_suggestions" | "partially_applied" | "ignored_warning" | "saved_as_draft";
+  overridePreviewBody?: string | null;
 };

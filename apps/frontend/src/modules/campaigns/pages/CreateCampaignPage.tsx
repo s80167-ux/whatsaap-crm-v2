@@ -2,6 +2,7 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from "react-rout
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { applyCampaignRiskGuardSuggestions, getCampaignRiskGuardReview } from "../../../api/campaignSafety";
 import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
@@ -16,7 +17,7 @@ import { CampaignPreviewCard } from "../components/CampaignPreviewCard";
 import { DynamicVariablePanel } from "../components/DynamicVariablePanel";
 import { createCampaign, fetchCampaigns, formatCampaignStartError, sendCampaignTest, startCampaign, updateCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
-import type { Campaign, CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import type { Campaign, CampaignAttachment, CampaignRiskGuardReview, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 import {
   campaignTempoPresetLabels,
   campaignTempoPresets,
@@ -58,6 +59,10 @@ export function CreateCampaignPage() {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
+  const [isApplyingRiskGuard, setIsApplyingRiskGuard] = useState(false);
+  const [draftCampaignId, setDraftCampaignId] = useState<string | null>(null);
+  const [riskGuardReview, setRiskGuardReview] = useState<CampaignRiskGuardReview | null>(null);
+  const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [identityHintDismissed, setIdentityHintDismissed] = useState(false);
   const [initializedSourceKey, setInitializedSourceKey] = useState("");
   const [missingSourceKey, setMissingSourceKey] = useState("");
@@ -182,11 +187,13 @@ export function CreateCampaignPage() {
       ?? ""
     );
     setAudienceGroupId(sourceCampaign.audienceGroupId ?? "");
-    setSelectedMessageTemplateId("");
+    setSelectedMessageTemplateId(sourceCampaign.selectedMessageTemplateId ?? "");
     setMessageTemplate(sourceCampaign.messageTemplate?.trim() ? sourceCampaign.messageTemplate : defaultTemplate);
     setTempo(getCampaignTempo(sourceCampaign));
     setAttachment(sourceCampaign.attachment ?? null);
     setAttachContactCard(Boolean(sourceCampaign.attachContactCard));
+    setDraftCampaignId(isEditMode ? sourceCampaign.id : null);
+    setRiskGuardReview(null);
     setIdentityHintDismissed(false);
     setTestSendNotice(null);
     setNotice(null);
@@ -262,6 +269,7 @@ export function CreateCampaignPage() {
       return next;
     });
     setTestSendNotice(null);
+    setRiskGuardReview(null);
   }
 
   function validateAudience() {
@@ -311,6 +319,7 @@ export function CreateCampaignPage() {
     setAudienceGroupId(nextAudienceGroupId);
     setTestSendNotice(null);
     setIdentityHintDismissed(false);
+    setRiskGuardReview(null);
   }
 
   function handleInsertVariable(token: string) {
@@ -325,12 +334,14 @@ export function CreateCampaignPage() {
     pendingCursorPositionRef.current = nextCursorPosition;
     setMessageTemplate(nextValue);
     setTestSendNotice(null);
+    setRiskGuardReview(null);
   }
 
   function handleTempoPresetChange(speedPreset: CampaignSpeedPreset) {
     setTempo((current) => speedPreset === "custom"
       ? { ...current, speedPreset: "custom" }
       : { ...campaignTempoPresets[speedPreset] });
+    setRiskGuardReview(null);
   }
 
   function handleTempoNumberChange(field: keyof Omit<CampaignTempo, "speedPreset" | "stopOnHighFailure">, value: string) {
@@ -339,6 +350,7 @@ export function CreateCampaignPage() {
       speedPreset: "custom",
       [field]: Math.max(1, Number(value) || 1)
     }));
+    setRiskGuardReview(null);
   }
 
   function handleMessageTemplateSelect(templateId: string) {
@@ -348,6 +360,7 @@ export function CreateCampaignPage() {
     if (selectedTemplate) {
       setMessageTemplate(selectedTemplate.content);
     }
+    setRiskGuardReview(null);
   }
 
   function handleAttachmentChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -381,6 +394,7 @@ export function CreateCampaignPage() {
           dataBase64,
           fileSizeBytes: file.size
         });
+        setRiskGuardReview(null);
       }
     };
     reader.onerror = () => showError("Unable to read the selected file.");
@@ -398,6 +412,7 @@ export function CreateCampaignPage() {
       messageTemplate,
       organizationId,
       primarySenderWhatsAppAccountId,
+      selectedMessageTemplateId,
       selectedSenderWhatsAppAccountIds,
       tempo
     });
@@ -412,6 +427,8 @@ export function CreateCampaignPage() {
 
     try {
       const campaign = await saveCampaignDraft();
+      setDraftCampaignId(campaign.id);
+      setRiskGuardReview(null);
       showNotice(
         isEditMode
           ? `Campaign "${campaign.name}" updated.`
@@ -456,6 +473,79 @@ export function CreateCampaignPage() {
     }
   }
 
+  async function runRiskGuardReview(campaignId: string) {
+    const review = await getCampaignRiskGuardReview({ campaignId, organizationId });
+    setRiskGuardReview(review);
+    return review;
+  }
+
+  async function handleApplyRiskGuard(review: CampaignRiskGuardReview, applyMessageOverride: boolean) {
+    if (!draftCampaignId) {
+      showError("Save the campaign draft first before applying safer settings.");
+      return;
+    }
+
+    setIsApplyingRiskGuard(true);
+
+    try {
+      const updatedReview = await applyCampaignRiskGuardSuggestions({
+        campaignId: draftCampaignId,
+        reviewId: review.reviewId,
+        organizationId,
+        applyTempo: true,
+        applyMessageOverride,
+        markDecision: applyMessageOverride ? "applied_suggestions" : "partially_applied"
+      });
+      setTempo((current) => ({
+        ...current,
+        speedPreset: updatedReview.tempo.suggested.speedPreset,
+        delayPerMessageSeconds: updatedReview.tempo.suggested.delayPerMessageSeconds,
+        batchSize: updatedReview.tempo.suggested.batchSize,
+        batchPauseSeconds: updatedReview.tempo.suggested.batchPauseSeconds,
+        dailyLimit: updatedReview.tempo.suggested.dailyLimit
+      }));
+      setRiskGuardReview(updatedReview);
+      setShowApplyConfirmation(false);
+      showNotice("Recommended safer settings have been applied. Original template and original audience remain unchanged.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to apply safer settings.");
+    } finally {
+      setIsApplyingRiskGuard(false);
+    }
+  }
+
+  async function startSavedCampaign(campaignId: string) {
+    if (riskGuardReview) {
+      await applyCampaignRiskGuardSuggestions({
+        campaignId,
+        reviewId: riskGuardReview.reviewId,
+        organizationId,
+        applyTempo: false,
+        applyMessageOverride: false,
+        markDecision: "ignored_warning"
+      });
+    }
+    const result = await startCampaign({
+      campaignId,
+      organizationId,
+      senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
+      senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
+      senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
+      audienceGroupId,
+      messageTemplate,
+      speedPreset: tempo.speedPreset,
+      delayPerMessageSeconds: tempo.delayPerMessageSeconds,
+      batchSize: tempo.batchSize,
+      batchPauseSeconds: tempo.batchPauseSeconds,
+      dailyLimit: tempo.dailyLimit,
+      stopOnHighFailure: tempo.stopOnHighFailure,
+      attachment,
+      attachContactCard
+    });
+    showNotice(result.message, "success");
+    navigate("/campaigns/whatsapp/history");
+  }
+
   async function handleStartCampaign(action: "Schedule Later" | "Start Campaign") {
     if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate() || !validateAvailableVariables()) {
       return;
@@ -465,6 +555,7 @@ export function CreateCampaignPage() {
 
     try {
       const campaign = await saveCampaignDraft();
+      setDraftCampaignId(campaign.id);
 
       if (action === "Schedule Later") {
         showNotice(
@@ -477,25 +568,8 @@ export function CreateCampaignPage() {
         return;
       }
 
-      const result = await startCampaign({
-        campaignId: campaign.id,
-        organizationId,
-        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
-        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
-        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
-        audienceGroupId,
-        messageTemplate,
-        speedPreset: tempo.speedPreset,
-        delayPerMessageSeconds: tempo.delayPerMessageSeconds,
-        batchSize: tempo.batchSize,
-        batchPauseSeconds: tempo.batchPauseSeconds,
-        dailyLimit: tempo.dailyLimit,
-        stopOnHighFailure: tempo.stopOnHighFailure,
-        attachment,
-        attachContactCard
-      });
-      showNotice(result.message, "success");
-      navigate("/campaigns/whatsapp/history");
+      await runRiskGuardReview(campaign.id);
+      showNotice("Campaign Risk Guard review is ready. Please confirm how you want to proceed.", "success");
     } catch (error) {
       showError(formatCampaignStartError(error));
     } finally {
@@ -506,7 +580,7 @@ export function CreateCampaignPage() {
   const actionDisabled = selectedSenderWhatsAppAccountIds.length === 0 || !selectedSender || !selectedSenderIsConnected;
   const hasInvalidTemplateVariables = invalidTemplateVariables.length > 0;
   const sendTestDisabled = actionDisabled || isSendingTest || hasInvalidTemplateVariables;
-  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign || hasInvalidTemplateVariables;
+  const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign || isApplyingRiskGuard || hasInvalidTemplateVariables;
   const pageTitle = isEditMode ? "Edit Campaign" : duplicateCampaignId ? "Duplicate Campaign" : "Campaign Setup";
   const pageCopy = isEditMode
     ? "Update sender, audience, message template and sending tempo for this campaign."
@@ -721,7 +795,10 @@ export function CreateCampaignPage() {
                 <textarea
                   ref={messageTemplateRef}
                   value={messageTemplate}
-                  onChange={(event) => setMessageTemplate(event.target.value)}
+                  onChange={(event) => {
+                    setMessageTemplate(event.target.value);
+                    setRiskGuardReview(null);
+                  }}
                   className="input-base min-h-44 w-full resize-y"
                   placeholder={defaultTemplate}
                 />
@@ -742,7 +819,10 @@ export function CreateCampaignPage() {
                     <button
                       type="button"
                       className="ml-auto text-coral hover:text-coral-dark"
-                      onClick={() => setAttachment(null)}
+                      onClick={() => {
+                        setAttachment(null);
+                        setRiskGuardReview(null);
+                      }}
                     >
                       Remove
                     </button>
@@ -835,6 +915,91 @@ export function CreateCampaignPage() {
               attachContactCard={attachContactCard}
             />
 
+            {riskGuardReview ? (
+              <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
+                <div>
+                  <p className="text-sm font-semibold text-text">Campaign Risk Guard</p>
+                  <p className="mt-1 text-sm text-text-muted">Reduce campaign risk with a final review before sending. Template asal tidak akan diubah. Audience asal tidak akan diubah.</p>
+                </div>
+                <div className="mt-4 space-y-3 text-sm">
+                  <div className="rounded-2xl border border-border bg-background-tint px-4 py-3">
+                    <p className="font-semibold text-text">Overall Risk: {riskGuardReview.overallRiskLevel.toUpperCase()}</p>
+                    <p className="mt-1 text-text-muted">Audience: {riskGuardReview.audience.riskLevel.toUpperCase()} | Template: {riskGuardReview.template.riskLevel.toUpperCase()} | Sender: {riskGuardReview.sender.senderHealth} | Tempo: {riskGuardReview.tempo.riskLevel.toUpperCase()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border px-4 py-3">
+                    <p className="font-semibold text-text">Audience</p>
+                    <p className="mt-1 text-text-muted">
+                      Permission: {formatRiskLabel(riskGuardReview.audience.permissionStatus)}. Source: {formatRiskLabel(riskGuardReview.audience.sourceType ?? "not_sure")}. Valid contacts: {riskGuardReview.audience.validRows}. Suppressed contacts excluded: {riskGuardReview.audience.suppressedRows}.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border px-4 py-3">
+                    <p className="font-semibold text-text">Template</p>
+                    <p className="mt-1 text-text-muted">{riskGuardReview.template.statusLabel}</p>
+                    {riskGuardReview.template.issues.length > 0 ? (
+                      <ul className="mt-2 space-y-1 text-text-muted">
+                        {riskGuardReview.template.issues.map((issue) => <li key={issue}>{issue}</li>)}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <div className="rounded-2xl border border-border px-4 py-3">
+                    <p className="font-semibold text-text">Sender Health</p>
+                    <p className="mt-1 text-text-muted">Health: {riskGuardReview.sender.senderHealth}. Sent today: {riskGuardReview.sender.sentToday}. Recent failed sends: {riskGuardReview.sender.failedRecently}.</p>
+                  </div>
+                  <div className="rounded-2xl border border-border px-4 py-3">
+                    <p className="font-semibold text-text">Tempo Risk</p>
+                    <p className="mt-1 text-text-muted">
+                      Current batch size: {riskGuardReview.tempo.current.batchSize}. Current delay: {riskGuardReview.tempo.current.delayPerMessageSeconds} sec. Suggested batch size: {riskGuardReview.tempo.suggested.batchSize}. Suggested delay: {riskGuardReview.tempo.suggested.delayPerMessageSeconds} sec.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                    <p className="font-semibold">Recommended safer settings</p>
+                    <ul className="mt-2 space-y-1">
+                      {riskGuardReview.suggestedActions.map((action) => <li key={action}>{action}</li>)}
+                    </ul>
+                  </div>
+                </div>
+
+                {showApplyConfirmation ? (
+                  <div className="mt-4 rounded-2xl border border-border bg-background-tint px-4 py-4 text-sm">
+                    <p className="font-semibold text-text">We will apply the following changes:</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-text-muted">
+                      {riskGuardReview.recommendedChanges.map((change) => (
+                        <li key={`${change.type}-${change.label}`}>
+                          {change.currentValue && change.suggestedValue
+                            ? `${change.label}: ${change.currentValue} -> ${change.suggestedValue}`
+                            : `${change.label}: ${change.suggestedValue ?? change.currentValue ?? ""}`}
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="mt-3 text-text-muted">Original template will not be changed. Original audience list will not be changed.</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button disabled={isApplyingRiskGuard} onClick={() => void handleApplyRiskGuard(riskGuardReview, Boolean(riskGuardReview.overridePreviewBody))}>
+                        {isApplyingRiskGuard ? t("common.loading") : "Yes, Apply Changes"}
+                      </Button>
+                      <Button variant="secondary" disabled={isApplyingRiskGuard} onClick={() => setShowApplyConfirmation(false)}>
+                        No, Keep Current Settings
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <Button variant="secondary" disabled={isApplyingRiskGuard} onClick={() => setShowApplyConfirmation(true)}>
+                    Apply Safer Settings
+                  </Button>
+                  <Button variant="secondary" disabled={isApplyingRiskGuard} onClick={() => showNotice("Review each suggested item above before you continue.")}>
+                    Review One by One
+                  </Button>
+                  <Button variant="secondary" disabled={isApplyingRiskGuard || !draftCampaignId} onClick={() => draftCampaignId ? void startSavedCampaign(draftCampaignId) : undefined}>
+                    Start with Current Settings
+                  </Button>
+                  <Button variant="secondary" disabled={isApplyingRiskGuard} onClick={() => navigate("/campaigns/whatsapp/history")}>
+                    Save as Draft
+                  </Button>
+                </div>
+              </section>
+            ) : null}
+
             <section className="rounded-3xl border border-border bg-card p-5 shadow-soft">
               <div>
                 <p className="text-sm font-semibold text-text">Test Delivery</p>
@@ -901,6 +1066,7 @@ async function saveCampaignDraftFromInput(input: {
   messageTemplate: string;
   organizationId?: string | null;
   primarySenderWhatsAppAccountId: string;
+  selectedMessageTemplateId?: string | null;
   selectedSenderWhatsAppAccountIds: string[];
   tempo: CampaignTempo;
 }) {
@@ -911,6 +1077,7 @@ async function saveCampaignDraftFromInput(input: {
     senderWhatsAppAccountIds: input.selectedSenderWhatsAppAccountIds,
     senderMode: input.selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" as const : "single" as const,
     audienceGroupId: input.audienceGroupId,
+    selectedMessageTemplateId: input.selectedMessageTemplateId ?? null,
     messageTemplate: input.messageTemplate,
     tempo: input.tempo,
     attachment: input.attachment,
@@ -961,4 +1128,10 @@ function formatSenderStatus(account: { status: string; live_status_error?: strin
   }
 
   return account.live_connection_status ?? account.status;
+}
+
+function formatRiskLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }

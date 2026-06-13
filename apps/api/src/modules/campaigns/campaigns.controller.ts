@@ -47,11 +47,23 @@ const createAudienceGroupBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
   name: z.string().trim().min(1).max(160),
   description: z.string().trim().max(1000).optional().nullable(),
+  sourceType: z.enum([
+    "existing_customers",
+    "form_or_register_leads",
+    "event_booth_walkin",
+    "previous_whatsapp_contact",
+    "referral_partner_list",
+    "cold_public_list",
+    "not_sure"
+  ]).optional().nullable(),
+  permissionStatus: z.enum(["not_verified_by_system", "declared_by_user", "crm_verified"]).optional().nullable(),
+  riskLevel: z.enum(["low", "medium", "high"]).optional().nullable(),
   totalRows: z.number().int().min(0).optional(),
   validCount: z.number().int().min(0).optional(),
   invalidCount: z.number().int().min(0).optional(),
   duplicateCount: z.number().int().min(0).optional(),
   optOutCount: z.number().int().min(0).optional(),
+  suppressedCount: z.number().int().min(0).optional(),
   linkedCrmCount: z.number().int().min(0).optional()
 });
 
@@ -65,10 +77,12 @@ const audienceContactSchema = z.object({
   product_interest: z.string().optional().nullable(),
   customer_type: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  raw_data_json: z.record(z.string()).optional(),
   validation_status: z.enum(["valid", "invalid"]).default("valid"),
   validation_issues: z.array(z.string()).default([]),
   is_duplicate: z.boolean().default(false),
   is_opted_out: z.boolean().default(false),
+  exclude_reason: z.string().optional().nullable(),
   crm_contact_id: z.string().uuid().optional().nullable()
 });
 
@@ -95,6 +109,7 @@ const createCampaignBodySchema = z.object({
   senderWhatsAppAccountIds: senderPoolSchema.optional(),
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid(),
+  selectedMessageTemplateId: z.string().uuid().optional().nullable(),
   messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
   tempo: campaignTempoSchema,
@@ -112,6 +127,7 @@ const updateCampaignBodySchema = z.object({
   senderWhatsAppAccountIds: senderPoolSchema.optional(),
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
+  selectedMessageTemplateId: z.string().uuid().optional().nullable(),
   messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
   tempo: campaignTempoSchema.optional(),
   attachment: attachmentSchema.optional().nullable(),
@@ -177,7 +193,7 @@ const audienceGroupsQuerySchema = organizationQuerySchema.extend({
 
 const campaignRecipientsQuerySchema = z.object({
   organization_id: z.string().uuid().optional(),
-  status: z.enum(["pending", "queued", "sent", "failed", "skipped"]).optional(),
+  status: z.enum(["pending", "queued", "sending", "sent", "failed", "skipped", "opted_out"]).optional(),
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(250).default(50)
@@ -195,6 +211,10 @@ type AudienceGroupRecord = {
   invalid_count: number;
   duplicate_count: number;
   opt_out_count: number;
+  source_type: string | null;
+  permission_status: "not_verified_by_system" | "declared_by_user" | "crm_verified";
+  risk_level: "low" | "medium" | "high";
+  suppressed_count: number;
   linked_crm_count: number;
   created_by: string | null;
   created_at: string;
@@ -238,6 +258,9 @@ type CampaignRecord = {
   audience_group_id: string | null;
   sender_mode: "single" | "round_robin";
   sender_whatsapp_account_id: string | null;
+  selected_message_template_id: string | null;
+  active_safety_review_id: string | null;
+  active_message_override_id: string | null;
   message_template: string | null;
   message_body_type: string;
   attachment: unknown | null;
@@ -263,6 +286,7 @@ type CampaignSummaryRecord = CampaignRecord & {
   recipients: string;
   pending: string;
   queued: string;
+  sending: string;
   sent: string;
   failed: string;
   failed_sender_issue: string;
@@ -286,11 +310,15 @@ type CampaignRecipientRecord = {
   product_interest: string | null;
   customer_type: string | null;
   notes: string | null;
-  send_status: "pending" | "queued" | "sent" | "failed" | "skipped";
+  send_status: "pending" | "queued" | "sending" | "sent" | "failed" | "skipped" | "opted_out";
   message_id: string | null;
+  message_body_rendered: string | null;
   attempt_count: number;
   queued_at: string | null;
   sent_at: string | null;
+  delivered_at: string | null;
+  replied_at: string | null;
+  opt_out_detected: boolean;
   failed_at: string | null;
   next_attempt_at: string | null;
   error_message: string | null;
@@ -405,6 +433,7 @@ export async function createCampaign(request: Request, response: Response) {
           audience_group_id,
           sender_mode,
           sender_whatsapp_account_id,
+          selected_message_template_id,
           message_template,
           message_body_type,
           attachment,
@@ -417,7 +446,7 @@ export async function createCampaign(request: Request, response: Response) {
           attach_contact_card,
           created_by
         )
-        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         returning *
       `,
       [
@@ -426,6 +455,7 @@ export async function createCampaign(request: Request, response: Response) {
         input.audienceGroupId,
         senderSelection.senderMode,
         senderSelection.primarySenderWhatsAppAccountId,
+        input.selectedMessageTemplateId ?? null,
         governedTemplate.body,
         bodyType,
         input.attachment ? JSON.stringify(input.attachment) : null,
@@ -684,20 +714,21 @@ export async function updateCampaign(request: Request, response: Response) {
             audience_group_id = coalesce($4, audience_group_id),
             sender_mode = coalesce($5, sender_mode),
             sender_whatsapp_account_id = coalesce($6, sender_whatsapp_account_id),
-            message_template = coalesce($7, message_template),
-            message_body_type = coalesce($8, message_body_type),
+            selected_message_template_id = coalesce($7, selected_message_template_id),
+            message_template = coalesce($8, message_template),
+            message_body_type = coalesce($9, message_body_type),
             attachment = case
-              when $17 then null
-              when $9 is not null then $9
+              when $18 then null
+              when $10 is not null then $10
               else attachment
             end,
-            speed_preset = coalesce($10, speed_preset),
-            delay_per_message_seconds = coalesce($11, delay_per_message_seconds),
-            batch_size = coalesce($12, batch_size),
-            batch_pause_seconds = coalesce($13, batch_pause_seconds),
-            daily_limit = coalesce($14, daily_limit),
-            stop_on_high_failure = coalesce($15, stop_on_high_failure),
-            attach_contact_card = coalesce($16, attach_contact_card),
+            speed_preset = coalesce($11, speed_preset),
+            delay_per_message_seconds = coalesce($12, delay_per_message_seconds),
+            batch_size = coalesce($13, batch_size),
+            batch_pause_seconds = coalesce($14, batch_pause_seconds),
+            daily_limit = coalesce($15, daily_limit),
+            stop_on_high_failure = coalesce($16, stop_on_high_failure),
+            attach_contact_card = coalesce($17, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -710,6 +741,7 @@ export async function updateCampaign(request: Request, response: Response) {
         input.audienceGroupId ?? null,
         senderSelection?.senderMode ?? null,
         senderSelection?.primarySenderWhatsAppAccountId ?? null,
+        input.selectedMessageTemplateId ?? null,
         input.messageTemplate ?? null,
         nextBodyType ?? null,
         input.attachment ? JSON.stringify(input.attachment) : null,
@@ -1151,27 +1183,35 @@ export async function createAudienceGroup(request: Request, response: Response) 
         name,
         description,
         source,
+        source_type,
+        permission_status,
+        risk_level,
         status,
         total_rows,
         valid_count,
         invalid_count,
         duplicate_count,
         opt_out_count,
+        suppressed_count,
         linked_crm_count,
         created_by
       )
-      values ($1, $2, nullif(trim($3), ''), 'csv', 'draft', $4, $5, $6, $7, $8, $9, $10)
+      values ($1, $2, nullif(trim($3), ''), 'csv', $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14)
       returning *
     `,
     [
       organizationId,
       input.name,
       input.description ?? null,
+      input.sourceType ?? null,
+      input.permissionStatus ?? "not_verified_by_system",
+      input.riskLevel ?? inferAudienceRiskLevelFromSource(input.sourceType ?? null),
       input.totalRows ?? 0,
       input.validCount ?? 0,
       input.invalidCount ?? 0,
       input.duplicateCount ?? 0,
       input.optOutCount ?? 0,
+      input.suppressedCount ?? input.optOutCount ?? 0,
       input.linkedCrmCount ?? 0,
       auth.organizationUserId
     ]
@@ -1211,13 +1251,7 @@ export async function importAudienceGroupContacts(request: Request, response: Re
     throw new AppError("Audience Group not found", 404, "audience_group_not_found");
   }
 
-  const importableContacts = input.contacts.filter(
-    (contact) =>
-      contact.validation_status === "valid" &&
-      !contact.is_duplicate &&
-      !contact.is_opted_out &&
-      contact.phone_normalized
-  );
+  const importableContacts = input.contacts.filter((contact) => contact.phone_raw?.trim());
 
   const importedGroup = await withTransaction(async (client) => {
     for (const contact of importableContacts) {
@@ -1227,6 +1261,7 @@ export async function importAudienceGroupContacts(request: Request, response: Re
             organization_id,
             audience_group_id,
             crm_contact_id,
+            matched_contact_id,
             name,
             phone_raw,
             phone_normalized,
@@ -1236,17 +1271,37 @@ export async function importAudienceGroupContacts(request: Request, response: Re
             product_interest,
             customer_type,
             notes,
+            raw_data_json,
             validation_status,
             validation_issues,
             is_duplicate,
-            is_opted_out
+            is_opted_out,
+            exclude_reason
           )
-          values ($1, $2, $3, nullif(trim($4), ''), $5, $6, $7, nullif(trim($8), ''), nullif(trim($9), ''), nullif(trim($10), ''), nullif(trim($11), ''), nullif(trim($12), ''), $13, $14::jsonb, $15, $16)
-          on conflict (audience_group_id, phone_normalized) do nothing
+          values ($1, $2, $3, $4, nullif(trim($5), ''), $6, $7, $8, nullif(trim($9), ''), nullif(trim($10), ''), nullif(trim($11), ''), nullif(trim($12), ''), nullif(trim($13), ''), $14::jsonb, $15, $16::jsonb, $17, $18, nullif(trim($19), ''))
+          on conflict (audience_group_id, phone_normalized)
+          do update set
+            crm_contact_id = excluded.crm_contact_id,
+            matched_contact_id = excluded.matched_contact_id,
+            name = excluded.name,
+            phone_raw = excluded.phone_raw,
+            gender = excluded.gender,
+            tag = excluded.tag,
+            location = excluded.location,
+            product_interest = excluded.product_interest,
+            customer_type = excluded.customer_type,
+            notes = excluded.notes,
+            raw_data_json = excluded.raw_data_json,
+            validation_status = excluded.validation_status,
+            validation_issues = excluded.validation_issues,
+            is_duplicate = excluded.is_duplicate,
+            is_opted_out = excluded.is_opted_out,
+            exclude_reason = excluded.exclude_reason
         `,
         [
           organizationId,
           audienceGroupId,
+          contact.crm_contact_id ?? null,
           contact.crm_contact_id ?? null,
           contact.name ?? null,
           contact.phone_raw,
@@ -1257,10 +1312,12 @@ export async function importAudienceGroupContacts(request: Request, response: Re
           contact.product_interest ?? null,
           contact.customer_type ?? null,
           contact.notes ?? null,
+          JSON.stringify(contact.raw_data_json ?? {}),
           contact.validation_status,
           JSON.stringify(contact.validation_issues),
           contact.is_duplicate,
-          contact.is_opted_out
+          contact.is_opted_out,
+          contact.exclude_reason ?? null
         ]
       );
     }
@@ -1274,7 +1331,8 @@ export async function importAudienceGroupContacts(request: Request, response: Re
             invalid_count = $5,
             duplicate_count = $6,
             opt_out_count = $7,
-            linked_crm_count = $8,
+            suppressed_count = $8,
+            linked_crm_count = $9,
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -1284,9 +1342,10 @@ export async function importAudienceGroupContacts(request: Request, response: Re
         organizationId,
         audienceGroupId,
         input.contacts.length,
-        importableContacts.length,
-        input.contacts.filter((contact) => contact.validation_status === "invalid").length,
+        input.contacts.filter((contact) => contact.validation_status === "valid" && !contact.is_duplicate && !contact.is_opted_out && Boolean(contact.phone_normalized)).length,
+        input.contacts.filter((contact) => contact.validation_status === "invalid" || !contact.phone_normalized).length,
         input.contacts.filter((contact) => contact.is_duplicate).length,
+        input.contacts.filter((contact) => contact.is_opted_out).length,
         input.contacts.filter((contact) => contact.is_opted_out).length,
         input.contacts.filter((contact) => Boolean(contact.crm_contact_id)).length
       ]
@@ -1936,6 +1995,9 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     senderWhatsAppAccountIds: row.sender_whatsapp_account_ids ?? (row.sender_whatsapp_account_id ? [row.sender_whatsapp_account_id] : []),
     senderWhatsAppLabel: row.sender_whatsapp_label,
     senderPhoneNumber: row.sender_phone_number,
+    selectedMessageTemplateId: row.selected_message_template_id,
+    activeSafetyReviewId: row.active_safety_review_id,
+    activeMessageOverrideId: row.active_message_override_id,
     messageTemplate: row.message_template,
     attachment: parseCampaignAttachment(row.attachment),
     attachContactCard: row.attach_contact_card,
@@ -2076,9 +2138,13 @@ function toCampaignRecipient(row: CampaignRecipientRecord) {
     notes: row.notes,
     sendStatus: row.send_status,
     messageId: row.message_id,
+    messageBodyRendered: row.message_body_rendered,
     attemptCount: row.attempt_count,
     queuedAt: row.queued_at,
     sentAt: row.sent_at,
+    deliveredAt: row.delivered_at,
+    repliedAt: row.replied_at,
+    optOutDetected: row.opt_out_detected,
     failedAt: row.failed_at,
     nextAttemptAt: row.next_attempt_at,
     errorMessage: row.error_message,
@@ -2144,6 +2210,22 @@ function formatCampaignStatus(status: string) {
     .split("_")
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+function inferAudienceRiskLevelFromSource(sourceType: string | null | undefined) {
+  switch (sourceType) {
+    case "previous_whatsapp_contact":
+    case "form_or_register_leads":
+      return "low" as const;
+    case "cold_public_list":
+    case "not_sure":
+      return "high" as const;
+    case "existing_customers":
+    case "event_booth_walkin":
+    case "referral_partner_list":
+    default:
+      return "medium" as const;
+  }
 }
 
 async function assertCampaignExists(organizationId: string, campaignId: string) {

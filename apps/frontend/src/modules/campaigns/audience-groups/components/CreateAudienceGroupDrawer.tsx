@@ -1,15 +1,18 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { listCampaignOptOuts } from "../../../../api/campaignSafety";
 import { Button } from "../../../../components/Button";
-import { Input } from "../../../../components/Input";
+import { Input, Select } from "../../../../components/Input";
 import { PopupOverlay } from "../../../../components/PopupOverlay";
 import type {
   AudienceColumnMapping,
   AudienceColumnMappingSuggestion,
   AudienceCsvField,
   AudienceGroup,
+  AudienceSourceType,
   AudienceValidationResult
 } from "../types/audienceGroup.types";
+import { audienceSourceOptions } from "../types/audienceGroup.types";
 import {
   parseAudienceCsv,
   suggestAudienceColumnMapping,
@@ -53,6 +56,7 @@ export function CreateAudienceGroupDrawer({
   const [stepIndex, setStepIndex] = useState(0);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [sourceType, setSourceType] = useState<AudienceSourceType>("not_sure");
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<ReturnType<typeof parseAudienceCsv>["rows"]>([]);
@@ -90,6 +94,7 @@ export function CreateAudienceGroupDrawer({
     setStepIndex(0);
     setName("");
     setDescription("");
+    setSourceType("not_sure");
     setFileName(null);
     setHeaders([]);
     setRows([]);
@@ -148,13 +153,13 @@ export function CreateAudienceGroupDrawer({
 
     try {
       const crmPhones = await fetchCrmPhoneLookup(organizationId);
+      const optOuts = await listCampaignOptOuts({ organizationId, limit: 5000 });
       const validationResult = validateAudienceRows({
         headers,
         rows,
         mapping,
         crmPhones,
-        // TODO Phase 1 follow-up: replace this placeholder with the real opt-out table/list lookup when it exists.
-        optedOutPhones: new Set()
+        optedOutPhones: new Set(optOuts.map((item) => item.normalized_phone))
       });
       setResult(validationResult);
       setStepIndex(4);
@@ -177,11 +182,15 @@ export function CreateAudienceGroupDrawer({
         name: name.trim(),
         description: description.trim() || null,
         organizationId,
+        sourceType,
+        permissionStatus: "not_verified_by_system",
+        riskLevel: audienceSourceOptions.find((option) => option.value === sourceType)?.riskLevel ?? "high",
         totalRows: result.totalRows,
         validCount: result.validContacts,
         invalidCount: result.invalidContacts,
         duplicateCount: result.duplicatesInCsv + result.duplicatesInAudienceGroup,
         optOutCount: result.optOutBlocked,
+        suppressedCount: result.suppressedContacts,
         linkedCrmCount: result.linkedCrmContacts
       });
 
@@ -256,6 +265,19 @@ export function CreateAudienceGroupDrawer({
                 placeholder="Short note for your team"
               />
             </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-text-muted">Declared Audience Source</span>
+              <Select value={sourceType} onChange={(event) => setSourceType(event.target.value as AudienceSourceType)} className="mt-1">
+                {audienceSourceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-2 text-xs leading-5 text-text-muted">
+                Permission for this uploaded audience cannot be verified by the system. Please declare the source so we can recommend safer campaign settings.
+              </p>
+            </label>
           </div>
         ) : null}
 
@@ -277,11 +299,13 @@ export function CreateAudienceGroupDrawer({
             <div className="border border-border bg-background-tint p-4">
               <p className="text-sm font-semibold text-text">Ready to validate {rows.length} CSV rows.</p>
               <p className="mt-1 text-sm text-text-muted">
-                Validation will normalize Malaysia phone numbers, detect duplicates, link existing CRM Contacts when possible, and block invalid recipients before import.
+                Validation will normalize phone numbers, detect duplicates, link existing CRM Contacts when possible, and exclude invalid or suppressed recipients from the sendable list.
               </p>
               <div className="mt-3 grid gap-2 text-xs text-text-muted sm:grid-cols-2">
                 <span className="border border-border bg-card px-3 py-2">Phone column: {mapping.phone ?? "Not mapped"}</span>
                 <span className="border border-border bg-card px-3 py-2">Name column: {mapping.name ?? "Not mapped"}</span>
+                <span className="border border-border bg-card px-3 py-2">Permission: Not verified by system</span>
+                <span className="border border-border bg-card px-3 py-2">Source: {audienceSourceOptions.find((option) => option.value === sourceType)?.label ?? "Not sure"}</span>
               </div>
             </div>
           </div>
@@ -290,6 +314,13 @@ export function CreateAudienceGroupDrawer({
         {stepIndex === 4 ? (
           <div className="space-y-4">
             <AudienceValidationSummary result={result} />
+            <div className="border border-border bg-background-tint p-4 text-sm leading-6 text-text-muted">
+              <p className="font-semibold text-text">Audience Upload Review</p>
+              <p className="mt-2">Permission: Not verified by system</p>
+              <p>Declared source: {audienceSourceOptions.find((option) => option.value === sourceType)?.label ?? "Not sure"}</p>
+              <p>Audience risk: {(audienceSourceOptions.find((option) => option.value === sourceType)?.riskLevel ?? "high").toUpperCase()}</p>
+              <p>Previously suppressed / opted-out numbers: {result?.suppressedContacts ?? 0}</p>
+            </div>
             <AudienceErrorReportButton result={result} />
           </div>
         ) : null}
@@ -300,7 +331,7 @@ export function CreateAudienceGroupDrawer({
             <div className="border border-border bg-background-tint p-3">
               <p className="text-sm font-semibold text-text">Audience will be saved for campaign use only.</p>
               <p className="mt-1 text-xs leading-5 text-text-muted">
-                Admins can sync contact identity later from the action icon in each Audience Group row.
+                Invalid, duplicate, and previously suppressed numbers stay excluded from the sendable list. Admins can sync contact identity later from the action icon in each Audience Group row.
               </p>
             </div>
           </div>

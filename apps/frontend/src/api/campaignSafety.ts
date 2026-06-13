@@ -1,4 +1,5 @@
 import { apiGet, apiPatch, apiPost } from "../lib/http";
+import type { CampaignRiskGuardReview } from "../modules/campaigns/types/campaign.types";
 
 export type SafetyStatus = "pass" | "warning" | "blocked";
 export type SpamRiskLevel = "low" | "medium" | "high" | "critical";
@@ -29,6 +30,9 @@ export type ContentRiskResult = {
   link_count: number;
   has_opt_out_text: boolean;
   variable_errors: string[];
+  spintax_errors?: string[];
+  uppercase_ratio?: number;
+  emoji_count?: number;
 };
 
 export type CampaignPrecheck = {
@@ -160,5 +164,34 @@ export async function overrideCampaignSafetyWarnings(input: {
     warning_codes: input.warningCodes,
     note: input.note ?? null
   });
+  return response.data;
+}
+
+export async function getCampaignRiskGuardReview(input: { campaignId: string; organizationId?: string | null }) {
+  const response = await apiGet<{ data: CampaignRiskGuardReview }>(
+    `/campaign-safety/campaigns/${input.campaignId}/risk-guard${buildQuery({ organizationId: input.organizationId })}`
+  );
+  return response.data;
+}
+
+export async function applyCampaignRiskGuardSuggestions(input: {
+  campaignId: string;
+  reviewId: string;
+  organizationId?: string | null;
+  applyTempo?: boolean;
+  applyMessageOverride?: boolean;
+  markDecision?: "applied_suggestions" | "partially_applied" | "ignored_warning" | "saved_as_draft";
+}) {
+  const response = await apiPost<{ data: CampaignRiskGuardReview }>(
+    `/campaign-safety/campaigns/${input.campaignId}/risk-guard/apply`,
+    {
+      organizationId: input.organizationId,
+      organization_id: input.organizationId,
+      review_id: input.reviewId,
+      apply_tempo: input.applyTempo ?? false,
+      apply_message_override: input.applyMessageOverride ?? false,
+      mark_decision: input.markDecision ?? "applied_suggestions"
+    }
+  );
   return response.data;
 }

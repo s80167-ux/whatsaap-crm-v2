@@ -95,6 +95,7 @@ export type CreateCampaignInput = {
   senderWhatsAppAccountIds?: string[];
   senderMode?: "single" | "round_robin";
   audienceGroupId: string;
+  selectedMessageTemplateId?: string | null;
   messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
   tempo: CampaignTempo;

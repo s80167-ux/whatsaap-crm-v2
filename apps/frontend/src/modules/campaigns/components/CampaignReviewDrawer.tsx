@@ -428,9 +428,11 @@ function StatusPill({ status }: { status: CampaignRecipientSendStatus }) {
   const classes: Record<CampaignRecipientSendStatus, string> = {
     pending: "border-border bg-muted text-text-muted",
     queued: "border-warning/20 bg-warning/10 text-warning",
+    sending: "border-primary/20 bg-primary/10 text-primary",
     sent: "border-success/20 bg-success/10 text-success",
     failed: "border-destructive/30 bg-destructive/10 text-destructive",
-    skipped: "border-border bg-card text-text-soft"
+    skipped: "border-border bg-card text-text-soft",
+    opted_out: "border-amber-200 bg-amber-50 text-amber-900"
   };
 
   return (

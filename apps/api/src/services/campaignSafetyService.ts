@@ -233,6 +233,8 @@ export class CampaignSafetyService {
       detected_risk_keywords: detectedPatterns,
       message_length: message.length,
       link_count: linkCount,
+      emoji_count: emojiCount,
+      uppercase_ratio: allCapsRatio,
       has_opt_out_text: hasOptOutText,
       variable_errors: findVariableErrors(message),
       spintax_errors: findSpintaxErrors(message)
