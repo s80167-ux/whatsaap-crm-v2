@@ -125,6 +125,9 @@ const approveGoogleSignupRequestSchema = z.object({
 const rejectGoogleSignupRequestSchema = z.object({
   reason: z.string().min(1).max(500).optional().nullable()
 });
+const reconnectWhatsAppAccountSchema = z.object({
+  confirmBlockedReconnect: z.boolean().optional()
+});
 
 function requireAuth(request: Request) {
   if (!request.auth) {
@@ -528,7 +531,10 @@ export async function updateWhatsAppAccount(request: Request, response: Response
 export async function reconnectWhatsAppAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const accountId = z.string().uuid().parse(request.params.accountId);
-  const account = await adminService.reconnectWhatsAppAccount(auth, accountId);
+  const input = reconnectWhatsAppAccountSchema.parse(request.body ?? {});
+  const account = await adminService.reconnectWhatsAppAccount(auth, accountId, {
+    confirmBlockedReconnect: input.confirmBlockedReconnect ?? false
+  });
 
   await auditLogService.record(auth, {
     organizationId: account.organization_id,

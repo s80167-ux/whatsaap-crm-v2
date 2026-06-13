@@ -1,7 +1,6 @@
 import {
   type Contact,
   downloadMediaMessage,
-  DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   type WAMessage,
@@ -28,6 +27,10 @@ import {
   normalizePhoneNumber,
   normalizeWhatsAppJid
 } from "../utils/phone.js";
+import {
+  classifyWhatsAppDisconnect,
+  normalizeDisconnectErrorMessage
+} from "./disconnectClassification.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
 type SessionRuntimeState = {
@@ -181,6 +184,8 @@ function shouldBlockSessionMutationInThisEnvironment() {
   return env.NODE_ENV !== "production" && !env.ALLOW_NON_PRODUCTION_REMOTE_CONNECTOR && !isLocalDatabaseUrl(env.DATABASE_URL);
 }
 
+const BLOCKED_AUTO_RECONNECT_STATUSES = new Set(["suspected_ban", "banned", "reconnect_suppressed", "logged_out"]);
+
 export class WhatsAppSessionManager {
   private static instance: WhatsAppSessionManager;
 
@@ -198,6 +203,7 @@ export class WhatsAppSessionManager {
   private readonly initializingAccounts = new Set<string>();
   private readonly connectedAccounts = new Set<string>();
   private readonly reconnectFailureCounts = new Map<string, number>();
+  private readonly qrRequiredAccounts = new Set<string>();
   private readonly accountRepository = new WhatsAppAccountRepository();
   private readonly runtimeRepository = new WhatsAppRuntimeRepository();
   private readonly rawEventIngestionService = new RawEventIngestionService();
@@ -287,7 +293,7 @@ export class WhatsAppSessionManager {
     account_jid: string | null;
     display_name: string | null;
     history_sync_lookback_days?: number | null;
-  }) {
+  }, options: { allowBlockedReconnect?: boolean } = {}) {
     if (shouldBlockSessionMutationInThisEnvironment()) {
       logger.error(
         {
@@ -300,13 +306,26 @@ export class WhatsAppSessionManager {
       return;
     }
 
+    if (BLOCKED_AUTO_RECONNECT_STATUSES.has(account.connection_status) && !options.allowBlockedReconnect) {
+      throw new Error("Manual confirmation is required before reconnecting this WhatsApp account");
+    }
+
     this.disabledAccounts.delete(account.id);
     this.connectedAccounts.delete(account.id);
     this.reconnectFailureCounts.delete(account.id);
+    this.qrRequiredAccounts.delete(account.id);
 
     await this.cleanupRuntime(account.id, "manual_reconnect");
 
-    await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "reconnecting"));
+    await withTransaction((client) =>
+      this.accountRepository.updateStatus(client, account.id, "reconnecting", {
+        errorCode: null,
+        errorMessage: null,
+        reconnectFailureCount: 0,
+        banSuspectedAt: null,
+        reconnectSuppressedAt: null
+      })
+    );
     await this.initializeSession(account);
   }
 
@@ -437,6 +456,7 @@ export class WhatsAppSessionManager {
       socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         try {
           if (qr) {
+            this.qrRequiredAccounts.add(account.id);
             await withTransaction(async (client) => {
               await this.runtimeRepository.touchQrGenerated(client, session.id);
               await this.runtimeRepository.appendConnectionEvent(client, {
@@ -449,7 +469,10 @@ export class WhatsAppSessionManager {
                   qr_length: qr.length
                 }
               });
-              await this.accountRepository.updateStatus(client, account.id, "qr_required");
+              await this.accountRepository.updateStatus(client, account.id, "qr_required", {
+                errorCode: null,
+                errorMessage: null
+              });
             });
             logger.info(
               { accountId: account.id, qrLength: qr.length },
@@ -460,6 +483,7 @@ export class WhatsAppSessionManager {
           if (connection === "open") {
             this.connectedAccounts.add(account.id);
             this.reconnectFailureCounts.delete(account.id);
+            this.qrRequiredAccounts.delete(account.id);
             this.flushConnectionWaiters(account.id);
 
             await withTransaction(async (client) => {
@@ -470,15 +494,22 @@ export class WhatsAppSessionManager {
                 eventType: "connected",
                 severity: "info"
               });
-              await this.accountRepository.updateStatus(client, account.id, "connected");
+              await this.accountRepository.updateStatus(client, account.id, "connected", {
+                errorCode: null,
+                errorMessage: null,
+                reconnectFailureCount: 0,
+                banSuspectedAt: null,
+                reconnectSuppressedAt: null
+              });
             });
             logger.info({ accountId: account.id }, "WhatsApp session connected");
           }
 
           if (connection === "close") {
             const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-            const reason = shouldReconnect ? "connection_closed_reconnecting" : "logged_out";
+            const errorMessage = normalizeDisconnectErrorMessage(
+              (lastDisconnect?.error as { message?: unknown } | undefined)?.message
+            );
             const activeRuntime = this.runtimes.get(account.id);
 
             if (activeRuntime?.sessionId !== session.id) {
@@ -494,18 +525,29 @@ export class WhatsAppSessionManager {
             const consecutiveReconnectFailures = hadConnected
               ? 0
               : (this.reconnectFailureCounts.get(account.id) ?? 0) + 1;
-            const autoReconnectSuppressed =
-              shouldReconnect &&
-              !hadConnected &&
-              consecutiveReconnectFailures >= env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES;
-
-            // Ban heuristics for Baileys:
-            // 1. loggedOut (401) while previously connected = kicked by WhatsApp
-            // 2. loggedOut (401) with repeated QR failures = QR rejected (banned)
-            // 3. loggedOut (401) without shouldReconnect = permanent disconnect
-            const isSuspectedBan =
-              statusCode === DisconnectReason.loggedOut &&
-              (hadConnected || consecutiveReconnectFailures >= 2);
+            const disconnectResult = classifyWhatsAppDisconnect({
+              statusCode: statusCode ?? null,
+              errorMessage,
+              hadConnected,
+              consecutiveReconnectFailures,
+              maxConsecutiveReconnectFailures: env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES,
+              hasExistingCreds,
+              qrRequiredRecently: this.qrRequiredAccounts.has(account.id)
+            });
+            const shouldReconnect = disconnectResult.shouldReconnect;
+            const autoReconnectSuppressed = disconnectResult.autoReconnectSuppressed;
+            const isSuspectedBan = disconnectResult.suspectedBan;
+            const reason =
+              disconnectResult.classification === "logged_out"
+                ? "logged_out"
+                : disconnectResult.classification === "suspected_ban"
+                  ? "suspected_ban"
+                  : disconnectResult.classification === "reconnect_suppressed"
+                    ? "reconnect_suppressed"
+                    : disconnectResult.classification === "qr_required"
+                      ? "qr_required"
+                      : "connection_closed_reconnecting";
+            const detectedAt = new Date().toISOString();
 
             if (hadConnected) {
               this.reconnectFailureCounts.delete(account.id);
@@ -516,6 +558,9 @@ export class WhatsAppSessionManager {
             if (autoReconnectSuppressed || isSuspectedBan) {
               this.disabledAccounts.add(account.id);
               this.rejectConnectionWaiters(account.id, new Error("WhatsApp reconnect was suppressed after repeated failures"));
+            }
+            if (disconnectResult.classification !== "qr_required") {
+              this.qrRequiredAccounts.delete(account.id);
             }
 
             this.sockets.delete(account.id);
@@ -535,6 +580,8 @@ export class WhatsAppSessionManager {
                   severity: shouldReconnect ? "warn" : "error",
                   payload: {
                     status_code: statusCode,
+                    error_message: errorMessage,
+                    disconnect_classification: disconnectResult.classification,
                     should_reconnect: shouldReconnect
                   }
                 });
@@ -553,8 +600,12 @@ export class WhatsAppSessionManager {
                     severity: "warn",
                     payload: {
                       status_code: statusCode,
+                      error_message: errorMessage,
+                      had_connected: hadConnected,
                       consecutive_failures: consecutiveReconnectFailures,
-                      max_consecutive_failures: env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES
+                      max_consecutive_failures: env.CONNECTOR_MAX_CONSECUTIVE_RECONNECT_FAILURES,
+                      connector_instance_id: env.CONNECTOR_INSTANCE_ID,
+                      detected_at: detectedAt
                     }
                   });
                   await this.accountRepository.releaseLease(client, {
@@ -571,19 +622,66 @@ export class WhatsAppSessionManager {
                     severity: "critical",
                     payload: {
                       status_code: statusCode,
+                      error_message: errorMessage,
                       had_connected: hadConnected,
-                      consecutive_reconnect_failures: consecutiveReconnectFailures
+                      consecutive_reconnect_failures: consecutiveReconnectFailures,
+                      connector_instance_id: env.CONNECTOR_INSTANCE_ID,
+                      detected_at: detectedAt
                     }
                   });
-                  await this.accountRepository.updateStatus(client, account.id, "banned");
+                  await this.accountRepository.updateStatus(client, account.id, "suspected_ban", {
+                    errorCode: statusCode ? String(statusCode) : null,
+                    errorMessage,
+                    reconnectFailureCount: consecutiveReconnectFailures,
+                    banSuspectedAt: detectedAt,
+                    reconnectSuppressedAt: null
+                  });
+                } else if (disconnectResult.classification === "logged_out") {
+                  await this.accountRepository.updateStatus(client, account.id, "logged_out", {
+                    errorCode: statusCode ? String(statusCode) : null,
+                    errorMessage,
+                    reconnectFailureCount: consecutiveReconnectFailures,
+                    banSuspectedAt: null,
+                    reconnectSuppressedAt: null
+                  });
+                } else if (disconnectResult.classification === "qr_required") {
+                  await this.accountRepository.updateStatus(client, account.id, "qr_required", {
+                    errorCode: statusCode ? String(statusCode) : null,
+                    errorMessage,
+                    reconnectFailureCount: consecutiveReconnectFailures,
+                    banSuspectedAt: null,
+                    reconnectSuppressedAt: null
+                  });
+                } else if (disconnectResult.classification === "reconnect_suppressed") {
+                  await this.accountRepository.updateStatus(client, account.id, "reconnect_suppressed", {
+                    errorCode: statusCode ? String(statusCode) : null,
+                    errorMessage,
+                    reconnectFailureCount: consecutiveReconnectFailures,
+                    banSuspectedAt: null,
+                    reconnectSuppressedAt: detectedAt
+                  });
                 } else {
-                  await this.accountRepository.updateStatus(client, account.id, "disconnected");
+                  await this.accountRepository.updateStatus(client, account.id, "disconnected", {
+                    errorCode: statusCode ? String(statusCode) : null,
+                    errorMessage,
+                    reconnectFailureCount: consecutiveReconnectFailures,
+                    banSuspectedAt: null,
+                    reconnectSuppressedAt: null
+                  });
                 }
               });
             } catch (error) {
               closePersistenceFailed = true;
               logger.error(
-                { error, accountId: account.id, sessionId: session.id, shouldReconnect, statusCode },
+                {
+                  error,
+                  accountId: account.id,
+                  sessionId: session.id,
+                  shouldReconnect,
+                  statusCode,
+                  errorMessage,
+                  disconnectClassification: disconnectResult.classification
+                },
                 "Failed to persist WhatsApp session close state"
               );
             }
@@ -591,7 +689,10 @@ export class WhatsAppSessionManager {
             logger.warn(
               {
                 accountId: account.id,
+                organizationId: account.organization_id,
                 statusCode,
+                errorMessage,
+                disconnectClassification: disconnectResult.classification,
                 shouldReconnect,
                 closePersistenceFailed,
                 hadConnected,
@@ -1030,13 +1131,33 @@ export class WhatsAppSessionManager {
       throw new Error("WhatsApp account not found");
     }
 
-    await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, "reconnecting"));
+    if (BLOCKED_AUTO_RECONNECT_STATUSES.has(account.connection_status)) {
+      throw new Error("Manual reconnect is required before this WhatsApp account can send messages again");
+    }
+
+    await withTransaction((client) =>
+      this.accountRepository.updateStatus(client, accountId, "reconnecting", {
+        errorCode: account.last_connection_error_code ?? null,
+        errorMessage: account.last_connection_error_message ?? null,
+        reconnectFailureCount: account.reconnect_failure_count ?? 0,
+        banSuspectedAt: account.ban_suspected_at ?? null,
+        reconnectSuppressedAt: account.reconnect_suppressed_at ?? null
+      })
+    );
     await this.reconnectSession(account);
 
     try {
       await this.waitForConnection(accountId, SEND_RECONNECT_TIMEOUT_MS);
     } catch (error) {
-      await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, "reconnecting"));
+      await withTransaction((client) =>
+        this.accountRepository.updateStatus(client, accountId, "reconnecting", {
+          errorCode: account.last_connection_error_code ?? null,
+          errorMessage: account.last_connection_error_message ?? null,
+          reconnectFailureCount: account.reconnect_failure_count ?? 0,
+          banSuspectedAt: account.ban_suspected_at ?? null,
+          reconnectSuppressedAt: account.reconnect_suppressed_at ?? null
+        })
+      );
       throw error;
     }
 

@@ -829,7 +829,7 @@ async function getBannedSenderCount(client: PoolClient, campaign: CampaignRow) {
     `
       select
         count(*)::text as total,
-        count(*) filter (where wa.connection_status = 'banned')::text as banned
+        count(*) filter (where wa.connection_status in ('banned', 'suspected_ban', 'reconnect_suppressed'))::text as banned
       from campaign_sender_accounts csa
       join whatsapp_accounts wa on wa.id = csa.whatsapp_account_id
       where csa.organization_id = $1

@@ -629,7 +629,7 @@ export class CampaignDispatchService {
 
     const eligible = result.rows.filter((sender) =>
       ["connected", "open", "ready"].includes(sender.connection_status) &&
-      !["banned", "logged_out"].includes(sender.connection_status)
+      !["banned", "logged_out", "suspected_ban", "reconnect_suppressed"].includes(sender.connection_status)
     );
 
     // Sort by health_score desc so round-robin starts from healthiest accounts

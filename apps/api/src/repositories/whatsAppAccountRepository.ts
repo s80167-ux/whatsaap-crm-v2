@@ -15,11 +15,24 @@ type WhatsAppAccountColumns = {
   created_at: boolean;
   last_connected_at: boolean;
   last_disconnected_at: boolean;
+  last_connection_error_code: boolean;
+  last_connection_error_message: boolean;
+  reconnect_failure_count: boolean;
+  ban_suspected_at: boolean;
+  reconnect_suppressed_at: boolean;
   health_score: boolean;
   history_sync_lookback_days: boolean;
   warmup_level: boolean;
   warmup_started_at: boolean;
   health_score_computed_at: boolean;
+};
+
+type UpdateStatusOptions = {
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  reconnectFailureCount?: number | null;
+  banSuspectedAt?: Date | string | null;
+  reconnectSuppressedAt?: Date | string | null;
 };
 
 export class WhatsAppAccountRepository {
@@ -54,6 +67,11 @@ export class WhatsAppAccountRepository {
       created_at: names.has("created_at"),
       last_connected_at: names.has("last_connected_at"),
       last_disconnected_at: names.has("last_disconnected_at"),
+      last_connection_error_code: names.has("last_connection_error_code"),
+      last_connection_error_message: names.has("last_connection_error_message"),
+      reconnect_failure_count: names.has("reconnect_failure_count"),
+      ban_suspected_at: names.has("ban_suspected_at"),
+      reconnect_suppressed_at: names.has("reconnect_suppressed_at"),
       health_score: names.has("health_score"),
       history_sync_lookback_days: names.has("history_sync_lookback_days"),
       warmup_level: names.has("warmup_level"),
@@ -77,6 +95,11 @@ export class WhatsAppAccountRepository {
         ${columns.account_jid ? "account_jid" : "null"} as account_jid,
         ${columns.display_name ? "display_name" : columns.label ? "label" : columns.name ? "name" : "null"} as display_name,
         ${columns.history_sync_lookback_days ? "history_sync_lookback_days" : "7"} as history_sync_lookback_days,
+        ${columns.reconnect_failure_count ? "reconnect_failure_count" : "0"} as reconnect_failure_count,
+        ${columns.last_connection_error_code ? "last_connection_error_code" : "null"} as last_connection_error_code,
+        ${columns.last_connection_error_message ? "last_connection_error_message" : "null"} as last_connection_error_message,
+        ${columns.ban_suspected_at ? "ban_suspected_at" : "null"} as ban_suspected_at,
+        ${columns.reconnect_suppressed_at ? "reconnect_suppressed_at" : "null"} as reconnect_suppressed_at,
         ${columns.warmup_level ? "warmup_level" : "0"} as warmup_level,
         ${columns.warmup_started_at ? "warmup_started_at" : "null"} as warmup_started_at,
         ${columns.health_score_computed_at ? "health_score_computed_at" : "null"} as health_score_computed_at
@@ -111,10 +134,14 @@ export class WhatsAppAccountRepository {
     return result.rows[0] ?? null;
   }
 
-  async updateStatus(client: PoolClient, accountId: string, status: string): Promise<void> {
+  async updateStatus(client: PoolClient, accountId: string, status: string, options: UpdateStatusOptions = {}): Promise<void> {
     const columns = await this.getColumns(client);
     const assignments = [];
-    const params: string[] = [accountId, status];
+    const params: Array<string | number | null> = [accountId, status];
+    const pushParam = (value: string | number | null) => {
+      params.push(value);
+      return `$${params.length}`;
+    };
 
     if (columns.connection_status) {
       assignments.push("connection_status = $2");
@@ -129,7 +156,33 @@ export class WhatsAppAccountRepository {
     }
 
     if (columns.last_disconnected_at) {
-      assignments.push("last_disconnected_at = case when $2 = 'disconnected' then timezone('utc', now()) else last_disconnected_at end");
+      assignments.push(
+        "last_disconnected_at = case when $2 in ('disconnected', 'logged_out', 'suspected_ban', 'reconnect_suppressed') then timezone('utc', now()) else last_disconnected_at end"
+      );
+    }
+
+    if (columns.last_connection_error_code) {
+      assignments.push(`last_connection_error_code = ${pushParam(options.errorCode ?? null)}`);
+    }
+
+    if (columns.last_connection_error_message) {
+      assignments.push(`last_connection_error_message = ${pushParam(options.errorMessage ?? null)}`);
+    }
+
+    if (columns.reconnect_failure_count) {
+      assignments.push(`reconnect_failure_count = ${pushParam(options.reconnectFailureCount ?? null)}`);
+    }
+
+    if (columns.ban_suspected_at) {
+      assignments.push(
+        `ban_suspected_at = ${pushParam(options.banSuspectedAt ? new Date(options.banSuspectedAt).toISOString() : null)}`
+      );
+    }
+
+    if (columns.reconnect_suppressed_at) {
+      assignments.push(
+        `reconnect_suppressed_at = ${pushParam(options.reconnectSuppressedAt ? new Date(options.reconnectSuppressedAt).toISOString() : null)}`
+      );
     }
 
     if (assignments.length === 0) {

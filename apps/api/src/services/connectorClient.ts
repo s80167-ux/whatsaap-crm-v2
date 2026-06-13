@@ -30,9 +30,12 @@ export class ConnectorClient {
     });
   }
 
-  async reconnectAccount(accountId: string) {
+  async reconnectAccount(accountId: string, options: { allowBlockedReconnect?: boolean } = {}) {
     return this.request(`/internal/accounts/${accountId}/reconnect`, {
-      method: "POST"
+      method: "POST",
+      body: JSON.stringify({
+        allowBlockedReconnect: options.allowBlockedReconnect ?? false
+      })
     });
   }
 

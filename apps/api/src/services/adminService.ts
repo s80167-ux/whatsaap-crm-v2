@@ -1878,7 +1878,11 @@ export class AdminService {
     });
   }
 
-  async reconnectWhatsAppAccount(authUser: AuthUser, accountId: string) {
+  async reconnectWhatsAppAccount(
+    authUser: AuthUser,
+    accountId: string,
+    options: { confirmBlockedReconnect?: boolean } = {}
+  ) {
     const account = await withTransaction(async (client) => {
       const existingAccount = await this.whatsappRepository.findById(client, accountId);
 
@@ -1893,8 +1897,18 @@ export class AdminService {
       return existingAccount;
     });
 
+    if (account.connection_status === "suspected_ban" && !options.confirmBlockedReconnect) {
+      throw new AppError(
+        "Only reconnect after confirming this number works normally in the official WhatsApp app. Reconnecting too early may extend the restriction.",
+        409,
+        "whatsapp_reconnect_confirmation_required"
+      );
+    }
+
     try {
-      await this.connectorClient.reconnectAccount(account.id);
+      await this.connectorClient.reconnectAccount(account.id, {
+        allowBlockedReconnect: options.confirmBlockedReconnect ?? false
+      });
     } catch (error) {
       logger.warn(
         { error, accountId: account.id },

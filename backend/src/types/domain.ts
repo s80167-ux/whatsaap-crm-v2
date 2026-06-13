@@ -63,6 +63,11 @@ export interface WhatsAppAccountRecord {
   connection_status: string;
   account_jid: string | null;
   display_name: string | null;
+  reconnect_failure_count?: number | null;
+  last_connection_error_code?: string | null;
+  last_connection_error_message?: string | null;
+  ban_suspected_at?: string | null;
+  reconnect_suppressed_at?: string | null;
   last_connected_at?: string | null;
   last_disconnected_at?: string | null;
   health_score?: number | null;

@@ -36,6 +36,9 @@ const onWhatsAppSchema = z.object({
 const profilePictureSchema = z.object({
   jid: z.string().min(3)
 });
+const reconnectAccountSchema = z.object({
+  allowBlockedReconnect: z.boolean().optional()
+});
 
 export async function health(_req: Request, res: Response) {
   return res.json({ ok: true });
@@ -54,7 +57,10 @@ export async function initializeAccountSession(req: Request, res: Response) {
 
 export async function reconnectAccountSession(req: Request, res: Response) {
   const { accountId } = accountParamSchema.parse(req.params);
-  const account = await connectorCommandService.reconnectAccount(accountId);
+  const input = reconnectAccountSchema.parse(req.body ?? {});
+  const account = await connectorCommandService.reconnectAccount(accountId, {
+    allowBlockedReconnect: input.allowBlockedReconnect ?? false
+  });
   return res.status(202).json({ data: account });
 }
 

@@ -13,6 +13,9 @@ export function useWhatsAppStatus(): WhatsAppStatus {
   // Find the first account with a status
   const status = accounts[0]?.status?.toLowerCase();
   if (status === "connected") return "connected";
+  if (status === "suspected_ban") return "suspected_ban";
+  if (status === "reconnect_suppressed") return "reconnect_suppressed";
+  if (status === "logged_out") return "logged_out";
   if (["connecting", "initializing", "pairing", "reconnecting", "qr_required", "new"].includes(status ?? "")) {
     return "connecting";
   }

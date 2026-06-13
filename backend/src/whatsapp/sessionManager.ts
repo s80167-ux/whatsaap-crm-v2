@@ -1,5 +1,4 @@
 import {
-  DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   useMultiFileAuthState
@@ -16,8 +15,10 @@ import { RawEventIngestionService } from "../services/rawEventIngestionService.j
 import { detectMessageType, extractTextContent } from "../utils/message.js";
 import { jidToPhone } from "../utils/phone.js";
 import { setQrCode, clearQrCode } from "./qrCodeStore.js";
+import { classifyWhatsAppDisconnect, normalizeDisconnectErrorMessage } from "./disconnectClassification.js";
 
 type SocketMap = Map<string, ReturnType<typeof makeWASocket>>;
+const MAX_CONSECUTIVE_RECONNECT_FAILURES = 5;
 
 export class WhatsAppSessionManager {
   private static instance: WhatsAppSessionManager;
@@ -32,6 +33,9 @@ export class WhatsAppSessionManager {
 
   private readonly sockets: SocketMap = new Map();
   private readonly disabledAccounts = new Set<string>();
+  private readonly connectedAccounts = new Set<string>();
+  private readonly reconnectFailureCounts = new Map<string, number>();
+  private readonly qrRequiredAccounts = new Set<string>();
   private readonly accountRepository = new WhatsAppAccountRepository();
   private readonly rawEventIngestionService = new RawEventIngestionService();
 
@@ -117,6 +121,7 @@ export class WhatsAppSessionManager {
 
     socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
+        this.qrRequiredAccounts.add(account.id);
         setQrCode(account.id, qr);
         await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "qr_required"));
         logger.info(
@@ -128,17 +133,56 @@ export class WhatsAppSessionManager {
       }
 
       if (connection === "open") {
+        this.connectedAccounts.add(account.id);
+        this.reconnectFailureCounts.delete(account.id);
+        this.qrRequiredAccounts.delete(account.id);
         await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "connected"));
         clearQrCode(account.id);
         logger.info({ accountId: account.id }, "WhatsApp session connected");
       }
 
       if (connection === "close") {
-        await withTransaction((client) => this.accountRepository.updateStatus(client, account.id, "disconnected"));
         const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const errorMessage = normalizeDisconnectErrorMessage(
+          (lastDisconnect?.error as { message?: unknown } | undefined)?.message
+        );
+        const hadConnected = this.connectedAccounts.delete(account.id);
+        const consecutiveReconnectFailures = hadConnected
+          ? 0
+          : (this.reconnectFailureCounts.get(account.id) ?? 0) + 1;
+        const disconnectResult = classifyWhatsAppDisconnect({
+          statusCode: statusCode ?? null,
+          errorMessage,
+          hadConnected,
+          consecutiveReconnectFailures,
+          maxConsecutiveReconnectFailures: MAX_CONSECUTIVE_RECONNECT_FAILURES,
+          hasExistingCreds: true,
+          qrRequiredRecently: this.qrRequiredAccounts.has(account.id)
+        });
+        const shouldReconnect = disconnectResult.shouldReconnect;
 
-        logger.warn({ accountId: account.id, statusCode }, "WhatsApp session closed");
+        if (hadConnected) {
+          this.reconnectFailureCounts.delete(account.id);
+        } else {
+          this.reconnectFailureCounts.set(account.id, consecutiveReconnectFailures);
+        }
+
+        if (!shouldReconnect) {
+          this.disabledAccounts.add(account.id);
+        }
+        this.qrRequiredAccounts.delete(account.id);
+        await withTransaction((client) =>
+          this.accountRepository.updateStatus(
+            client,
+            account.id,
+            disconnectResult.classification === "normal_disconnect" ? "disconnected" : disconnectResult.classification
+          )
+        );
+
+        logger.warn(
+          { accountId: account.id, statusCode, errorMessage, disconnectClassification: disconnectResult.classification },
+          "WhatsApp session closed"
+        );
 
         if (shouldReconnect && !this.disabledAccounts.has(account.id)) {
           setTimeout(() => {

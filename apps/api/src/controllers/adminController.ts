@@ -34,6 +34,9 @@ const createWhatsAppAccountSchema = z.object({
 });
 
 const rawEventStatusSchema = z.enum(["pending", "processing", "processed", "failed", "ignored"]);
+const reconnectWhatsAppAccountSchema = z.object({
+  confirmBlockedReconnect: z.boolean().optional()
+});
 
 const replayRawEventsSchema = z.object({
   organizationId: z.string().uuid().optional().nullable(),
@@ -241,7 +244,10 @@ export async function reconnectWhatsAppAccount(req: Request, res: Response) {
   }
 
   const accountId = z.string().uuid().parse(req.params.accountId);
-  const account = await adminService.reconnectWhatsAppAccount(req.auth, accountId);
+  const input = reconnectWhatsAppAccountSchema.parse(req.body ?? {});
+  const account = await adminService.reconnectWhatsAppAccount(req.auth, accountId, {
+    confirmBlockedReconnect: input.confirmBlockedReconnect ?? false
+  });
   await auditLogService.record(req.auth, {
     organizationId: account.organization_id,
     action: "whatsapp_account.reconnected",

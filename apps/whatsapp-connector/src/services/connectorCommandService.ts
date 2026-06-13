@@ -18,9 +18,9 @@ export class ConnectorCommandService {
     return account;
   }
 
-  async reconnectAccount(accountId: string) {
+  async reconnectAccount(accountId: string, options: { allowBlockedReconnect?: boolean } = {}) {
     const account = await this.getAccount(accountId);
-    await this.sessionManager.reconnectSession(account);
+    await this.sessionManager.reconnectSession(account, options);
     return account;
   }
 
@@ -50,7 +50,10 @@ export class ConnectorCommandService {
   async getAccountStatus(accountId: string) {
     const account = await this.getAccount(accountId);
     const connected = this.sessionManager.isConnected(accountId);
-    const connectionStatus = account.connection_status === "connected" && !connected ? "reconnecting" : account.connection_status;
+    const connectionStatus =
+      account.connection_status === "connected" && !connected
+        ? "reconnecting"
+        : account.connection_status;
 
     if (connectionStatus !== account.connection_status) {
       await withTransaction((client) => this.accountRepository.updateStatus(client, accountId, connectionStatus));

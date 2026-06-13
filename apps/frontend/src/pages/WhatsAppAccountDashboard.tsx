@@ -294,10 +294,37 @@ function formatConnectionStatus(status: string) {
     .join(" ");
 }
 
+function getConnectionStatusDescription(status: string) {
+  switch (status.toLowerCase()) {
+    case "connected":
+      return "Connected";
+    case "disconnected":
+      return "Disconnected. Reconnecting if possible.";
+    case "reconnecting":
+      return "Reconnecting...";
+    case "qr_required":
+      return "Scan QR to reconnect WhatsApp.";
+    case "logged_out":
+      return "WhatsApp session logged out. Please scan QR again.";
+    case "reconnect_suppressed":
+      return "Auto reconnect stopped after repeated failures. Please check this number.";
+    case "suspected_ban":
+      return "WhatsApp connection may be blocked or temporarily banned. Auto reconnect has been stopped. Please check this number in the official WhatsApp app before reconnecting.";
+    default:
+      return formatConnectionStatus(status);
+  }
+}
+
 function getConnectionTone(status: string) {
   const normalized = status.toLowerCase();
   if (normalized === "connected") {
     return { dot: "bg-success", text: "text-success" };
+  }
+  if (normalized === "suspected_ban") {
+    return { dot: "bg-destructive", text: "text-destructive" };
+  }
+  if (["logged_out", "reconnect_suppressed"].includes(normalized)) {
+    return { dot: "bg-warning", text: "text-warning" };
   }
   if (["pairing", "reconnecting", "qr_required", "new"].includes(normalized)) {
     return { dot: "bg-warning", text: "text-warning" };
@@ -311,6 +338,10 @@ function isConnectedAccount(status: string) {
 
 function canResetPairing(status: string) {
   return status.toLowerCase() !== "connected";
+}
+
+function requiresSuspectedBanConfirmation(status: string) {
+  return status.toLowerCase() === "suspected_ban";
 }
 
 export function WhatsAppAccountDashboard() {
@@ -360,6 +391,11 @@ export function WhatsAppAccountDashboard() {
   const [accountActivityNotice, setAccountActivityNotice] = useState<Record<string, { title: string; detail: string; tone?: "sky" | "emerald" }>>({});
   const [statusPollingUntil, setStatusPollingUntil] = useState<number | null>(null);
   const [accessAccountId, setAccessAccountId] = useState<string | null>(null);
+  const [confirmReconnectAccount, setConfirmReconnectAccount] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -474,13 +510,14 @@ export function WhatsAppAccountDashboard() {
     }
   }
 
-  async function handleReconnectAccount(accountId: string, label: string) {
+  async function handleReconnectAccount(accountId: string, label: string, options: { confirmBlockedReconnect?: boolean } = {}) {
     setIsWorking(true);
     setNotice(null);
     try {
-      await reconnectWhatsAppAccount(accountId);
+      await reconnectWhatsAppAccount(accountId, options);
       startTemporaryStatusPolling();
       setNotice(`Reconnect requested for "${label}".`);
+      setConfirmReconnectAccount(null);
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to reconnect WhatsApp account");
@@ -709,6 +746,42 @@ export function WhatsAppAccountDashboard() {
       </PopupOverlay>
 
       <PopupOverlay
+        open={Boolean(confirmReconnectAccount)}
+        onClose={() => !isWorking && setConfirmReconnectAccount(null)}
+        title="Confirm WhatsApp reconnect"
+        panelClassName="max-w-lg"
+      >
+        <div className="workspace-form-panel space-y-4 p-4">
+          <p className="text-sm leading-6 text-text-muted">
+            Only reconnect after confirming this number works normally in the official WhatsApp app. Reconnecting too early may extend the restriction.
+          </p>
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-text">
+            <p className="font-semibold text-destructive">{confirmReconnectAccount?.name}</p>
+            <p className="mt-1 text-text-muted">{confirmReconnectAccount ? getConnectionStatusDescription(confirmReconnectAccount.status) : null}</p>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" size="sm" disabled={isWorking} onClick={() => setConfirmReconnectAccount(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={isWorking || !confirmReconnectAccount}
+              onClick={() =>
+                confirmReconnectAccount
+                  ? handleReconnectAccount(confirmReconnectAccount.id, confirmReconnectAccount.name, {
+                      confirmBlockedReconnect: true
+                    })
+                  : Promise.resolve()
+              }
+            >
+              Reconnect Anyway
+            </Button>
+          </div>
+        </div>
+      </PopupOverlay>
+
+      <PopupOverlay
         open={Boolean(backfillPopupAccount)}
         onClose={() => setBackfillPopupAccount(null)}
         title="Sync WhatsApp History"
@@ -908,6 +981,7 @@ export function WhatsAppAccountDashboard() {
               const statusTone = getConnectionTone(account.status);
               const connected = isConnectedAccount(account.status);
               const showResetPairing = canResetPairing(account.status);
+              const statusDescription = getConnectionStatusDescription(account.status);
               const phoneNumber = account.phone_number_normalized ?? account.phone_number ?? "No phone set";
               const isBackfillingThisAccount = backfillingAccountId === account.id;
               const isSyncingContactsThisAccount = syncingContactsAccountId === account.id;
@@ -927,6 +1001,7 @@ export function WhatsAppAccountDashboard() {
                           <span className={`h-3 w-3 shrink-0 rounded-full ${statusTone.dot}`} />
                           {formatConnectionStatus(account.status)}
                         </span>
+                        <p className="mt-1 text-xs leading-5 text-text-muted">{statusDescription}</p>
                       </div>
                       <div className={`min-w-0 ${isMobile ? "rounded-2xl border border-border bg-background-tint/60 px-3 py-3" : ""}`}>
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Phone Number</p>
@@ -983,10 +1058,18 @@ export function WhatsAppAccountDashboard() {
                               size="sm"
                               className={isMobile ? "w-full justify-start px-3 text-left" : ""}
                               disabled={isWorking}
-                              onClick={() => handleReconnectAccount(account.id, account.name)}
+                              onClick={() =>
+                                requiresSuspectedBanConfirmation(account.status)
+                                  ? setConfirmReconnectAccount({
+                                      id: account.id,
+                                      name: account.name,
+                                      status: account.status
+                                    })
+                                  : handleReconnectAccount(account.id, account.name)
+                              }
                             >
                               <Link2 className="h-3.5 w-3.5" />
-                              Pair as New Device
+                              {account.status?.toLowerCase() === "suspected_ban" ? "Confirm Reconnect" : "Pair as New Device"}
                             </Button>
                           )}
                           {showResetPairing ? (

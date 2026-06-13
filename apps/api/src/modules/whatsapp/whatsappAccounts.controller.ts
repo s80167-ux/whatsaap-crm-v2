@@ -14,6 +14,9 @@ const createWhatsAppAccountSchema = z.object({
   phoneNumber: z.string().min(6).optional().nullable(),
   historySyncLookbackDays: z.coerce.number().int().min(0).max(365).default(7)
 });
+const reconnectWhatsAppAccountSchema = z.object({
+  confirmBlockedReconnect: z.boolean().optional()
+});
 
 function requireAuth(request: Request) {
   if (!request.auth) {
@@ -77,7 +80,10 @@ export async function createWhatsAppAccount(request: Request, response: Response
 export async function reconnectWhatsAppAccount(request: Request, response: Response) {
   const auth = requireAuth(request);
   const accountId = z.string().uuid().parse(request.params.accountId);
-  const account = await adminService.reconnectWhatsAppAccount(auth, accountId);
+  const input = reconnectWhatsAppAccountSchema.parse(request.body ?? {});
+  const account = await adminService.reconnectWhatsAppAccount(auth, accountId, {
+    confirmBlockedReconnect: input.confirmBlockedReconnect ?? false
+  });
 
   await auditLogService.record(auth, {
     organizationId: account.organization_id,

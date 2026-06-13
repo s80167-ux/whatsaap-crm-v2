@@ -368,8 +368,10 @@ export async function createWhatsAppAccount(payload: {
   return mapWhatsAppAccount(response.data);
 }
 
-export async function reconnectWhatsAppAccount(accountId: string) {
-  const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/whatsapp/accounts/${accountId}/reconnect`, {});
+export async function reconnectWhatsAppAccount(accountId: string, payload: { confirmBlockedReconnect?: boolean } = {}) {
+  const response = await apiPost<{ data: WhatsAppAccountApiRecord }>(`/whatsapp/accounts/${accountId}/reconnect`, {
+    confirmBlockedReconnect: payload.confirmBlockedReconnect ?? false
+  });
   return mapWhatsAppAccount(response.data);
 }
 
