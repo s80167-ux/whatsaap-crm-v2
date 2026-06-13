@@ -6,6 +6,7 @@ import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { SendMessageService } from "./sendMessageService.js";
 import { renderCampaignTemplateVariables } from "../modules/campaigns/campaignTemplateVariables.js";
+import { resolveCampaignTempo, type CampaignSpeedPreset } from "../modules/campaigns/campaignTempo.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 
 type CampaignDispatchCandidate = {
@@ -22,10 +23,11 @@ type CampaignDispatchCandidate = {
     dataBase64: string;
     fileSizeBytes: number;
   } | null;
-  delay_per_message_seconds: number;
-  batch_size: number;
-  batch_pause_seconds: number;
-  daily_limit: number;
+  speed_preset: CampaignSpeedPreset | null;
+  delay_per_message_seconds: number | null;
+  batch_size: number | null;
+  batch_pause_seconds: number | null;
+  daily_limit: number | null;
   attach_contact_card: boolean;
   sender_count: string;
   last_queued_at: string | null;
@@ -65,10 +67,11 @@ type ClaimedCampaignRecipient = {
     dataBase64: string;
     fileSizeBytes: number;
   } | null;
-  delay_per_message_seconds: number;
-  batch_size: number;
-  batch_pause_seconds: number;
-  daily_limit: number;
+  speed_preset: CampaignSpeedPreset | null;
+  delay_per_message_seconds: number | null;
+  batch_size: number | null;
+  batch_pause_seconds: number | null;
+  daily_limit: number | null;
   attach_contact_card: boolean;
   min_delay_seconds: number;
   max_delay_seconds: number;
@@ -161,6 +164,7 @@ export class CampaignDispatchService {
           c.message_template,
           c.message_body_type,
           c.attachment,
+          c.speed_preset,
           c.delay_per_message_seconds,
           c.batch_size,
           c.batch_pause_seconds,
@@ -204,20 +208,28 @@ export class CampaignDispatchService {
     for (const campaign of candidates.rows) {
       const senderCount = Math.max(Number(campaign.sender_count) || 0, 1);
       const todayCount = Number(campaign.today_count);
+      const tempo = resolveCampaignTempo({
+        speedPreset: campaign.speed_preset,
+        delayPerMessageSeconds: campaign.delay_per_message_seconds ?? undefined,
+        batchSize: campaign.batch_size ?? undefined,
+        batchPauseSeconds: campaign.batch_pause_seconds ?? undefined,
+        dailyLimit: campaign.daily_limit ?? undefined
+      });
 
-      if (todayCount >= campaign.daily_limit * senderCount) {
+      if (todayCount >= tempo.dailyLimit * senderCount) {
         continue;
       }
 
       const dispatchedCount = Number(campaign.dispatched_count);
-      const effectiveBatchSize = Math.max(campaign.batch_size * senderCount, 1);
+      const effectiveBatchSize = Math.max(tempo.batchSize, 1);
       const isBatchPause = dispatchedCount > 0 && dispatchedCount % effectiveBatchSize === 0;
-      const baseWaitSeconds = isBatchPause
-        ? campaign.batch_pause_seconds
-        : randomInRange(campaign.min_delay_seconds, campaign.max_delay_seconds) / senderCount;
-      // Occasional long pause every ~50 messages to mimic human behavior
-      const occasionalPauseSeconds = !isBatchPause && Math.random() < 0.02 ? randomInRange(30, 90) : 0;
-      const waitSeconds = Math.max(1, Math.ceil(baseWaitSeconds + occasionalPauseSeconds));
+      const waitSeconds = isBatchPause
+        ? tempo.batchPauseSeconds
+        : getEffectiveMessageDelaySeconds({
+            campaignDelaySeconds: tempo.delayPerMessageSeconds,
+            minDelaySeconds: campaign.min_delay_seconds,
+            maxDelaySeconds: campaign.max_delay_seconds
+          });
 
       if (campaign.last_queued_at) {
         const nextAllowedAt = new Date(campaign.last_queued_at).getTime() + waitSeconds * 1000;
@@ -296,6 +308,7 @@ export class CampaignDispatchService {
             c.message_template,
             c.message_body_type,
             c.attachment,
+            c.speed_preset,
             c.delay_per_message_seconds,
             c.batch_size,
             c.batch_pause_seconds,
@@ -691,21 +704,23 @@ export class CampaignDispatchService {
   }
 
   private computeAvailableAt(recipient: ClaimedCampaignRecipient, assignmentIndex: number) {
-    const dailyLimit = Math.max(recipient.daily_limit, 1);
+    const tempo = resolveCampaignTempo({
+      speedPreset: recipient.speed_preset,
+      delayPerMessageSeconds: recipient.delay_per_message_seconds ?? undefined,
+      batchSize: recipient.batch_size ?? undefined,
+      batchPauseSeconds: recipient.batch_pause_seconds ?? undefined,
+      dailyLimit: recipient.daily_limit ?? undefined
+    });
+    const dailyLimit = Math.max(tempo.dailyLimit, 1);
     const indexWithinDay = assignmentIndex % dailyLimit;
     const dayOffset = Math.floor(assignmentIndex / dailyLimit);
-    const pauseBlocks = Math.floor(indexWithinDay / Math.max(recipient.batch_size, 1));
-    const minDelay = recipient.min_delay_seconds ?? 5;
-    const maxDelay = recipient.max_delay_seconds ?? 20;
-    // Human-like jitter: random delay per message + occasional long pause
-    let messageDelays = 0;
-    for (let i = 0; i < indexWithinDay; i++) {
-      messageDelays += randomInRange(minDelay, maxDelay);
-      if (Math.random() < 0.02) {
-        messageDelays += randomInRange(30, 90);
-      }
-    }
-    const secondsOffset = messageDelays + pauseBlocks * recipient.batch_pause_seconds;
+    const pauseBlocks = Math.floor(indexWithinDay / Math.max(tempo.batchSize, 1));
+    const messageDelaySeconds = getEffectiveMessageDelaySeconds({
+      campaignDelaySeconds: tempo.delayPerMessageSeconds,
+      minDelaySeconds: recipient.min_delay_seconds,
+      maxDelaySeconds: recipient.max_delay_seconds
+    });
+    const secondsOffset = indexWithinDay * messageDelaySeconds + pauseBlocks * tempo.batchPauseSeconds;
     const availableAt = new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000 + secondsOffset * 1000);
     return availableAt.toISOString();
   }
@@ -836,8 +851,13 @@ export function renderSpintax(text: string): string {
   return expanded.replace(new RegExp(ESCAPED_OPEN, "g"), "{").replace(new RegExp(ESCAPED_CLOSE, "g"), "}");
 }
 
-function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+function getEffectiveMessageDelaySeconds(input: {
+  campaignDelaySeconds: number;
+  minDelaySeconds: number;
+  maxDelaySeconds: number;
+}) {
+  const orgSafetyDelaySeconds = Math.max(input.minDelaySeconds || 0, input.maxDelaySeconds || 0, 1);
+  return Math.max(input.campaignDelaySeconds, orgSafetyDelaySeconds);
 }
 
 export async function closeCampaignDispatchPool() {

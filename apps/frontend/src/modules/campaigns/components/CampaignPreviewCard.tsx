@@ -30,7 +30,7 @@ export function CampaignPreviewCard({
           value={audienceLabel ? `${audienceLabel} - ${validRecipients ?? 0} valid contacts` : "Not selected"}
         />
         <PreviewMeta label="Valid recipients" value={String(validRecipients ?? 0)} />
-        <PreviewMeta label="Estimated tempo" value={tempoLabel ?? "Safe mode, 12s/message, 20 per batch, 2 min pause"} />
+        <PreviewMeta label="Estimated tempo" value={tempoLabel ?? "Safe tempo: 22s per message, 12 messages per batch, 5 min pause after each batch, 150 messages/day per sender."} />
       </div>
       {attachment ? (
         <div className="mt-2 rounded-xl border border-primary/10 bg-primary/5 px-3 py-2 text-xs">

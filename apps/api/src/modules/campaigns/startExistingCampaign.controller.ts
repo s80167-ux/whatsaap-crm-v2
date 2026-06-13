@@ -6,6 +6,7 @@ import { AppError } from "../../lib/errors.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
 import { assertCampaignTemplateVariablesAvailable } from "./campaignTemplateVariables.js";
+import { campaignSpeedPresetSchema, resolveCampaignTempo, type CampaignSpeedPreset, type CampaignTempo } from "./campaignTempo.js";
 
 const connectorClient = new ConnectorClient();
 const campaignSafetyService = new CampaignSafetyService();
@@ -28,7 +29,12 @@ const startExistingCampaignBodySchema = z.object({
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
   messageTemplate: z.string().trim().min(1).max(5000).optional(),
-  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).optional()
+  speedPreset: campaignSpeedPresetSchema.optional(),
+  delayPerMessageSeconds: z.number().int().positive().optional(),
+  batchSize: z.number().int().positive().optional(),
+  batchPauseSeconds: z.number().int().positive().optional(),
+  dailyLimit: z.number().int().positive().optional(),
+  stopOnHighFailure: z.boolean().optional()
 });
 
 type AuthUser = NonNullable<Request["auth"]>;
@@ -44,7 +50,12 @@ type CampaignRecord = {
   message_template: string | null;
   message_body_type: string;
   attachment: unknown | null;
-  speed_preset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
+  speed_preset: CampaignSpeedPreset | null;
+  delay_per_message_seconds: number | null;
+  batch_size: number | null;
+  batch_pause_seconds: number | null;
+  daily_limit: number | null;
+  stop_on_high_failure: boolean | null;
   attach_contact_card: boolean;
 };
 
@@ -126,7 +137,14 @@ export async function startExistingCampaign(request: Request, response: Response
   }
 
   const senderSelection = resolveSenderSelection(input, campaign.sender_whatsapp_account_id);
-  const speedPreset = input.speedPreset ?? campaign.speed_preset ?? "safe";
+  const tempo = resolveCampaignTempo({
+    speedPreset: input.speedPreset ?? campaign.speed_preset ?? undefined,
+    delayPerMessageSeconds: input.delayPerMessageSeconds ?? campaign.delay_per_message_seconds ?? undefined,
+    batchSize: input.batchSize ?? campaign.batch_size ?? undefined,
+    batchPauseSeconds: input.batchPauseSeconds ?? campaign.batch_pause_seconds ?? undefined,
+    dailyLimit: input.dailyLimit ?? campaign.daily_limit ?? undefined,
+    stopOnHighFailure: input.stopOnHighFailure ?? campaign.stop_on_high_failure ?? undefined
+  });
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, audienceGroupId);
@@ -143,7 +161,7 @@ export async function startExistingCampaign(request: Request, response: Response
     primarySenderWhatsAppAccountId: senderSelection.primarySenderWhatsAppAccountId,
     senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
     messageTemplate,
-    speedPreset
+    tempo
   });
 
   const snapshot = await snapshotCampaignRecipients({
@@ -373,7 +391,7 @@ async function saveCampaignStartConfiguration(input: {
   primarySenderWhatsAppAccountId: string;
   senderWhatsAppAccountIds: string[];
   messageTemplate: string;
-  speedPreset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
+  tempo: CampaignTempo;
 }) {
   await withTransaction(async (client) => {
     await client.query(
@@ -384,6 +402,11 @@ async function saveCampaignStartConfiguration(input: {
             sender_whatsapp_account_id = $5,
             message_template = $6,
             speed_preset = $7,
+            delay_per_message_seconds = $8,
+            batch_size = $9,
+            batch_pause_seconds = $10,
+            daily_limit = $11,
+            stop_on_high_failure = $12,
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -395,7 +418,12 @@ async function saveCampaignStartConfiguration(input: {
         input.senderMode,
         input.primarySenderWhatsAppAccountId,
         input.messageTemplate,
-        input.speedPreset
+        input.tempo.speedPreset,
+        input.tempo.delayPerMessageSeconds,
+        input.tempo.batchSize,
+        input.tempo.batchPauseSeconds,
+        input.tempo.dailyLimit,
+        input.tempo.stopOnHighFailure
       ]
     );
 

@@ -19,10 +19,10 @@ export const mockCampaigns: Campaign[] = [
     audienceGroupId: null,
     senderWhatsAppAccountId: null,
     speedPreset: "safe",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 300,
+    delayPerMessageSeconds: 22,
+    batchSize: 12,
+    batchPauseSeconds: 300,
+    dailyLimit: 150,
     stopOnHighFailure: true,
     status: "Draft",
     recipients: 240,
@@ -241,6 +241,11 @@ export async function startCampaign(input: {
   messageTemplate?: string;
   templateGovernanceVersionId?: string | null;
   speedPreset?: CampaignSpeedPreset;
+  delayPerMessageSeconds?: number;
+  batchSize?: number;
+  batchPauseSeconds?: number;
+  dailyLimit?: number;
+  stopOnHighFailure?: boolean;
   attachment?: CampaignAttachment | null;
   attachContactCard?: boolean;
 }) {

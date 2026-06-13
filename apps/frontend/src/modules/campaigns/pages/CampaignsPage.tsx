@@ -102,9 +102,18 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
         campaignId: campaign.id,
         organizationId,
         ...(campaign.senderWhatsAppAccountId ? { senderWhatsAppAccountId: campaign.senderWhatsAppAccountId } : {}),
+        ...(campaign.senderWhatsAppAccountIds?.length ? { senderWhatsAppAccountIds: campaign.senderWhatsAppAccountIds } : {}),
+        ...(campaign.senderWhatsAppAccountIds && campaign.senderWhatsAppAccountIds.length > 1 ? { senderMode: "round_robin" as const } : {}),
         ...(campaign.audienceGroupId ? { audienceGroupId: campaign.audienceGroupId } : {}),
         ...(campaign.messageTemplate ? { messageTemplate: campaign.messageTemplate } : {}),
-        ...(campaign.speedPreset ? { speedPreset: campaign.speedPreset } : {})
+        ...(campaign.speedPreset ? { speedPreset: campaign.speedPreset } : {}),
+        ...(campaign.delayPerMessageSeconds ? { delayPerMessageSeconds: campaign.delayPerMessageSeconds } : {}),
+        ...(campaign.batchSize ? { batchSize: campaign.batchSize } : {}),
+        ...(campaign.batchPauseSeconds ? { batchPauseSeconds: campaign.batchPauseSeconds } : {}),
+        ...(campaign.dailyLimit ? { dailyLimit: campaign.dailyLimit } : {}),
+        ...(typeof campaign.stopOnHighFailure === "boolean" ? { stopOnHighFailure: campaign.stopOnHighFailure } : {}),
+        ...(campaign.attachment ? { attachment: campaign.attachment } : {}),
+        ...(typeof campaign.attachContactCard === "boolean" ? { attachContactCard: campaign.attachContactCard } : {})
       }),
     onSuccess: async (result) => {
       showPlaceholderNotice(result.message, "success");

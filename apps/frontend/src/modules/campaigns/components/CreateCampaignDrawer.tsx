@@ -10,9 +10,16 @@ import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
 import { createCampaign, formatCampaignStartError, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
+import type { CampaignAttachment, CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import {
+  campaignTempoPresetLabels,
+  campaignTempoPresets,
+  formatCampaignTempoSummary,
+  getCampaignTempoPresetHelpText,
+  selectableCampaignTempoPresets
+} from "../utils/campaignTempo";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
-import type { CampaignAttachment, CampaignContact, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 
 const fallbackSampleContact: CampaignContact = {
   name: "Ahmad",
@@ -22,68 +29,6 @@ const fallbackSampleContact: CampaignContact = {
 };
 
 const defaultTemplate = "Salam {{salutation}} {{name}}, kami ada promosi khas untuk anda.";
-
-const tempoPresetLabels: Record<CampaignSpeedPreset, string> = {
-  very_safe: "Very Safe",
-  safe: "Safe",
-  balanced: "Balanced",
-  normal: "Normal",
-  fast: "Fast",
-  custom: "Custom"
-};
-
-const selectableTempoPresets: CampaignSpeedPreset[] = ["very_safe", "safe", "balanced", "normal", "fast", "custom"];
-
-const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
-  very_safe: {
-    speedPreset: "very_safe",
-    delayPerMessageSeconds: 15,
-    batchSize: 15,
-    batchPauseSeconds: 180,
-    dailyLimit: 150,
-    stopOnHighFailure: true
-  },
-  safe: {
-    speedPreset: "safe",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 300,
-    stopOnHighFailure: true
-  },
-  balanced: {
-    speedPreset: "balanced",
-    delayPerMessageSeconds: 9,
-    batchSize: 25,
-    batchPauseSeconds: 90,
-    dailyLimit: 400,
-    stopOnHighFailure: true
-  },
-  normal: {
-    speedPreset: "normal",
-    delayPerMessageSeconds: 7,
-    batchSize: 30,
-    batchPauseSeconds: 60,
-    dailyLimit: 500,
-    stopOnHighFailure: true
-  },
-  fast: {
-    speedPreset: "fast",
-    delayPerMessageSeconds: 5,
-    batchSize: 40,
-    batchPauseSeconds: 45,
-    dailyLimit: 700,
-    stopOnHighFailure: true
-  },
-  custom: {
-    speedPreset: "custom",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 300,
-    stopOnHighFailure: true
-  }
-};
 
 const connectedStatuses = new Set(["connected", "open", "ready"]);
 
@@ -112,7 +57,7 @@ export function CreateCampaignDrawer({
   const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
   const [messageTemplate, setMessageTemplate] = useState(defaultTemplate);
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
-  const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
+  const [tempo, setTempo] = useState<CampaignTempo>(campaignTempoPresets.safe);
   const [attachment, setAttachment] = useState<CampaignAttachment | null>(null);
   const [attachContactCard, setAttachContactCard] = useState(false);
   const [sampleContact, setSampleContact] = useState<CampaignContact>(fallbackSampleContact);
@@ -169,7 +114,7 @@ export function CreateCampaignDrawer({
 
     return `${selectedSenders.length} senders selected - Primary: ${selectedSender ? formatSenderLabel(selectedSender) : formatSenderLabel(selectedSenders[0])}`;
   }, [selectedSender, selectedSenders]);
-  const tempoLabel = formatTempoLabel(tempo);
+  const tempoLabel = formatCampaignTempoSummary(tempo, selectedSenderWhatsAppAccountIds.length || 1);
 
   if (!open) {
     return null;
@@ -279,7 +224,9 @@ export function CreateCampaignDrawer({
   }
 
   function handleTempoPresetChange(speedPreset: CampaignSpeedPreset) {
-    setTempo(speedPreset === "custom" ? { ...tempo, speedPreset: "custom" } : tempoPresets[speedPreset]);
+    setTempo((current) => speedPreset === "custom"
+      ? { ...current, speedPreset: "custom" }
+      : { ...campaignTempoPresets[speedPreset] });
   }
 
   function handleTempoNumberChange(field: keyof Omit<CampaignTempo, "speedPreset" | "stopOnHighFailure">, value: string) {
@@ -442,6 +389,11 @@ export function CreateCampaignDrawer({
         audienceGroupId,
         messageTemplate,
         speedPreset: tempo.speedPreset,
+        delayPerMessageSeconds: tempo.delayPerMessageSeconds,
+        batchSize: tempo.batchSize,
+        batchPauseSeconds: tempo.batchPauseSeconds,
+        dailyLimit: tempo.dailyLimit,
+        stopOnHighFailure: tempo.stopOnHighFailure,
         attachment,
         attachContactCard
       });
@@ -714,19 +666,22 @@ export function CreateCampaignDrawer({
               </p>
             </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {selectableTempoPresets.map((preset) => (
+                {selectableCampaignTempoPresets.map((preset) => (
                   <Button
                     key={preset}
                     variant={tempo.speedPreset === preset ? "primary" : "secondary"}
                     onClick={() => handleTempoPresetChange(preset)}
                   >
-                    {tempoPresetLabels[preset]}
+                    {campaignTempoPresetLabels[preset]}
                   </Button>
                 ))}
               </div>
+              <p className={tempo.speedPreset === "fast" ? "mt-4 text-xs leading-5 text-amber-700" : "mt-4 text-xs leading-5 text-text-muted"}>
+                {getCampaignTempoPresetHelpText(tempo.speedPreset)}
+              </p>
               {tempo.speedPreset === "custom" ? (
                 <>
-                  <p className="mt-4 text-xs leading-5 text-text-muted">
+                  <p className="mt-3 text-xs leading-5 text-text-muted">
                     Set your own delay, batch size, pause, and daily limit when the presets do not fit this sender.
                   </p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -846,10 +801,4 @@ function formatSenderStatus(account: WhatsAppAccountSummary) {
   }
 
   return account.live_connection_status ?? account.status;
-}
-
-function formatTempoLabel(tempo: CampaignTempo) {
-  const preset = `${tempoPresetLabels[tempo.speedPreset]} mode`;
-  const pauseMinutes = tempo.batchPauseSeconds >= 60 ? `${Math.round(tempo.batchPauseSeconds / 60)} min pause` : `${tempo.batchPauseSeconds}s pause`;
-  return `${preset}, ${tempo.delayPerMessageSeconds}s/message, ${tempo.batchSize} per batch, ${pauseMinutes}`;
 }

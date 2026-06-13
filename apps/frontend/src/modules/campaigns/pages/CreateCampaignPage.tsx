@@ -17,72 +17,18 @@ import { DynamicVariablePanel } from "../components/DynamicVariablePanel";
 import { createCampaign, fetchCampaigns, formatCampaignStartError, sendCampaignTest, startCampaign, updateCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
 import type { Campaign, CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import {
+  campaignTempoPresetLabels,
+  campaignTempoPresets,
+  formatCampaignTempoSummary,
+  getCampaignTempo,
+  getCampaignTempoPresetHelpText,
+  selectableCampaignTempoPresets
+} from "../utils/campaignTempo";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { findInvalidTemplateVariables, formatVariableToken, insertVariableIntoTemplate } from "../utils/templateVariables";
 
 const defaultTemplate = "Salam {{salutation}} {{name}}, kami ada promosi khas untuk anda.";
-
-const tempoPresetLabels: Record<CampaignSpeedPreset, string> = {
-  very_safe: "Very Safe",
-  safe: "Safe",
-  balanced: "Balanced",
-  normal: "Normal",
-  fast: "Fast",
-  custom: "Custom"
-};
-
-const selectableTempoPresets: CampaignSpeedPreset[] = ["very_safe", "safe", "balanced", "normal", "fast", "custom"];
-
-const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
-  very_safe: {
-    speedPreset: "very_safe",
-    delayPerMessageSeconds: 15,
-    batchSize: 15,
-    batchPauseSeconds: 180,
-    dailyLimit: 150,
-    stopOnHighFailure: true
-  },
-  safe: {
-    speedPreset: "safe",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 300,
-    stopOnHighFailure: true
-  },
-  balanced: {
-    speedPreset: "balanced",
-    delayPerMessageSeconds: 9,
-    batchSize: 25,
-    batchPauseSeconds: 90,
-    dailyLimit: 400,
-    stopOnHighFailure: true
-  },
-  normal: {
-    speedPreset: "normal",
-    delayPerMessageSeconds: 7,
-    batchSize: 30,
-    batchPauseSeconds: 60,
-    dailyLimit: 500,
-    stopOnHighFailure: true
-  },
-  fast: {
-    speedPreset: "fast",
-    delayPerMessageSeconds: 5,
-    batchSize: 40,
-    batchPauseSeconds: 45,
-    dailyLimit: 700,
-    stopOnHighFailure: true
-  },
-  custom: {
-    speedPreset: "custom",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 300,
-    stopOnHighFailure: true
-  }
-};
 
 const connectedStatuses = new Set(["connected", "open", "ready"]);
 
@@ -104,7 +50,7 @@ export function CreateCampaignPage() {
   const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
   const [messageTemplate, setMessageTemplate] = useState(defaultTemplate);
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
-  const [tempo, setTempo] = useState<CampaignTempo>(tempoPresets.safe);
+  const [tempo, setTempo] = useState<CampaignTempo>(campaignTempoPresets.safe);
   const [attachment, setAttachment] = useState<CampaignAttachment | null>(null);
   const [attachContactCard, setAttachContactCard] = useState(false);
   const [testSendNotice, setTestSendNotice] = useState<{ message: string; variant: "success" | "error" } | null>(null);
@@ -205,7 +151,7 @@ export function CreateCampaignPage() {
 
     return `${selectedSenders.length} senders selected - Primary: ${selectedSender ? formatSenderLabel(selectedSender) : formatSenderLabel(selectedSenders[0])}`;
   }, [selectedSender, selectedSenders]);
-  const tempoLabel = formatTempoLabel(tempo);
+  const tempoLabel = formatCampaignTempoSummary(tempo, selectedSenderWhatsAppAccountIds.length || 1);
 
   useLayoutEffect(() => {
     if (pendingCursorPositionRef.current === null || !messageTemplateRef.current) {
@@ -382,7 +328,9 @@ export function CreateCampaignPage() {
   }
 
   function handleTempoPresetChange(speedPreset: CampaignSpeedPreset) {
-    setTempo(speedPreset === "custom" ? { ...tempo, speedPreset: "custom" } : tempoPresets[speedPreset]);
+    setTempo((current) => speedPreset === "custom"
+      ? { ...current, speedPreset: "custom" }
+      : { ...campaignTempoPresets[speedPreset] });
   }
 
   function handleTempoNumberChange(field: keyof Omit<CampaignTempo, "speedPreset" | "stopOnHighFailure">, value: string) {
@@ -538,6 +486,11 @@ export function CreateCampaignPage() {
         audienceGroupId,
         messageTemplate,
         speedPreset: tempo.speedPreset,
+        delayPerMessageSeconds: tempo.delayPerMessageSeconds,
+        batchSize: tempo.batchSize,
+        batchPauseSeconds: tempo.batchPauseSeconds,
+        dailyLimit: tempo.dailyLimit,
+        stopOnHighFailure: tempo.stopOnHighFailure,
         attachment,
         attachContactCard
       });
@@ -834,19 +787,22 @@ export function CreateCampaignPage() {
                 </p>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {selectableTempoPresets.map((preset) => (
+                {selectableCampaignTempoPresets.map((preset) => (
                   <Button
                     key={preset}
                     variant={tempo.speedPreset === preset ? "primary" : "secondary"}
                     onClick={() => handleTempoPresetChange(preset)}
                   >
-                    {tempoPresetLabels[preset]}
+                    {campaignTempoPresetLabels[preset]}
                   </Button>
                 ))}
               </div>
+              <p className={tempo.speedPreset === "fast" ? "mt-4 text-xs leading-5 text-amber-700" : "mt-4 text-xs leading-5 text-text-muted"}>
+                {getCampaignTempoPresetHelpText(tempo.speedPreset)}
+              </p>
               {tempo.speedPreset === "custom" ? (
                 <>
-                  <p className="mt-4 text-xs leading-5 text-text-muted">
+                  <p className="mt-3 text-xs leading-5 text-text-muted">
                     Set your own delay, batch size, pause, and daily limit when you need tighter control than the presets.
                   </p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -971,20 +927,6 @@ async function saveCampaignDraftFromInput(input: {
   return createCampaign(payload);
 }
 
-function getCampaignTempo(campaign: Campaign): CampaignTempo {
-  const speedPreset = campaign.speedPreset ?? "safe";
-  const preset = tempoPresets[speedPreset];
-
-  return {
-    speedPreset,
-    delayPerMessageSeconds: campaign.delayPerMessageSeconds ?? preset.delayPerMessageSeconds,
-    batchSize: campaign.batchSize ?? preset.batchSize,
-    batchPauseSeconds: campaign.batchPauseSeconds ?? preset.batchPauseSeconds,
-    dailyLimit: campaign.dailyLimit ?? preset.dailyLimit,
-    stopOnHighFailure: campaign.stopOnHighFailure ?? preset.stopOnHighFailure
-  };
-}
-
 function TempoInput({ label, value, onChange }: { label: string; value: number; onChange: (value: string) => void }) {
   return (
     <label className="block">
@@ -1019,10 +961,4 @@ function formatSenderStatus(account: { status: string; live_status_error?: strin
   }
 
   return account.live_connection_status ?? account.status;
-}
-
-function formatTempoLabel(tempo: CampaignTempo) {
-  const preset = `${tempoPresetLabels[tempo.speedPreset]} mode`;
-  const pauseMinutes = tempo.batchPauseSeconds >= 60 ? `${Math.round(tempo.batchPauseSeconds / 60)} min pause` : `${tempo.batchPauseSeconds}s pause`;
-  return `${preset}, ${tempo.delayPerMessageSeconds}s/message, ${tempo.batchSize} per batch, ${pauseMinutes}`;
 }

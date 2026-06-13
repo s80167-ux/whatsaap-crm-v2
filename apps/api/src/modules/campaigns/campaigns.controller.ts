@@ -15,6 +15,7 @@ import {
   getAudienceTemplateVariableMetadata,
   renderCampaignTemplateVariables
 } from "./campaignTemplateVariables.js";
+import { campaignSpeedPresetSchema, campaignTempoSchema, resolveCampaignTempo, type CampaignTempo } from "./campaignTempo.js";
 
 const contactService = new ContactService();
 const connectorClient = new ConnectorClient();
@@ -69,15 +70,6 @@ const importAudienceContactsBodySchema = z.object({
   contacts: z.array(audienceContactSchema)
 });
 
-const tempoSchema = z.object({
-  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).default("safe"),
-  delayPerMessageSeconds: z.number().int().positive().default(12),
-  batchSize: z.number().int().positive().default(20),
-  batchPauseSeconds: z.number().int().positive().default(120),
-  dailyLimit: z.number().int().positive().default(300),
-  stopOnHighFailure: z.boolean().default(true)
-});
-
 const senderModeSchema = z.enum(["single", "round_robin"]);
 const senderPoolSchema = z.array(z.string().uuid()).min(1).max(32);
 
@@ -98,7 +90,7 @@ const createCampaignBodySchema = z.object({
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
-  tempo: tempoSchema,
+  tempo: campaignTempoSchema,
   attachment: attachmentSchema.optional().nullable(),
   attachContactCard: z.boolean().optional().default(false)
 }).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
@@ -114,7 +106,7 @@ const updateCampaignBodySchema = z.object({
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
   messageTemplate: z.string().trim().min(1).max(5000).optional().nullable(),
-  tempo: tempoSchema.optional(),
+  tempo: campaignTempoSchema.optional(),
   attachment: attachmentSchema.optional().nullable(),
   attachContactCard: z.boolean().optional()
 }).refine((input) => {
@@ -146,7 +138,12 @@ const startCampaignBodySchema = z.object({
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
-  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).default("safe"),
+  speedPreset: campaignSpeedPresetSchema.optional(),
+  delayPerMessageSeconds: z.number().int().positive().optional(),
+  batchSize: z.number().int().positive().optional(),
+  batchPauseSeconds: z.number().int().positive().optional(),
+  dailyLimit: z.number().int().positive().optional(),
+  stopOnHighFailure: z.boolean().optional(),
   attachment: attachmentSchema.optional().nullable(),
   attachContactCard: z.boolean().optional().default(false)
 }).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
@@ -232,12 +229,12 @@ type CampaignRecord = {
   message_template: string | null;
   message_body_type: string;
   attachment: unknown | null;
-  speed_preset: string;
-  delay_per_message_seconds: number;
-  batch_size: number;
-  batch_pause_seconds: number;
-  daily_limit: number;
-  stop_on_high_failure: boolean;
+  speed_preset: string | null;
+  delay_per_message_seconds: number | null;
+  batch_size: number | null;
+  batch_pause_seconds: number | null;
+  daily_limit: number | null;
+  stop_on_high_failure: boolean | null;
   attach_contact_card: boolean;
   created_by: string | null;
   created_at: string;
@@ -847,10 +844,18 @@ export async function startCampaignPreview(request: Request, response: Response)
     templateGovernanceVersionId: input.templateGovernanceVersionId,
     messageTemplate: input.messageTemplate
   });
+  const tempo = resolveCampaignTempo({
+    speedPreset: input.speedPreset,
+    delayPerMessageSeconds: input.delayPerMessageSeconds,
+    batchSize: input.batchSize,
+    batchPauseSeconds: input.batchPauseSeconds,
+    dailyLimit: input.dailyLimit,
+    stopOnHighFailure: input.stopOnHighFailure
+  });
   return response.json({
     data: {
       ok: true,
-      message: `Campaign queued using ${senderSelection.senderWhatsAppAccountIds.length} sender${senderSelection.senderWhatsAppAccountIds.length === 1 ? "" : "s"} for ${input.audienceGroupId} with ${input.speedPreset} tempo.`
+      message: `Campaign queued using ${senderSelection.senderWhatsAppAccountIds.length} sender${senderSelection.senderWhatsAppAccountIds.length === 1 ? "" : "s"} for ${input.audienceGroupId} with ${tempo.speedPreset} tempo.`
     }
   });
 }
@@ -887,6 +892,14 @@ export async function startCampaign(request: Request, response: Response) {
     messageTemplate: input.messageTemplate
   });
   const bodyType = input.attachment?.kind ?? 'text';
+  const tempo = resolveCampaignTempo({
+    speedPreset: input.speedPreset ?? campaign.speed_preset ?? undefined,
+    delayPerMessageSeconds: input.delayPerMessageSeconds ?? campaign.delay_per_message_seconds ?? undefined,
+    batchSize: input.batchSize ?? campaign.batch_size ?? undefined,
+    batchPauseSeconds: input.batchPauseSeconds ?? campaign.batch_pause_seconds ?? undefined,
+    dailyLimit: input.dailyLimit ?? campaign.daily_limit ?? undefined,
+    stopOnHighFailure: input.stopOnHighFailure ?? campaign.stop_on_high_failure ?? undefined
+  });
 
   await saveExistingCampaignStartConfiguration({
     organizationId,
@@ -898,7 +911,7 @@ export async function startCampaign(request: Request, response: Response) {
     messageTemplate: governedTemplate.body,
     messageBodyType: bodyType,
     attachment: input.attachment ? JSON.stringify(input.attachment) : null,
-    speedPreset: input.speedPreset,
+    tempo,
     attachContactCard: input.attachContactCard ?? null
   });
 
@@ -2346,7 +2359,7 @@ async function saveExistingCampaignStartConfiguration(input: {
   messageTemplate: string;
   messageBodyType: string;
   attachment: string | null;
-  speedPreset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
+  tempo: CampaignTempo;
   attachContactCard: boolean | null;
 }) {
   await withTransaction(async (client) => {
@@ -2360,7 +2373,12 @@ async function saveExistingCampaignStartConfiguration(input: {
             message_body_type = $7,
             attachment = coalesce($8, attachment),
             speed_preset = $9,
-            attach_contact_card = coalesce($10, attach_contact_card),
+            delay_per_message_seconds = $10,
+            batch_size = $11,
+            batch_pause_seconds = $12,
+            daily_limit = $13,
+            stop_on_high_failure = $14,
+            attach_contact_card = coalesce($15, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
@@ -2374,7 +2392,12 @@ async function saveExistingCampaignStartConfiguration(input: {
         input.messageTemplate,
         input.messageBodyType,
         input.attachment,
-        input.speedPreset,
+        input.tempo.speedPreset,
+        input.tempo.delayPerMessageSeconds,
+        input.tempo.batchSize,
+        input.tempo.batchPauseSeconds,
+        input.tempo.dailyLimit,
+        input.tempo.stopOnHighFailure,
         input.attachContactCard
       ]
     );

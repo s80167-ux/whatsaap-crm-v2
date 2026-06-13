@@ -8,6 +8,7 @@ import { PanelPagination } from "../../../components/PanelPagination";
 import { PopupOverlay } from "../../../components/PopupOverlay";
 import { downloadCampaignRecipients, fetchCampaignRecipients, fetchCampaignWarmupAdvisory } from "../services/campaignService";
 import type { Campaign, CampaignRecipient, CampaignRecipientSendStatus, CampaignWarmupAdvisory } from "../types/campaign.types";
+import { formatCampaignTempoSummary } from "../utils/campaignTempo";
 
 const pageSize = 50;
 const statusOptions: Array<{ label: string; value: CampaignRecipientSendStatus | "all" }> = [
@@ -80,6 +81,10 @@ export function CampaignReviewDrawer({
   const warmupAdvisories = warmupQuery.data ?? [];
   const total = recipientsQuery.data?.pagination.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const tempoSummary = useMemo(
+    () => campaign ? formatCampaignTempoSummary(campaign, campaign.senderWhatsAppAccountIds?.length ?? (campaign.senderWhatsAppAccountId ? 1 : 0)) : "",
+    [campaign]
+  );
   const successRate = useMemo(() => {
     const completed = campaign ? campaign.sent + campaign.failed + (campaign.skipped ?? 0) : 0;
     return completed > 0 && campaign ? Math.round((campaign.sent / completed) * 100) : 0;
@@ -126,6 +131,11 @@ export function CampaignReviewDrawer({
             <Metric label="Failed" value={campaign.failed} tone="danger" />
             <Metric label="Skipped" value={campaign.skipped ?? 0} />
             <Metric label="Success" value={`${successRate}%`} />
+          </div>
+
+          <div className="rounded-2xl border border-border bg-muted px-4 py-4 text-sm text-text">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-soft">Effective Sending Plan</p>
+            <p className="mt-2 leading-6 text-text-muted">{tempoSummary}</p>
           </div>
 
           {warmupAdvisories.length > 0 ? (
