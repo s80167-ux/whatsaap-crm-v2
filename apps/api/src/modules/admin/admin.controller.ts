@@ -129,6 +129,25 @@ const reconnectWhatsAppAccountSchema = z.object({
   confirmBlockedReconnect: z.boolean().optional()
 });
 
+const warmerStatusSchema = z.enum(["not_started", "active", "paused", "completed"]);
+const warmerContactSourceSchema = z.enum(["known_contacts"]);
+const warmerMessageSourceSchema = z.enum(["warmup_templates"]);
+
+const saveWhatsAppNumberWarmerSchema = z.object({
+  warmupDays: z.coerce.number().int().min(1).max(365).optional(),
+  currentDay: z.coerce.number().int().min(1).max(365).optional(),
+  dailyTarget: z.coerce.number().int().min(1).max(500).optional(),
+  minDelayMinutes: z.coerce.number().int().min(1).max(1440).optional(),
+  maxDelayMinutes: z.coerce.number().int().min(1).max(1440).optional(),
+  activeFrom: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  activeUntil: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  weekendEnabled: z.boolean().optional(),
+  contactSource: warmerContactSourceSchema.optional(),
+  messageSource: warmerMessageSourceSchema.optional(),
+  manualRecipientNumbers: z.array(z.string().min(3)).optional(),
+  status: warmerStatusSchema.optional()
+});
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -149,6 +168,13 @@ function mapWhatsAppAccount(account: {
   last_disconnected_at?: string | null;
   health_score?: number | null;
   history_sync_lookback_days?: number | null;
+  warmer_status?: string | null;
+  warmer_warmup_days?: number | null;
+  warmer_current_day?: number | null;
+  warmer_daily_target?: number | null;
+  warmer_today_warmed?: number | null;
+  warmer_last_warmed_at?: string | null;
+  warmer_next_warm_at?: string | null;
 }) {
   return {
     id: account.id,
@@ -161,7 +187,86 @@ function mapWhatsAppAccount(account: {
     last_connected_at: account.last_connected_at ?? null,
     last_disconnected_at: account.last_disconnected_at ?? null,
     health_score: account.health_score ?? null,
-    history_sync_lookback_days: account.history_sync_lookback_days ?? 7
+    history_sync_lookback_days: account.history_sync_lookback_days ?? 7,
+    warmer_status: account.warmer_status ?? null,
+    warmer_warmup_days: account.warmer_warmup_days ?? null,
+    warmer_current_day: account.warmer_current_day ?? null,
+    warmer_daily_target: account.warmer_daily_target ?? null,
+    warmer_today_warmed: account.warmer_today_warmed ?? null,
+    warmer_last_warmed_at: account.warmer_last_warmed_at ?? null,
+    warmer_next_warm_at: account.warmer_next_warm_at ?? null
+  };
+}
+
+function mapWhatsAppNumberWarmerProfile(profile: {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  warmup_days: number;
+  current_day: number;
+  daily_target: number;
+  today_warmed: number;
+  min_delay_minutes: number;
+  max_delay_minutes: number;
+  active_from: string;
+  active_until: string;
+  weekend_enabled: boolean;
+  contact_source: string;
+  message_source: string;
+  manual_recipient_numbers?: string[] | null;
+  auto_recipient_numbers?: string[] | null;
+  status: string;
+  started_at?: string | null;
+  paused_at?: string | null;
+  completed_at?: string | null;
+  last_warmed_at?: string | null;
+  next_warm_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}) {
+  return {
+    id: profile.id,
+    organization_id: profile.organization_id,
+    whatsapp_account_id: profile.whatsapp_account_id,
+    warmup_days: profile.warmup_days,
+    current_day: profile.current_day,
+    daily_target: profile.daily_target,
+    today_warmed: profile.today_warmed,
+    min_delay_minutes: profile.min_delay_minutes,
+    max_delay_minutes: profile.max_delay_minutes,
+    active_from: profile.active_from,
+    active_until: profile.active_until,
+    weekend_enabled: profile.weekend_enabled,
+    contact_source: profile.contact_source,
+    message_source: profile.message_source,
+    manual_recipient_numbers: profile.manual_recipient_numbers ?? [],
+    auto_recipient_numbers: profile.auto_recipient_numbers ?? [],
+    status: profile.status,
+    started_at: profile.started_at ?? null,
+    paused_at: profile.paused_at ?? null,
+    completed_at: profile.completed_at ?? null,
+    last_warmed_at: profile.last_warmed_at ?? null,
+    next_warm_at: profile.next_warm_at ?? null,
+    created_at: profile.created_at,
+    updated_at: profile.updated_at
+  };
+}
+
+function mapWhatsAppNumberWarmerLog(log: {
+  id: string;
+  level: string;
+  event_type: string;
+  message: string;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+}) {
+  return {
+    id: log.id,
+    level: log.level,
+    event_type: log.event_type,
+    message: log.message,
+    metadata: log.metadata ?? {},
+    created_at: log.created_at
   };
 }
 
@@ -421,6 +526,95 @@ export async function listWhatsAppAccounts(request: Request, response: Response)
   const { organization_id: organizationId } = listWhatsAppAccountsQuerySchema.parse(request.query);
   const accounts = await adminService.listWhatsAppAccounts(auth, organizationId);
   return response.json({ data: accounts.map(mapWhatsAppAccount) });
+}
+
+export async function getWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const warmer = await adminService.getWhatsAppNumberWarmer(auth, accountId);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: warmer.profile ? mapWhatsAppNumberWarmerProfile(warmer.profile) : null
+    }
+  });
+}
+
+export async function enableWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const warmer = await adminService.enableWhatsAppNumberWarmer(auth, accountId);
+
+  return response.status(201).json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: mapWhatsAppNumberWarmerProfile(warmer.profile)
+    }
+  });
+}
+
+export async function saveWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const input = saveWhatsAppNumberWarmerSchema.parse(request.body ?? {});
+  const warmer = await adminService.saveWhatsAppNumberWarmer(auth, accountId, input);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: mapWhatsAppNumberWarmerProfile(warmer.profile)
+    }
+  });
+}
+
+export async function startWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const warmer = await adminService.startWhatsAppNumberWarmer(auth, accountId);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: mapWhatsAppNumberWarmerProfile(warmer.profile)
+    }
+  });
+}
+
+export async function pauseWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const warmer = await adminService.pauseWhatsAppNumberWarmer(auth, accountId);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: mapWhatsAppNumberWarmerProfile(warmer.profile)
+    }
+  });
+}
+
+export async function resumeWhatsAppNumberWarmer(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const warmer = await adminService.resumeWhatsAppNumberWarmer(auth, accountId);
+
+  return response.json({
+    data: {
+      account: mapWhatsAppAccount(warmer.account),
+      profile: mapWhatsAppNumberWarmerProfile(warmer.profile)
+    }
+  });
+}
+
+export async function listWhatsAppNumberWarmerLogs(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const accountId = z.string().uuid().parse(request.params.accountId);
+  const logs = await adminService.listWhatsAppNumberWarmerLogs(auth, accountId);
+
+  return response.json({
+    data: logs.map(mapWhatsAppNumberWarmerLog)
+  });
 }
 
 export async function listWhatsAppAccountAccess(request: Request, response: Response) {

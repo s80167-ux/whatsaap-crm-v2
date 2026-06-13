@@ -18,20 +18,27 @@ import {
 import {
   createWhatsAppAccount,
   deleteWhatsAppAccount,
+  enableWhatsAppNumberWarmer,
+  getWhatsAppNumberWarmer,
   getWhatsAppAccountQr,
   approveGoogleSignupRequest,
   listGoogleSignupRequests,
   listRawEvents,
+  listWhatsAppNumberWarmerLogs,
   listWhatsAppAccounts,
   listWhatsAppAccountAccess,
   getWhatsAppAccountAccess,
   disconnectWhatsAppAccount,
   getCampaignsModuleStatus,
   getOrganizationAccessLimits,
+  pauseWhatsAppNumberWarmer,
   reconnectWhatsAppAccount,
+  resumeWhatsAppNumberWarmer,
   resetWhatsAppAccountPairing,
   rejectGoogleSignupRequest,
   replayRawEvents,
+  saveWhatsAppNumberWarmer,
+  startWhatsAppNumberWarmer,
   updateOrganizationAccessLimits,
   updateWhatsAppAccountAccess,
   updateWhatsAppAccount
@@ -72,6 +79,41 @@ adminRoutes.post(
   asyncHandler(createWhatsAppAccount)
 );
 adminRoutes.get("/whatsapp-accounts/:accountId/qr", asyncHandler(getWhatsAppAccountQr));
+adminRoutes.get(
+  "/whatsapp-accounts/:accountId/warmer",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(getWhatsAppNumberWarmer)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/warmer/enable",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(enableWhatsAppNumberWarmer)
+);
+adminRoutes.patch(
+  "/whatsapp-accounts/:accountId/warmer",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(saveWhatsAppNumberWarmer)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/warmer/start",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(startWhatsAppNumberWarmer)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/warmer/pause",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(pauseWhatsAppNumberWarmer)
+);
+adminRoutes.post(
+  "/whatsapp-accounts/:accountId/warmer/resume",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(resumeWhatsAppNumberWarmer)
+);
+adminRoutes.get(
+  "/whatsapp-accounts/:accountId/warmer/logs",
+  requirePermission("org.manage_whatsapp_accounts"),
+  asyncHandler(listWhatsAppNumberWarmerLogs)
+);
 adminRoutes.patch(
   "/whatsapp-accounts/:accountId",
   requirePermission("org.manage_whatsapp_accounts"),

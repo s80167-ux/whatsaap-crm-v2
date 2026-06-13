@@ -107,6 +107,13 @@ export interface WhatsAppAccountRecord {
   health_score_computed_at?: string | null;
   warmup_level?: number | null;
   warmup_started_at?: string | null;
+  warmer_status?: string | null;
+  warmer_warmup_days?: number | null;
+  warmer_current_day?: number | null;
+  warmer_daily_target?: number | null;
+  warmer_today_warmed?: number | null;
+  warmer_last_warmed_at?: string | null;
+  warmer_next_warm_at?: string | null;
   live_connection_status?: string | null;
   live_connected?: boolean | null;
   live_status_error?: string | null;

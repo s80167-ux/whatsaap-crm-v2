@@ -374,6 +374,11 @@ function WarmupCard({ advisory }: { advisory: CampaignWarmupAdvisory }) {
         <Detail label="Suggested cap" value={advisory.suggestedDailyLimit.toLocaleString()} />
         <Detail label="Campaign cap" value={advisory.baseDailyLimit.toLocaleString()} />
         <Detail label="Warm-up start" value={formatDateTime(advisory.warmupStartedAt)} />
+        <Detail label="Warm-up Status" value={advisory.warmerStatus ? advisory.warmerStatus.replace(/_/g, " ") : "not enabled"} />
+        <Detail
+          label="Warmup Progress"
+          value={advisory.warmupDays ? `${advisory.currentDay ?? 1} / ${advisory.warmupDays}` : "Not enabled"}
+        />
       </div>
 
       <p className="mt-3 text-xs leading-5">

@@ -4,6 +4,7 @@ import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { WhatsAppQrDisplay } from "../components/WhatsAppQrDisplay";
+import { WhatsAppNumberWarmerProfile } from "../components/WhatsAppNumberWarmerProfile";
 import { WhatsAppNumberAccessPanel } from "./WhatsAppNumberAccessPage";
 import { useOrganizations, useWhatsAppAccounts } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
@@ -19,6 +20,7 @@ import {
   createWhatsAppAccount,
   disconnectWhatsAppAccount,
   deleteWhatsAppAccount,
+  enableWhatsAppNumberWarmer,
   fetchLatestWhatsAppSyncJob,
   recoverWhatsAppContacts,
   reconnectWhatsAppAccount,
@@ -27,7 +29,7 @@ import {
   updateWhatsAppAccount
 } from "../api/admin";
 import type { WhatsAppContactRecoverySummary } from "../api/admin";
-import type { WhatsAppSyncJobStatus, WhatsAppSyncJobSummary } from "../types/admin";
+import type { WhatsAppNumberWarmerProfile as WhatsAppNumberWarmerProfileRecord, WhatsAppSyncJobStatus, WhatsAppSyncJobSummary } from "../types/admin";
 const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const WHATSAPP_BACKFILL_OPTIONS = [7, 30, 90] as const;
 type WhatsAppBackfillDays = (typeof WHATSAPP_BACKFILL_OPTIONS)[number];
@@ -396,6 +398,10 @@ export function WhatsAppAccountDashboard() {
     name: string;
     status: string;
   } | null>(null);
+  const [warmerProfileAccount, setWarmerProfileAccount] = useState<{
+    id: string;
+    profile?: WhatsAppNumberWarmerProfileRecord | null;
+  } | null>(null);
 
   // Popup state
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -659,7 +665,26 @@ export function WhatsAppAccountDashboard() {
     await refetchAccounts();
   }
 
+  async function handleEnableWarmer(accountId: string) {
+    setIsWorking(true);
+    setNotice(null);
+    try {
+      const result = await enableWhatsAppNumberWarmer(accountId);
+      setWarmerProfileAccount({
+        id: accountId,
+        profile: result.profile
+      });
+      setNotice("Warmer profile enabled.");
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-accounts"] });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to enable warmer.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   const editingAccount = editingAccountId ? accounts.find((account) => account.id === editingAccountId) : null;
+  const warmerDrawerAccount = warmerProfileAccount ? accounts.find((account) => account.id === warmerProfileAccount.id) ?? null : null;
 
   return (
     <section className="space-y-6">
@@ -1012,7 +1037,7 @@ export function WhatsAppAccountDashboard() {
                       <div className="min-w-0">
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-text-soft lg:hidden">Device Info</p>
                         {account.status?.toLowerCase() === "qr_required" ? (
-                          <div className="mt-4">
+                          <div>
                             <WhatsAppQrDisplay accountId={account.id} />
                           </div>
                         ) : null}
@@ -1084,6 +1109,23 @@ export function WhatsAppAccountDashboard() {
                               Reset to QR
                             </Button>
                           ) : null}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className={isMobile ? "w-full justify-start px-3 text-left" : "gap-1.5"}
+                            disabled={isWorking}
+                            onClick={() => {
+                              if (!account.warmer_status) {
+                                void handleEnableWarmer(account.id);
+                                return;
+                              }
+
+                              setWarmerProfileAccount({ id: account.id });
+                            }}
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            Manage Warmer
+                          </Button>
                           <Button
                             variant="secondary"
                             size="sm"
@@ -1164,6 +1206,13 @@ export function WhatsAppAccountDashboard() {
         selectedAccountId={accessAccountId}
         open={Boolean(accessAccountId)}
         onClose={() => setAccessAccountId(null)}
+      />
+
+      <WhatsAppNumberWarmerProfile
+        account={warmerDrawerAccount}
+        open={Boolean(warmerProfileAccount)}
+        initialProfile={warmerProfileAccount?.profile ?? null}
+        onClose={() => setWarmerProfileAccount(null)}
       />
     </section>
   );

@@ -35,6 +35,53 @@ export interface WhatsAppAccountSummary {
   live_connection_status?: string | null;
   live_connected?: boolean | null;
   live_status_error?: string | null;
+  warmer_status?: string | null;
+  warmer_warmup_days?: number | null;
+  warmer_current_day?: number | null;
+  warmer_daily_target?: number | null;
+  warmer_today_warmed?: number | null;
+  warmer_last_warmed_at?: string | null;
+  warmer_next_warm_at?: string | null;
+}
+
+export type WhatsAppNumberWarmerStatus = "not_started" | "active" | "paused" | "completed";
+export type WhatsAppNumberWarmerContactSource = "known_contacts";
+export type WhatsAppNumberWarmerMessageSource = "warmup_templates";
+
+export interface WhatsAppNumberWarmerProfile {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  warmup_days: number;
+  current_day: number;
+  daily_target: number;
+  today_warmed: number;
+  min_delay_minutes: number;
+  max_delay_minutes: number;
+  active_from: string;
+  active_until: string;
+  weekend_enabled: boolean;
+  contact_source: WhatsAppNumberWarmerContactSource;
+  message_source: WhatsAppNumberWarmerMessageSource;
+  manual_recipient_numbers: string[];
+  auto_recipient_numbers: string[];
+  status: WhatsAppNumberWarmerStatus;
+  started_at?: string | null;
+  paused_at?: string | null;
+  completed_at?: string | null;
+  last_warmed_at?: string | null;
+  next_warm_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppNumberWarmerLog {
+  id: string;
+  level: string;
+  event_type: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export type WhatsAppAccountAccessRole = "owner" | "manager" | "agent" | "viewer";

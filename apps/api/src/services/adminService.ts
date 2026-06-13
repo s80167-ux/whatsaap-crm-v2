@@ -2,6 +2,7 @@ import { pool, withTransaction } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../lib/errors.js";
 import type { PoolClient } from "pg";
+import { randomUUID } from "node:crypto";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
 import { GoogleSignupRequestRepository, type GoogleSignupRequestStatus } from "../repositories/googleSignupRequestRepository.js";
 import { RawEventRepository } from "../repositories/rawEventRepository.js";
@@ -15,6 +16,7 @@ import { AuthService } from "./authService.js";
 import type { AuthUser, UserRole } from "../types/auth.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
+import { normalizePhoneNumber } from "../utils/phone.js";
 
 const LEGACY_CAMPAIGNS_MODULE_KEY = "campaigns";
 const CAMPAIGN_MODULE_KEY = "campaign";
@@ -169,6 +171,64 @@ const EMPTY_AI_USAGE_SOURCE_BREAKDOWN: AiUsageSourceBreakdown = {
   other: EMPTY_AI_USAGE_WINDOW
 };
 
+type WhatsAppNumberWarmerStatus = "not_started" | "active" | "paused" | "completed";
+type WhatsAppNumberWarmerContactSource = "known_contacts";
+type WhatsAppNumberWarmerMessageSource = "warmup_templates";
+
+type WhatsAppNumberWarmerRecord = {
+  id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  warmup_days: number;
+  current_day: number;
+  daily_target: number;
+  today_warmed: number;
+  min_delay_minutes: number;
+  max_delay_minutes: number;
+  active_from: string;
+  active_until: string;
+  weekend_enabled: boolean;
+  contact_source: WhatsAppNumberWarmerContactSource;
+  message_source: WhatsAppNumberWarmerMessageSource;
+  manual_recipient_numbers?: string[] | null;
+  auto_recipient_numbers?: string[] | null;
+  status: WhatsAppNumberWarmerStatus;
+  started_at?: string | null;
+  paused_at?: string | null;
+  completed_at?: string | null;
+  last_warmed_at?: string | null;
+  next_warm_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type WhatsAppNumberWarmerLogRecord = {
+  id: string;
+  warmer_id: string;
+  organization_id: string;
+  whatsapp_account_id: string;
+  level: string;
+  event_type: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type SaveWhatsAppNumberWarmerInput = {
+  warmupDays?: number;
+  currentDay?: number;
+  dailyTarget?: number;
+  minDelayMinutes?: number;
+  maxDelayMinutes?: number;
+  activeFrom?: string;
+  activeUntil?: string;
+  weekendEnabled?: boolean;
+  contactSource?: WhatsAppNumberWarmerContactSource;
+  messageSource?: WhatsAppNumberWarmerMessageSource;
+  manualRecipientNumbers?: string[];
+  status?: WhatsAppNumberWarmerStatus;
+};
+
 export type OrganizationModuleKey = (typeof SUPPORTED_MODULE_KEYS)[number];
 
 function getModuleLookupKeys(moduleKey: OrganizationModuleKey) {
@@ -231,6 +291,52 @@ function canManageWhatsAppNumberAccess(authUser: AuthUser, organizationId: strin
 
 function isMissingRelationError(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
+}
+
+function normalizeClockTime(value: string) {
+  const trimmed = value.trim();
+  if (!/^\d{2}:\d{2}$/.test(trimmed)) {
+    throw new AppError("Time must use HH:MM format", 400, "invalid_time_format");
+  }
+
+  const [hours, minutes] = trimmed.split(":").map(Number);
+  if (hours > 23 || minutes > 59) {
+    throw new AppError("Time must use a valid 24-hour value", 400, "invalid_time_format");
+  }
+
+  return `${trimmed}:00`;
+}
+
+function computeNextWarmAt(input: {
+  status: WhatsAppNumberWarmerStatus;
+  activeFrom: string;
+  activeUntil: string;
+  minDelayMinutes: number;
+}) {
+  if (input.status !== "active") {
+    return null;
+  }
+
+  const now = new Date();
+  const candidate = new Date(now.getTime() + input.minDelayMinutes * 60 * 1000);
+  const [fromHours, fromMinutes] = input.activeFrom.split(":").map(Number);
+  const [untilHours, untilMinutes] = input.activeUntil.split(":").map(Number);
+  const windowStart = new Date(candidate);
+  windowStart.setHours(fromHours, fromMinutes, 0, 0);
+  const windowEnd = new Date(candidate);
+  windowEnd.setHours(untilHours, untilMinutes, 0, 0);
+
+  if (candidate < windowStart) {
+    return windowStart.toISOString();
+  }
+
+  if (candidate > windowEnd) {
+    const nextDayStart = new Date(windowStart);
+    nextDayStart.setDate(nextDayStart.getDate() + 1);
+    return nextDayStart.toISOString();
+  }
+
+  return candidate.toISOString();
 }
 
 export class AdminService {
@@ -1583,7 +1689,7 @@ export class AdminService {
     const client = await pool.connect();
     try {
       if (authUser.role === "super_admin" && !resolvedOrganizationId) {
-        const accounts = await this.whatsappRepository.listAll(client);
+        const accounts = await this.appendWhatsAppWarmerSummary(client, await this.whatsappRepository.listAll(client));
         return await this.attachLiveStatus(accounts);
       }
 
@@ -1596,17 +1702,365 @@ export class AdminService {
           throw new AppError("Organization user context is required", 403, "organization_user_required");
         }
 
-        const accounts = await this.whatsappRepository.listByOrganizationAndCreator(
+        const accounts = await this.appendWhatsAppWarmerSummary(
+          client,
+          await this.whatsappRepository.listByOrganizationAndCreator(
           client,
           resolvedOrganizationId,
           authUser.organizationUserId
+          )
         );
 
         return await this.attachLiveStatus(accounts);
       }
 
-      const accounts = await this.whatsappRepository.listByOrganization(client, resolvedOrganizationId);
+      const accounts = await this.appendWhatsAppWarmerSummary(
+        client,
+        await this.whatsappRepository.listByOrganization(client, resolvedOrganizationId)
+      );
       return await this.attachLiveStatus(accounts);
+    } finally {
+      client.release();
+    }
+  }
+
+  async getWhatsAppNumberWarmer(authUser: AuthUser, accountId: string) {
+    const client = await pool.connect();
+    try {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const profile = await this.findWhatsAppNumberWarmer(client, accountId);
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: profile ? { ...profile, auto_recipient_numbers: autoRecipientNumbers } : null
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async enableWhatsAppNumberWarmer(authUser: AuthUser, accountId: string) {
+    return withTransaction(async (client) => {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const existing = await this.findWhatsAppNumberWarmer(client, accountId);
+      const profile = await this.getOrCreateDefaultWhatsAppNumberWarmer(client, account);
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      if (!existing) {
+        await this.insertWhatsAppNumberWarmerLog(client, {
+          warmerId: profile.id,
+          organizationId: account.organization_id,
+          whatsappAccountId: account.id,
+          eventType: "enabled",
+          message: "Warmer profile enabled with default settings."
+        });
+      }
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: { ...profile, auto_recipient_numbers: autoRecipientNumbers }
+      };
+    });
+  }
+
+  async saveWhatsAppNumberWarmer(authUser: AuthUser, accountId: string, input: SaveWhatsAppNumberWarmerInput) {
+    return withTransaction(async (client) => {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const existing = await this.getOrCreateDefaultWhatsAppNumberWarmer(client, account);
+
+      const minDelayMinutes = input.minDelayMinutes ?? existing.min_delay_minutes;
+      const maxDelayMinutes = input.maxDelayMinutes ?? existing.max_delay_minutes;
+      if (minDelayMinutes > maxDelayMinutes) {
+        throw new AppError("Minimum delay cannot be greater than maximum delay", 400, "invalid_warmer_delay_range");
+      }
+
+      const warmupDays = input.warmupDays ?? existing.warmup_days;
+      const currentDay = input.currentDay ?? existing.current_day;
+      if (currentDay > warmupDays) {
+        throw new AppError("Current day cannot be greater than warmup days", 400, "invalid_warmer_day_range");
+      }
+
+      const status = input.status ?? existing.status;
+      const activeFrom = normalizeClockTime(input.activeFrom ?? existing.active_from);
+      const activeUntil = normalizeClockTime(input.activeUntil ?? existing.active_until);
+      const manualRecipientNumbers = Array.from(
+        new Set(
+          (input.manualRecipientNumbers ?? existing.manual_recipient_numbers ?? [])
+            .map((value) => normalizePhoneNumber(value))
+            .filter((value): value is string => Boolean(value))
+        )
+      );
+      const nextWarmAt = computeNextWarmAt({
+        status,
+        activeFrom,
+        activeUntil,
+        minDelayMinutes
+      });
+
+      await client.query(
+        `
+          update whatsapp_number_warmers
+          set
+            warmup_days = $2,
+            current_day = $3,
+            daily_target = $4,
+            min_delay_minutes = $5,
+            max_delay_minutes = $6,
+            active_from = $7::time,
+            active_until = $8::time,
+            weekend_enabled = $9,
+            contact_source = $10,
+            message_source = $11,
+            manual_recipient_numbers = $12::text[],
+            status = $13,
+            next_warm_at = $14
+          where whatsapp_account_id = $1
+        `,
+        [
+          accountId,
+          warmupDays,
+          currentDay,
+          input.dailyTarget ?? existing.daily_target,
+          minDelayMinutes,
+          maxDelayMinutes,
+          activeFrom,
+          activeUntil,
+          input.weekendEnabled ?? existing.weekend_enabled,
+          input.contactSource ?? existing.contact_source,
+          input.messageSource ?? existing.message_source,
+          manualRecipientNumbers,
+          status,
+          nextWarmAt
+        ]
+      );
+      await client.query(
+        `
+          update whatsapp_accounts
+          set
+            warmup_level = $2,
+            warmup_started_at = case
+              when $3 = 'active' then coalesce(warmup_started_at, timezone('utc', now()))
+              else warmup_started_at
+            end
+          where id = $1
+        `,
+        [accountId, currentDay, status]
+      );
+
+      const profile = await this.findWhatsAppNumberWarmer(client, accountId);
+      if (!profile) {
+        throw new AppError("WhatsApp warmer profile not found", 404, "whatsapp_warmer_not_found");
+      }
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      await this.insertWhatsAppNumberWarmerLog(client, {
+        warmerId: profile.id,
+        organizationId: account.organization_id,
+        whatsappAccountId: account.id,
+        eventType: "settings_saved",
+        message: "Warmer settings updated.",
+        metadata: {
+          status: profile.status,
+          currentDay: profile.current_day,
+          warmupDays: profile.warmup_days,
+          dailyTarget: profile.daily_target,
+          manualRecipientNumbers
+        }
+      });
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: { ...profile, auto_recipient_numbers: autoRecipientNumbers }
+      };
+    });
+  }
+
+  async startWhatsAppNumberWarmer(authUser: AuthUser, accountId: string) {
+    return withTransaction(async (client) => {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const existing = await this.getOrCreateDefaultWhatsAppNumberWarmer(client, account);
+      const nextWarmAt = computeNextWarmAt({
+        status: "active",
+        activeFrom: existing.active_from,
+        activeUntil: existing.active_until,
+        minDelayMinutes: existing.min_delay_minutes
+      });
+
+      await client.query(
+        `
+          update whatsapp_number_warmers
+          set
+            status = 'active',
+            started_at = coalesce(started_at, timezone('utc', now())),
+            paused_at = null,
+            completed_at = null,
+            next_warm_at = $2
+          where whatsapp_account_id = $1
+        `,
+        [accountId, nextWarmAt]
+      );
+      await client.query(
+        `
+          update whatsapp_accounts
+          set
+            warmup_started_at = coalesce(warmup_started_at, timezone('utc', now())),
+            warmup_level = greatest(coalesce(warmup_level, 1), $2)
+          where id = $1
+        `,
+        [accountId, existing.current_day]
+      );
+
+      const profile = await this.findWhatsAppNumberWarmer(client, accountId);
+      if (!profile) {
+        throw new AppError("WhatsApp warmer profile not found", 404, "whatsapp_warmer_not_found");
+      }
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      await this.insertWhatsAppNumberWarmerLog(client, {
+        warmerId: profile.id,
+        organizationId: account.organization_id,
+        whatsappAccountId: account.id,
+        eventType: "started",
+        message: "Warmer started."
+      });
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: { ...profile, auto_recipient_numbers: autoRecipientNumbers }
+      };
+    });
+  }
+
+  async pauseWhatsAppNumberWarmer(authUser: AuthUser, accountId: string) {
+    return withTransaction(async (client) => {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const existing = await this.getOrCreateDefaultWhatsAppNumberWarmer(client, account);
+
+      await client.query(
+        `
+          update whatsapp_number_warmers
+          set
+            status = 'paused',
+            paused_at = timezone('utc', now()),
+            next_warm_at = null
+          where whatsapp_account_id = $1
+        `,
+        [accountId]
+      );
+
+      await client.query(
+        `
+          update whatsapp_accounts
+          set
+            warmup_started_at = coalesce(warmup_started_at, $2),
+            warmup_level = greatest(coalesce(warmup_level, 1), $3)
+          where id = $1
+        `,
+        [accountId, existing.started_at ?? new Date().toISOString(), existing.current_day]
+      );
+
+      const profile = await this.findWhatsAppNumberWarmer(client, accountId);
+      if (!profile) {
+        throw new AppError("WhatsApp warmer profile not found", 404, "whatsapp_warmer_not_found");
+      }
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      await this.insertWhatsAppNumberWarmerLog(client, {
+        warmerId: profile.id,
+        organizationId: account.organization_id,
+        whatsappAccountId: account.id,
+        eventType: "paused",
+        message: "Warmer paused."
+      });
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: { ...profile, auto_recipient_numbers: autoRecipientNumbers }
+      };
+    });
+  }
+
+  async resumeWhatsAppNumberWarmer(authUser: AuthUser, accountId: string) {
+    return withTransaction(async (client) => {
+      const account = await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      const existing = await this.getOrCreateDefaultWhatsAppNumberWarmer(client, account);
+      const nextWarmAt = computeNextWarmAt({
+        status: "active",
+        activeFrom: existing.active_from,
+        activeUntil: existing.active_until,
+        minDelayMinutes: existing.min_delay_minutes
+      });
+
+      await client.query(
+        `
+          update whatsapp_number_warmers
+          set
+            status = 'active',
+            paused_at = null,
+            next_warm_at = $2,
+            started_at = coalesce(started_at, timezone('utc', now()))
+          where whatsapp_account_id = $1
+        `,
+        [accountId, nextWarmAt]
+      );
+      await client.query(
+        `
+          update whatsapp_accounts
+          set
+            warmup_started_at = coalesce(warmup_started_at, timezone('utc', now())),
+            warmup_level = greatest(coalesce(warmup_level, 1), $2)
+          where id = $1
+        `,
+        [accountId, existing.current_day]
+      );
+
+      const profile = await this.findWhatsAppNumberWarmer(client, accountId);
+      if (!profile) {
+        throw new AppError("WhatsApp warmer profile not found", 404, "whatsapp_warmer_not_found");
+      }
+      const autoRecipientNumbers = await this.listAutoWarmerRecipientNumbers(client, account.organization_id, account.id);
+
+      await this.insertWhatsAppNumberWarmerLog(client, {
+        warmerId: profile.id,
+        organizationId: account.organization_id,
+        whatsappAccountId: account.id,
+        eventType: "resumed",
+        message: "Warmer resumed."
+      });
+
+      return {
+        account: (await this.appendWhatsAppWarmerSummary(client, [account]))[0],
+        profile: { ...profile, auto_recipient_numbers: autoRecipientNumbers }
+      };
+    });
+  }
+
+  async listWhatsAppNumberWarmerLogs(authUser: AuthUser, accountId: string) {
+    const client = await pool.connect();
+    try {
+      await this.getManageableWhatsAppAccount(client, authUser, accountId);
+      await this.ensureWhatsAppWarmerTables(client);
+      const result = await client.query<WhatsAppNumberWarmerLogRecord>(
+        `
+          select
+            id,
+            warmer_id,
+            organization_id,
+            whatsapp_account_id,
+            level,
+            event_type,
+            message,
+            metadata,
+            created_at
+          from whatsapp_number_warmer_logs
+          where whatsapp_account_id = $1
+          order by created_at desc
+          limit 20
+        `,
+        [accountId]
+      );
+      return result.rows;
     } finally {
       client.release();
     }
@@ -1642,6 +2096,297 @@ export class AdminService {
         }
       })
     );
+  }
+
+  private async ensureWhatsAppWarmerTables(client: PoolClient) {
+    await client.query(`
+      alter table if exists whatsapp_accounts
+      add column if not exists warmup_started_at timestamptz null,
+      add column if not exists warmup_level integer null
+    `);
+    await client.query(`
+      create table if not exists whatsapp_number_warmers (
+        id uuid primary key default gen_random_uuid(),
+        organization_id uuid not null references organizations(id) on delete cascade,
+        whatsapp_account_id uuid not null unique references whatsapp_accounts(id) on delete cascade,
+        warmup_days integer not null default 14,
+        current_day integer not null default 1,
+        daily_target integer not null default 10,
+        today_warmed integer not null default 0,
+        min_delay_minutes integer not null default 5,
+        max_delay_minutes integer not null default 20,
+        active_from time not null default '09:00',
+        active_until time not null default '18:00',
+        weekend_enabled boolean not null default false,
+        contact_source text not null default 'known_contacts',
+        message_source text not null default 'warmup_templates',
+        manual_recipient_numbers text[] not null default '{}'::text[],
+        status text not null default 'not_started',
+        started_at timestamptz null,
+        paused_at timestamptz null,
+        completed_at timestamptz null,
+        last_warmed_at timestamptz null,
+        next_warm_at timestamptz null,
+        created_at timestamptz not null default timezone('utc', now()),
+        updated_at timestamptz not null default timezone('utc', now())
+      )
+    `);
+    await client.query(`
+      create table if not exists whatsapp_number_warmer_logs (
+        id uuid primary key default gen_random_uuid(),
+        warmer_id uuid not null references whatsapp_number_warmers(id) on delete cascade,
+        organization_id uuid not null references organizations(id) on delete cascade,
+        whatsapp_account_id uuid not null references whatsapp_accounts(id) on delete cascade,
+        level text not null default 'info',
+        event_type text not null,
+        message text not null,
+        metadata jsonb not null default '{}'::jsonb,
+        created_at timestamptz not null default timezone('utc', now())
+      )
+    `);
+    await client.query(`
+      create index if not exists whatsapp_number_warmer_logs_account_created_idx
+      on whatsapp_number_warmer_logs (whatsapp_account_id, created_at desc)
+    `);
+    await client.query(`
+      alter table whatsapp_number_warmers
+      add column if not exists today_warmed integer not null default 0,
+      add column if not exists min_delay_minutes integer not null default 5,
+      add column if not exists max_delay_minutes integer not null default 20,
+      add column if not exists active_from time not null default '09:00',
+      add column if not exists active_until time not null default '18:00',
+        add column if not exists weekend_enabled boolean not null default false,
+        add column if not exists contact_source text not null default 'known_contacts',
+        add column if not exists message_source text not null default 'warmup_templates',
+        add column if not exists manual_recipient_numbers text[] not null default '{}'::text[],
+        add column if not exists status text not null default 'not_started',
+      add column if not exists started_at timestamptz null,
+      add column if not exists paused_at timestamptz null,
+      add column if not exists completed_at timestamptz null,
+      add column if not exists last_warmed_at timestamptz null,
+      add column if not exists next_warm_at timestamptz null,
+      add column if not exists created_at timestamptz not null default timezone('utc', now()),
+      add column if not exists updated_at timestamptz not null default timezone('utc', now())
+    `);
+    await client.query("drop trigger if exists whatsapp_number_warmers_set_updated_at on whatsapp_number_warmers");
+    await client.query(`
+      create trigger whatsapp_number_warmers_set_updated_at
+      before update on whatsapp_number_warmers
+      for each row execute function set_updated_at()
+    `);
+  }
+
+  private async appendWhatsAppWarmerSummary(
+    client: PoolClient,
+    accounts: import("../types/domain.js").WhatsAppAccountRecord[]
+  ) {
+    if (accounts.length === 0) {
+      return accounts;
+    }
+
+    await this.ensureWhatsAppWarmerTables(client);
+    const accountIds = accounts.map((account) => account.id);
+    const warmerResult = await client.query<{
+      whatsapp_account_id: string;
+      status: string;
+      warmup_days: number;
+      current_day: number;
+      daily_target: number;
+      today_warmed: number;
+      last_warmed_at: string | null;
+      next_warm_at: string | null;
+    }>(
+      `
+        select
+          whatsapp_account_id,
+          status,
+          warmup_days,
+          current_day,
+          daily_target,
+          today_warmed,
+          last_warmed_at,
+          next_warm_at
+        from whatsapp_number_warmers
+        where whatsapp_account_id = any($1::uuid[])
+      `,
+      [accountIds]
+    );
+    const warmerByAccountId = new Map(warmerResult.rows.map((row) => [row.whatsapp_account_id, row]));
+
+    return accounts.map((account) => {
+      const warmer = warmerByAccountId.get(account.id);
+      if (!warmer) {
+        return account;
+      }
+
+      return {
+        ...account,
+        warmer_status: warmer.status,
+        warmer_warmup_days: warmer.warmup_days,
+        warmer_current_day: warmer.current_day,
+        warmer_daily_target: warmer.daily_target,
+        warmer_today_warmed: warmer.today_warmed,
+        warmer_last_warmed_at: warmer.last_warmed_at,
+        warmer_next_warm_at: warmer.next_warm_at
+      };
+    });
+  }
+
+  private async listAutoWarmerRecipientNumbers(client: PoolClient, organizationId: string, senderAccountId: string) {
+    const result = await client.query<{ phone: string | null }>(
+      `
+        select coalesce(account_phone_e164, account_phone_normalized) as phone
+        from whatsapp_accounts
+        where organization_id = $1
+          and id <> $2
+          and coalesce(account_phone_e164, account_phone_normalized) is not null
+          and deleted_at is null
+        order by created_at asc
+      `,
+      [organizationId, senderAccountId]
+    );
+
+    const seen = new Set<string>();
+    const numbers: string[] = [];
+
+    for (const row of result.rows) {
+      const normalized = normalizePhoneNumber(row.phone);
+      if (!normalized || seen.has(normalized)) {
+        continue;
+      }
+      seen.add(normalized);
+      numbers.push(normalized);
+    }
+
+    return numbers;
+  }
+
+  private async getManageableWhatsAppAccount(client: PoolClient, authUser: AuthUser, accountId: string) {
+    const account = await this.whatsappRepository.findById(client, accountId);
+
+    if (!account) {
+      throw new AppError("WhatsApp account not found", 404, "whatsapp_account_not_found");
+    }
+
+    if (!canManageWhatsAppAccount(authUser, account)) {
+      throw new AppError("Insufficient permissions", 403, "forbidden");
+    }
+
+    return account;
+  }
+
+  private async findWhatsAppNumberWarmer(client: PoolClient, accountId: string) {
+    await this.ensureWhatsAppWarmerTables(client);
+    const result = await client.query<WhatsAppNumberWarmerRecord>(
+      `
+        select
+          id,
+          organization_id,
+          whatsapp_account_id,
+          warmup_days,
+          current_day,
+          daily_target,
+          today_warmed,
+          min_delay_minutes,
+          max_delay_minutes,
+          to_char(active_from, 'HH24:MI:SS') as active_from,
+          to_char(active_until, 'HH24:MI:SS') as active_until,
+          weekend_enabled,
+          contact_source,
+          message_source,
+          manual_recipient_numbers,
+          status,
+          started_at,
+          paused_at,
+          completed_at,
+          last_warmed_at,
+          next_warm_at,
+          created_at,
+          updated_at
+        from whatsapp_number_warmers
+        where whatsapp_account_id = $1
+      `,
+      [accountId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  private async insertWhatsAppNumberWarmerLog(
+    client: PoolClient,
+    input: {
+      warmerId: string;
+      organizationId: string;
+      whatsappAccountId: string;
+      eventType: string;
+      message: string;
+      level?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ) {
+    await this.ensureWhatsAppWarmerTables(client);
+    await client.query(
+      `
+        insert into whatsapp_number_warmer_logs (
+          id,
+          warmer_id,
+          organization_id,
+          whatsapp_account_id,
+          level,
+          event_type,
+          message,
+          metadata
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      `,
+      [
+        randomUUID(),
+        input.warmerId,
+        input.organizationId,
+        input.whatsappAccountId,
+        input.level ?? "info",
+        input.eventType,
+        input.message,
+        JSON.stringify(input.metadata ?? {})
+      ]
+    );
+  }
+
+  private async getOrCreateDefaultWhatsAppNumberWarmer(
+    client: PoolClient,
+    account: import("../types/domain.js").WhatsAppAccountRecord
+  ) {
+    await this.ensureWhatsAppWarmerTables(client);
+    await client.query(
+      `
+        insert into whatsapp_number_warmers (
+          organization_id,
+          whatsapp_account_id,
+          warmup_days,
+          current_day,
+          daily_target,
+          min_delay_minutes,
+          max_delay_minutes,
+          active_from,
+          active_until,
+          weekend_enabled,
+          contact_source,
+          message_source,
+          manual_recipient_numbers,
+          status
+        )
+        values ($1, $2, 14, 1, 10, 5, 20, '09:00', '18:00', false, 'known_contacts', 'warmup_templates', '{}'::text[], 'not_started')
+        on conflict (whatsapp_account_id) do nothing
+      `,
+      [account.organization_id, account.id]
+    );
+
+    const warmer = await this.findWhatsAppNumberWarmer(client, account.id);
+    if (!warmer) {
+      throw new AppError("Unable to create WhatsApp warmer profile", 500, "whatsapp_warmer_create_failed");
+    }
+
+    return warmer;
   }
 
   async listWhatsAppAccountAccess(authUser: AuthUser, organizationId?: string | null) {

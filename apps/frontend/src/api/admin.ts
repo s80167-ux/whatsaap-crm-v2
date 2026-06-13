@@ -7,6 +7,8 @@ import type {
   WhatsAppAccountAccessOverview,
   WhatsAppAccountAccessRole,
   WhatsAppAccountSummary,
+  WhatsAppNumberWarmerLog,
+  WhatsAppNumberWarmerProfile,
   WhatsAppSyncJobSummary
 } from "../types/admin";
 import type { ModuleKey, OrganizationAccessLimits, OrganizationModule, OrganizationModuleStatus } from "../types/modules";
@@ -96,6 +98,13 @@ type WhatsAppAccountApiRecord = {
   live_connection_status?: string | null;
   live_connected?: boolean | null;
   live_status_error?: string | null;
+  warmer_status?: string | null;
+  warmer_warmup_days?: number | null;
+  warmer_current_day?: number | null;
+  warmer_daily_target?: number | null;
+  warmer_today_warmed?: number | null;
+  warmer_last_warmed_at?: string | null;
+  warmer_next_warm_at?: string | null;
 };
 
 type WhatsAppSyncJobApiRecord = WhatsAppSyncJobSummary;
@@ -146,9 +155,19 @@ function mapWhatsAppAccount(record: WhatsAppAccountApiRecord): WhatsAppAccountSu
     history_sync_lookback_days: record.history_sync_lookback_days ?? 7,
     live_connection_status: record.live_connection_status ?? null,
     live_connected: record.live_connected ?? null,
-    live_status_error: record.live_status_error ?? null
+    live_status_error: record.live_status_error ?? null,
+    warmer_status: record.warmer_status ?? null,
+    warmer_warmup_days: record.warmer_warmup_days ?? null,
+    warmer_current_day: record.warmer_current_day ?? null,
+    warmer_daily_target: record.warmer_daily_target ?? null,
+    warmer_today_warmed: record.warmer_today_warmed ?? null,
+    warmer_last_warmed_at: record.warmer_last_warmed_at ?? null,
+    warmer_next_warm_at: record.warmer_next_warm_at ?? null
   };
 }
+
+type WhatsAppNumberWarmerApiRecord = WhatsAppNumberWarmerProfile;
+type WhatsAppNumberWarmerLogApiRecord = WhatsAppNumberWarmerLog;
 
 export async function fetchOrganizations() {
   const response = await apiGet<{ data: OrganizationApiRecord[] }>("/organizations");
@@ -373,6 +392,107 @@ export async function reconnectWhatsAppAccount(accountId: string, payload: { con
     confirmBlockedReconnect: payload.confirmBlockedReconnect ?? false
   });
   return mapWhatsAppAccount(response.data);
+}
+
+export async function fetchWhatsAppNumberWarmer(accountId: string) {
+  const response = await apiGet<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord | null;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer`);
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function enableWhatsAppNumberWarmer(accountId: string) {
+  const response = await apiPost<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer/enable`, {});
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function saveWhatsAppNumberWarmer(
+  accountId: string,
+  payload: {
+    warmupDays?: number;
+    currentDay?: number;
+    dailyTarget?: number;
+    minDelayMinutes?: number;
+    maxDelayMinutes?: number;
+    activeFrom?: string;
+    activeUntil?: string;
+    weekendEnabled?: boolean;
+    contactSource?: "known_contacts";
+    messageSource?: "warmup_templates";
+    manualRecipientNumbers?: string[];
+    status?: "not_started" | "active" | "paused" | "completed";
+  }
+) {
+  const response = await apiPatch<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer`, payload);
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function startWhatsAppNumberWarmer(accountId: string) {
+  const response = await apiPost<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer/start`, {});
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function pauseWhatsAppNumberWarmer(accountId: string) {
+  const response = await apiPost<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer/pause`, {});
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function resumeWhatsAppNumberWarmer(accountId: string) {
+  const response = await apiPost<{
+    data: {
+      account: WhatsAppAccountApiRecord;
+      profile: WhatsAppNumberWarmerApiRecord;
+    };
+  }>(`/admin/whatsapp-accounts/${accountId}/warmer/resume`, {});
+  return {
+    account: mapWhatsAppAccount(response.data.account),
+    profile: response.data.profile
+  };
+}
+
+export async function fetchWhatsAppNumberWarmerLogs(accountId: string) {
+  const response = await apiGet<{ data: WhatsAppNumberWarmerLogApiRecord[] }>(
+    `/admin/whatsapp-accounts/${accountId}/warmer/logs`
+  );
+  return response.data;
 }
 
 export async function resetWhatsAppPairing(accountId: string) {

@@ -15,6 +15,22 @@ for (const envPath of [backendEnvPath, rootEnvPath]) {
   }
 }
 
+const booleanFromEnv = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+
+    if (["false", "0", "no", "off", ""].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return value;
+}, z.boolean());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
@@ -36,17 +52,17 @@ const envSchema = z.object({
   SESSION_COOKIE_NAME: z.string().min(1).default("crm_session"),
   REFRESH_COOKIE_NAME: z.string().min(1).default("crm_refresh"),
   CSRF_COOKIE_NAME: z.string().min(1).default("crm_csrf"),
-  COOKIE_SECURE: z.coerce.boolean().optional(),
+  COOKIE_SECURE: booleanFromEnv.optional(),
   COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
   COOKIE_DOMAIN: z.string().min(1).optional(),
   COOKIE_MAX_AGE_MS: z.coerce.number().int().positive().default(1000 * 60 * 60 * 24 * 30),
-  TRUST_PROXY: z.coerce.boolean().default(false),
+  TRUST_PROXY: booleanFromEnv.default(false),
   BAILEYS_AUTH_DIR: z.string().default("./data/baileys_auth"),
   CONNECTOR_BASE_URL: z.string().url().default("http://localhost:4010"),
   CONNECTOR_INTERNAL_SECRET: z.string().min(1).default("rezeki_crm_connector_2026_x7Kp91LmQ2s8"),
-  ALLOW_LOCAL_CONNECTOR_SEND: z.coerce.boolean().default(false),
+  ALLOW_LOCAL_CONNECTOR_SEND: booleanFromEnv.default(false),
   OUTBOUND_DISPATCH_MODE: z.enum(["worker_only", "immediate"]).optional(),
-  EMBED_RAW_EVENT_WORKER: z.coerce.boolean().optional(),
+  EMBED_RAW_EVENT_WORKER: booleanFromEnv.optional(),
   RAW_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(50),
   RAW_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(500),
   RAW_EVENT_WORKER_STALE_AFTER_MS: z.coerce.number().int().positive().default(120000),

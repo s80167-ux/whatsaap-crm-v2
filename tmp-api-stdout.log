@@ -1,0 +1,67 @@
+
+> api@2.0.0 dev
+> tsx watch src/server.ts
+
+[00:12:23.690] [32mINFO[39m (1848): [36mDatabase connection established[39m
+[00:12:23.775] [32mINFO[39m (1848): [36mMobile inbox event listener started[39m
+    [35mchannel[39m: "mobile_inbox_events"
+[00:12:23.778] [32mINFO[39m (1848): [36mBackend listening on port 4000[39m
+[0mGET /api/health [32m200[0m 2.425 ms - 11[0m
+[00:12:27.011] [32mINFO[39m (1848): [36mRequest started[39m
+    [35mrequestId[39m: "dfa69b8f-3a15-4b7c-b543-93ac5bf33967"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[00:12:27.021] [32mINFO[39m (1848): [36mRequest completed[39m
+    [35mrequestId[39m: "dfa69b8f-3a15-4b7c-b543-93ac5bf33967"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 10
+[0mHEAD /api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173 [36m302[0m 44.181 ms - 257[0m
+[00:12:27.108] [32mINFO[39m (1848): [36mRequest started[39m
+    [35mrequestId[39m: "f0dba19a-dc2b-4bb0-8120-430e35058beb"
+    [35mmethod[39m: "HEAD"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+[00:12:27.153] [32mINFO[39m (1848): [36mRequest completed[39m
+    [35mrequestId[39m: "f0dba19a-dc2b-4bb0-8120-430e35058beb"
+    [35mmethod[39m: "HEAD"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+    [35mstatusCode[39m: 302
+    [35mdurationMs[39m: 45
+[0mHEAD /api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173 [36m302[0m 4.565 ms - 257[0m
+[00:12:55.083] [32mINFO[39m (1848): [36mRequest started[39m
+    [35mrequestId[39m: "fb16a498-2461-42e0-ae8e-8400f93dcb9b"
+    [35mmethod[39m: "HEAD"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+[00:12:55.089] [32mINFO[39m (1848): [36mRequest completed[39m
+    [35mrequestId[39m: "fb16a498-2461-42e0-ae8e-8400f93dcb9b"
+    [35mmethod[39m: "HEAD"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+    [35mstatusCode[39m: 302
+    [35mdurationMs[39m: 6
+[0mGET /api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173 [36m302[0m 4.106 ms - 257[0m
+[00:13:17.790] [32mINFO[39m (1848): [36mRequest started[39m
+    [35mrequestId[39m: "262be992-7838-4189-ac35-c04342f94b3a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+[00:13:17.796] [32mINFO[39m (1848): [36mRequest completed[39m
+    [35mrequestId[39m: "262be992-7838-4189-ac35-c04342f94b3a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/google/start?return_to=http%3A%2F%2Flocalhost%3A5173"
+    [35mstatusCode[39m: 302
+    [35mdurationMs[39m: 6
+[0mGET /api/health [32m200[0m 0.305 ms - 11[0m
+[00:13:18.449] [32mINFO[39m (1848): [36mRequest started[39m
+    [35mrequestId[39m: "f6ee8f44-eb31-4d1b-9049-45ebf2e9f230"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[00:13:18.450] [32mINFO[39m (1848): [36mRequest completed[39m
+    [35mrequestId[39m: "f6ee8f44-eb31-4d1b-9049-45ebf2e9f230"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+12:13:48 am [tsx] change in ./src\config\env.ts Restarting...
+c[00:13:53.759] [32mINFO[39m (10256): [36mDatabase connection established[39m
+[00:13:53.844] [32mINFO[39m (10256): [36mMobile inbox event listener started[39m
+    [35mchannel[39m: "mobile_inbox_events"

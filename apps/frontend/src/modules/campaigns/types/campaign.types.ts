@@ -124,6 +124,9 @@ export type CampaignWarmupAdvisory = {
   connectionStatus: string;
   warmupStartedAt?: string | null;
   warmupLevel: number;
+  warmerStatus?: string | null;
+  currentDay?: number | null;
+  warmupDays?: number | null;
   sentToday: number;
   baseDailyLimit: number;
   suggestedDailyLimit: number;

@@ -361,6 +361,9 @@ type CampaignWarmupAdvisoryRecord = {
   connection_status: string | null;
   warmup_started_at: string | null;
   warmup_level: number | null;
+  warmer_status: string | null;
+  warmer_current_day: number | null;
+  warmer_warmup_days: number | null;
   campaign_daily_limit: number;
   sent_today: string;
 };
@@ -2092,6 +2095,7 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
 }
 
 async function listCampaignWarmupAdvisory(organizationId: string, campaignId: string) {
+  await ensureWhatsAppWarmerCompat();
   const result = await query<CampaignWarmupAdvisoryRecord>(
     `
       with selected_campaign as (
@@ -2132,6 +2136,9 @@ async function listCampaignWarmupAdvisory(organizationId: string, campaignId: st
         lower(coalesce(wa.connection_status, 'unknown')) as connection_status,
         wa.warmup_started_at,
         wa.warmup_level,
+        wnw.status as warmer_status,
+        wnw.current_day as warmer_current_day,
+        wnw.warmup_days as warmer_warmup_days,
         sc.daily_limit as campaign_daily_limit,
         count(cr.id)::text as sent_today
       from selected_campaign sc
@@ -2139,6 +2146,9 @@ async function listCampaignWarmupAdvisory(organizationId: string, campaignId: st
       join whatsapp_accounts wa
         on wa.organization_id = sc.organization_id
        and wa.id = ss.whatsapp_account_id
+      left join whatsapp_number_warmers wnw
+        on wnw.organization_id = sc.organization_id
+       and wnw.whatsapp_account_id = wa.id
       left join campaign_recipients cr
         on cr.organization_id = sc.organization_id
        and cr.assigned_whatsapp_account_id = wa.id
@@ -2161,6 +2171,9 @@ async function listCampaignWarmupAdvisory(organizationId: string, campaignId: st
       connectionStatus: row.connection_status ?? "unknown",
       warmupStartedAt: row.warmup_started_at,
       warmupLevel: row.warmup_level ?? inferWarmupLevel(row.warmup_started_at),
+      warmerStatus: row.warmer_status,
+      currentDay: row.warmer_current_day,
+      warmupDays: row.warmer_warmup_days,
       sentToday,
       baseDailyLimit: row.campaign_daily_limit,
       suggestedDailyLimit,
@@ -2168,6 +2181,36 @@ async function listCampaignWarmupAdvisory(organizationId: string, campaignId: st
       isAboveSuggestedLimit: exceededBy > 0
     };
   });
+}
+
+async function ensureWhatsAppWarmerCompat() {
+  await query(`
+    create table if not exists whatsapp_number_warmers (
+      id uuid primary key default gen_random_uuid(),
+      organization_id uuid not null references organizations(id) on delete cascade,
+      whatsapp_account_id uuid not null unique references whatsapp_accounts(id) on delete cascade,
+      warmup_days integer not null default 14,
+      current_day integer not null default 1,
+      daily_target integer not null default 10,
+      today_warmed integer not null default 0,
+      min_delay_minutes integer not null default 5,
+      max_delay_minutes integer not null default 20,
+      active_from time not null default '09:00',
+      active_until time not null default '18:00',
+      weekend_enabled boolean not null default false,
+      contact_source text not null default 'known_contacts',
+      message_source text not null default 'warmup_templates',
+      manual_recipient_numbers text[] not null default '{}'::text[],
+      status text not null default 'not_started',
+      started_at timestamptz null,
+      paused_at timestamptz null,
+      completed_at timestamptz null,
+      last_warmed_at timestamptz null,
+      next_warm_at timestamptz null,
+      created_at timestamptz not null default timezone('utc', now()),
+      updated_at timestamptz not null default timezone('utc', now())
+    )
+  `);
 }
 
 async function prepareCampaignAttachmentForStorage(
