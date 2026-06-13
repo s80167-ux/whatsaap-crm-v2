@@ -21,13 +21,13 @@ export function Toast({ message, onClose, variant = "success" }: ToastProps) {
 
   return (
     <div
-      className={`fixed bottom-5 right-5 z-[120] flex max-w-sm items-start gap-3 rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${onClose ? "pointer-events-auto" : "pointer-events-none"} ${tone}`}
+      className={`fixed bottom-5 right-5 z-[120] flex w-[min(calc(100vw-2rem),24rem)] items-start justify-between gap-3 rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${onClose ? "pointer-events-auto" : "pointer-events-none"} ${tone}`}
     >
-      <p className="text-sm font-medium">{message}</p>
+      <p className="min-w-0 flex-1 break-words text-sm font-medium leading-5">{message}</p>
       {onClose ? (
         <button
           type="button"
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-current opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-current opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           aria-label={t("common.closeNotification")}
           onClick={onClose}
         >

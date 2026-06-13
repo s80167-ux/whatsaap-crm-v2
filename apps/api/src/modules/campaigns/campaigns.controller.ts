@@ -856,11 +856,25 @@ export async function startCampaign(request: Request, response: Response) {
     audienceGroupId: input.audienceGroupId,
     template: input.messageTemplate
   });
-  await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
   const governedTemplate = await templateGovernanceService.assertTemplateCanBeUsedInCampaign({
     organizationId,
     templateGovernanceVersionId: input.templateGovernanceVersionId,
     messageTemplate: input.messageTemplate
+  });
+  const bodyType = input.attachment?.kind ?? 'text';
+
+  await saveExistingCampaignStartConfiguration({
+    organizationId,
+    campaignId,
+    audienceGroupId: input.audienceGroupId,
+    senderMode: senderSelection.senderMode,
+    primarySenderWhatsAppAccountId: senderSelection.primarySenderWhatsAppAccountId,
+    senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
+    messageTemplate: governedTemplate.body,
+    messageBodyType: bodyType,
+    attachment: input.attachment ? JSON.stringify(input.attachment) : null,
+    speedPreset: input.speedPreset,
+    attachContactCard: input.attachContactCard ?? null
   });
 
   const snapshot = await snapshotCampaignRecipients({
@@ -876,45 +890,19 @@ export async function startCampaign(request: Request, response: Response) {
   if (Number(validationSummary.valid ?? 0) <= 0) {
     throw new AppError("Campaign has no recipients that passed safety validation", 400, "campaign_no_safe_recipients", validationSummary);
   }
-
-  const bodyType = input.attachment?.kind ?? 'text';
+  await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
       `
         update campaigns
         set status = 'sending',
-            sender_mode = $3,
-            sender_whatsapp_account_id = $4,
-            audience_group_id = $5,
-            message_template = $6,
-            message_body_type = $7,
-            attachment = coalesce($8, attachment),
-            speed_preset = $9,
-            attach_contact_card = coalesce($10, attach_contact_card),
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
         returning *
       `,
-      [
-        organizationId,
-        campaignId,
-        senderSelection.senderMode,
-        senderSelection.primarySenderWhatsAppAccountId,
-        input.audienceGroupId,
-        governedTemplate.body,
-        bodyType,
-        input.attachment ? JSON.stringify(input.attachment) : null,
-        input.speedPreset,
-        input.attachContactCard
-      ]
+      [organizationId, campaignId]
     );
-
-    await syncCampaignSenderAccounts(client, {
-      organizationId,
-      campaignId,
-      senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds
-    });
 
     return updated.rows[0];
   });
@@ -2197,6 +2185,57 @@ async function snapshotCampaignRecipients(input: {
   );
 
   return result.rows;
+}
+
+async function saveExistingCampaignStartConfiguration(input: {
+  organizationId: string;
+  campaignId: string;
+  audienceGroupId: string;
+  senderMode: "single" | "round_robin";
+  primarySenderWhatsAppAccountId: string;
+  senderWhatsAppAccountIds: string[];
+  messageTemplate: string;
+  messageBodyType: string;
+  attachment: string | null;
+  speedPreset: "safe" | "normal" | "custom";
+  attachContactCard: boolean | null;
+}) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        update campaigns
+        set audience_group_id = $3,
+            sender_mode = $4,
+            sender_whatsapp_account_id = $5,
+            message_template = $6,
+            message_body_type = $7,
+            attachment = coalesce($8, attachment),
+            speed_preset = $9,
+            attach_contact_card = coalesce($10, attach_contact_card),
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [
+        input.organizationId,
+        input.campaignId,
+        input.audienceGroupId,
+        input.senderMode,
+        input.primarySenderWhatsAppAccountId,
+        input.messageTemplate,
+        input.messageBodyType,
+        input.attachment,
+        input.speedPreset,
+        input.attachContactCard
+      ]
+    );
+
+    await syncCampaignSenderAccounts(client, {
+      organizationId: input.organizationId,
+      campaignId: input.campaignId,
+      senderWhatsAppAccountIds: input.senderWhatsAppAccountIds
+    });
+  });
 }
 
 function renderCampaignMessage(template: string, recipient: {

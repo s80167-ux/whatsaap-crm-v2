@@ -126,6 +126,7 @@ export async function startExistingCampaign(request: Request, response: Response
   }
 
   const senderSelection = resolveSenderSelection(input, campaign.sender_whatsapp_account_id);
+  const speedPreset = input.speedPreset ?? campaign.speed_preset ?? "safe";
 
   await assertConnectedSenders(organizationId, senderSelection.senderWhatsAppAccountIds);
   await assertReadyAudienceGroup(organizationId, audienceGroupId);
@@ -134,7 +135,16 @@ export async function startExistingCampaign(request: Request, response: Response
     audienceGroupId,
     template: messageTemplate
   });
-  await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
+  await saveCampaignStartConfiguration({
+    organizationId,
+    campaignId,
+    audienceGroupId,
+    senderMode: senderSelection.senderMode,
+    primarySenderWhatsAppAccountId: senderSelection.primarySenderWhatsAppAccountId,
+    senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds,
+    messageTemplate,
+    speedPreset
+  });
 
   const snapshot = await snapshotCampaignRecipients({
     organizationId,
@@ -150,38 +160,20 @@ export async function startExistingCampaign(request: Request, response: Response
   if (Number(validationSummary.valid ?? 0) <= 0) {
     throw new AppError("Campaign has no recipients that passed safety validation", 400, "campaign_no_safe_recipients", validationSummary);
   }
+  await campaignSafetyService.assertCampaignCanStart(auth, { organizationId, campaignId });
 
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
       `
         update campaigns
         set status = 'sending',
-            sender_mode = $3,
-            sender_whatsapp_account_id = $4,
-            audience_group_id = $5,
-            message_template = $6,
-            speed_preset = $7,
             updated_at = timezone('utc', now())
         where organization_id = $1
           and id = $2
         returning *
       `,
-      [
-        organizationId,
-        campaignId,
-        senderSelection.senderMode,
-        senderSelection.primarySenderWhatsAppAccountId,
-        audienceGroupId,
-        messageTemplate,
-        input.speedPreset ?? campaign.speed_preset ?? "safe"
-      ]
+      [organizationId, campaignId]
     );
-
-    await syncCampaignSenderAccounts(client, {
-      organizationId,
-      campaignId,
-      senderWhatsAppAccountIds: senderSelection.senderWhatsAppAccountIds
-    });
 
     return updated.rows[0];
   });
@@ -371,6 +363,48 @@ async function snapshotCampaignRecipients(input: {
   );
 
   return result.rows;
+}
+
+async function saveCampaignStartConfiguration(input: {
+  organizationId: string;
+  campaignId: string;
+  audienceGroupId: string;
+  senderMode: "single" | "round_robin";
+  primarySenderWhatsAppAccountId: string;
+  senderWhatsAppAccountIds: string[];
+  messageTemplate: string;
+  speedPreset: "safe" | "normal" | "custom";
+}) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        update campaigns
+        set audience_group_id = $3,
+            sender_mode = $4,
+            sender_whatsapp_account_id = $5,
+            message_template = $6,
+            speed_preset = $7,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [
+        input.organizationId,
+        input.campaignId,
+        input.audienceGroupId,
+        input.senderMode,
+        input.primarySenderWhatsAppAccountId,
+        input.messageTemplate,
+        input.speedPreset
+      ]
+    );
+
+    await syncCampaignSenderAccounts(client, {
+      organizationId: input.organizationId,
+      campaignId: input.campaignId,
+      senderWhatsAppAccountIds: input.senderWhatsAppAccountIds
+    });
+  });
 }
 
 async function syncCampaignSenderAccounts(
