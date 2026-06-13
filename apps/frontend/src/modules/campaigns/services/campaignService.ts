@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "../../../lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost, isApiError } from "../../../lib/http";
 import { config } from "../../../lib/config";
 import type {
   Campaign,
@@ -257,6 +257,56 @@ export async function cancelCampaign(input: { campaignId: string; organizationId
 export async function deleteCampaign(input: { campaignId: string; organizationId?: string | null }) {
   const suffix = input.organizationId ? `?organization_id=${encodeURIComponent(input.organizationId)}` : "";
   return apiDelete<{ ok: true; message: string }>(`/campaigns/${input.campaignId}${suffix}`);
+}
+
+type CampaignSafetyDetails = {
+  blocking_errors?: string[];
+  warnings?: string[];
+  content_summary?: {
+    spintax_errors?: string[];
+    variable_errors?: string[];
+  };
+  sending_summary?: {
+    account_status?: string;
+    remaining_today?: number;
+  };
+  recipient_summary?: {
+    valid?: number;
+  };
+};
+
+export function formatCampaignStartError(error: unknown) {
+  if (isApiError(error)) {
+    const details = (error.details ?? null) as CampaignSafetyDetails | null;
+
+    if (error.code === "campaign_safety_blocked") {
+      const blockingErrors = details?.blocking_errors ?? [];
+      if (blockingErrors.includes("spintax_syntax_error")) {
+        const reason = details?.content_summary?.spintax_errors?.[0] ?? "Message template contains invalid brace syntax.";
+        return `Campaign blocked: ${reason}`;
+      }
+      if (blockingErrors.includes("required_variables_missing")) {
+        const reason = details?.content_summary?.variable_errors?.[0] ?? "Campaign message uses invalid or missing template variables.";
+        return `Campaign blocked: ${reason}`;
+      }
+      if (blockingErrors.includes("whatsapp_account_disconnected")) {
+        return "Campaign blocked: the selected WhatsApp sender is not connected.";
+      }
+      if (blockingErrors.includes("daily_limit_reached")) {
+        return "Campaign blocked: the selected sender has reached its daily sending limit.";
+      }
+      if (blockingErrors.includes("no_valid_recipients")) {
+        return "Campaign blocked: there are no recipients left who passed safety validation.";
+      }
+    }
+
+    if (error.code === "campaign_safety_warning_ack_required") {
+      const warnings = details?.warnings?.length ? details.warnings.join(", ") : "campaign safety warnings";
+      return `Review required before start: ${warnings}. Open Review to inspect the safety warnings.`;
+    }
+  }
+
+  return error instanceof Error ? error.message : "Unable to start campaign.";
 }
 
 function toSafeFilename(value: string) {

@@ -21,7 +21,7 @@ export function Toast({ message, onClose, variant = "success" }: ToastProps) {
 
   return (
     <div
-      className={`fixed bottom-5 right-5 z-[120] flex w-[min(calc(100vw-2rem),24rem)] items-start justify-between gap-3 rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${onClose ? "pointer-events-auto" : "pointer-events-none"} ${tone}`}
+      className={`fixed right-5 top-5 z-[1000] flex w-[min(calc(100vw-2rem),28rem)] items-start justify-between gap-3 rounded-xl border px-4 py-3 shadow-[0_18px_50px_rgba(20,32,51,0.18)] ${onClose ? "pointer-events-auto" : "pointer-events-none"} ${tone}`}
     >
       <p className="min-w-0 flex-1 break-words text-sm font-medium leading-5">{message}</p>
       {onClose ? (

@@ -14,7 +14,7 @@ import { useAudienceTemplateVariables } from "../hooks/useAudienceTemplateVariab
 import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignPreviewCard } from "../components/CampaignPreviewCard";
 import { DynamicVariablePanel } from "../components/DynamicVariablePanel";
-import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
+import { createCampaign, formatCampaignStartError, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
 import type { CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
@@ -445,7 +445,7 @@ export function CreateCampaignPage() {
       showNotice(result.message, "success");
       navigate("/campaigns/whatsapp/history");
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to start campaign.");
+      showError(formatCampaignStartError(error));
     } finally {
       setIsStartingCampaign(false);
     }

@@ -1,6 +1,23 @@
 import { config } from "./config";
 import { clearAuthSession, getCsrfToken, storeCsrfToken } from "./auth";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string | null,
+    public readonly details?: unknown,
+    public readonly requestId?: string | null
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export function isApiError(error: unknown): error is ApiError {
+  return error instanceof ApiError;
+}
+
 function getNetworkErrorMessage() {
   if (config.apiBaseUrl.includes("localhost")) {
     const isLocalFrontend =
@@ -36,12 +53,27 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
+    let code: string | null = null;
+    let details: unknown = null;
+    let requestId: string | null = null;
 
     if (typeof body === "object" && body && "error" in body && typeof body.error === "string") {
       message = body.error;
     }
 
-    throw new Error(message);
+    if (typeof body === "object" && body) {
+      if ("code" in body && typeof body.code === "string") {
+        code = body.code;
+      }
+      if ("details" in body) {
+        details = body.details;
+      }
+      if ("requestId" in body && typeof body.requestId === "string") {
+        requestId = body.requestId;
+      }
+    }
+
+    throw new ApiError(message, response.status, code, details, requestId);
   }
 
   return body as T;

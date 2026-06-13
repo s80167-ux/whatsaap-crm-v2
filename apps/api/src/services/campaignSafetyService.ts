@@ -52,6 +52,7 @@ const SPAM_PATTERNS = [
   "TAK PERLU BAYAR",
   "CONFIRM LULUS"
 ];
+const AUTO_ACKNOWLEDGED_WARNINGS = new Set(["duplicate_recipients", "opted_out_recipients"]);
 
 function canManage(user: AuthUser) {
   return user.role === "super_admin" || user.role === "org_admin" || user.permissionKeys.includes("org.manage_settings");
@@ -512,9 +513,15 @@ export class CampaignSafetyService {
       throw new AppError("Campaign failed safety pre-check.", 400, "campaign_safety_blocked", precheck);
     }
     if (precheck.warnings.length > 0) {
-      const hasOverride = await this.hasRecentOverride(precheck.organization_id, input.campaignId, precheck.warnings);
-      if (!hasOverride) {
-        throw new AppError("Campaign safety warnings require acknowledgement before start.", 409, "campaign_safety_warning_ack_required", precheck);
+      const warningsRequiringOverride = precheck.warnings.filter((warning) => !AUTO_ACKNOWLEDGED_WARNINGS.has(warning));
+      if (warningsRequiringOverride.length > 0) {
+        const hasOverride = await this.hasRecentOverride(precheck.organization_id, input.campaignId, warningsRequiringOverride);
+        if (!hasOverride) {
+          throw new AppError("Campaign safety warnings require acknowledgement before start.", 409, "campaign_safety_warning_ack_required", {
+            ...precheck,
+            warnings_requiring_override: warningsRequiringOverride
+          });
+        }
       }
     }
     return precheck;
@@ -863,9 +870,10 @@ function findSpintaxErrors(message: string) {
   for (let i = 0; i < message.length; i++) {
     const ch = message[i];
     const prev = message[i - 1];
-    if (ch === "{" && prev !== "{" && prev !== "\\") {
+    const next = message[i + 1];
+    if (ch === "{" && prev !== "{" && next !== "{" && prev !== "\\") {
       depth++;
-    } else if (ch === "}" && prev !== "\\") {
+    } else if (ch === "}" && prev !== "}" && next !== "}" && prev !== "\\") {
       depth--;
       if (depth < 0) {
         errors.push("Unmatched closing brace '}'");

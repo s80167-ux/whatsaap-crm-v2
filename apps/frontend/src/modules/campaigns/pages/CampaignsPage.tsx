@@ -16,7 +16,7 @@ import { CampaignListTable } from "../components/CampaignListTable";
 import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignReviewDrawer } from "../components/CampaignReviewDrawer";
 import { CampaignStatsCards } from "../components/CampaignStatsCards";
-import { cancelCampaign, deleteCampaign, fetchCampaigns, getCampaignStats, pauseCampaign, resumeCampaign, startCampaign } from "../services/campaignService";
+import { cancelCampaign, deleteCampaign, fetchCampaigns, formatCampaignStartError, getCampaignStats, pauseCampaign, resumeCampaign, startCampaign } from "../services/campaignService";
 import type { Campaign, CampaignStatus } from "../types/campaign.types";
 
 const campaignStatusFilters: Array<{ label: string; value: CampaignStatus | "all" }> = [
@@ -110,7 +110,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
       showPlaceholderNotice(result.message, "success");
       await refreshCampaigns();
     },
-    onError: (error) => showPlaceholderNotice(error instanceof Error ? error.message : "Unable to start campaign.", "error")
+    onError: (error) => showPlaceholderNotice(formatCampaignStartError(error), "error")
   });
 
   const pauseMutation = useMutation({

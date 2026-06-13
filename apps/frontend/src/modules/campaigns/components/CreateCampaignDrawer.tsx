@@ -8,7 +8,7 @@ import { PopupOverlay } from "../../../components/PopupOverlay";
 import type { WhatsAppAccountSummary } from "../../../types/admin";
 import type { AudienceGroup } from "../audience-groups/types/audienceGroup.types";
 import { fetchAudienceGroupContacts } from "../audience-groups/services/audienceGroupService";
-import { createCampaign, sendCampaignTest, startCampaign } from "../services/campaignService";
+import { createCampaign, formatCampaignStartError, sendCampaignTest, startCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { CampaignPreviewCard } from "./CampaignPreviewCard";
@@ -414,7 +414,7 @@ export function CreateCampaignDrawer({
       onCampaignChanged?.();
       onClose();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to start campaign.");
+      showError(formatCampaignStartError(error));
     } finally {
       setIsStartingCampaign(false);
     }
