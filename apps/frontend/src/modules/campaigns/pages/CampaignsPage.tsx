@@ -176,6 +176,16 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     }
   }
 
+  function handleResumeCampaign(campaign: Campaign) {
+    const confirmed = window.confirm(
+      "Resume will continue pending recipients only. Sent recipients will not be resent. Failed recipients will remain failed unless you choose Retry Failed. Continue?"
+    );
+
+    if (confirmed) {
+      resumeMutation.mutate(campaign);
+    }
+  }
+
   function handleEditCampaign(campaign: Campaign) {
     navigate(`/campaigns/whatsapp/create?edit=${encodeURIComponent(campaign.id)}`);
   }
@@ -282,7 +292,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                     onReview={setReviewCampaign}
                     onStart={handleStartCampaign}
                     onPause={(campaign) => pauseMutation.mutate(campaign)}
-                    onResume={(campaign) => resumeMutation.mutate(campaign)}
+                    onResume={handleResumeCampaign}
                     onCancel={(campaign) => cancelMutation.mutate(campaign)}
                     onDelete={handleDeleteCampaign}
                   />
@@ -385,7 +395,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   onReview={setReviewCampaign}
                   onStart={handleStartCampaign}
                   onPause={(campaign) => pauseMutation.mutate(campaign)}
-                  onResume={(campaign) => resumeMutation.mutate(campaign)}
+                  onResume={handleResumeCampaign}
                   onCancel={(campaign) => cancelMutation.mutate(campaign)}
                   onDelete={handleDeleteCampaign}
                 />

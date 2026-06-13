@@ -2,6 +2,7 @@ import { query } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { CampaignSafetyService } from "./campaignSafetyService.js";
+import { classifyCampaignSendFailure, pauseCampaignForSenderIssue } from "./campaignRecoveryService.js";
 
 export class CampaignQueuedRecipientReconciler {
   async reconcile(limit = env.MESSAGE_OUTBOX_WORKER_BATCH_SIZE) {
@@ -93,7 +94,15 @@ export class CampaignQueuedRecipientReconciler {
               failed_at = timezone('utc', now()),
               next_attempt_at = null,
               error_message = candidates.error_message,
-              failure_code = 'send_failed',
+              failure_code = case
+                when lower(candidates.error_message) like '%banned%' then 'sender_banned'
+                when lower(candidates.error_message) like '%logged out%' then 'sender_logged_out'
+                when lower(candidates.error_message) like '%connection closed%' then 'sender_disconnected'
+                when lower(candidates.error_message) like '%not connected%' then 'sender_unavailable'
+                when lower(candidates.error_message) like '%unauthorized%' then 'sender_suspected_ban'
+                when lower(candidates.error_message) like '%forbidden%' then 'sender_suspected_ban'
+                else 'send_failed'
+              end,
               failure_reason = candidates.error_message,
               last_attempt_at = timezone('utc', now())
           from candidates
@@ -185,9 +194,43 @@ export class CampaignQueuedRecipientReconciler {
       }
 
       seen.add(key);
+      await this.pauseIfSenderIssue(row.organization_id, row.campaign_id);
       await CampaignSafetyService.autoPauseCampaignIfNeeded(row.organization_id, row.campaign_id);
       await this.refreshCampaignCompletion(row.organization_id, row.campaign_id);
     }
+  }
+
+  private async pauseIfSenderIssue(organizationId: string, campaignId: string) {
+    const result = await query<{ failure_code: string | null; failure_reason: string | null }>(
+      `
+        select failure_code, failure_reason
+        from campaign_recipients
+        where organization_id = $1
+          and campaign_id = $2
+          and send_status = 'failed'
+        order by coalesce(failed_at, last_attempt_at, created_at) desc nulls last
+        limit 1
+      `,
+      [organizationId, campaignId]
+    );
+
+    const row = result.rows[0];
+    if (!row?.failure_code) {
+      return;
+    }
+
+    const classification = classifyCampaignSendFailure(row.failure_reason ?? row.failure_code);
+    if (!classification.senderIssue) {
+      return;
+    }
+
+    await pauseCampaignForSenderIssue({
+      organizationId,
+      campaignId,
+      pauseReason: classification.confirmedBanned
+        ? "Campaign paused because the selected WhatsApp sender appears to be banned. Replace the sender to resume."
+        : "Campaign paused because the selected WhatsApp sender appears to be disconnected, logged out, or unavailable. Reconnect or replace the sender to resume."
+    });
   }
 
   private async refreshCampaignCompletion(organizationId: string, campaignId: string) {

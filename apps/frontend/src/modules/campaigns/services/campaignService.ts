@@ -270,6 +270,18 @@ export async function resumeCampaign(input: { campaignId: string; organizationId
   return response.data;
 }
 
+export async function retryFailedCampaign(input: {
+  campaignId: string;
+  organizationId?: string | null;
+  failureCodes?: string[];
+}) {
+  const response = await apiPost<{ data: { ok: true; message: string; campaign: Campaign | null; retriedCount: number } }>(
+    `/campaigns/${input.campaignId}/retry-failed`,
+    input
+  );
+  return response.data;
+}
+
 export async function cancelCampaign(input: { campaignId: string; organizationId?: string | null }) {
   const response = await apiPost<{ data: { ok: true; message: string; campaign: Campaign | null } }>(
     `/campaigns/${input.campaignId}/cancel`,
@@ -327,6 +339,12 @@ export function formatCampaignStartError(error: unknown) {
     if (error.code === "campaign_safety_warning_ack_required") {
       const warnings = details?.warnings?.length ? details.warnings.join(", ") : "campaign safety warnings";
       return `Review required before start: ${warnings}. Open Review to inspect the safety warnings.`;
+    }
+
+    if (error.code === "sender_unavailable") {
+      return typeof error.message === "string" && error.message.length > 0
+        ? error.message
+        : "Resume blocked: the selected WhatsApp sender still appears unavailable.";
     }
   }
 

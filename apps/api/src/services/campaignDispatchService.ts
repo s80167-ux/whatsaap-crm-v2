@@ -5,6 +5,11 @@ import { CampaignSafetyService } from "./campaignSafetyService.js";
 import { ContactService } from "./contactService.js";
 import { ConversationService } from "./conversationService.js";
 import { SendMessageService } from "./sendMessageService.js";
+import {
+  assessCampaignSenderAvailability,
+  classifyCampaignSendFailure,
+  pauseCampaignForSenderIssue
+} from "./campaignRecoveryService.js";
 import { renderCampaignTemplateVariables } from "../modules/campaigns/campaignTemplateVariables.js";
 import { resolveCampaignTempo, type CampaignSpeedPreset } from "../modules/campaigns/campaignTempo.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
@@ -193,7 +198,7 @@ export class CampaignDispatchService {
         where c.status = 'sending'
           and c.sender_whatsapp_account_id is not null
           and (c.message_template is not null or c.attachment is not null)
-          and cr.send_status in ('pending', 'failed')
+          and cr.send_status = 'pending'
           and cr.attempt_count < $1
           and coalesce(cr.next_attempt_at, timezone('utc', now())) <= timezone('utc', now())
         group by c.id, css.min_delay_seconds, css.max_delay_seconds
@@ -251,13 +256,41 @@ export class CampaignDispatchService {
 
   private async claimRecipientForCampaign(campaignId: string) {
     return withTransaction(async (client) => {
+      const senderAvailability = await assessCampaignSenderAvailability({
+        organizationId: (
+          await client.query<{ organization_id: string }>(
+            `select organization_id from campaigns where id = $1 limit 1`,
+            [campaignId]
+          )
+        ).rows[0]?.organization_id ?? "",
+        campaignId,
+        client
+      });
+
+      if (!senderAvailability.hasAvailableSender) {
+        const campaignRow = await client.query<{ organization_id: string }>(
+          `select organization_id from campaigns where id = $1 limit 1`,
+          [campaignId]
+        );
+        const organizationId = campaignRow.rows[0]?.organization_id;
+        if (organizationId) {
+          await pauseCampaignForSenderIssue({
+            organizationId,
+            campaignId,
+            pauseReason: senderAvailability.pauseReason,
+            client
+          });
+        }
+        return null;
+      }
+
       const result = await client.query<ClaimedCampaignRecipient>(
         `
           with candidate as (
             select cr.id
             from campaign_recipients cr
             where cr.campaign_id = $1
-              and cr.send_status in ('pending', 'failed')
+              and cr.send_status = 'pending'
               and coalesce(cr.validation_status, 'valid') = 'valid'
               and cr.safety_exclusion_reason is null
               and cr.attempt_count < $2
@@ -347,6 +380,37 @@ export class CampaignDispatchService {
       }
 
       const senderAssignment = await this.resolveSenderAssignment(recipient);
+      const senderAvailability = await assessCampaignSenderAvailability({
+        organizationId: recipient.organization_id,
+        campaignId: recipient.campaign_id
+      });
+
+      if (!senderAvailability.hasAvailableSender) {
+        await query(
+          `
+            update campaign_recipients
+            set send_status = 'failed',
+                queued_at = null,
+                failed_at = timezone('utc', now()),
+                next_attempt_at = null,
+                error_message = $4,
+                failure_code = 'sender_unavailable',
+                failure_reason = $4,
+                last_attempt_at = timezone('utc', now())
+            where organization_id = $1
+              and campaign_id = $2
+              and id = $3
+              and message_id is null
+          `,
+          [recipient.organization_id, recipient.campaign_id, recipient.id, senderAvailability.pauseReason]
+        );
+        await pauseCampaignForSenderIssue({
+          organizationId: recipient.organization_id,
+          campaignId: recipient.campaign_id,
+          pauseReason: senderAvailability.pauseReason
+        });
+        return;
+      }
 
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
@@ -402,9 +466,12 @@ export class CampaignDispatchService {
       );
       await this.touchWarmupStarted(recipient.organization_id, senderAssignment.whatsappAccountId);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unable to send campaign message";
+      const failure = classifyCampaignSendFailure(error);
+      const shouldRetry =
+        !failure.senderIssue &&
+        failure.code !== "recipient_invalid" &&
+        recipient.attempt_count < env.CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES;
       const retryDelaySeconds = Math.min(recipient.attempt_count, 5) * 60;
-      const shouldRetry = recipient.attempt_count < env.CAMPAIGN_DISPATCH_WORKER_MAX_RETRIES;
 
       await query(
         `
@@ -413,7 +480,7 @@ export class CampaignDispatchService {
               failed_at = timezone('utc', now()),
               next_attempt_at = $4,
               error_message = $5,
-              failure_code = 'send_failed',
+              failure_code = $6,
               failure_reason = $5,
               last_attempt_at = timezone('utc', now())
           where organization_id = $1
@@ -425,9 +492,20 @@ export class CampaignDispatchService {
           recipient.campaign_id,
           recipient.id,
           shouldRetry ? new Date(Date.now() + retryDelaySeconds * 1000).toISOString() : null,
-          errorMessage
+          failure.reason,
+          failure.code
         ]
       );
+
+      if (failure.senderIssue) {
+        await pauseCampaignForSenderIssue({
+          organizationId: recipient.organization_id,
+          campaignId: recipient.campaign_id,
+          pauseReason: failure.confirmedBanned
+            ? "Campaign paused because the selected WhatsApp sender appears to be banned. Replace the sender to resume."
+            : "Campaign paused because the selected WhatsApp sender appears to be disconnected, logged out, or unavailable. Reconnect or replace the sender to resume."
+        });
+      }
 
       logger.error({ err: error, campaignId: recipient.campaign_id, campaignRecipientId: recipient.id }, "Campaign recipient dispatch failed");
     } finally {
@@ -640,10 +718,7 @@ export class CampaignDispatchService {
       [organizationId, campaignId]
     );
 
-    const eligible = result.rows.filter((sender) =>
-      ["connected", "open", "ready"].includes(sender.connection_status) &&
-      !["banned", "logged_out", "suspected_ban", "reconnect_suppressed"].includes(sender.connection_status)
-    );
+    const eligible = result.rows.filter((sender) => ["connected", "open", "ready"].includes(sender.connection_status));
 
     // Sort by health_score desc so round-robin starts from healthiest accounts
     eligible.sort((a, b) => (b.health_score ?? 50) - (a.health_score ?? 50));

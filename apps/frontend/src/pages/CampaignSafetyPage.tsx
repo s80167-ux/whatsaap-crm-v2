@@ -19,7 +19,7 @@ import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import type { DashboardOutletContext } from "../layouts/DashboardLayout";
 import { CampaignModuleTabs } from "../modules/campaigns/components/CampaignModuleTabs";
-import { fetchCampaignRecipients, fetchCampaigns } from "../modules/campaigns/services/campaignService";
+import { fetchCampaignRecipients, fetchCampaigns, retryFailedCampaign } from "../modules/campaigns/services/campaignService";
 import type { Campaign } from "../modules/campaigns/types/campaign.types";
 
 type Notice = { type: "success" | "error"; message: string };
@@ -153,6 +153,23 @@ export function CampaignSafetyPage() {
       void settingsQuery.refetch();
     },
     onError: (error) => setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to update settings." })
+  });
+
+  const retryFailedMutation = useMutation({
+    mutationFn: () =>
+      retryFailedCampaign({
+        campaignId: selectedCampaignId,
+        organizationId: selectedOrganizationId,
+        failureCodes: ["sender_banned", "sender_suspected_ban", "sender_logged_out", "sender_disconnected", "sender_unavailable", "suspected_sender_issue"]
+      }),
+    onSuccess: async (result) => {
+      setNotice({ type: "success", message: result.message });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaign-safety"] }),
+        failedRecipientsQuery.refetch()
+      ]);
+    },
+    onError: (error) => setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to retry sender-issue failures." })
   });
 
   function selectedCampaignMessage() {
@@ -321,6 +338,27 @@ export function CampaignSafetyPage() {
 
       {activeTab === "failed" ? (
         <section>
+          {selectedCampaign ? (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <p className="font-semibold">Recovery summary</p>
+              <p className="mt-1 leading-6">
+                {selectedCampaign.pauseReason || "Campaign paused because the sender appears to be unavailable. This may be caused by disconnection, logout, session issue, or possible ban."}
+              </p>
+              <p className="mt-2 text-xs leading-5">
+                Sent: {selectedCampaign.sent} | Pending: {selectedCampaign.pending ?? 0} | Queued: {selectedCampaign.queued ?? 0} | Failed due to sender issue: {selectedCampaign.failedSenderIssue ?? 0} | Other failed: {selectedCampaign.failedOther ?? Math.max(selectedCampaign.failed - (selectedCampaign.failedSenderIssue ?? 0), 0)}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={(selectedCampaign.failedSenderIssue ?? 0) === 0 || retryFailedMutation.isPending}
+                  onClick={() => retryFailedMutation.mutate()}
+                >
+                  Retry Failed Sender Issues
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="workspace-table-wrap overflow-x-auto">
             <table className="workspace-table min-w-[980px]">
               <thead><tr><th>Recipient</th><th>Phone</th><th>Status</th><th>Failure Code</th><th>Failure Reason</th><th>Attempts</th><th>Last Attempt</th></tr></thead>

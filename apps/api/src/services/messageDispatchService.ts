@@ -5,6 +5,11 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { CampaignSafetyService } from "./campaignSafetyService.js";
 import {
+  classifyCampaignSendFailure,
+  isSenderIssueFailureCode,
+  pauseCampaignForSenderIssue
+} from "./campaignRecoveryService.js";
+import {
   MessageDispatchOutboxRepository,
   type MessageDispatchOutboxRecord,
   type PendingOutboundDraftRecord
@@ -155,7 +160,7 @@ export class MessageDispatchService {
           payload: { error: errorMessage }
         });
 
-        await this.markCampaignRecipientFailed(client, job, errorMessage, false);
+        await this.markCampaignRecipientFailed(client, job, classifyCampaignSendFailure(errorMessage), false);
       });
     }
   }
@@ -322,7 +327,8 @@ export class MessageDispatchService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to dispatch message";
       const nextAttemptAt = new Date(Date.now() + Math.min(job.attempt_count, 5) * 15000);
-      const willRetry = job.attempt_count < env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES;
+      const failure = classifyCampaignSendFailure(error);
+      const willRetry = !failure.senderIssue && job.attempt_count < env.MESSAGE_OUTBOX_WORKER_MAX_RETRIES;
       const keepMessagePending = willRetry && isTransientConnectorSessionError(errorMessage);
 
       await withTransaction(async (client) => {
@@ -347,7 +353,7 @@ export class MessageDispatchService {
           payload: { error: errorMessage }
         });
 
-        await this.markCampaignRecipientFailed(client, job, errorMessage, willRetry);
+        await this.markCampaignRecipientFailed(client, job, failure, willRetry);
       });
 
       logger.error({ err: error, outboxId: job.id, messageId: job.message_id }, "Failed to dispatch outbound message");
@@ -781,7 +787,7 @@ export class MessageDispatchService {
   private async markCampaignRecipientFailed(
     client: PoolClient,
     job: MessageDispatchOutboxRecord,
-    errorMessage: string,
+    failure: { code: string; reason: string; senderIssue: boolean; confirmedBanned: boolean },
     willRetry: boolean
   ) {
     const context = this.extractCampaignContext(job.payload);
@@ -795,7 +801,7 @@ export class MessageDispatchService {
         `
           update campaign_recipients
           set error_message = $4,
-              failure_code = 'send_failed',
+              failure_code = $5,
               failure_reason = $4,
               last_attempt_at = timezone('utc', now())
           where organization_id = $1
@@ -803,7 +809,7 @@ export class MessageDispatchService {
             and id = $3
             and send_status = 'queued'
         `,
-        [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
+        [job.organization_id, context.campaignId, context.campaignRecipientId, failure.reason, failure.code]
       );
 
       return;
@@ -816,15 +822,26 @@ export class MessageDispatchService {
             failed_at = timezone('utc', now()),
             next_attempt_at = null,
             error_message = $4,
-            failure_code = 'send_failed',
+            failure_code = $5,
             failure_reason = $4,
             last_attempt_at = timezone('utc', now())
         where organization_id = $1
           and campaign_id = $2
           and id = $3
       `,
-      [job.organization_id, context.campaignId, context.campaignRecipientId, errorMessage]
+      [job.organization_id, context.campaignId, context.campaignRecipientId, failure.reason, failure.code]
     );
+
+    if (failure.senderIssue) {
+      await pauseCampaignForSenderIssue({
+        organizationId: job.organization_id,
+        campaignId: context.campaignId,
+        pauseReason: failure.confirmedBanned
+          ? "Campaign paused because the selected WhatsApp sender appears to be banned. Replace the sender to resume."
+          : "Campaign paused because the selected WhatsApp sender appears to be disconnected, logged out, or unavailable. Reconnect or replace the sender to resume.",
+        client
+      });
+    }
 
     await CampaignSafetyService.autoPauseCampaignIfNeeded(job.organization_id, context.campaignId);
     await this.refreshCampaignCompletion(client, job.organization_id, context.campaignId);
@@ -864,6 +881,9 @@ export class MessageDispatchService {
 
 function isTransientConnectorSessionError(errorMessage: string) {
   const normalized = errorMessage.toLowerCase();
+  if (isSenderIssueFailureCode(classifyCampaignSendFailure(errorMessage).code)) {
+    return false;
+  }
   return (
     normalized.includes("session is not connected") ||
     normalized.includes("did not reconnect before the send timeout") ||

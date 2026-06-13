@@ -7,6 +7,13 @@ import { ContactService } from "../../services/contactService.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { ConversationService } from "../../services/conversationService.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
+import {
+  assessCampaignSenderAvailability,
+  isSenderIssueFailureCode,
+  resetResumeSafeRecipients,
+  retryFailedCampaignRecipients,
+  snapshotCampaignRecipientsSafely
+} from "../../services/campaignRecoveryService.js";
 import { SendMessageService } from "../../services/sendMessageService.js";
 import { TemplateGovernanceService } from "../../services/templateGovernanceService.js";
 import { normalizePhoneNumber } from "../../utils/phone.js";
@@ -155,6 +162,11 @@ const campaignActionBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable()
 });
 
+const retryFailedCampaignBodySchema = z.object({
+  organizationId: z.string().uuid().optional().nullable(),
+  failureCodes: z.array(z.string().trim().min(1)).max(32).optional()
+});
+
 const audienceStorageActionBodySchema = z.object({
   organizationId: z.string().uuid().optional().nullable()
 });
@@ -236,6 +248,7 @@ type CampaignRecord = {
   daily_limit: number | null;
   stop_on_high_failure: boolean | null;
   attach_contact_card: boolean;
+  pause_reason: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -252,22 +265,11 @@ type CampaignSummaryRecord = CampaignRecord & {
   queued: string;
   sent: string;
   failed: string;
+  failed_sender_issue: string;
+  failed_other: string;
   skipped: string;
   replied: string;
-};
-
-type CampaignAudienceContactRecord = {
-  id: string;
-  crm_contact_id: string | null;
-  name: string | null;
-  phone_normalized: string;
-  gender: "male" | "female" | "unknown";
-  salutation: string | null;
-  tag: string | null;
-  location: string | null;
-  product_interest: string | null;
-  customer_type: string | null;
-  notes: string | null;
+  pause_reason: string | null;
 };
 
 type CampaignRecipientRecord = {
@@ -921,7 +923,7 @@ export async function startCampaign(request: Request, response: Response) {
     audienceGroupId: input.audienceGroupId
   });
 
-  if (snapshot.length === 0) {
+  if (!snapshot.hasHistory && snapshot.affectedCount === 0) {
     throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
   }
   const validationSummary = await campaignSafetyService.validateCampaignRecipients(auth, { organizationId, campaignId, audit: false });
@@ -948,9 +950,11 @@ export async function startCampaign(request: Request, response: Response) {
   return response.json({
     data: {
       ok: true,
-      message: `Campaign started. ${snapshot.length} recipient${snapshot.length === 1 ? "" : "s"} scheduled for paced dispatch.`,
+      message: snapshot.hasHistory
+        ? "Campaign started from existing history. Sent recipients were preserved, pending recipients will continue, and failed recipients remain failed until manually retried."
+        : `Campaign started. ${snapshot.affectedCount} recipient${snapshot.affectedCount === 1 ? "" : "s"} scheduled for paced dispatch.`,
       campaign: result,
-      scheduled: snapshot.length
+      scheduled: snapshot.affectedCount
     }
   });
 }
@@ -981,20 +985,103 @@ export async function resumeCampaign(request: Request, response: Response) {
   const { campaignId } = campaignParamsSchema.parse(request.params);
   const input = campaignActionBodySchema.parse(request.body);
   const organizationId = resolveOrganizationId(request, input.organizationId);
-  const campaign = await transitionCampaignStatus({
+  const existing = await findCampaign(organizationId, campaignId);
+
+  if (!existing) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  if (existing.status !== "paused") {
+    throw new AppError("Only paused campaigns can be resumed", 409, "campaign_not_resumable", {
+      status: existing.status
+    });
+  }
+
+  const senderAvailability = await assessCampaignSenderAvailability({
     organizationId,
     campaignId,
-    fromStatuses: ["paused"],
-    toStatus: "sending",
-    errorMessage: "Only paused campaigns can be resumed",
-    errorCode: "campaign_not_resumable"
+    connectorClient
   });
+
+  if (!senderAvailability.hasAvailableSender) {
+    throw new AppError(senderAvailability.pauseReason, 409, "sender_unavailable", {
+      senders: senderAvailability.senders,
+      pause_reason: senderAvailability.pauseReason
+    });
+  }
+
+  await withTransaction(async (client) => {
+    await resetResumeSafeRecipients({ organizationId, campaignId, client });
+    await client.query(
+      `
+        update campaigns
+        set status = 'sending',
+            pause_reason = $3,
+            updated_at = timezone('utc', now())
+        where organization_id = $1
+          and id = $2
+      `,
+      [organizationId, campaignId, "Resume will continue pending recipients only. Sent recipients will not be resent. Failed recipients will remain failed unless you choose Retry Failed."]
+    );
+  });
+
+  const campaign = await getCampaignSummary(organizationId, campaignId);
 
   return response.json({
     data: {
       ok: true,
-      message: "Campaign resumed.",
+      message: "Campaign resumed. Pending recipients only will continue. Sent recipients will not be resent, and failed recipients stay failed unless you retry them manually.",
       campaign
+    }
+  });
+}
+
+export async function retryFailedCampaign(request: Request, response: Response) {
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  const input = retryFailedCampaignBodySchema.parse(request.body);
+  const organizationId = resolveOrganizationId(request, input.organizationId);
+  const campaign = await findCampaign(organizationId, campaignId);
+
+  if (!campaign) {
+    throw new AppError("Campaign not found", 404, "campaign_not_found");
+  }
+
+  if (!["paused", "failed"].includes(campaign.status)) {
+    throw new AppError("Retry Failed is only available for paused or failed campaigns", 409, "campaign_retry_failed_unavailable", {
+      status: campaign.status
+    });
+  }
+
+  if ((input.failureCodes ?? []).some((code) => isSenderIssueFailureCode(code))) {
+    const senderAvailability = await assessCampaignSenderAvailability({
+      organizationId,
+      campaignId,
+      connectorClient
+    });
+
+    if (!senderAvailability.hasAvailableSender) {
+      throw new AppError(senderAvailability.pauseReason, 409, "sender_unavailable", {
+        senders: senderAvailability.senders,
+        pause_reason: senderAvailability.pauseReason
+      });
+    }
+  }
+
+  const retriedCount = await withTransaction(async (client) =>
+    retryFailedCampaignRecipients({
+      organizationId,
+      campaignId,
+      failureCodes: input.failureCodes,
+      client
+    })
+  );
+
+  return response.json({
+    data: {
+      ok: true,
+      message: `Retry Failed moved ${retriedCount} recipient${retriedCount === 1 ? "" : "s"} back to pending.`,
+      retriedCount,
+      campaign: await getCampaignSummary(organizationId, campaignId)
     }
   });
 }
@@ -1731,8 +1818,11 @@ async function listCampaignSummaries(organizationId: string) {
         count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
         count(cr.id) filter (where cr.send_status = 'sent')::text as sent,
         count(cr.id) filter (where cr.send_status = 'failed')::text as failed,
+        count(cr.id) filter (where cr.send_status = 'failed' and cr.failure_code in ('sender_banned', 'sender_suspected_ban', 'sender_logged_out', 'sender_disconnected', 'sender_unavailable', 'suspected_sender_issue'))::text as failed_sender_issue,
+        count(cr.id) filter (where cr.send_status = 'failed' and coalesce(cr.failure_code, '') not in ('sender_banned', 'sender_suspected_ban', 'sender_logged_out', 'sender_disconnected', 'sender_unavailable', 'suspected_sender_issue'))::text as failed_other,
         count(cr.id) filter (where cr.send_status = 'skipped')::text as skipped,
-        0::text as replied
+        0::text as replied,
+        c.pause_reason
       from campaigns c
       left join campaign_audience_groups ag on ag.id = c.audience_group_id
       left join whatsapp_accounts wa on wa.id = c.sender_whatsapp_account_id
@@ -1778,8 +1868,11 @@ async function getCampaignSummary(organizationId: string, campaignId: string) {
         count(cr.id) filter (where cr.send_status = 'queued')::text as queued,
         count(cr.id) filter (where cr.send_status = 'sent')::text as sent,
         count(cr.id) filter (where cr.send_status = 'failed')::text as failed,
+        count(cr.id) filter (where cr.send_status = 'failed' and cr.failure_code in ('sender_banned', 'sender_suspected_ban', 'sender_logged_out', 'sender_disconnected', 'sender_unavailable', 'suspected_sender_issue'))::text as failed_sender_issue,
+        count(cr.id) filter (where cr.send_status = 'failed' and coalesce(cr.failure_code, '') not in ('sender_banned', 'sender_suspected_ban', 'sender_logged_out', 'sender_disconnected', 'sender_unavailable', 'suspected_sender_issue'))::text as failed_other,
         count(cr.id) filter (where cr.send_status = 'skipped')::text as skipped,
-        0::text as replied
+        0::text as replied,
+        c.pause_reason
       from campaigns c
       left join campaign_audience_groups ag on ag.id = c.audience_group_id
       left join whatsapp_accounts wa on wa.id = c.sender_whatsapp_account_id
@@ -1858,8 +1951,11 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     queued: Number(row.queued),
     sent: Number(row.sent),
     failed: Number(row.failed),
+    failedSenderIssue: Number(row.failed_sender_issue),
+    failedOther: Number(row.failed_other),
     skipped: Number(row.skipped),
     replied: Number(row.replied),
+    pauseReason: row.pause_reason,
     createdAt: row.created_at
   };
 }
@@ -2285,68 +2381,7 @@ async function snapshotCampaignRecipients(input: {
   campaignId: string;
   audienceGroupId: string;
 }) {
-  const result = await query<CampaignAudienceContactRecord>(
-    `
-      with deleted as (
-        delete from campaign_recipients
-        where organization_id = $1
-          and campaign_id = $2
-      ),
-      inserted as (
-        insert into campaign_recipients (
-          organization_id,
-          campaign_id,
-          audience_group_contact_id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-        )
-        select
-          organization_id,
-          $2,
-          id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-        from campaign_audience_contacts
-        where organization_id = $1
-          and audience_group_id = $3
-          and validation_status = 'valid'
-          and is_duplicate = false
-          and is_opted_out = false
-        returning
-          audience_group_contact_id as id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-      )
-      select * from inserted
-    `,
-    [input.organizationId, input.campaignId, input.audienceGroupId]
-  );
-
-  return result.rows;
+  return snapshotCampaignRecipientsSafely(input);
 }
 
 async function saveExistingCampaignStartConfiguration(input: {

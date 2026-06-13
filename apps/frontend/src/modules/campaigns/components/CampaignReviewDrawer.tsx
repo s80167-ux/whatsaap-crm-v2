@@ -1,12 +1,13 @@
 import { Download, Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/Button";
 import { Input } from "../../../components/Input";
 import { PanelPagination } from "../../../components/PanelPagination";
 import { PopupOverlay } from "../../../components/PopupOverlay";
-import { downloadCampaignRecipients, fetchCampaignRecipients, fetchCampaignWarmupAdvisory } from "../services/campaignService";
+import { downloadCampaignRecipients, fetchCampaignRecipients, fetchCampaignWarmupAdvisory, resumeCampaign, retryFailedCampaign } from "../services/campaignService";
 import type { Campaign, CampaignRecipient, CampaignRecipientSendStatus, CampaignWarmupAdvisory } from "../types/campaign.types";
 import { formatCampaignTempoSummary } from "../utils/campaignTempo";
 
@@ -33,6 +34,8 @@ export function CampaignReviewDrawer({
   onClose: () => void;
   onNotice: (message: string, variant?: "success" | "error") => void;
 }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<CampaignRecipientSendStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -89,6 +92,45 @@ export function CampaignReviewDrawer({
     const completed = campaign ? campaign.sent + campaign.failed + (campaign.skipped ?? 0) : 0;
     return completed > 0 && campaign ? Math.round((campaign.sent / completed) * 100) : 0;
   }, [campaign]);
+  const senderStatusSummary = useMemo(() => {
+    if (warmupAdvisories.length === 0) {
+      return campaign?.pauseReason ?? "No sender status available.";
+    }
+
+    return warmupAdvisories
+      .map((advisory) => `${advisory.senderLabel || advisory.senderPhoneNumber || "Sender"}: ${advisory.connectionStatus}`)
+      .join(" | ");
+  }, [campaign?.pauseReason, warmupAdvisories]);
+
+  const resumeMutation = useMutation({
+    mutationFn: () => resumeCampaign({ campaignId: campaign?.id ?? "", organizationId }),
+    onSuccess: async (result) => {
+      onNotice(result.message, "success");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-recipients", campaign?.id] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-warmup-advisory", campaign?.id, organizationId] })
+      ]);
+    },
+    onError: (error) => onNotice(error instanceof Error ? error.message : "Unable to resume campaign.", "error")
+  });
+
+  const retryFailedMutation = useMutation({
+    mutationFn: () =>
+      retryFailedCampaign({
+        campaignId: campaign?.id ?? "",
+        organizationId,
+        failureCodes: ["sender_banned", "sender_suspected_ban", "sender_logged_out", "sender_disconnected", "sender_unavailable", "suspected_sender_issue"]
+      }),
+    onSuccess: async (result) => {
+      onNotice(result.message, "success");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-recipients", campaign?.id] })
+      ]);
+    },
+    onError: (error) => onNotice(error instanceof Error ? error.message : "Unable to retry failed recipients.", "error")
+  });
 
   async function handleDownload() {
     if (!campaign) {
@@ -128,9 +170,15 @@ export function CampaignReviewDrawer({
             <Metric label="Pending" value={campaign.pending ?? 0} />
             <Metric label="Queued" value={campaign.queued ?? 0} />
             <Metric label="Sent" value={campaign.sent} />
-            <Metric label="Failed" value={campaign.failed} tone="danger" />
+            <Metric label="Sender Issue Failed" value={campaign.failedSenderIssue ?? 0} tone="danger" />
+            <Metric label="Other Failed" value={campaign.failedOther ?? Math.max(campaign.failed - (campaign.failedSenderIssue ?? 0), 0)} tone="danger" />
             <Metric label="Skipped" value={campaign.skipped ?? 0} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Metric label="Success" value={`${successRate}%`} />
+            <Metric label="Current Sender Status" value={warmupAdvisories[0]?.connectionStatus ?? "unknown"} />
+            <Metric label="Campaign Status" value={campaign.status} />
           </div>
 
           <div className="rounded-2xl border border-border bg-muted px-4 py-4 text-sm text-text">
@@ -138,12 +186,45 @@ export function CampaignReviewDrawer({
             <p className="mt-2 leading-6 text-text-muted">{tempoSummary}</p>
           </div>
 
+          {campaign.status === "Paused" ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Recovery State</p>
+              <p className="mt-2 leading-6 text-amber-900">
+                {campaign.pauseReason || "Campaign paused because the sender appears to be unavailable. This may be caused by disconnection, logout, session issue, or possible ban."}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-amber-900">
+                Resume will continue pending recipients only. Sent recipients will not be resent. Failed recipients will remain failed unless you choose Retry Failed.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={() => navigate(`/campaigns/whatsapp/create?edit=${encodeURIComponent(campaign.id)}`)}>
+                  Replace Sender
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => resumeMutation.mutate()}
+                  disabled={resumeMutation.isPending}
+                >
+                  Resume Pending Only
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => retryFailedMutation.mutate()}
+                  disabled={retryFailedMutation.isPending || (campaign.failedSenderIssue ?? 0) === 0}
+                >
+                  Retry Failed Sender Issues
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           {warmupAdvisories.length > 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Sender Warm-up</p>
               <p className="mt-2 leading-6 text-amber-900">
                 Warm-up is advisory only. Sending continues, and this panel shows which sender is still ramping up.
               </p>
+              <p className="mt-2 text-xs leading-5 text-amber-900">{senderStatusSummary}</p>
               <div className="mt-4 grid gap-3 xl:grid-cols-2">
                 {warmupAdvisories.map((advisory) => (
                   <WarmupCard key={advisory.whatsappAccountId} advisory={advisory} />

@@ -5,6 +5,7 @@ import { query, withTransaction } from "../../config/database.js";
 import { AppError } from "../../lib/errors.js";
 import { ConnectorClient } from "../../services/connectorClient.js";
 import { CampaignSafetyService } from "../../services/campaignSafetyService.js";
+import { snapshotCampaignRecipientsSafely } from "../../services/campaignRecoveryService.js";
 import { assertCampaignTemplateVariablesAvailable } from "./campaignTemplateVariables.js";
 import { campaignSpeedPresetSchema, resolveCampaignTempo, type CampaignSpeedPreset, type CampaignTempo } from "./campaignTempo.js";
 
@@ -64,20 +65,6 @@ type AudienceGroupRecord = {
   status: string;
   valid_count: number;
   storage_status: string;
-};
-
-type CampaignAudienceContactRecord = {
-  id: string;
-  crm_contact_id: string | null;
-  name: string | null;
-  phone_normalized: string;
-  gender: "male" | "female" | "unknown";
-  salutation: string | null;
-  tag: string | null;
-  location: string | null;
-  product_interest: string | null;
-  customer_type: string | null;
-  notes: string | null;
 };
 
 function requireAuth(request: Request): AuthUser {
@@ -170,7 +157,7 @@ export async function startExistingCampaign(request: Request, response: Response
     audienceGroupId
   });
 
-  if (snapshot.length === 0) {
+  if (!snapshot.hasHistory && snapshot.affectedCount === 0) {
     throw new AppError("Audience Group has no valid recipients to send", 400, "campaign_no_valid_recipients");
   }
 
@@ -199,9 +186,11 @@ export async function startExistingCampaign(request: Request, response: Response
   return response.json({
     data: {
       ok: true,
-      message: `Campaign started. ${snapshot.length} recipient${snapshot.length === 1 ? "" : "s"} scheduled for paced dispatch.`,
+      message: snapshot.hasHistory
+        ? "Campaign started from existing history. Sent recipients were preserved, pending recipients will continue, and failed recipients remain failed until manually retried."
+        : `Campaign started. ${snapshot.affectedCount} recipient${snapshot.affectedCount === 1 ? "" : "s"} scheduled for paced dispatch.`,
       campaign: result,
-      scheduled: snapshot.length
+      scheduled: snapshot.affectedCount
     }
   });
 }
@@ -319,68 +308,7 @@ async function snapshotCampaignRecipients(input: {
   campaignId: string;
   audienceGroupId: string;
 }) {
-  const result = await query<CampaignAudienceContactRecord>(
-    `
-      with deleted as (
-        delete from campaign_recipients
-        where organization_id = $1
-          and campaign_id = $2
-      ),
-      inserted as (
-        insert into campaign_recipients (
-          organization_id,
-          campaign_id,
-          audience_group_contact_id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-        )
-        select
-          organization_id,
-          $2,
-          id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-        from campaign_audience_contacts
-        where organization_id = $1
-          and audience_group_id = $3
-          and validation_status = 'valid'
-          and is_duplicate = false
-          and is_opted_out = false
-        returning
-          audience_group_contact_id as id,
-          crm_contact_id,
-          name,
-          phone_normalized,
-          gender,
-          salutation,
-          tag,
-          location,
-          product_interest,
-          customer_type,
-          notes
-      )
-      select * from inserted
-    `,
-    [input.organizationId, input.campaignId, input.audienceGroupId]
-  );
-
-  return result.rows;
+  return snapshotCampaignRecipientsSafely(input);
 }
 
 async function saveCampaignStartConfiguration(input: {

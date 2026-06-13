@@ -22,6 +22,7 @@ import {
   pauseCampaign,
   previewSaveAudienceAsCrmContacts,
   resumeCampaign,
+  retryFailedCampaign,
   saveAudienceAsCrmContacts,
   sendCampaignTest,
   sendCampaignTestPreview,
@@ -60,4 +61,5 @@ campaignsRoutes.post(`/:campaignId/${testPath}`, asyncHandler(sendCampaignTest))
 campaignsRoutes.post("/:campaignId/start", asyncHandler(startExistingCampaign));
 campaignsRoutes.post("/:campaignId/pause", asyncHandler(pauseCampaign));
 campaignsRoutes.post("/:campaignId/resume", asyncHandler(resumeCampaign));
+campaignsRoutes.post("/:campaignId/retry-failed", asyncHandler(retryFailedCampaign));
 campaignsRoutes.post("/:campaignId/cancel", asyncHandler(cancelCampaign));

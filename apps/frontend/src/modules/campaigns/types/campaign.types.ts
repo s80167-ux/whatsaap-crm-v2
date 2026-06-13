@@ -43,8 +43,11 @@ export type Campaign = {
   queued?: number;
   sent: number;
   failed: number;
+  failedSenderIssue?: number;
+  failedOther?: number;
   skipped?: number;
   replied: number;
+  pauseReason?: string | null;
   createdAt: string;
 };
 
