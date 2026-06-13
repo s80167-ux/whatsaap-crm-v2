@@ -28,7 +28,7 @@ const startExistingCampaignBodySchema = z.object({
   senderMode: senderModeSchema.optional(),
   audienceGroupId: z.string().uuid().optional(),
   messageTemplate: z.string().trim().min(1).max(5000).optional(),
-  speedPreset: z.enum(["safe", "normal", "custom"]).optional()
+  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).optional()
 });
 
 type AuthUser = NonNullable<Request["auth"]>;
@@ -44,7 +44,7 @@ type CampaignRecord = {
   message_template: string | null;
   message_body_type: string;
   attachment: unknown | null;
-  speed_preset: "safe" | "normal" | "custom";
+  speed_preset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
   attach_contact_card: boolean;
 };
 
@@ -373,7 +373,7 @@ async function saveCampaignStartConfiguration(input: {
   primarySenderWhatsAppAccountId: string;
   senderWhatsAppAccountIds: string[];
   messageTemplate: string;
-  speedPreset: "safe" | "normal" | "custom";
+  speedPreset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
 }) {
   await withTransaction(async (client) => {
     await client.query(

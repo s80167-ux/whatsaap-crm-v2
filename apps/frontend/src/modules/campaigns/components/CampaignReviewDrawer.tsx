@@ -6,8 +6,8 @@ import { Button } from "../../../components/Button";
 import { Input } from "../../../components/Input";
 import { PanelPagination } from "../../../components/PanelPagination";
 import { PopupOverlay } from "../../../components/PopupOverlay";
-import { downloadCampaignRecipients, fetchCampaignRecipients } from "../services/campaignService";
-import type { Campaign, CampaignRecipient, CampaignRecipientSendStatus } from "../types/campaign.types";
+import { downloadCampaignRecipients, fetchCampaignRecipients, fetchCampaignWarmupAdvisory } from "../services/campaignService";
+import type { Campaign, CampaignRecipient, CampaignRecipientSendStatus, CampaignWarmupAdvisory } from "../types/campaign.types";
 
 const pageSize = 50;
 const statusOptions: Array<{ label: string; value: CampaignRecipientSendStatus | "all" }> = [
@@ -64,8 +64,20 @@ export function CampaignReviewDrawer({
     refetchInterval: open && campaign?.status === "Sending" ? 3000 : false,
     refetchIntervalInBackground: false
   });
+  const warmupQuery = useQuery({
+    queryKey: ["campaign-warmup-advisory", campaign?.id, organizationId],
+    queryFn: () =>
+      fetchCampaignWarmupAdvisory({
+        campaignId: campaign?.id ?? "",
+        organizationId
+      }),
+    enabled: open && Boolean(campaign?.id),
+    refetchInterval: open && campaign?.status === "Sending" ? 3000 : false,
+    refetchIntervalInBackground: false
+  });
 
   const recipients = recipientsQuery.data?.data ?? [];
+  const warmupAdvisories = warmupQuery.data ?? [];
   const total = recipientsQuery.data?.pagination.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const successRate = useMemo(() => {
@@ -116,8 +128,22 @@ export function CampaignReviewDrawer({
             <Metric label="Success" value={`${successRate}%`} />
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
+          {warmupAdvisories.length > 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Sender Warm-up</p>
+              <p className="mt-2 leading-6 text-amber-900">
+                Warm-up is advisory only. Sending continues, and this panel shows which sender is still ramping up.
+              </p>
+              <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                {warmupAdvisories.map((advisory) => (
+                  <WarmupCard key={advisory.whatsappAccountId} advisory={advisory} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => (
                 <button
                   key={option.value}
@@ -151,7 +177,7 @@ export function CampaignReviewDrawer({
             </div>
           </div>
 
-          <div className="space-y-3 sm:hidden">
+          <div className="space-y-3 xl:hidden">
             {recipientsQuery.isLoading ? (
               <div className="workspace-empty-state px-4 py-6 text-sm text-text-muted">Loading recipients...</div>
             ) : recipients.length > 0 ? (
@@ -161,7 +187,7 @@ export function CampaignReviewDrawer({
             )}
           </div>
 
-          <div className="workspace-table-wrap hidden sm:block">
+          <div className="workspace-table-wrap hidden xl:block">
             <table className="workspace-table workspace-table-compact">
               <thead>
                 <tr>
@@ -202,6 +228,42 @@ export function CampaignReviewDrawer({
         </div>
       ) : null}
     </PopupOverlay>
+  );
+}
+
+function WarmupCard({ advisory }: { advisory: CampaignWarmupAdvisory }) {
+  const label = advisory.senderLabel || advisory.senderPhoneNumber || "Sender";
+  const tone = advisory.isAboveSuggestedLimit
+    ? "border-amber-300 bg-white/80 text-amber-950"
+    : "border-emerald-200 bg-white/80 text-emerald-950";
+
+  return (
+    <div className={clsx("rounded-2xl border px-4 py-3", tone)}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{label}</p>
+          <p className="mt-1 text-xs text-current/75">
+            {advisory.senderPhoneNumber || "No phone shown"} · {advisory.connectionStatus}
+          </p>
+        </div>
+        <span className="inline-flex min-h-[1.75rem] items-center border border-current/15 px-2 text-xs font-semibold">
+          Warm-up L{advisory.warmupLevel}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <Detail label="Sent today" value={advisory.sentToday.toLocaleString()} />
+        <Detail label="Suggested cap" value={advisory.suggestedDailyLimit.toLocaleString()} />
+        <Detail label="Campaign cap" value={advisory.baseDailyLimit.toLocaleString()} />
+        <Detail label="Warm-up start" value={formatDateTime(advisory.warmupStartedAt)} />
+      </div>
+
+      <p className="mt-3 text-xs leading-5">
+        {advisory.isAboveSuggestedLimit
+          ? `Above suggested warm-up pace by ${advisory.exceededBy.toLocaleString()} messages today.`
+          : "Within the suggested warm-up pace today."}
+      </p>
+    </div>
   );
 }
 

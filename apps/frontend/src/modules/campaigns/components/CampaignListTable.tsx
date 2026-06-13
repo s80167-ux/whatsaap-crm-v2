@@ -6,6 +6,8 @@ import { CampaignStatusBadge } from "./CampaignStatusBadge";
 export function CampaignListTable({
   campaigns,
   onAction,
+  onEdit,
+  onDuplicate,
   onReview,
   onStart,
   onPause,
@@ -15,6 +17,8 @@ export function CampaignListTable({
 }: {
   campaigns: Campaign[];
   onAction: (message: string) => void;
+  onEdit?: (campaign: Campaign) => void;
+  onDuplicate?: (campaign: Campaign) => void;
   onReview?: (campaign: Campaign) => void;
   onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
@@ -33,12 +37,14 @@ export function CampaignListTable({
 
   return (
     <>
-      <div className="space-y-3 sm:hidden">
+      <div className="space-y-3 xl:hidden">
         {campaigns.map((campaign) => (
           <CampaignMobileCard
             key={campaign.id}
             campaign={campaign}
             onAction={onAction}
+            onEdit={onEdit}
+            onDuplicate={onDuplicate}
             onReview={onReview}
             onStart={onStart}
             onPause={onPause}
@@ -49,7 +55,7 @@ export function CampaignListTable({
         ))}
       </div>
 
-      <div className="workspace-table-wrap hidden sm:block">
+      <div className="workspace-table-wrap hidden xl:block">
         <table className="workspace-table workspace-table-compact">
           <thead>
             <tr>
@@ -79,6 +85,8 @@ export function CampaignListTable({
                   <CampaignActions
                     campaign={campaign}
                     onAction={onAction}
+                    onEdit={onEdit}
+                    onDuplicate={onDuplicate}
                     onReview={onReview}
                     onStart={onStart}
                     onPause={onPause}
@@ -99,6 +107,8 @@ export function CampaignListTable({
 function CampaignMobileCard({
   campaign,
   onAction,
+  onEdit,
+  onDuplicate,
   onReview,
   onStart,
   onPause,
@@ -108,6 +118,8 @@ function CampaignMobileCard({
 }: {
   campaign: Campaign;
   onAction: (message: string) => void;
+  onEdit?: (campaign: Campaign) => void;
+  onDuplicate?: (campaign: Campaign) => void;
   onReview?: (campaign: Campaign) => void;
   onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
@@ -153,6 +165,8 @@ function CampaignMobileCard({
       <CampaignActions
         campaign={campaign}
         onAction={onAction}
+        onEdit={onEdit}
+        onDuplicate={onDuplicate}
         onReview={onReview}
         onStart={onStart}
         onPause={onPause}
@@ -177,6 +191,8 @@ function Metric({ label, value, danger = false }: { label: string; value: number
 function CampaignActions({
   campaign,
   onAction,
+  onEdit,
+  onDuplicate,
   onReview,
   onStart,
   onPause,
@@ -187,6 +203,8 @@ function CampaignActions({
 }: {
   campaign: Campaign;
   onAction: (message: string) => void;
+  onEdit?: (campaign: Campaign) => void;
+  onDuplicate?: (campaign: Campaign) => void;
   onReview?: (campaign: Campaign) => void;
   onStart?: (campaign: Campaign) => void;
   onPause?: (campaign: Campaign) => void;
@@ -218,6 +236,16 @@ function CampaignActions({
       >
         Review
       </Button>
+      {onEdit ? (
+        <Button size="sm" variant="ghost" onClick={() => onEdit(campaign)}>
+          Edit
+        </Button>
+      ) : null}
+      {onDuplicate ? (
+        <Button size="sm" variant="ghost" onClick={() => onDuplicate(campaign)}>
+          Duplicate
+        </Button>
+      ) : null}
       {campaign.status === "Sending" && onPause ? (
         <Button size="sm" variant="secondary" onClick={() => onPause(campaign)}>
           Pause

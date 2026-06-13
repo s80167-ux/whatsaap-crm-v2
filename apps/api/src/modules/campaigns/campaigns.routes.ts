@@ -14,6 +14,7 @@ import {
   getAudienceGroupTemplateVariables,
   getAudienceGroupContacts,
   getCampaign,
+  getCampaignWarmupAdvisory,
   importAudienceGroupContacts,
   listCampaignRecipients,
   listAudienceGroups,
@@ -50,6 +51,7 @@ campaignsRoutes.post("/audience-groups/:audienceGroupId/archive", asyncHandler(a
 campaignsRoutes.post("/audience-groups/:audienceGroupId/delete-details", asyncHandler(deleteAudienceGroupDetails));
 campaignsRoutes.delete("/audience-groups/:audienceGroupId", asyncHandler(deleteAudienceGroup));
 campaignsRoutes.get("/:campaignId", asyncHandler(getCampaign));
+campaignsRoutes.get("/:campaignId/warmup-advisory", asyncHandler(getCampaignWarmupAdvisory));
 campaignsRoutes.get("/:campaignId/recipients", asyncHandler(listCampaignRecipients));
 campaignsRoutes.get("/:campaignId/recipients/export", asyncHandler(exportCampaignRecipients));
 campaignsRoutes.patch("/:campaignId", asyncHandler(updateCampaign));

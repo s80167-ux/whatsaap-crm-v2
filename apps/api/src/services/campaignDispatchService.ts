@@ -133,6 +133,21 @@ export class CampaignDispatchService {
       `,
       [staleBefore.toISOString()]
     );
+
+    await query(
+      `
+        update campaign_recipients cr
+        set next_attempt_at = null,
+            error_message = null
+        from campaigns c
+        where cr.organization_id = c.organization_id
+          and cr.campaign_id = c.id
+          and c.status = 'sending'
+          and cr.send_status = 'pending'
+          and cr.message_id is null
+          and cr.error_message = 'Sender account warm-up limit reached for today'
+      `
+    );
   }
 
   private async claimNextDueRecipient() {
@@ -320,26 +335,6 @@ export class CampaignDispatchService {
 
       const senderAssignment = await this.resolveSenderAssignment(recipient);
 
-      // Warm-up check
-      const warmupOk = await this.checkSenderWarmup(recipient.organization_id, senderAssignment.whatsappAccountId, recipient.daily_limit);
-      if (!warmupOk) {
-        await query(
-          `
-            update campaign_recipients
-            set send_status = 'pending',
-                queued_at = null,
-                next_attempt_at = date_trunc('day', timezone('utc', now())) + interval '1 day',
-                error_message = 'Sender account warm-up limit reached for today'
-            where organization_id = $1
-              and campaign_id = $2
-              and id = $3
-              and message_id is null
-          `,
-          [recipient.organization_id, recipient.campaign_id, recipient.id]
-        );
-        return;
-      }
-
       const message = await this.sendCampaignRecipientMessage({
         organizationId: recipient.organization_id,
         campaignId: recipient.campaign_id,
@@ -441,36 +436,6 @@ export class CampaignDispatchService {
     );
 
     return result.rows[0]?.status ?? null;
-  }
-
-  private async checkSenderWarmup(organizationId: string, whatsappAccountId: string, baseDailyLimit: number): Promise<boolean> {
-    const account = await query<{ warmup_started_at: string | null; created_at: string }>(
-      `
-        select warmup_started_at, created_at
-        from whatsapp_accounts
-        where organization_id = $1
-          and id = $2
-        limit 1
-      `,
-      [organizationId, whatsappAccountId]
-    );
-    const row = account.rows[0];
-    if (!row) return false;
-
-    const warmupLimit = getWarmupDailyLimit(row.warmup_started_at ?? row.created_at, baseDailyLimit);
-
-    const sentToday = await query<{ count: string }>(
-      `
-        select count(*)::text as count
-        from campaign_recipients
-        where organization_id = $1
-          and assigned_whatsapp_account_id = $2
-          and sent_at >= date_trunc('day', timezone('utc', now()))
-      `,
-      [organizationId, whatsappAccountId]
-    );
-    const sentTodayCount = Number(sentToday.rows[0]?.count ?? 0);
-    return sentTodayCount < warmupLimit;
   }
 
   private async touchWarmupStarted(organizationId: string, whatsappAccountId: string) {
@@ -873,17 +838,6 @@ export function renderSpintax(text: string): string {
 
 function randomInRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
-}
-
-function getWarmupDailyLimit(warmupStartedAt: string | null | Date, baseLimit: number): number {
-  if (!warmupStartedAt) return 20;
-  const days = Math.floor((Date.now() - new Date(warmupStartedAt).getTime()) / (1000 * 60 * 60 * 24));
-  if (days < 2) return 20;
-  if (days < 4) return 50;
-  if (days < 7) return 100;
-  if (days < 10) return 200;
-  if (days < 14) return 300;
-  return baseLimit;
 }
 
 export async function closeCampaignDispatchPool() {

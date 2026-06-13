@@ -1,5 +1,5 @@
-import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AiMessageAssist } from "../../../components/ai/AiMessageAssist";
@@ -14,15 +14,34 @@ import { useAudienceTemplateVariables } from "../hooks/useAudienceTemplateVariab
 import { CampaignModuleTabs } from "../components/CampaignModuleTabs";
 import { CampaignPreviewCard } from "../components/CampaignPreviewCard";
 import { DynamicVariablePanel } from "../components/DynamicVariablePanel";
-import { createCampaign, formatCampaignStartError, sendCampaignTest, startCampaign } from "../services/campaignService";
+import { createCampaign, fetchCampaigns, formatCampaignStartError, sendCampaignTest, startCampaign, updateCampaign } from "../services/campaignService";
 import { useMessageTemplates } from "../templates/hooks/useMessageTemplates";
-import type { CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
+import type { Campaign, CampaignAttachment, CampaignSpeedPreset, CampaignTempo } from "../types/campaign.types";
 import { renderCampaignTemplate } from "../utils/campaignTemplate";
 import { findInvalidTemplateVariables, formatVariableToken, insertVariableIntoTemplate } from "../utils/templateVariables";
 
 const defaultTemplate = "Salam {{salutation}} {{name}}, kami ada promosi khas untuk anda.";
 
+const tempoPresetLabels: Record<CampaignSpeedPreset, string> = {
+  very_safe: "Very Safe",
+  safe: "Safe",
+  balanced: "Balanced",
+  normal: "Normal",
+  fast: "Fast",
+  custom: "Custom"
+};
+
+const selectableTempoPresets: CampaignSpeedPreset[] = ["very_safe", "safe", "balanced", "normal", "fast", "custom"];
+
 const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
+  very_safe: {
+    speedPreset: "very_safe",
+    delayPerMessageSeconds: 15,
+    batchSize: 15,
+    batchPauseSeconds: 180,
+    dailyLimit: 150,
+    stopOnHighFailure: true
+  },
   safe: {
     speedPreset: "safe",
     delayPerMessageSeconds: 12,
@@ -31,12 +50,28 @@ const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
     dailyLimit: 300,
     stopOnHighFailure: true
   },
+  balanced: {
+    speedPreset: "balanced",
+    delayPerMessageSeconds: 9,
+    batchSize: 25,
+    batchPauseSeconds: 90,
+    dailyLimit: 400,
+    stopOnHighFailure: true
+  },
   normal: {
     speedPreset: "normal",
     delayPerMessageSeconds: 7,
     batchSize: 30,
     batchPauseSeconds: 60,
     dailyLimit: 500,
+    stopOnHighFailure: true
+  },
+  fast: {
+    speedPreset: "fast",
+    delayPerMessageSeconds: 5,
+    batchSize: 40,
+    batchPauseSeconds: 45,
+    dailyLimit: 700,
     stopOnHighFailure: true
   },
   custom: {
@@ -55,8 +90,13 @@ export function CreateCampaignPage() {
   const { t } = useTranslation();
   const outletContext = useOutletContext<DashboardOutletContext>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const organizationId = outletContext.isSuperAdmin ? outletContext.selectedOrganizationId || null : null;
   const shouldFetchOrganizationData = !outletContext.isSuperAdmin || Boolean(organizationId);
+  const editCampaignId = searchParams.get("edit")?.trim() ?? "";
+  const duplicateCampaignId = searchParams.get("duplicate")?.trim() ?? "";
+  const sourceCampaignId = editCampaignId || duplicateCampaignId;
+  const isEditMode = Boolean(editCampaignId);
   const [campaignName, setCampaignName] = useState("");
   const [selectedSenderWhatsAppAccountIds, setSelectedSenderWhatsAppAccountIds] = useState<string[]>([]);
   const [primarySenderWhatsAppAccountId, setPrimarySenderWhatsAppAccountId] = useState("");
@@ -73,9 +113,16 @@ export function CreateCampaignPage() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
   const [identityHintDismissed, setIdentityHintDismissed] = useState(false);
+  const [initializedSourceKey, setInitializedSourceKey] = useState("");
+  const [missingSourceKey, setMissingSourceKey] = useState("");
   const messageTemplateRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingCursorPositionRef = useRef<number | null>(null);
 
+  const { data: existingCampaigns = [] } = useQuery({
+    queryKey: ["campaigns", organizationId],
+    queryFn: () => fetchCampaigns(organizationId),
+    enabled: shouldFetchOrganizationData && Boolean(sourceCampaignId)
+  });
   const { data: whatsappAccounts = [] } = useWhatsAppAccounts(organizationId, shouldFetchOrganizationData);
   const { data: audienceGroups = [] } = useQuery({
     queryKey: ["audience-groups", organizationId],
@@ -99,6 +146,10 @@ export function CreateCampaignPage() {
   const disconnectedAccounts = useMemo(
     () => whatsappAccounts.filter((account) => !isSenderConnected(account)),
     [whatsappAccounts]
+  );
+  const sourceCampaign = useMemo(
+    () => existingCampaigns.find((campaign) => campaign.id === sourceCampaignId) ?? null,
+    [existingCampaigns, sourceCampaignId]
   );
 
   const readyAudienceGroups = useMemo(
@@ -166,6 +217,50 @@ export function CreateCampaignPage() {
     messageTemplateRef.current.focus();
     messageTemplateRef.current.setSelectionRange(nextCursorPosition, nextCursorPosition);
   }, [messageTemplate]);
+
+  useEffect(() => {
+    if (!sourceCampaignId || !sourceCampaign) {
+      return;
+    }
+
+    const sourceKey = `${isEditMode ? "edit" : "duplicate"}:${sourceCampaign.id}`;
+    if (initializedSourceKey === sourceKey) {
+      return;
+    }
+
+    setCampaignName(isEditMode ? sourceCampaign.name : `${sourceCampaign.name} Copy`);
+    setSelectedSenderWhatsAppAccountIds(sourceCampaign.senderWhatsAppAccountIds ?? (sourceCampaign.senderWhatsAppAccountId ? [sourceCampaign.senderWhatsAppAccountId] : []));
+    setPrimarySenderWhatsAppAccountId(
+      sourceCampaign.senderWhatsAppAccountId
+      ?? sourceCampaign.senderWhatsAppAccountIds?.[0]
+      ?? ""
+    );
+    setAudienceGroupId(sourceCampaign.audienceGroupId ?? "");
+    setSelectedMessageTemplateId("");
+    setMessageTemplate(sourceCampaign.messageTemplate?.trim() ? sourceCampaign.messageTemplate : defaultTemplate);
+    setTempo(getCampaignTempo(sourceCampaign));
+    setAttachment(sourceCampaign.attachment ?? null);
+    setAttachContactCard(Boolean(sourceCampaign.attachContactCard));
+    setIdentityHintDismissed(false);
+    setTestSendNotice(null);
+    setNotice(null);
+    setInitializedSourceKey(sourceKey);
+    setMissingSourceKey("");
+  }, [initializedSourceKey, isEditMode, sourceCampaign, sourceCampaignId]);
+
+  useEffect(() => {
+    if (!sourceCampaignId || sourceCampaign || existingCampaigns.length === 0) {
+      return;
+    }
+
+    const sourceKey = `${isEditMode ? "edit" : "duplicate"}:${sourceCampaignId}`;
+    if (missingSourceKey === sourceKey) {
+      return;
+    }
+
+    showError("Unable to load the selected campaign.");
+    setMissingSourceKey(sourceKey);
+  }, [existingCampaigns.length, isEditMode, missingSourceKey, sourceCampaign, sourceCampaignId]);
 
   function showNotice(message: string, variant: "success" | "error" = "success") {
     setNotice({ message, variant });
@@ -344,6 +439,22 @@ export function CreateCampaignPage() {
     reader.readAsDataURL(file);
   }
 
+  async function saveCampaignDraft() {
+    return saveCampaignDraftFromInput({
+      attachContactCard,
+      attachment,
+      audienceGroupId,
+      campaignId: editCampaignId || undefined,
+      campaignName,
+      isEditMode,
+      messageTemplate,
+      organizationId,
+      primarySenderWhatsAppAccountId,
+      selectedSenderWhatsAppAccountIds,
+      tempo
+    });
+  }
+
   async function handleSaveDraft() {
     if (!validateCampaignName() || !validateSender() || !validateAudience() || !validateTemplate()) {
       return;
@@ -352,22 +463,16 @@ export function CreateCampaignPage() {
     setIsSavingDraft(true);
 
     try {
-      const campaign = await createCampaign({
-        organizationId,
-        name: campaignName.trim(),
-        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
-        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
-        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
-        audienceGroupId,
-        messageTemplate,
-        tempo,
-        attachment,
-        attachContactCard
-      });
-      showNotice(`Campaign draft "${campaign.name}" saved.`, "success");
+      const campaign = await saveCampaignDraft();
+      showNotice(
+        isEditMode
+          ? `Campaign "${campaign.name}" updated.`
+          : `Campaign draft "${campaign.name}" saved.`,
+        "success"
+      );
       navigate("/campaigns/whatsapp/history");
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to save campaign draft.");
+      showError(error instanceof Error ? error.message : isEditMode ? "Unable to update campaign." : "Unable to save campaign draft.");
     } finally {
       setIsSavingDraft(false);
     }
@@ -411,21 +516,15 @@ export function CreateCampaignPage() {
     setIsStartingCampaign(true);
 
     try {
-      const campaign = await createCampaign({
-        organizationId,
-        name: campaignName.trim(),
-        senderWhatsAppAccountId: primarySenderWhatsAppAccountId,
-        senderWhatsAppAccountIds: selectedSenderWhatsAppAccountIds,
-        senderMode: selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" : "single",
-        audienceGroupId,
-        messageTemplate,
-        tempo,
-        attachment,
-        attachContactCard
-      });
+      const campaign = await saveCampaignDraft();
 
       if (action === "Schedule Later") {
-        showNotice(`Campaign "${campaign.name}" saved for scheduling.`, "success");
+        showNotice(
+          isEditMode
+            ? `Campaign "${campaign.name}" updated.`
+            : `Campaign "${campaign.name}" saved for scheduling.`,
+          "success"
+        );
         navigate("/campaigns/whatsapp/history");
         return;
       }
@@ -455,6 +554,14 @@ export function CreateCampaignPage() {
   const hasInvalidTemplateVariables = invalidTemplateVariables.length > 0;
   const sendTestDisabled = actionDisabled || isSendingTest || hasInvalidTemplateVariables;
   const startDisabled = actionDisabled || !selectedAudienceGroup || isSavingDraft || isStartingCampaign || hasInvalidTemplateVariables;
+  const pageTitle = isEditMode ? "Edit Campaign" : duplicateCampaignId ? "Duplicate Campaign" : "Campaign Setup";
+  const pageCopy = isEditMode
+    ? "Update sender, audience, message template and sending tempo for this campaign."
+    : duplicateCampaignId
+      ? "Review the copied campaign details, then save it as a new campaign."
+      : "Set sender, audience, message template and sending tempo before launching the campaign.";
+  const saveDraftLabel = isEditMode ? "Update Campaign" : t("campaign.saveDraft");
+  const scheduleLabel = isEditMode ? "Update and Close" : t("campaign.scheduleLater");
 
   return (
     <section className="space-y-5">
@@ -462,9 +569,9 @@ export function CreateCampaignPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{t("nav.campaigns")}</p>
-            <h2 className="mt-3 section-title">Campaign Setup</h2>
+            <h2 className="mt-3 section-title">{pageTitle}</h2>
             <p className="mt-2 max-w-2xl section-copy">
-              Set sender, audience, message template and sending tempo before launching the campaign.
+              {pageCopy}
             </p>
           </div>
           <Button variant="secondary" onClick={() => navigate("/campaigns/whatsapp")}>
@@ -726,24 +833,29 @@ export function CreateCampaignPage() {
                   Use a slower tempo for new or recently reconnected WhatsApp numbers to reduce delivery risk.
                 </p>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                {(["safe", "normal", "custom"] as CampaignSpeedPreset[]).map((preset) => (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {selectableTempoPresets.map((preset) => (
                   <Button
                     key={preset}
                     variant={tempo.speedPreset === preset ? "primary" : "secondary"}
                     onClick={() => handleTempoPresetChange(preset)}
                   >
-                    {preset[0].toUpperCase() + preset.slice(1)}
+                    {tempoPresetLabels[preset]}
                   </Button>
                 ))}
               </div>
               {tempo.speedPreset === "custom" ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <TempoInput label="Delay per message seconds" value={tempo.delayPerMessageSeconds} onChange={(value) => handleTempoNumberChange("delayPerMessageSeconds", value)} />
-                  <TempoInput label="Batch size" value={tempo.batchSize} onChange={(value) => handleTempoNumberChange("batchSize", value)} />
-                  <TempoInput label="Batch pause seconds" value={tempo.batchPauseSeconds} onChange={(value) => handleTempoNumberChange("batchPauseSeconds", value)} />
-                  <TempoInput label="Daily limit" value={tempo.dailyLimit} onChange={(value) => handleTempoNumberChange("dailyLimit", value)} />
-                </div>
+                <>
+                  <p className="mt-4 text-xs leading-5 text-text-muted">
+                    Set your own delay, batch size, pause, and daily limit when you need tighter control than the presets.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <TempoInput label="Delay per message seconds" value={tempo.delayPerMessageSeconds} onChange={(value) => handleTempoNumberChange("delayPerMessageSeconds", value)} />
+                    <TempoInput label="Batch size" value={tempo.batchSize} onChange={(value) => handleTempoNumberChange("batchSize", value)} />
+                    <TempoInput label="Batch pause seconds" value={tempo.batchPauseSeconds} onChange={(value) => handleTempoNumberChange("batchPauseSeconds", value)} />
+                    <TempoInput label="Daily limit" value={tempo.dailyLimit} onChange={(value) => handleTempoNumberChange("dailyLimit", value)} />
+                  </div>
+                </>
               ) : null}
               <label className="mt-4 flex items-center gap-2 text-sm text-text-muted">
                 <input
@@ -801,13 +913,13 @@ export function CreateCampaignPage() {
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <Button variant="secondary" disabled={startDisabled} onClick={() => void handleSaveDraft()}>
-                  {isSavingDraft ? t("common.loading") : t("campaign.saveDraft")}
+                  {isSavingDraft ? t("common.loading") : saveDraftLabel}
                 </Button>
                 <Button variant="secondary" disabled={sendTestDisabled} onClick={() => void handleSendTest()}>
                   {isSendingTest ? t("common.loading") : t("campaign.sendTest")}
                 </Button>
                 <Button variant="secondary" disabled={startDisabled} onClick={() => void handleStartCampaign("Schedule Later")}>
-                  {t("campaign.scheduleLater")}
+                  {scheduleLabel}
                 </Button>
                 <Button disabled={startDisabled} onClick={() => void handleStartCampaign("Start Campaign")}>
                   {isStartingCampaign ? t("common.loading") : t("campaign.startCampaign")}
@@ -821,6 +933,56 @@ export function CreateCampaignPage() {
       <Toast message={notice?.message ?? null} variant={notice?.variant ?? "success"} onClose={() => setNotice(null)} />
     </section>
   );
+}
+
+async function saveCampaignDraftFromInput(input: {
+  attachContactCard: boolean;
+  attachment: CampaignAttachment | null;
+  audienceGroupId: string;
+  campaignId?: string;
+  campaignName: string;
+  isEditMode: boolean;
+  messageTemplate: string;
+  organizationId?: string | null;
+  primarySenderWhatsAppAccountId: string;
+  selectedSenderWhatsAppAccountIds: string[];
+  tempo: CampaignTempo;
+}) {
+  const payload = {
+    organizationId: input.organizationId,
+    name: input.campaignName.trim(),
+    senderWhatsAppAccountId: input.primarySenderWhatsAppAccountId,
+    senderWhatsAppAccountIds: input.selectedSenderWhatsAppAccountIds,
+    senderMode: input.selectedSenderWhatsAppAccountIds.length > 1 ? "round_robin" as const : "single" as const,
+    audienceGroupId: input.audienceGroupId,
+    messageTemplate: input.messageTemplate,
+    tempo: input.tempo,
+    attachment: input.attachment,
+    attachContactCard: input.attachContactCard
+  };
+
+  if (input.isEditMode && input.campaignId) {
+    return updateCampaign({
+      campaignId: input.campaignId,
+      ...payload
+    });
+  }
+
+  return createCampaign(payload);
+}
+
+function getCampaignTempo(campaign: Campaign): CampaignTempo {
+  const speedPreset = campaign.speedPreset ?? "safe";
+  const preset = tempoPresets[speedPreset];
+
+  return {
+    speedPreset,
+    delayPerMessageSeconds: campaign.delayPerMessageSeconds ?? preset.delayPerMessageSeconds,
+    batchSize: campaign.batchSize ?? preset.batchSize,
+    batchPauseSeconds: campaign.batchPauseSeconds ?? preset.batchPauseSeconds,
+    dailyLimit: campaign.dailyLimit ?? preset.dailyLimit,
+    stopOnHighFailure: campaign.stopOnHighFailure ?? preset.stopOnHighFailure
+  };
 }
 
 function TempoInput({ label, value, onChange }: { label: string; value: number; onChange: (value: string) => void }) {
@@ -860,7 +1022,7 @@ function formatSenderStatus(account: { status: string; live_status_error?: strin
 }
 
 function formatTempoLabel(tempo: CampaignTempo) {
-  const preset = `${tempo.speedPreset[0].toUpperCase()}${tempo.speedPreset.slice(1)} mode`;
+  const preset = `${tempoPresetLabels[tempo.speedPreset]} mode`;
   const pauseMinutes = tempo.batchPauseSeconds >= 60 ? `${Math.round(tempo.batchPauseSeconds / 60)} min pause` : `${tempo.batchPauseSeconds}s pause`;
   return `${preset}, ${tempo.delayPerMessageSeconds}s/message, ${tempo.batchSize} per batch, ${pauseMinutes}`;
 }

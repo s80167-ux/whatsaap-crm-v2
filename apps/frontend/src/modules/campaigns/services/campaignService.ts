@@ -7,7 +7,8 @@ import type {
   CampaignRecipientSendStatus,
   CampaignSpeedPreset,
   CampaignStats,
-  CampaignTempo
+  CampaignTempo,
+  CampaignWarmupAdvisory
 } from "../types/campaign.types";
 
 export const mockCampaigns: Campaign[] = [
@@ -142,6 +143,24 @@ export async function fetchCampaignRecipients(input: {
   }>(`/campaigns/${input.campaignId}/recipients?${params.toString()}`);
 
   return response;
+}
+
+export async function fetchCampaignWarmupAdvisory(input: {
+  campaignId: string;
+  organizationId?: string | null;
+}) {
+  const params = new URLSearchParams();
+
+  if (input.organizationId) {
+    params.set("organization_id", input.organizationId);
+  }
+
+  const suffix = params.toString();
+  const response = await apiGet<{ data: CampaignWarmupAdvisory[] }>(
+    `/campaigns/${input.campaignId}/warmup-advisory${suffix ? `?${suffix}` : ""}`
+  );
+
+  return response.data;
 }
 
 export async function downloadCampaignRecipients(input: {

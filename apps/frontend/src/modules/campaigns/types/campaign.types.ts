@@ -1,6 +1,6 @@
 export type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Paused" | "Completed" | "Failed" | "Cancelled";
 
-export type CampaignSpeedPreset = "safe" | "normal" | "custom";
+export type CampaignSpeedPreset = "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
 
 export type CampaignContact = {
   name: string;
@@ -100,4 +100,18 @@ export type CampaignRecipient = {
   lastAttemptAt?: string | null;
   safetyExclusionReason?: string | null;
   createdAt: string;
+};
+
+export type CampaignWarmupAdvisory = {
+  whatsappAccountId: string;
+  senderLabel?: string | null;
+  senderPhoneNumber?: string | null;
+  connectionStatus: string;
+  warmupStartedAt?: string | null;
+  warmupLevel: number;
+  sentToday: number;
+  baseDailyLimit: number;
+  suggestedDailyLimit: number;
+  exceededBy: number;
+  isAboveSuggestedLimit: boolean;
 };

@@ -70,7 +70,7 @@ const importAudienceContactsBodySchema = z.object({
 });
 
 const tempoSchema = z.object({
-  speedPreset: z.enum(["safe", "normal", "custom"]).default("safe"),
+  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).default("safe"),
   delayPerMessageSeconds: z.number().int().positive().default(12),
   batchSize: z.number().int().positive().default(20),
   batchPauseSeconds: z.number().int().positive().default(120),
@@ -146,7 +146,7 @@ const startCampaignBodySchema = z.object({
   audienceGroupId: z.string().uuid(),
   messageTemplate: z.string().trim().min(1).optional().nullable(),
   templateGovernanceVersionId: z.string().uuid().optional().nullable(),
-  speedPreset: z.enum(["safe", "normal", "custom"]).default("safe"),
+  speedPreset: z.enum(["very_safe", "safe", "balanced", "normal", "fast", "custom"]).default("safe"),
   attachment: attachmentSchema.optional().nullable(),
   attachContactCard: z.boolean().optional().default(false)
 }).refine((input) => Boolean(input.messageTemplate?.trim()) || Boolean(input.attachment), {
@@ -308,6 +308,17 @@ type CampaignRecipientRecord = {
   total_count: string;
 };
 
+type CampaignWarmupAdvisoryRecord = {
+  whatsapp_account_id: string;
+  sender_label: string | null;
+  sender_phone_number: string | null;
+  connection_status: string | null;
+  warmup_started_at: string | null;
+  warmup_level: number | null;
+  campaign_daily_limit: number;
+  sent_today: string;
+};
+
 function requireAuth(request: Request) {
   if (!request.auth) {
     throw new AppError("Authentication required", 401, "auth_required");
@@ -454,6 +465,14 @@ export async function getCampaign(request: Request, response: Response) {
   }
 
   return response.json({ data: campaign });
+}
+
+export async function getCampaignWarmupAdvisory(request: Request, response: Response) {
+  const organizationId = resolveOrganizationId(request);
+  const { campaignId } = campaignParamsSchema.parse(request.params);
+  await assertCampaignExists(organizationId, campaignId);
+  const data = await listCampaignWarmupAdvisory(organizationId, campaignId);
+  return response.json({ data });
 }
 
 export async function listCampaignRecipients(request: Request, response: Response) {
@@ -656,6 +675,7 @@ export async function updateCampaign(request: Request, response: Response) {
   }
 
   const nextTempo = input.tempo;
+  const shouldClearAttachment = Object.prototype.hasOwnProperty.call(input, "attachment") && input.attachment === null;
   const nextBodyType = input.attachment?.kind ?? (input.attachment === null ? 'text' : undefined);
   const result = await withTransaction(async (client) => {
     const updated = await client.query<CampaignRecord>(
@@ -667,7 +687,11 @@ export async function updateCampaign(request: Request, response: Response) {
             sender_whatsapp_account_id = coalesce($6, sender_whatsapp_account_id),
             message_template = coalesce($7, message_template),
             message_body_type = coalesce($8, message_body_type),
-            attachment = coalesce($9, attachment),
+            attachment = case
+              when $17 then null
+              when $9 is not null then $9
+              else attachment
+            end,
             speed_preset = coalesce($10, speed_preset),
             delay_per_message_seconds = coalesce($11, delay_per_message_seconds),
             batch_size = coalesce($12, batch_size),
@@ -696,7 +720,8 @@ export async function updateCampaign(request: Request, response: Response) {
         nextTempo?.batchPauseSeconds ?? null,
         nextTempo?.dailyLimit ?? null,
         nextTempo?.stopOnHighFailure ?? null,
-        input.attachContactCard ?? null
+        input.attachContactCard ?? null,
+        shouldClearAttachment
       ]
     );
 
@@ -1805,6 +1830,9 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     senderWhatsAppAccountIds: row.sender_whatsapp_account_ids ?? (row.sender_whatsapp_account_id ? [row.sender_whatsapp_account_id] : []),
     senderWhatsAppLabel: row.sender_whatsapp_label,
     senderPhoneNumber: row.sender_phone_number,
+    messageTemplate: row.message_template,
+    attachment: parseCampaignAttachment(row.attachment),
+    attachContactCard: row.attach_contact_card,
     speedPreset: row.speed_preset,
     delayPerMessageSeconds: row.delay_per_message_seconds,
     batchSize: row.batch_size,
@@ -1821,6 +1849,105 @@ function toCampaignSummary(row: CampaignSummaryRecord) {
     replied: Number(row.replied),
     createdAt: row.created_at
   };
+}
+
+async function listCampaignWarmupAdvisory(organizationId: string, campaignId: string) {
+  const result = await query<CampaignWarmupAdvisoryRecord>(
+    `
+      with selected_campaign as (
+        select
+          c.id,
+          c.organization_id,
+          c.daily_limit,
+          c.sender_whatsapp_account_id
+        from campaigns c
+        where c.organization_id = $1
+          and c.id = $2
+      ),
+      pooled_senders as (
+        select csa.whatsapp_account_id
+        from campaign_sender_accounts csa
+        join selected_campaign sc
+          on sc.organization_id = csa.organization_id
+         and sc.id = csa.campaign_id
+        where csa.is_enabled = true
+      ),
+      selected_senders as (
+        select whatsapp_account_id from pooled_senders
+        union
+        select sc.sender_whatsapp_account_id
+        from selected_campaign sc
+        where sc.sender_whatsapp_account_id is not null
+          and not exists (select 1 from pooled_senders)
+      )
+      select
+        wa.id as whatsapp_account_id,
+        coalesce(to_jsonb(wa)->>'label', to_jsonb(wa)->>'name', to_jsonb(wa)->>'display_name') as sender_label,
+        coalesce(
+          to_jsonb(wa)->>'account_phone_e164',
+          to_jsonb(wa)->>'phone_number',
+          to_jsonb(wa)->>'account_phone_normalized',
+          to_jsonb(wa)->>'phone_number_normalized'
+        ) as sender_phone_number,
+        lower(coalesce(wa.connection_status, 'unknown')) as connection_status,
+        wa.warmup_started_at,
+        wa.warmup_level,
+        sc.daily_limit as campaign_daily_limit,
+        count(cr.id)::text as sent_today
+      from selected_campaign sc
+      join selected_senders ss on true
+      join whatsapp_accounts wa
+        on wa.organization_id = sc.organization_id
+       and wa.id = ss.whatsapp_account_id
+      left join campaign_recipients cr
+        on cr.organization_id = sc.organization_id
+       and cr.assigned_whatsapp_account_id = wa.id
+       and cr.sent_at >= date_trunc('day', timezone('utc', now()))
+      group by wa.id, sc.daily_limit
+      order by sender_label asc nulls last, sender_phone_number asc nulls last, wa.id asc
+    `,
+    [organizationId, campaignId]
+  );
+
+  return result.rows.map((row) => {
+    const sentToday = Number(row.sent_today);
+    const suggestedDailyLimit = getWarmupDailyLimit(row.warmup_started_at, row.campaign_daily_limit);
+    const exceededBy = Math.max(sentToday - suggestedDailyLimit, 0);
+
+    return {
+      whatsappAccountId: row.whatsapp_account_id,
+      senderLabel: row.sender_label,
+      senderPhoneNumber: row.sender_phone_number,
+      connectionStatus: row.connection_status ?? "unknown",
+      warmupStartedAt: row.warmup_started_at,
+      warmupLevel: row.warmup_level ?? inferWarmupLevel(row.warmup_started_at),
+      sentToday,
+      baseDailyLimit: row.campaign_daily_limit,
+      suggestedDailyLimit,
+      exceededBy,
+      isAboveSuggestedLimit: exceededBy > 0
+    };
+  });
+}
+
+function parseCampaignAttachment(value: unknown) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof value === "object") {
+    return value;
+  }
+
+  return null;
 }
 
 function toCampaignRecipient(row: CampaignRecipientRecord) {
@@ -1870,6 +1997,28 @@ function toCsv(rows: string[][]) {
         .join(",")
     )
     .join("\r\n");
+}
+
+function getWarmupDailyLimit(warmupStartedAt: string | null | Date, baseLimit: number): number {
+  if (!warmupStartedAt) return 20;
+  const days = Math.floor((Date.now() - new Date(warmupStartedAt).getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 2) return 20;
+  if (days < 4) return 50;
+  if (days < 7) return 100;
+  if (days < 10) return 200;
+  if (days < 14) return 300;
+  return baseLimit;
+}
+
+function inferWarmupLevel(warmupStartedAt: string | null | Date): number {
+  if (!warmupStartedAt) return 1;
+  const days = Math.floor((Date.now() - new Date(warmupStartedAt).getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 2) return 1;
+  if (days < 4) return 2;
+  if (days < 7) return 3;
+  if (days < 10) return 4;
+  if (days < 14) return 5;
+  return 6;
 }
 
 function toSafeFilename(value: string) {
@@ -2197,7 +2346,7 @@ async function saveExistingCampaignStartConfiguration(input: {
   messageTemplate: string;
   messageBodyType: string;
   attachment: string | null;
-  speedPreset: "safe" | "normal" | "custom";
+  speedPreset: "very_safe" | "safe" | "balanced" | "normal" | "fast" | "custom";
   attachContactCard: boolean | null;
 }) {
   await withTransaction(async (client) => {

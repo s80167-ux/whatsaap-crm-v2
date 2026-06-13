@@ -23,7 +23,26 @@ const fallbackSampleContact: CampaignContact = {
 
 const defaultTemplate = "Salam {{salutation}} {{name}}, kami ada promosi khas untuk anda.";
 
+const tempoPresetLabels: Record<CampaignSpeedPreset, string> = {
+  very_safe: "Very Safe",
+  safe: "Safe",
+  balanced: "Balanced",
+  normal: "Normal",
+  fast: "Fast",
+  custom: "Custom"
+};
+
+const selectableTempoPresets: CampaignSpeedPreset[] = ["very_safe", "safe", "balanced", "normal", "fast", "custom"];
+
 const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
+  very_safe: {
+    speedPreset: "very_safe",
+    delayPerMessageSeconds: 15,
+    batchSize: 15,
+    batchPauseSeconds: 180,
+    dailyLimit: 150,
+    stopOnHighFailure: true
+  },
   safe: {
     speedPreset: "safe",
     delayPerMessageSeconds: 12,
@@ -32,12 +51,28 @@ const tempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
     dailyLimit: 300,
     stopOnHighFailure: true
   },
+  balanced: {
+    speedPreset: "balanced",
+    delayPerMessageSeconds: 9,
+    batchSize: 25,
+    batchPauseSeconds: 90,
+    dailyLimit: 400,
+    stopOnHighFailure: true
+  },
   normal: {
     speedPreset: "normal",
     delayPerMessageSeconds: 7,
     batchSize: 30,
     batchPauseSeconds: 60,
     dailyLimit: 500,
+    stopOnHighFailure: true
+  },
+  fast: {
+    speedPreset: "fast",
+    delayPerMessageSeconds: 5,
+    batchSize: 40,
+    batchPauseSeconds: 45,
+    dailyLimit: 700,
     stopOnHighFailure: true
   },
   custom: {
@@ -678,25 +713,30 @@ export function CreateCampaignDrawer({
                 Use a slower tempo for new or recently reconnected WhatsApp numbers to reduce delivery risk.
               </p>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              {(["safe", "normal", "custom"] as CampaignSpeedPreset[]).map((preset) => (
-                <Button
-                  key={preset}
-                  variant={tempo.speedPreset === preset ? "primary" : "secondary"}
-                  onClick={() => handleTempoPresetChange(preset)}
-                >
-                  {preset[0].toUpperCase() + preset.slice(1)}
-                </Button>
-              ))}
-            </div>
-            {tempo.speedPreset === "custom" ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <TempoInput label="Delay per message seconds" value={tempo.delayPerMessageSeconds} onChange={(value) => handleTempoNumberChange("delayPerMessageSeconds", value)} />
-                <TempoInput label="Batch size" value={tempo.batchSize} onChange={(value) => handleTempoNumberChange("batchSize", value)} />
-                <TempoInput label="Batch pause seconds" value={tempo.batchPauseSeconds} onChange={(value) => handleTempoNumberChange("batchPauseSeconds", value)} />
-                <TempoInput label="Daily limit" value={tempo.dailyLimit} onChange={(value) => handleTempoNumberChange("dailyLimit", value)} />
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {selectableTempoPresets.map((preset) => (
+                  <Button
+                    key={preset}
+                    variant={tempo.speedPreset === preset ? "primary" : "secondary"}
+                    onClick={() => handleTempoPresetChange(preset)}
+                  >
+                    {tempoPresetLabels[preset]}
+                  </Button>
+                ))}
               </div>
-            ) : null}
+              {tempo.speedPreset === "custom" ? (
+                <>
+                  <p className="mt-4 text-xs leading-5 text-text-muted">
+                    Set your own delay, batch size, pause, and daily limit when the presets do not fit this sender.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <TempoInput label="Delay per message seconds" value={tempo.delayPerMessageSeconds} onChange={(value) => handleTempoNumberChange("delayPerMessageSeconds", value)} />
+                    <TempoInput label="Batch size" value={tempo.batchSize} onChange={(value) => handleTempoNumberChange("batchSize", value)} />
+                    <TempoInput label="Batch pause seconds" value={tempo.batchPauseSeconds} onChange={(value) => handleTempoNumberChange("batchPauseSeconds", value)} />
+                    <TempoInput label="Daily limit" value={tempo.dailyLimit} onChange={(value) => handleTempoNumberChange("dailyLimit", value)} />
+                  </div>
+                </>
+              ) : null}
             <label className="mt-4 flex items-center gap-2 text-sm text-text-muted">
               <input
                 type="checkbox"
@@ -809,7 +849,7 @@ function formatSenderStatus(account: WhatsAppAccountSummary) {
 }
 
 function formatTempoLabel(tempo: CampaignTempo) {
-  const preset = `${tempo.speedPreset[0].toUpperCase()}${tempo.speedPreset.slice(1)} mode`;
+  const preset = `${tempoPresetLabels[tempo.speedPreset]} mode`;
   const pauseMinutes = tempo.batchPauseSeconds >= 60 ? `${Math.round(tempo.batchPauseSeconds / 60)} min pause` : `${tempo.batchPauseSeconds}s pause`;
   return `${preset}, ${tempo.delayPerMessageSeconds}s/message, ${tempo.batchSize} per batch, ${pauseMinutes}`;
 }

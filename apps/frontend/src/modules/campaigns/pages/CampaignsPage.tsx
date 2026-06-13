@@ -167,6 +167,14 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
     }
   }
 
+  function handleEditCampaign(campaign: Campaign) {
+    navigate(`/campaigns/whatsapp/create?edit=${encodeURIComponent(campaign.id)}`);
+  }
+
+  function handleDuplicateCampaign(campaign: Campaign) {
+    navigate(`/campaigns/whatsapp/create?duplicate=${encodeURIComponent(campaign.id)}`);
+  }
+
   const audienceCount = useMemo(
     () => audienceGroups.reduce((total, group) => total + group.valid_count, 0),
     [audienceGroups]
@@ -237,16 +245,21 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
           </div>
 
           {activeTab === "overview" ? (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+            <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
               <Card elevated className="space-y-4 p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t("campaign.whatsapp.launchMonitorTitle")}</p>
                     <p className="mt-2 text-sm text-text-muted">
                       {t("campaign.whatsapp.launchMonitorCopy")}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/history")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full sm:w-auto"
+                    onClick={() => navigate("/campaigns/whatsapp/history")}
+                  >
                     View History
                   </Button>
                 </div>
@@ -255,6 +268,8 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   <CampaignListTable
                     campaigns={recentCampaigns}
                     onAction={showPlaceholderNotice}
+                    onEdit={handleEditCampaign}
+                    onDuplicate={handleDuplicateCampaign}
                     onReview={setReviewCampaign}
                     onStart={handleStartCampaign}
                     onPause={(campaign) => pauseMutation.mutate(campaign)}
@@ -273,7 +288,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
               </Card>
 
               <Card elevated className="space-y-4 p-4 sm:p-5">
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Launch Review</p>
                   <p className="mt-2 text-sm text-text-muted">
                     Safety is now part of launch review so teams can check readiness in one place before sending.
@@ -307,9 +322,9 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                   Send only to customers who have given permission to receive WhatsApp messages, and make opting out easy in every campaign.
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => navigate("/campaigns/whatsapp/create")}>Open Composer</Button>
-                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/whatsapp/audience")}>Manage Audience</Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button size="sm" className="w-full" onClick={() => navigate("/campaigns/whatsapp/create")}>Open Composer</Button>
+                  <Button size="sm" variant="secondary" className="w-full" onClick={() => navigate("/campaigns/whatsapp/audience")}>Manage Audience</Button>
                 </div>
               </Card>
             </div>
@@ -318,7 +333,7 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
           {activeTab === "history" ? (
             <>
               <div className="space-y-3">
-                <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                <div className="flex flex-wrap gap-2">
                   {campaignStatusFilters.map((filter) => (
                     <button
                       key={filter.value}
@@ -356,6 +371,8 @@ export function CampaignsPage({ activeTab = "overview" }: { activeTab?: "overvie
                 <CampaignListTable
                   campaigns={visibleCampaigns}
                   onAction={showPlaceholderNotice}
+                  onEdit={handleEditCampaign}
+                  onDuplicate={handleDuplicateCampaign}
                   onReview={setReviewCampaign}
                   onStart={handleStartCampaign}
                   onPause={(campaign) => pauseMutation.mutate(campaign)}
