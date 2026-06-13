@@ -170,7 +170,7 @@ export function CampaignReviewDrawer({
     }
   }
 
-  const canRetryFailed = Boolean(campaign) && (campaign.status === "Paused" || campaign.status === "Failed");
+  const canRetryFailed = campaign?.status === "Paused" || campaign?.status === "Failed";
   const hasSenderIssueFailures = (campaign?.failedSenderIssue ?? 0) > 0;
   const hasAnyFailedRecipients = (campaign?.failed ?? 0) > 0;
 
