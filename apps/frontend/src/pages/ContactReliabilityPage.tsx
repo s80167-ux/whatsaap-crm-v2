@@ -64,6 +64,22 @@ function humanize(value: string) {
   return value.replace(/_/g, " ");
 }
 
+function normalizeName(value: string | null | undefined) {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function canApplySuggestedName(contact: UnknownContact) {
+  if (contact.suggested_action !== "update_name" || !contact.best_available_name) {
+    return false;
+  }
+
+  const currentName = normalizeName(contact.display_name)?.toLowerCase();
+  const suggestedName = normalizeName(contact.best_available_name)?.toLowerCase();
+  return Boolean(suggestedName && suggestedName !== currentName);
+}
+
 function StatCard({ label, value, tone = "default" }: { label: string; value: number | string; tone?: "default" | "good" | "warn" | "bad" }) {
   const toneClass =
     tone === "good"
@@ -349,31 +365,35 @@ export function ContactReliabilityPage() {
                 </tr>
               </thead>
               <tbody>
-                {unknownPagination.visibleItems.map((contact: UnknownContact) => (
-                  <tr key={contact.contact_id}>
-                    <td>{contact.display_name || t("contactReliability.unknownContact")}</td>
-                    <td>{contact.best_available_name || t("contactReliability.needsReview")}</td>
-                    <td>{contact.primary_phone_e164 || contact.whatsapp_jids[0] || t("contactReliability.missing")}</td>
-                    <td>{contact.profile_names[0] || contact.push_names[0] || t("contactReliability.whatsappIdentity")}</td>
-                    <td>{contact.confidence_score}</td>
-                    <td>{getSuggestedActionLabel(contact.suggested_action, t)}</td>
-                    <td>
-                      <div className="flex flex-wrap gap-2">
-                        {canWrite && contact.best_available_name ? (
-                          <Button className="px-2 py-1 text-xs" onClick={() => applyMutation.mutate({ contactId: contact.contact_id, organizationId, action: "update_name", displayName: contact.best_available_name })}>
-                            <CheckCircle2 size={14} />
-                            <span className="ml-1">{t("contactReliability.applyName")}</span>
-                          </Button>
-                        ) : null}
-                        {canWrite ? (
-                          <Button variant="ghost" className="border border-border px-2 py-1 text-xs" onClick={() => applyMutation.mutate({ contactId: contact.contact_id, organizationId, action: "ignore_flag", flag: contact.risk_flags[0] ?? "needs_manual_review" })}>
-                            {t("contactReliability.ignore")}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {unknownPagination.visibleItems.map((contact: UnknownContact) => {
+                  const showApplyName = canApplySuggestedName(contact);
+
+                  return (
+                    <tr key={contact.contact_id}>
+                      <td>{contact.display_name || t("contactReliability.unknownContact")}</td>
+                      <td>{contact.best_available_name || t("contactReliability.needsReview")}</td>
+                      <td>{contact.primary_phone_e164 || contact.whatsapp_jids[0] || t("contactReliability.missing")}</td>
+                      <td>{contact.profile_names[0] || contact.push_names[0] || t("contactReliability.whatsappIdentity")}</td>
+                      <td>{contact.confidence_score}</td>
+                      <td>{getSuggestedActionLabel(contact.suggested_action, t)}</td>
+                      <td>
+                        <div className="flex flex-wrap gap-2">
+                          {canWrite && showApplyName ? (
+                            <Button className="px-2 py-1 text-xs" onClick={() => applyMutation.mutate({ contactId: contact.contact_id, organizationId, action: "update_name", displayName: contact.best_available_name })}>
+                              <CheckCircle2 size={14} />
+                              <span className="ml-1">{t("contactReliability.applyName")}</span>
+                            </Button>
+                          ) : null}
+                          {canWrite ? (
+                            <Button variant="ghost" className="border border-border px-2 py-1 text-xs" onClick={() => applyMutation.mutate({ contactId: contact.contact_id, organizationId, action: "ignore_flag", flag: contact.risk_flags[0] ?? "needs_manual_review" })}>
+                              {t("contactReliability.ignore")}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -550,4 +570,3 @@ export function ContactReliabilityPage() {
     </div>
   );
 }
-
