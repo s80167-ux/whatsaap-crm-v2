@@ -2,6 +2,9 @@ import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "../lib/http";
 import type {
   GoogleSignupRequestSummary,
   OrganizationSummary,
+  RolePermissionDetail,
+  RolePermissionEditableRole,
+  RolePermissionSummary,
   UserSummary,
   WhatsAppAccountAccessDetail,
   WhatsAppAccountAccessOverview,
@@ -311,6 +314,35 @@ export async function fetchGoogleSignupRequests(status: "pending" | "approved" |
   const response = await apiGet<{ data: GoogleSignupRequestApiRecord[] }>(
     `/admin/google-signup-requests?status=${encodeURIComponent(status)}`
   );
+  return response.data;
+}
+
+export async function fetchRolePermissionsMatrix() {
+  const response = await apiGet<{
+    data: RolePermissionSummary[];
+    availablePermissions: string[];
+  }>("/admin/roles/permissions");
+
+  return response;
+}
+
+export async function fetchRolePermissions(role: RolePermissionEditableRole | "super_admin") {
+  const response = await apiGet<{ data: RolePermissionDetail }>(
+    `/admin/roles/${encodeURIComponent(role)}/permissions`
+  );
+
+  return response.data;
+}
+
+export async function saveRolePermissions(
+  role: RolePermissionEditableRole,
+  payload: { permissionKeys: string[] }
+) {
+  const response = await apiPut<{ data: RolePermissionDetail & { oldPermissionKeys?: string[] } }>(
+    `/admin/roles/${encodeURIComponent(role)}/permissions`,
+    payload
+  );
+
   return response.data;
 }
 

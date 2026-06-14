@@ -5,12 +5,15 @@ import {
   fetchOrganizationAccessLimits,
   fetchGoogleSignupRequests,
   fetchOrganizations,
+  fetchRolePermissions,
+  fetchRolePermissionsMatrix,
   fetchUsers,
   fetchWhatsAppAccountAccess,
   fetchWhatsAppAccountAccessDetail,
   fetchWhatsAppAccounts
 } from "../api/admin";
 import { getStoredUser } from "../lib/auth";
+import type { RolePermissionRole } from "../types/admin";
 import type { ModuleKey } from "../types/modules";
 
 export function useOrganizations() {
@@ -115,5 +118,25 @@ export function useGoogleSignupRequests(enabled = true) {
     queryKey: ["google-signup-requests", "pending"],
     queryFn: () => fetchGoogleSignupRequests("pending"),
     enabled: enabled && role === "super_admin"
+  });
+}
+
+export function useRolePermissionsMatrix(enabled = true) {
+  const role = getStoredUser()?.role;
+
+  return useQuery({
+    queryKey: ["role-permissions"],
+    queryFn: fetchRolePermissionsMatrix,
+    enabled: enabled && role === "super_admin"
+  });
+}
+
+export function useRolePermissions(roleName?: RolePermissionRole | null, enabled = true) {
+  const role = getStoredUser()?.role;
+
+  return useQuery({
+    queryKey: ["role-permissions", roleName],
+    queryFn: () => fetchRolePermissions(roleName ?? "org_admin"),
+    enabled: enabled && role === "super_admin" && Boolean(roleName)
   });
 }

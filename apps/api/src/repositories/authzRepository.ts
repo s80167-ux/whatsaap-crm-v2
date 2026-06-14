@@ -1,6 +1,48 @@
 import type { PoolClient } from "pg";
 import type { UserRole } from "../types/auth.js";
 
+export const EDITABLE_ROLE_PERMISSION_ROLES = ["org_admin", "manager", "agent", "user"] as const;
+export const ROLE_PERMISSION_ROLES = ["super_admin", ...EDITABLE_ROLE_PERMISSION_ROLES] as const;
+export type EditableRolePermissionRole = (typeof EDITABLE_ROLE_PERMISSION_ROLES)[number];
+export type RolePermissionRole = (typeof ROLE_PERMISSION_ROLES)[number];
+
+export const EDITABLE_ROLE_PERMISSION_KEYS = [
+  "platform.view_usage",
+  "platform.manage_subscriptions",
+  "platform.view_health",
+  "org.manage_users",
+  "org.manage_whatsapp_accounts",
+  "org.manage_settings",
+  "contacts.read_all",
+  "contacts.read_assigned",
+  "contacts.write",
+  "conversations.read_all",
+  "conversations.read_assigned",
+  "conversations.assign",
+  "messages.send",
+  "sales.read_all",
+  "sales.read_assigned",
+  "sales.write",
+  "data_exports.download",
+  "dashboard.view_admin",
+  "dashboard.view_agent"
+] as const;
+
+export const SUPER_ADMIN_ONLY_PERMISSION_KEYS = [
+  "platform.manage_organizations",
+  "dashboard.view_super_admin"
+] as const;
+
+export const KNOWN_ROLE_PERMISSION_KEYS = [
+  ...EDITABLE_ROLE_PERMISSION_KEYS,
+  ...SUPER_ADMIN_ONLY_PERMISSION_KEYS
+] as const;
+
+type RolePermissionRecord = {
+  role: RolePermissionRole;
+  permission_key: string;
+};
+
 export interface OrganizationUserAuthRecord {
   id: string;
   organization_id: string;
@@ -13,6 +55,60 @@ export interface OrganizationUserAuthRecord {
 }
 
 export class AuthzRepository {
+  async listRolePermissions(client: PoolClient): Promise<RolePermissionRecord[]> {
+    const result = await client.query<RolePermissionRecord>(
+      `
+        select role, permission_key
+        from role_permissions
+        where role = any($1::text[])
+        order by role asc, permission_key asc
+      `,
+      [ROLE_PERMISSION_ROLES]
+    );
+
+    return result.rows;
+  }
+
+  async listRolePermissionKeys(client: PoolClient, role: RolePermissionRole): Promise<string[]> {
+    const result = await client.query<{ permission_key: string }>(
+      `
+        select permission_key
+        from role_permissions
+        where role = $1
+        order by permission_key asc
+      `,
+      [role]
+    );
+
+    return result.rows.map((row) => row.permission_key);
+  }
+
+  async replaceRolePermissionKeys(
+    client: PoolClient,
+    role: EditableRolePermissionRole,
+    permissionKeys: string[]
+  ) {
+    await client.query(
+      `
+        delete from role_permissions
+        where role = $1
+      `,
+      [role]
+    );
+
+    if (permissionKeys.length === 0) {
+      return;
+    }
+
+    await client.query(
+      `
+        insert into role_permissions (role, permission_key)
+        select $1, unnest($2::text[])
+      `,
+      [role, permissionKeys]
+    );
+  }
+
   async findOrganizationUserByAuthUserId(
     client: PoolClient,
     authUserId: string

@@ -7,6 +7,7 @@ import type {
   PlatformHealthSummary,
   PlatformOrganization,
   PlatformOutboundDispatchSummary,
+  PlatformSupabaseUsageSummary,
   PlatformServiceHealthSummary,
   PlatformUsageSummary
 } from "../types/dashboard";
@@ -56,6 +57,11 @@ export async function fetchPlatformHealth() {
 
 export async function fetchPlatformServiceHealth() {
   const response = await apiGet<{ data: PlatformServiceHealthSummary }>("/platform/service-health");
+  return response.data;
+}
+
+export async function fetchPlatformSupabaseUsage() {
+  const response = await apiGet<{ data: PlatformSupabaseUsageSummary }>("/platform/supabase-usage");
   return response.data;
 }
 

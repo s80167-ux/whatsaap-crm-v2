@@ -28,6 +28,8 @@
     "worker:email-campaign-dispatch:once": "npm --workspace apps/api run worker:email-campaign-dispatch:once",
     "worker:social-events": "npm --workspace apps/api run worker:social-events",
     "worker:social-events:once": "npm --workspace apps/api run worker:social-events:once",
+    "worker:supabase-usage": "npm --workspace apps/api run worker:supabase-usage",
+    "worker:supabase-usage:once": "npm --workspace apps/api run worker:supabase-usage:once",
     "worker:raw-events:replay": "npm --workspace apps/api run worker:raw-events:replay --",
     "worker:projections:rebuild": "npm --workspace apps/api run worker:projections:rebuild",
     "worker:usage-daily": "npm --workspace apps/api run worker:usage-daily --",

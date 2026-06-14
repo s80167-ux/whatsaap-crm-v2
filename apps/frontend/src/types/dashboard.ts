@@ -205,6 +205,39 @@ export interface PlatformServiceHealthSummary {
   }>;
 }
 
+export type PlatformSupabaseUsageStatus =
+  | "healthy"
+  | "warning"
+  | "critical"
+  | "unknown";
+
+export interface PlatformSupabaseUsageSnapshot {
+  id: string;
+  collected_at: string;
+  overall_status: PlatformSupabaseUsageStatus;
+  source_status: "live" | "partial" | "unavailable";
+  db_size_bytes: string | number | null;
+  db_disk_used_bytes: string | number | null;
+  db_disk_total_bytes: string | number | null;
+  db_disk_percent: string | number | null;
+  storage_used_bytes: string | number | null;
+  storage_quota_bytes: string | number | null;
+  storage_percent: string | number | null;
+  storage_object_count: string | number | null;
+  egress_bytes: string | number | null;
+  egress_quota_bytes: string | number | null;
+  egress_percent: string | number | null;
+  api_requests_count: string | number | null;
+  errors?: unknown;
+}
+
+export interface PlatformSupabaseUsageSummary {
+  latest: PlatformSupabaseUsageSnapshot | null;
+  history: PlatformSupabaseUsageSnapshot[];
+  stale: boolean;
+  generated_at: string;
+}
+
 export interface PlatformAuditLog {
   id: string;
   organization_id: string | null;

@@ -1,33 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Info, Link2, Mail, PlugZap, RefreshCw, Trash2, Unplug, UserCircle, Zap } from "lucide-react";
+import { ArrowRight, Mail, UserCircle } from "lucide-react";
 import {
   approveGoogleSignupRequest,
   createOrganization,
   createUser,
-  createWhatsAppAccount,
-  disconnectWhatsAppAccount,
   deleteOrganization,
-  reconnectWhatsAppAccount,
   deleteUser,
-  deleteWhatsAppAccount,
   resetUserPassword,
   rejectGoogleSignupRequest,
+  saveRolePermissions,
   updateOrganization,
-  updateUser,
-  updateWhatsAppAccount
+  updateUser
 } from "../api/admin";
 import { Button } from "../components/Button";
 import { PopupOverlay } from "../components/PopupOverlay";
 import { Card } from "../components/Card";
 import { Input, Select } from "../components/Input";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
-import { useGoogleSignupRequests, useOrganizations, useOrganizationUsers } from "../hooks/useAdmin";
+import { useGoogleSignupRequests, useOrganizations, useOrganizationUsers, useRolePermissions, useRolePermissionsMatrix } from "../hooks/useAdmin";
 import { useIsMobileViewport } from "../hooks/useMediaQuery";
 import { getStoredUser, updateStoredUser } from "../lib/auth";
-import type { GoogleSignupRequestSummary, OrganizationSummary, UserSummary } from "../types/admin";
+import type { GoogleSignupRequestSummary, OrganizationSummary, RolePermissionEditableRole, UserSummary } from "../types/admin";
 
 function formatTimestamp(value?: string | null) {
   if (!value) {
@@ -37,42 +33,44 @@ function formatTimestamp(value?: string | null) {
   return new Date(value).toLocaleString();
 }
 
-const WHATSAPP_HISTORY_SYNC_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 const MAX_PROFILE_PICTURE_BYTES = 512 * 1024;
 const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-
-function formatHistorySyncWindow(days: number | null | undefined) {
-  if (!days) {
-    return "New messages only";
+const EDITABLE_ROLE_OPTIONS: RolePermissionEditableRole[] = ["org_admin", "manager", "agent", "user"];
+const ROLE_PERMISSION_GROUPS = [
+  {
+    title: "Platform",
+    permissions: ["platform.view_usage", "platform.manage_subscriptions", "platform.view_health"]
+  },
+  {
+    title: "Organization",
+    permissions: ["org.manage_users", "org.manage_whatsapp_accounts", "org.manage_settings"]
+  },
+  {
+    title: "Contacts",
+    permissions: ["contacts.read_all", "contacts.read_assigned", "contacts.write"]
+  },
+  {
+    title: "Conversations",
+    permissions: ["conversations.read_all", "conversations.read_assigned", "conversations.assign"]
+  },
+  {
+    title: "Messages",
+    permissions: ["messages.send"]
+  },
+  {
+    title: "Sales",
+    permissions: ["sales.read_all", "sales.read_assigned", "sales.write"]
+  },
+  {
+    title: "Data",
+    permissions: ["data_exports.download"]
+  },
+  {
+    title: "Dashboard",
+    permissions: ["dashboard.view_admin", "dashboard.view_agent"]
   }
-
-  return `Previous ${days} ${days === 1 ? "day" : "days"}`;
-}
-
-function formatConnectionStatus(status: string) {
-  return status
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function getConnectionTone(status: string) {
-  const normalized = status.toLowerCase();
-
-  if (normalized === "connected") {
-    return { dot: "bg-success", text: "text-success" };
-  }
-
-  if (normalized === "pairing" || normalized === "reconnecting" || normalized === "qr_required" || normalized === "new") {
-    return { dot: "bg-warning", text: "text-warning" };
-  }
-
-  return { dot: "bg-destructive", text: "text-destructive" };
-}
-
-function isConnectedAccount(status: string) {
-  return status.toLowerCase() === "connected";
-}
+] as const;
+const CRITICAL_ROLE_PERMISSION_KEYS = ["org.manage_users", "org.manage_whatsapp_accounts", "org.manage_settings"] as const;
 
 function readProfilePicture(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -103,6 +101,15 @@ function UserAvatarPreview({ src, label }: { src?: string | null; label?: string
   );
 }
 
+function arePermissionSetsEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const rightSet = new Set(right);
+  return left.every((permissionKey) => rightSet.has(permissionKey));
+}
+
 export function SetupPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -111,9 +118,12 @@ export function SetupPage() {
   const isSuperAdmin = currentUser?.role === "super_admin";
   const { data: organizations = [] } = useOrganizations();
   const { data: googleSignupRequests = [] } = useGoogleSignupRequests(isSuperAdmin);
+  const rolePermissionsMatrixQuery = useRolePermissionsMatrix(isSuperAdmin);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
   const activeOrganizationId = isSuperAdmin ? selectedOrganizationId || null : currentUser?.organizationId ?? null;
   const { data: users = [] } = useOrganizationUsers(activeOrganizationId);
+  const [selectedRolePermissionRole, setSelectedRolePermissionRole] = useState<RolePermissionEditableRole>("org_admin");
+  const rolePermissionsDetailQuery = useRolePermissions(selectedRolePermissionRole, isSuperAdmin);
   const organizationPagination = usePanelPagination(organizations);
   const userPagination = usePanelPagination(users);
 
@@ -149,9 +159,29 @@ export function SetupPage() {
   }>>({});
   // WhatsApp account edit state moved to WhatsAppAccountDashboard
   const [notice, setNotice] = useState<string | null>(null);
+  const [rolePermissionDraft, setRolePermissionDraft] = useState<string[]>([]);
+  const [rolePermissionNotice, setRolePermissionNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false);
   const [userCreateError, setUserCreateError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const canCreateScopedRecords = !isSuperAdmin || Boolean(activeOrganizationId) || userRole === "super_admin";
+  const selectedRolePermissionDetail = rolePermissionsDetailQuery.data;
+  const rolePermissionBaseline = selectedRolePermissionDetail?.permissionKeys ?? [];
+  const availableRolePermissions = selectedRolePermissionDetail?.availablePermissions ?? rolePermissionsMatrixQuery.data?.availablePermissions ?? [];
+  const rolePermissionHasChanges = arePermissionSetsEqual(rolePermissionDraft, rolePermissionBaseline) === false;
+  const addedRolePermissions = rolePermissionDraft.filter((permissionKey) => !rolePermissionBaseline.includes(permissionKey));
+  const removedRolePermissions = rolePermissionBaseline.filter((permissionKey) => !rolePermissionDraft.includes(permissionKey));
+  const superAdminRoleSummary = rolePermissionsMatrixQuery.data?.data.find((item) => item.role === "super_admin") ?? null;
+  const groupedPermissionKeys = new Set<string>(ROLE_PERMISSION_GROUPS.flatMap((group) => group.permissions));
+  const otherRolePermissions = availableRolePermissions.filter((permissionKey) => !groupedPermissionKeys.has(permissionKey));
+
+  useEffect(() => {
+    if (!selectedRolePermissionDetail) {
+      return;
+    }
+
+    setRolePermissionDraft(selectedRolePermissionDetail.permissionKeys);
+  }, [selectedRolePermissionDetail, selectedRolePermissionRole]);
 
   function openUserPopup() {
     setUserCreateError(null);
@@ -471,6 +501,56 @@ export function SetupPage() {
       setNotice(error instanceof Error ? error.message : "Unable to reject signup request");
     } finally {
       setIsWorking(false);
+    }
+  }
+
+  function handleToggleRolePermission(permissionKey: string) {
+    setRolePermissionDraft((current) =>
+      current.includes(permissionKey)
+        ? current.filter((value) => value !== permissionKey)
+        : [...current, permissionKey].sort()
+    );
+    setRolePermissionNotice(null);
+  }
+
+  async function handleSaveRolePermissions() {
+    if (!rolePermissionHasChanges) {
+      return;
+    }
+
+    const removingAllCriticalPermissions =
+      rolePermissionBaseline.some((permissionKey) => CRITICAL_ROLE_PERMISSION_KEYS.includes(permissionKey as typeof CRITICAL_ROLE_PERMISSION_KEYS[number])) &&
+      CRITICAL_ROLE_PERMISSION_KEYS.every((permissionKey) => !rolePermissionDraft.includes(permissionKey));
+
+    const confirmationMessage = removingAllCriticalPermissions
+      ? "This will remove all critical organization permissions from this role and affect all users with this role."
+      : "This will affect all users with this role.";
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    setIsSavingRolePermissions(true);
+    setRolePermissionNotice(null);
+
+    try {
+      const result = await saveRolePermissions(selectedRolePermissionRole, {
+        permissionKeys: rolePermissionDraft
+      });
+
+      setRolePermissionDraft(result.permissionKeys);
+      setRolePermissionNotice({ type: "success", message: "Role privileges updated." });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["role-permissions"] }),
+        queryClient.invalidateQueries({ queryKey: ["role-permissions", selectedRolePermissionRole] })
+      ]);
+    } catch (error) {
+      setRolePermissionNotice({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to update role privileges"
+      });
+    } finally {
+      setIsSavingRolePermissions(false);
     }
   }
 
@@ -829,6 +909,170 @@ export function SetupPage() {
                 totalItems={organizationPagination.totalItems}
                 onPageChange={organizationPagination.setPage}
               />
+            </Card>
+          </motion.div>
+        ) : null}
+
+        {isSuperAdmin ? (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: 0.04 }}>
+            <Card elevated className="workspace-block relative">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Organizations</p>
+                  <h3 className="mt-2 text-lg font-semibold text-text">Role & Privileges</h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+                    Control what each role can do across the organization.
+                  </p>
+                </div>
+                <div className="workspace-subtle max-w-md p-4 text-sm leading-6 text-text-muted">
+                  <p className="font-semibold text-text">Super admin access stays read-only.</p>
+                  <p className="mt-1">
+                    The `super_admin` role is not editable here. It currently carries {superAdminRoleSummary?.permissionKeys.length ?? 0} platform-level permissions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[260px,minmax(0,1fr)]">
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-text-soft">Role</span>
+                    <Select
+                      value={selectedRolePermissionRole}
+                      onChange={(event) => {
+                        setSelectedRolePermissionRole(event.target.value as RolePermissionEditableRole);
+                        setRolePermissionNotice(null);
+                      }}
+                    >
+                      {EDITABLE_ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+
+                  {selectedRolePermissionRole === "org_admin" ? (
+                    <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-3 text-sm leading-6 text-warning">
+                      This role has high access. Changes will affect organization admins.
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-xl border border-border bg-background-tint px-3 py-3 text-sm text-text-muted">
+                    <p className="font-semibold text-text">Change summary</p>
+                    <p className="mt-1">{rolePermissionHasChanges ? "Unsaved changes are ready to save." : "No unsaved changes."}</p>
+                    {rolePermissionHasChanges ? (
+                      <p className="mt-2 text-xs leading-5 text-text-soft">
+                        Added {addedRolePermissions.length} • Removed {removedRolePermissions.length}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div>
+                  {rolePermissionNotice ? (
+                    <div className={rolePermissionNotice.type === "success" ? "mb-4 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" : "mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"}>
+                      {rolePermissionNotice.message}
+                    </div>
+                  ) : null}
+
+                  {rolePermissionsDetailQuery.isLoading || rolePermissionsMatrixQuery.isLoading ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background-tint px-4 py-8 text-sm text-text-muted">
+                      Loading role privileges...
+                    </div>
+                  ) : rolePermissionsDetailQuery.error ? (
+                    <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-8 text-sm text-destructive">
+                      {rolePermissionsDetailQuery.error instanceof Error ? rolePermissionsDetailQuery.error.message : "Unable to load role privileges."}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {ROLE_PERMISSION_GROUPS.map((group) => {
+                        const visiblePermissions = group.permissions.filter((permissionKey) => availableRolePermissions.includes(permissionKey));
+
+                        if (visiblePermissions.length === 0) {
+                          return null;
+                        }
+
+                        return (
+                          <div key={group.title} className="rounded-2xl border border-border bg-background-tint p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <h4 className="text-sm font-semibold text-text">{group.title}</h4>
+                              <span className="text-xs text-text-soft">{visiblePermissions.length} privileges</span>
+                            </div>
+                            <div className="grid gap-2 md:grid-cols-2">
+                              {visiblePermissions.map((permissionKey) => {
+                                const checked = rolePermissionDraft.includes(permissionKey);
+
+                                return (
+                                  <label key={permissionKey} className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm text-text">
+                                    <input
+                                      type="checkbox"
+                                      className="mt-1 h-4 w-4"
+                                      checked={checked}
+                                      onChange={() => handleToggleRolePermission(permissionKey)}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-text">{permissionKey}</p>
+                                      <p className="mt-1 text-xs leading-5 text-text-soft">
+                                        {checked ? "Included for this role." : "Not included for this role."}
+                                      </p>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {otherRolePermissions.length > 0 ? (
+                        <div className="rounded-2xl border border-border bg-background-tint p-4">
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <h4 className="text-sm font-semibold text-text">Other</h4>
+                            <span className="text-xs text-text-soft">{otherRolePermissions.length} privileges</span>
+                          </div>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            {otherRolePermissions.map((permissionKey) => {
+                              const checked = rolePermissionDraft.includes(permissionKey);
+
+                              return (
+                                <label key={permissionKey} className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm text-text">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-1 h-4 w-4"
+                                    checked={checked}
+                                    onChange={() => handleToggleRolePermission(permissionKey)}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-text">{permissionKey}</p>
+                                    <p className="mt-1 text-xs leading-5 text-text-soft">
+                                      {checked ? "Included for this role." : "Not included for this role."}
+                                    </p>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-text">Save role changes</p>
+                          <p className="mt-1 text-sm text-text-muted">
+                            Saving will update the default privileges inherited by every user on this role.
+                          </p>
+                        </div>
+                        <Button
+                          disabled={!rolePermissionHasChanges || isSavingRolePermissions}
+                          onClick={handleSaveRolePermissions}
+                        >
+                          {isSavingRolePermissions ? "Saving..." : "Save privileges"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </Card>
           </motion.div>
         ) : null}

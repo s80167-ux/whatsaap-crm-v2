@@ -89,6 +89,13 @@ const envSchema = z.object({
   SOCIAL_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
   TOKEN_ENCRYPTION_SECRET: z.string().min(1).optional(),
   EMAIL_SECRET_KEY: z.string().min(1).optional(),
+  SUPABASE_MANAGEMENT_ACCESS_TOKEN: z.string().min(1).optional(),
+  SUPABASE_PROJECT_REF: z.string().min(1).optional(),
+  SUPABASE_EGRESS_QUOTA_GB: z.coerce.number().positive().default(250),
+  SUPABASE_DB_QUOTA_GB: z.coerce.number().positive().default(8),
+  SUPABASE_STORAGE_QUOTA_GB: z.coerce.number().positive().default(100),
+  SUPABASE_USAGE_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(7_200_000),
+  SUPABASE_USAGE_WORKER_ENABLED: booleanFromEnv.default(false),
   SOCIAL_EVENT_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
   SOCIAL_EVENT_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   DEFAULT_ORGANIZATION_ID: z.string().uuid().optional()

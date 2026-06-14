@@ -4,6 +4,7 @@ import {
   fetchPlatformHealth,
   fetchPlatformOrganizations,
   fetchPlatformOutboundDispatch,
+  fetchPlatformSupabaseUsage,
   fetchPlatformServiceHealth,
   fetchPlatformUsage,
   fetchDynamicDashboard
@@ -75,6 +76,17 @@ export function usePlatformServiceHealth() {
     queryFn: fetchPlatformServiceHealth,
     enabled: role === "super_admin",
     refetchInterval: 30000
+  });
+}
+
+export function usePlatformSupabaseUsage() {
+  const role = getStoredUser()?.role;
+
+  return useQuery({
+    queryKey: ["platform-supabase-usage"],
+    queryFn: fetchPlatformSupabaseUsage,
+    enabled: role === "super_admin",
+    refetchInterval: 300000
   });
 }
 

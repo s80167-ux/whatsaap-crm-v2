@@ -20,6 +20,8 @@
     "worker:email-campaign-dispatch:once": "tsx src/workers/processEmailCampaignDispatch.ts --once",
     "worker:social-events": "tsx src/workers/processSocialEvents.ts",
     "worker:social-events:once": "tsx src/workers/processSocialEvents.ts --once",
+    "worker:supabase-usage": "tsx src/workers/collectSupabaseUsage.ts",
+    "worker:supabase-usage:once": "tsx src/workers/collectSupabaseUsage.ts --once",
     "worker:projections:rebuild": "tsx src/workers/rebuildProjections.ts",
     "worker:raw-events:replay": "tsx src/workers/replayRawEvents.ts",
     "worker:usage-daily": "tsx src/workers/aggregateUsageDaily.ts"

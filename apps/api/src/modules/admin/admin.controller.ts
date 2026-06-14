@@ -2,6 +2,13 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { AppError } from "../../lib/errors.js";
 import { getRequestAuditContext } from "../../lib/requestAudit.js";
+import {
+  EDITABLE_ROLE_PERMISSION_KEYS,
+  EDITABLE_ROLE_PERMISSION_ROLES,
+  ROLE_PERMISSION_ROLES,
+  type EditableRolePermissionRole,
+  type RolePermissionRole
+} from "../../repositories/authzRepository.js";
 import { AuditLogService } from "../../services/auditLogService.js";
 import { AdminService } from "../../services/adminService.js";
 
@@ -127,6 +134,18 @@ const rejectGoogleSignupRequestSchema = z.object({
 });
 const reconnectWhatsAppAccountSchema = z.object({
   confirmBlockedReconnect: z.boolean().optional()
+});
+
+const rolePermissionsParamsSchema = z.object({
+  role: z.enum(ROLE_PERMISSION_ROLES)
+});
+
+const updateRolePermissionsParamsSchema = z.object({
+  role: z.enum(EDITABLE_ROLE_PERMISSION_ROLES)
+});
+
+const updateRolePermissionsSchema = z.object({
+  permissionKeys: z.array(z.enum(EDITABLE_ROLE_PERMISSION_KEYS))
 });
 
 const warmerStatusSchema = z.enum(["not_started", "active", "paused", "completed"]);
@@ -335,6 +354,43 @@ function mapWhatsAppAccountAccess(access: {
 export async function listOrganizations(_request: Request, response: Response) {
   const organizations = await adminService.listOrganizations();
   return response.json({ data: organizations });
+}
+
+export async function listRolePermissions(_request: Request, response: Response) {
+  const result = await adminService.listRolePermissions();
+  return response.json(result);
+}
+
+export async function getRolePermissions(request: Request, response: Response) {
+  const { role } = rolePermissionsParamsSchema.parse(request.params);
+  const result = await adminService.getRolePermissions(role as RolePermissionRole);
+
+  return response.json({
+    data: result
+  });
+}
+
+export async function updateRolePermissions(request: Request, response: Response) {
+  const auth = requireAuth(request);
+  const { role } = updateRolePermissionsParamsSchema.parse(request.params);
+  const input = updateRolePermissionsSchema.parse(request.body ?? {});
+  const result = await adminService.updateRolePermissions(role as EditableRolePermissionRole, input.permissionKeys);
+
+  await auditLogService.record(auth, {
+    organizationId: null,
+    action: "role_permissions.updated",
+    entityType: "role",
+    entityId: role,
+    metadata: {
+      old_permission_keys: result.oldPermissionKeys,
+      new_permission_keys: result.permissionKeys
+    },
+    request: getRequestAuditContext(request)
+  });
+
+  return response.json({
+    data: result
+  });
 }
 
 export async function createOrganization(request: Request, response: Response) {

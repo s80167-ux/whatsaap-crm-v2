@@ -514,6 +514,7 @@ export function DashboardLayout() {
             icon: <ShieldAlert size={18} />,
             items: [
               { to: "/platform", icon: <Building2 size={16} />, label: t("nav.organizations") },
+              { to: "/super-admin/roles-privileges", icon: <ShieldCheck size={16} />, label: "Role & Privileges" },
               { to: "/super-admin/access-limits", icon: <SlidersHorizontal size={16} />, label: t("nav.accessLimits") },
               { to: "/super-admin-map", icon: <Workflow size={16} />, label: t("nav.platformWorkflow") },
               { to: "/super-admin-map/data-structure", icon: <Building2 size={16} />, label: t("nav.dataStructure") },

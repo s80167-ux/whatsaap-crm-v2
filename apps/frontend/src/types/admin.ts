@@ -148,6 +148,20 @@ export interface GoogleSignupRequestSummary {
   updated_at: string;
 }
 
+export type RolePermissionEditableRole = "org_admin" | "manager" | "agent" | "user";
+export type RolePermissionRole = "super_admin" | RolePermissionEditableRole;
+
+export interface RolePermissionSummary {
+  role: RolePermissionRole;
+  permissionKeys: string[];
+}
+
+export interface RolePermissionDetail {
+  role: RolePermissionRole;
+  permissionKeys: string[];
+  availablePermissions: string[];
+}
+
 export type WhatsAppSyncJobStatus =
   | "queued"
   | "running"

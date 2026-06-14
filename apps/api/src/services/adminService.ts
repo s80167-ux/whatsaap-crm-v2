@@ -17,6 +17,13 @@ import type { AuthUser, UserRole } from "../types/auth.js";
 import { RawEventProcessorService } from "./rawEventProcessorService.js";
 import { ConnectorClient } from "./connectorClient.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
+import {
+  AuthzRepository,
+  EDITABLE_ROLE_PERMISSION_KEYS,
+  EDITABLE_ROLE_PERMISSION_ROLES,
+  type EditableRolePermissionRole,
+  type RolePermissionRole
+} from "../repositories/authzRepository.js";
 
 const LEGACY_CAMPAIGNS_MODULE_KEY = "campaigns";
 const CAMPAIGN_MODULE_KEY = "campaign";
@@ -229,6 +236,24 @@ type SaveWhatsAppNumberWarmerInput = {
   status?: WhatsAppNumberWarmerStatus;
 };
 
+type RolePermissionsSummary = {
+  role: RolePermissionRole;
+  permissionKeys: string[];
+};
+
+type RolePermissionsDetail = {
+  role: RolePermissionRole;
+  permissionKeys: string[];
+  availablePermissions: string[];
+};
+
+type UpdateRolePermissionsResult = {
+  role: EditableRolePermissionRole;
+  oldPermissionKeys: string[];
+  permissionKeys: string[];
+  availablePermissions: string[];
+};
+
 export type OrganizationModuleKey = (typeof SUPPORTED_MODULE_KEYS)[number];
 
 function getModuleLookupKeys(moduleKey: OrganizationModuleKey) {
@@ -347,6 +372,7 @@ export class AdminService {
     private readonly whatsappRepository = new WhatsAppAdminRepository(),
     private readonly whatsappAccessRepository = new WhatsAppAccountAccessRepository(),
     private readonly rawEventRepository = new RawEventRepository(),
+    private readonly authzRepository = new AuthzRepository(),
     private readonly authService = new AuthService(),
     private readonly rawEventProcessorService = new RawEventProcessorService(),
     private readonly connectorClient = new ConnectorClient()
@@ -421,6 +447,70 @@ export class AdminService {
     } finally {
       client.release();
     }
+  }
+
+  async listRolePermissions(): Promise<{ data: RolePermissionsSummary[]; availablePermissions: string[] }> {
+    const client = await pool.connect();
+
+    try {
+      const rows = await this.authzRepository.listRolePermissions(client);
+      const permissionMap = new Map<RolePermissionRole, string[]>();
+
+      for (const role of ["super_admin", ...EDITABLE_ROLE_PERMISSION_ROLES] as const) {
+        permissionMap.set(role, []);
+      }
+
+      for (const row of rows) {
+        const existing = permissionMap.get(row.role) ?? [];
+        existing.push(row.permission_key);
+        permissionMap.set(row.role, existing);
+      }
+
+      return {
+        data: (["super_admin", ...EDITABLE_ROLE_PERMISSION_ROLES] as const).map((role) => ({
+          role,
+          permissionKeys: Array.from(new Set(permissionMap.get(role) ?? [])).sort()
+        })),
+        availablePermissions: [...EDITABLE_ROLE_PERMISSION_KEYS]
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async getRolePermissions(role: RolePermissionRole): Promise<RolePermissionsDetail> {
+    const client = await pool.connect();
+
+    try {
+      const permissionKeys = await this.authzRepository.listRolePermissionKeys(client, role);
+
+      return {
+        role,
+        permissionKeys: Array.from(new Set(permissionKeys)).sort(),
+        availablePermissions: [...EDITABLE_ROLE_PERMISSION_KEYS]
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async updateRolePermissions(
+    role: EditableRolePermissionRole,
+    permissionKeys: string[]
+  ): Promise<UpdateRolePermissionsResult> {
+    const normalizedPermissionKeys = Array.from(new Set(permissionKeys)).sort();
+
+    return withTransaction(async (client) => {
+      const previousPermissionKeys = await this.authzRepository.listRolePermissionKeys(client, role);
+      await this.authzRepository.replaceRolePermissionKeys(client, role, normalizedPermissionKeys);
+
+      return {
+        role,
+        oldPermissionKeys: Array.from(new Set(previousPermissionKeys)).sort(),
+        permissionKeys: normalizedPermissionKeys,
+        availablePermissions: [...EDITABLE_ROLE_PERMISSION_KEYS]
+      };
+    });
   }
 
   async getCampaignsModuleStatus(authUser: AuthUser, organizationId?: string | null) {

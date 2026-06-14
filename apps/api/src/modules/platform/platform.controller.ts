@@ -47,6 +47,11 @@ export async function getPlatformServiceHealth(_request: Request, response: Resp
   return response.json({ data: health });
 }
 
+export async function getPlatformSupabaseUsage(_request: Request, response: Response) {
+  const summary = await platformService.getSupabaseUsageSummary();
+  return response.json({ data: summary });
+}
+
 export async function getPlatformAuditLogs(request: Request, response: Response) {
   const { limit = 100 } = platformAuditLogQuerySchema.parse(request.query);
   const logs = await platformService.getAuditSummary(limit);

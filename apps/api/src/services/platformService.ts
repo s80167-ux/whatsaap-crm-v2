@@ -6,6 +6,7 @@ import { MessageDispatchOutboxRepository } from "../repositories/messageDispatch
 import { withTransaction } from "../config/database.js";
 import { UsageAggregationService } from "./usageAggregationService.js";
 import { OrganizationAdminRepository } from "../repositories/organizationAdminRepository.js";
+import { SupabaseUsageMonitorService } from "./supabaseUsageMonitorService.js";
 
 type ServiceHealthStatus = "healthy" | "degraded" | "down" | "unknown";
 type ServiceHealthKind = "application" | "provider" | "database" | "worker";
@@ -46,7 +47,8 @@ export class PlatformService {
     private readonly auditLogService = new AuditLogService(),
     private readonly messageDispatchOutboxRepository = new MessageDispatchOutboxRepository(),
     private readonly messageDispatchService = new MessageDispatchService(),
-    private readonly organizationRepository = new OrganizationAdminRepository()
+    private readonly organizationRepository = new OrganizationAdminRepository(),
+    private readonly supabaseUsageMonitorService = new SupabaseUsageMonitorService()
   ) {}
 
   async listOrganizations() {
@@ -185,6 +187,10 @@ export class PlatformService {
 
   async getAuditSummary(limit = 100) {
     return this.auditLogService.list({ limit });
+  }
+
+  async getSupabaseUsageSummary() {
+    return this.supabaseUsageMonitorService.getLatestSummary();
   }
 
   async getOutboundDispatchSummary(limit = 25) {

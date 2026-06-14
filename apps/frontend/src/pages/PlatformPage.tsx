@@ -5,6 +5,7 @@ import { Activity, AlertTriangle, Building2, CheckCircle2, Clock3, Cloud, Databa
 import { retryPlatformOutboundDispatch } from "../api/dashboard";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { SupabaseUsageCards } from "../components/platform/SupabaseUsageCards";
 import { PanelPagination, usePanelPagination } from "../components/PanelPagination";
 import { usePlatformAuditLogs, usePlatformHealth, usePlatformOrganizations, usePlatformOutboundDispatch, usePlatformServiceHealth, usePlatformUsage } from "../hooks/useDashboard";
 import type { PlatformHealthSummary, PlatformOrganization, PlatformServiceHealthStatus, PlatformServiceHealthSummary } from "../types/dashboard";
@@ -170,6 +171,7 @@ export function PlatformPage() {
       queryClient.invalidateQueries({ queryKey: ["platform-usage"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-health"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-service-health"] }),
+      queryClient.invalidateQueries({ queryKey: ["platform-supabase-usage"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-audit-logs"] }),
       queryClient.invalidateQueries({ queryKey: ["platform-outbound-dispatch"] })
     ]);
@@ -293,6 +295,8 @@ export function PlatformPage() {
           Last checked {formatDateTime(serviceHealth?.checked_at)}. Provider API results are cached briefly to avoid noisy polling.
         </p>
       </Card>
+
+      <SupabaseUsageCards />
 
       <Card elevated className="p-0">
         <div className="border-b border-border px-3 py-3">

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
-import { requirePermission } from "../../middleware/authMiddleware.js";
+import { requirePermission, requireRole } from "../../middleware/authMiddleware.js";
 import {
   backfillWhatsAppAccount,
   backfillWhatsAppHistory,
@@ -31,6 +31,8 @@ import {
   disconnectWhatsAppAccount,
   getCampaignsModuleStatus,
   getOrganizationAccessLimits,
+  getRolePermissions,
+  listRolePermissions,
   pauseWhatsAppNumberWarmer,
   reconnectWhatsAppAccount,
   resumeWhatsAppNumberWarmer,
@@ -39,12 +41,17 @@ import {
   replayRawEvents,
   saveWhatsAppNumberWarmer,
   startWhatsAppNumberWarmer,
+  updateRolePermissions,
   updateOrganizationAccessLimits,
   updateWhatsAppAccountAccess,
   updateWhatsAppAccount
 } from "./admin.controller.js";
 
 export const adminRoutes = Router();
+
+adminRoutes.get("/roles/permissions", requireRole(["super_admin"]), asyncHandler(listRolePermissions));
+adminRoutes.get("/roles/:role/permissions", requireRole(["super_admin"]), asyncHandler(getRolePermissions));
+adminRoutes.put("/roles/:role/permissions", requireRole(["super_admin"]), asyncHandler(updateRolePermissions));
 
 adminRoutes.get("/organization-modules/:moduleKey/status", asyncHandler(getCampaignsModuleStatus));
 adminRoutes.get("/organizations/:organizationId/access-limits", asyncHandler(getOrganizationAccessLimits));
