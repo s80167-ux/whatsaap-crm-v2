@@ -12814,3 +12814,813 @@
     [35mpath[39m: "/api/platform/outbound-dispatch"
     [35mstatusCode[39m: 200
     [35mdurationMs[39m: 696
+[13:06:27.821] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "40eb4892-500c-45fe-a8ed-e0270184653d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[13:06:27.825] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "19447ef1-87d4-4cf7-8cf5-2e1a4d90f84d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[13:06:27.829] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "3f544e35-1b06-49d2-b125-cd0b514c7bf0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[13:06:27.841] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "09914366-3d66-4059-8ab7-7aaf35c26f42"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+[13:06:27.846] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "ff6ad101-249d-4e61-9142-fc1be3ecc1d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+[13:06:27.851] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d003c06a-70e6-46cc-961d-4c0426b05d6b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/auth/me [32m200[0m 1323.388 ms - 773[0m
+[13:06:29.150] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "19447ef1-87d4-4cf7-8cf5-2e1a4d90f84d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1325
+[13:06:29.158] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "3bb20d75-502d-4ee3-a076-a0c996e86b80"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/organizations [32m200[0m 2044.047 ms - 450[0m
+[13:06:29.875] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "3f544e35-1b06-49d2-b125-cd0b514c7bf0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2046
+[13:06:29.880] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "576c7194-f71d-47ad-bb3b-d955e61069f6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[0mGET /api/platform/health [32m200[0m 2249.575 ms - 12691[0m
+[13:06:30.101] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d003c06a-70e6-46cc-961d-4c0426b05d6b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2250
+[13:06:30.103] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "a727f53e-547e-4ac0-88dc-337cadb2f2d6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[0mGET /api/health [32m200[0m 0.186 ms - 11[0m
+[13:06:30.279] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b92b852c-777c-41b1-8083-7aad4d71e537"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[13:06:30.279] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b92b852c-777c-41b1-8083-7aad4d71e537"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 0
+[0mGET /api/platform/usage [32m200[0m 2589.139 ms - 135[0m
+[13:06:30.435] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "ff6ad101-249d-4e61-9142-fc1be3ecc1d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2589
+[13:06:30.437] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "66803b02-9fe3-4cb3-a6a2-68a1116debb7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+[0mGET /api/platform/organizations [32m200[0m 2813.765 ms - 450[0m
+[13:06:30.655] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "09914366-3d66-4059-8ab7-7aaf35c26f42"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2814
+[13:06:30.672] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "cefac827-ba55-4abc-961b-fe56b3222aaa"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[0mGET /api/notifications?limit=20 [32m200[0m 2938.038 ms - 14403[0m
+[13:06:30.759] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "40eb4892-500c-45fe-a8ed-e0270184653d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2938
+[0mGET /api/platform/service-health [32m200[0m 2088.663 ms - 2158[0m
+[13:06:31.247] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "3bb20d75-502d-4ee3-a076-a0c996e86b80"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2089
+[0mGET /api/platform/audit-logs [32m200[0m 1863.514 ms - 76810[0m
+[13:06:31.744] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "576c7194-f71d-47ad-bb3b-d955e61069f6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1864
+[0mGET /api/platform/outbound-dispatch [32m200[0m 1970.818 ms - 34011[0m
+[13:06:32.074] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "a727f53e-547e-4ac0-88dc-337cadb2f2d6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1971
+[0mGET /api/platform/supabase-usage [32m200[0m 1716.989 ms - 1691[0m
+[13:06:32.154] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "66803b02-9fe3-4cb3-a6a2-68a1116debb7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1717
+[0mGET /api/notifications?limit=20 [32m200[0m 1644.361 ms - 14403[0m
+[13:06:32.317] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "cefac827-ba55-4abc-961b-fe56b3222aaa"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1645
+[13:14:40.181] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "83c55bab-ce29-4f4f-a9f6-088b3260d07e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[13:14:40.188] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "9bd4483e-1d44-4f73-af31-ecb8b11b16a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[13:14:40.192] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "7640972c-881d-4dc9-a8b7-be9f5fa8ac8c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[13:14:40.195] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "99f3ea37-1da6-42f5-9a43-34a272d00099"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+[13:14:40.197] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "600c9c45-5d5d-4c94-bf1d-05644d3b4440"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+[13:14:40.200] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b7f4b19c-e6b7-48e9-aa3e-3369e4f5d247"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/auth/me [32m200[0m 1382.208 ms - 773[0m
+[13:14:41.571] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "9bd4483e-1d44-4f73-af31-ecb8b11b16a2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1383
+[13:14:41.574] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "8581fef0-8f7a-4e49-9455-ef6cde9d4b79"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/health [32m200[0m 0.145 ms - 11[0m
+[13:14:42.578] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "5a7295ae-b697-47b1-90f1-af025fa75a51"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[13:14:42.579] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "5a7295ae-b697-47b1-90f1-af025fa75a51"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+[0mGET /api/platform/health [32m200[0m 2667.532 ms - 12691[0m
+[0mGET /api/platform/supabase-usage [0m-[0m - ms - -[0m
+[0mGET /api/platform/audit-logs [0m-[0m - ms - -[0m
+[0mGET /api/platform/outbound-dispatch [0m-[0m - ms - -[0m
+[0mGET /api/organizations [0m-[0m - ms - -[0m
+[0mGET /api/notifications?limit=20 [0m-[0m - ms - -[0m
+[0mGET /api/platform/usage [0m-[0m - ms - -[0m
+[0mGET /api/platform/service-health [0m-[0m - ms - -[0m
+[0mGET /api/platform/organizations [0m-[0m - ms - -[0m
+[13:14:42.869] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b7f4b19c-e6b7-48e9-aa3e-3369e4f5d247"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2669
+[13:14:42.891] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "37fc8b78-fe56-48ec-b240-481ee794e31a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[13:14:42.894] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "16b855af-557a-495b-9997-bc6653893dc8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[13:14:42.895] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d1b139aa-5a57-45bf-a5f4-b633eb9d02e9"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+[13:14:43.686] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d87080b0-d044-43e3-ae08-c1d073627d3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[0mGET /api/auth/me [32m200[0m 749.319 ms - 773[0m
+[13:14:44.436] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d87080b0-d044-43e3-ae08-c1d073627d3f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 750
+[13:14:44.837] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "e2a05448-d924-4aba-90d1-0c7bd54a916f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[13:14:44.856] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "3d3fe1ce-ad6f-41ad-8854-fd6900c2721e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+[13:14:44.859] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "f6f69d3a-ecaa-400f-8b45-285ae26174a3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+[13:14:44.869] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "0cc68eb1-576d-4013-93d1-342c34a0910a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+[13:14:44.880] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "18a9466e-e243-4e69-8571-9f65ee792f1d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[13:14:44.887] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "e7d6dcd1-c09c-41ba-a58b-0d89a40adb46"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/platform/service-health [32m200[0m 1052.707 ms - 2159[0m
+[13:14:45.940] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "e7d6dcd1-c09c-41ba-a58b-0d89a40adb46"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1053
+[13:14:45.943] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b56887a9-ae5f-4b66-9624-46aa0b8dea4f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[0mGET /api/notifications?limit=20 [32m200[0m 1273.131 ms - 14403[0m
+[13:14:46.111] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "e2a05448-d924-4aba-90d1-0c7bd54a916f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1274
+[13:14:46.113] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "491ec0ad-9e29-4b30-9611-4bf992c7dcca"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[0mGET /api/platform/supabase-usage [32m200[0m 1336.351 ms - 1691[0m
+[13:14:46.193] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "3d3fe1ce-ad6f-41ad-8854-fd6900c2721e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1337
+[13:14:46.194] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "6345133e-32e6-41c2-8454-89e0be93d867"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[0mGET /api/platform/organizations [32m200[0m 1415.268 ms - 450[0m
+[13:14:46.275] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "f6f69d3a-ecaa-400f-8b45-285ae26174a3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1416
+[13:14:46.278] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "24263727-e817-4ccf-878d-581c5833b163"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[0mGET /api/platform/usage [32m200[0m 1570.917 ms - 135[0m
+[13:14:46.441] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "0cc68eb1-576d-4013-93d1-342c34a0910a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1572
+[13:14:46.444] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "c80aadd5-05ac-4c20-9350-c6a936dd4fdf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[0mGET /api/platform/health [32m200[0m 1731.207 ms - 12691[0m
+[13:14:46.612] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "18a9466e-e243-4e69-8571-9f65ee792f1d"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1732
+[0mGET /api/auth/me [32m200[0m 998.197 ms - 773[0m
+[0mGET /api/auth/me [32m200[0m 999.031 ms - 773[0m
+[0mGET /api/platform/audit-logs [32m200[0m 1603.472 ms - 76810[0m
+[0mGET /api/organizations [32m200[0m 1512.568 ms - 450[0m
+[13:14:47.277] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "24263727-e817-4ccf-878d-581c5833b163"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 999
+[13:14:47.444] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "c80aadd5-05ac-4c20-9350-c6a936dd4fdf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1000
+[13:14:47.547] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b56887a9-ae5f-4b66-9624-46aa0b8dea4f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1604
+[13:14:47.626] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "491ec0ad-9e29-4b30-9611-4bf992c7dcca"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1513
+[0mGET /api/platform/outbound-dispatch [32m200[0m 1768.427 ms - 34011[0m
+[13:14:47.963] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "6345133e-32e6-41c2-8454-89e0be93d867"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1769
+[13:24:32.020] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "1f35c8b5-866a-44eb-864f-2bb63e598496"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[13:24:32.026] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "fc24f032-fb65-4ea4-a769-419125223254"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[13:24:32.034] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "9e23f411-fdff-4fb5-8f0e-9d9c8a544d34"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[13:24:32.036] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "86c9cd75-6579-4fa9-8eab-ba01c5a0ad7a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+[13:24:32.039] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "027c830a-5d72-4aea-889d-34f1860053bf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+[13:24:32.041] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "0b179219-becb-4507-827e-91972854a436"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/auth/me [32m200[0m 1521.543 ms - 773[0m
+[13:24:33.547] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "fc24f032-fb65-4ea4-a769-419125223254"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1521
+[13:24:33.549] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d863194d-5bfb-486d-8fc3-1e89d1f9d60c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/health [32m200[0m 0.100 ms - 11[0m
+[0mGET /api/organizations [32m200[0m 2599.426 ms - 450[0m
+[13:24:34.541] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b6beb677-71ec-49d5-9a3c-16597c07931b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[13:24:34.542] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b6beb677-71ec-49d5-9a3c-16597c07931b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+[13:24:34.634] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "9e23f411-fdff-4fb5-8f0e-9d9c8a544d34"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2600
+[13:24:34.636] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "465ba2d9-4408-4a84-ad1c-faf4511a562f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+[0mGET /api/platform/health [32m200[0m 2930.278 ms - 12691[0m
+[13:24:34.972] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "0b179219-becb-4507-827e-91972854a436"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2931
+[13:24:34.974] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "e2641301-a490-4d86-9149-854c33369d55"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[0mGET /api/notifications?limit=20 [32m200[0m 3147.120 ms - 14403[0m
+[13:24:35.168] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "1f35c8b5-866a-44eb-864f-2bb63e598496"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3148
+[13:24:35.169] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "0ba9a494-6975-4f49-ae92-9aec02ee6105"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[0mGET /api/platform/usage [32m200[0m 3306.236 ms - 135[0m
+[13:24:35.346] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "027c830a-5d72-4aea-889d-34f1860053bf"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3306
+[0mGET /api/platform/organizations [32m200[0m 3470.181 ms - 450[0m
+[13:24:35.507] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "86c9cd75-6579-4fa9-8eab-ba01c5a0ad7a"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3471
+[0mGET /api/platform/service-health [32m200[0m 2063.615 ms - 2158[0m
+[13:24:35.613] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d863194d-5bfb-486d-8fc3-1e89d1f9d60c"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2064
+[0mGET /api/platform/supabase-usage [32m200[0m 1553.525 ms - 1691[0m
+[13:24:36.190] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "465ba2d9-4408-4a84-ad1c-faf4511a562f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1554
+[0mGET /api/platform/audit-logs [32m200[0m 1396.603 ms - 76810[0m
+[13:24:36.371] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "e2641301-a490-4d86-9149-854c33369d55"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1397
+[0mGET /api/platform/outbound-dispatch [32m200[0m 1558.130 ms - 34011[0m
+[13:24:36.728] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "0ba9a494-6975-4f49-ae92-9aec02ee6105"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1559
+[14:00:02.555] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "26d1f73e-5b11-43da-b8e0-0238ef03c2d0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[14:00:02.559] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "353a8752-ff00-49f5-b2f9-e95a8b361d20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+[14:00:02.567] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "57152c62-3982-4fda-8b0e-286f5409916e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+[14:00:02.572] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "5d07660c-8a58-4f46-913c-f91f937354f8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+[14:00:02.603] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "208bc4b3-c539-413a-b6a2-83ba44af18a0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:00:02.606] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "617c1c36-7de6-45d1-beb8-2541d04b8c03"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+[0mGET /api/auth/me [32m200[0m 2601.895 ms - 773[0m
+[14:00:05.161] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "353a8752-ff00-49f5-b2f9-e95a8b361d20"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/auth/me"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 2602
+[14:00:05.165] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "a1da173c-27de-4d3a-9ca8-78dec1579e08"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[0mGET /api/platform/usage [32m200[0m 3057.426 ms - 135[0m
+[14:00:05.664] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "617c1c36-7de6-45d1-beb8-2541d04b8c03"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3058
+[14:00:05.667] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "083f367d-83bf-4460-a169-8795a27b00e6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/notifications?limit=20 [32m200[0m 3302.150 ms - 14512[0m
+[14:00:05.858] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "26d1f73e-5b11-43da-b8e0-0238ef03c2d0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3303
+[14:00:05.860] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "c23b0518-5358-4d86-8047-0ff807bdf867"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 3639.449 ms - 34011[0m
+[0mGET /api/organizations [32m200[0m 3757.738 ms - 450[0m
+[14:00:06.243] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "208bc4b3-c539-413a-b6a2-83ba44af18a0"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3640
+[14:00:06.246] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "387c932d-5aca-4609-84ea-890303fbf0c7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+[14:00:06.325] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "57152c62-3982-4fda-8b0e-286f5409916e"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3758
+[14:00:06.332] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d1cbc4b4-5819-4a67-b5f5-b35e41dc1824"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+[0mGET /api/platform/organizations [32m200[0m 4000.176 ms - 450[0m
+[14:00:06.572] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "5d07660c-8a58-4f46-913c-f91f937354f8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/organizations"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 4000
+[0mGET /api/health [32m200[0m 0.100 ms - 11[0m
+[14:00:06.748] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "53b77492-fbe0-4be0-8a2a-373af6251939"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[14:00:06.749] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "53b77492-fbe0-4be0-8a2a-373af6251939"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+[0mGET /api/platform/audit-logs [32m200[0m 1928.864 ms - 76810[0m
+[14:00:07.094] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "a1da173c-27de-4d3a-9ca8-78dec1579e08"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1929
+[0mGET /api/platform/service-health [32m200[0m 1920.277 ms - 2157[0m
+[14:00:07.588] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "083f367d-83bf-4460-a169-8795a27b00e6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1921
+[0mGET /api/platform/health [32m200[0m 1998.838 ms - 12791[0m
+[14:00:07.859] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "c23b0518-5358-4d86-8047-0ff807bdf867"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1999
+[0mGET /api/platform/supabase-usage [32m200[0m 1699.729 ms - 1691[0m
+[14:00:07.946] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "387c932d-5aca-4609-84ea-890303fbf0c7"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/supabase-usage"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1700
+[0mGET /api/notifications?limit=20 [32m200[0m 1779.653 ms - 14512[0m
+[14:00:08.112] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d1cbc4b4-5819-4a67-b5f5-b35e41dc1824"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/notifications?limit=20"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1780
+[14:00:21.287] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "62231628-716c-4308-b648-5a7f85948ca3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 860.351 ms - 34011[0m
+[14:00:22.148] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "62231628-716c-4308-b648-5a7f85948ca3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 861
+[14:00:22.889] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "245d2578-02e0-49e7-9109-e025033e2837"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/health [32m200[0m 537.516 ms - 12791[0m
+[14:00:23.427] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "245d2578-02e0-49e7-9109-e025033e2837"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 538
+[14:00:37.137] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b43b7094-2a34-4880-a26c-aef30ca2d35f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[14:00:37.178] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "842ae2df-71ee-46ef-aa7b-02307602bf94"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:00:37.628] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "c117c8e4-8b77-4782-a314-4312c358ac68"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/platform/audit-logs [32m200[0m 930.008 ms - 76810[0m
+[14:00:38.068] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b43b7094-2a34-4880-a26c-aef30ca2d35f"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 931
+[0mGET /api/platform/service-health [32m200[0m 598.192 ms - 2157[0m
+[14:00:38.227] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "c117c8e4-8b77-4782-a314-4312c358ac68"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 599
+[14:00:38.445] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "b14c6e24-62d2-47e5-9d3a-54cf8f73ea6b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 1399.606 ms - 34011[0m
+[14:00:38.579] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "842ae2df-71ee-46ef-aa7b-02307602bf94"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1401
+[0mGET /api/platform/health [32m200[0m 483.484 ms - 12791[0m
+[14:00:38.929] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "b14c6e24-62d2-47e5-9d3a-54cf8f73ea6b"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 484
+[14:00:53.622] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "6f269a12-0409-4ac1-99ac-83ec62870856"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:00:53.959] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "4b367023-819d-4f68-8fa6-af4241a3e907"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 755.938 ms - 34011[0m
+[14:00:54.379] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "6f269a12-0409-4ac1-99ac-83ec62870856"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 757
+[0mGET /api/platform/health [32m200[0m 757.683 ms - 12791[0m
+[14:00:54.718] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "4b367023-819d-4f68-8fa6-af4241a3e907"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 759
+[0mGET /api/health [32m200[0m 0.128 ms - 11[0m
+[0mGET /api/platform/audit-logs [32m200[0m 736.141 ms - 76810[0m
+[14:01:08.121] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "0cd02b7b-ca33-4e2a-a324-0a6ea4e6cf50"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[14:01:08.241] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d1c63782-ba4e-4f25-b164-dd5d89b36361"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[14:01:08.613] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "68b2c8b0-4bdb-40be-8e8d-d9e498f25882"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+[14:01:08.614] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "68b2c8b0-4bdb-40be-8e8d-d9e498f25882"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1
+[14:01:08.858] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "0cd02b7b-ca33-4e2a-a324-0a6ea4e6cf50"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 737
+[0mGET /api/platform/service-health [32m200[0m 826.828 ms - 2155[0m
+[14:01:09.068] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d1c63782-ba4e-4f25-b164-dd5d89b36361"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 827
+[14:01:09.398] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "7d5b1f4a-50bb-4b6f-b19c-f260891e43e1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:01:09.740] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "5d9a3bb9-f113-4c52-b3a7-08f6c77db7f8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 603.582 ms - 34011[0m
+[14:01:10.003] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "7d5b1f4a-50bb-4b6f-b19c-f260891e43e1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 605
+[0mGET /api/platform/health [32m200[0m 603.193 ms - 12791[0m
+[14:01:10.344] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "5d9a3bb9-f113-4c52-b3a7-08f6c77db7f8"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 604
+[14:01:25.018] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "9d677da9-6b29-4054-881e-7937f75c26c6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:01:25.360] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "9cd23f04-9cc9-4da8-b440-f9fbdf21a145"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 831.203 ms - 34011[0m
+[14:01:25.850] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "9d677da9-6b29-4054-881e-7937f75c26c6"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 832
+[0mGET /api/platform/health [32m200[0m 834.506 ms - 12791[0m
+[14:01:26.195] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "9cd23f04-9cc9-4da8-b440-f9fbdf21a145"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 835
+[14:01:38.899] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "d3d7ff5c-fcf1-4df3-8e71-7cb816fae0d1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+[14:01:39.093] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "c1ca0952-0de2-458f-ac19-f5b2556ec1f3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+[0mGET /api/platform/service-health [32m200[0m 642.091 ms - 2155[0m
+[14:01:39.736] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "c1ca0952-0de2-458f-ac19-f5b2556ec1f3"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/service-health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 643
+[0mGET /api/platform/audit-logs [32m200[0m 1138.198 ms - 76810[0m
+[14:01:40.039] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "d3d7ff5c-fcf1-4df3-8e71-7cb816fae0d1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/audit-logs"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 1140
+[14:01:40.877] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "630144f4-1b6a-4037-8574-067575145ca1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+[14:01:41.223] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "aadb75ec-3706-425f-91e7-08db93f9aa56"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+[0mGET /api/platform/outbound-dispatch [32m200[0m 723.518 ms - 34011[0m
+[14:01:41.602] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "630144f4-1b6a-4037-8574-067575145ca1"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/outbound-dispatch"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 725
+[0mGET /api/platform/health [32m200[0m 812.750 ms - 12791[0m
+[14:01:42.037] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "aadb75ec-3706-425f-91e7-08db93f9aa56"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/platform/health"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 814
+[14:01:51.755] [32mINFO[39m (5736): [36mRequest started[39m
+    [35mrequestId[39m: "aa39f965-30ea-4478-8f27-32c5cdc228d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/dashboard/super-admin?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622&range_days=30"
+[0mGET /api/dashboard/super-admin?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622&range_days=30 [32m200[0m 3850.151 ms - 19314[0m
+[14:01:55.606] [32mINFO[39m (5736): [36mRequest completed[39m
+    [35mrequestId[39m: "aa39f965-30ea-4478-8f27-32c5cdc228d2"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/api/dashboard/super-admin?organization_id=b3d073f1-5bb4-4fa0-a115-86a7fb071622&range_days=30"
+    [35mstatusCode[39m: 200
+    [35mdurationMs[39m: 3851
