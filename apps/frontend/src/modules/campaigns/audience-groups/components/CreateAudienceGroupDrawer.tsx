@@ -153,13 +153,19 @@ export function CreateAudienceGroupDrawer({
 
     try {
       const crmPhones = await fetchCrmPhoneLookup(organizationId);
-      const optOuts = await listCampaignOptOuts({ organizationId, limit: 5000 });
+      const [optedOuts, blockedContacts] = await Promise.all([
+        listCampaignOptOuts({ organizationId, status: "opted_out", limit: 200 }),
+        listCampaignOptOuts({ organizationId, status: "blocked", limit: 200 })
+      ]);
+      const suppressedPhones = new Set(
+        [...optedOuts, ...blockedContacts].map((item) => item.normalized_phone)
+      );
       const validationResult = validateAudienceRows({
         headers,
         rows,
         mapping,
         crmPhones,
-        optedOutPhones: new Set(optOuts.map((item) => item.normalized_phone))
+        optedOutPhones: suppressedPhones
       });
       setResult(validationResult);
       setStepIndex(4);
