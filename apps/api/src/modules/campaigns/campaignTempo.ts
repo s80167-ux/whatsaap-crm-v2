@@ -20,50 +20,50 @@ type CampaignTempoInput = Partial<Omit<CampaignTempo, "speedPreset">> & {
 export const campaignTempoPresets: Record<CampaignSpeedPreset, CampaignTempo> = {
   very_safe: {
     speedPreset: "very_safe",
-    delayPerMessageSeconds: 30,
-    batchSize: 8,
-    batchPauseSeconds: 420,
-    dailyLimit: 80,
+    delayPerMessageSeconds: 120,
+    batchSize: 3,
+    batchPauseSeconds: 1800,
+    dailyLimit: 20,
     stopOnHighFailure: true
   },
   safe: {
     speedPreset: "safe",
-    delayPerMessageSeconds: 22,
-    batchSize: 12,
-    batchPauseSeconds: 300,
-    dailyLimit: 150,
+    delayPerMessageSeconds: 90,
+    batchSize: 4,
+    batchPauseSeconds: 1200,
+    dailyLimit: 30,
     stopOnHighFailure: true
   },
   balanced: {
     speedPreset: "balanced",
-    delayPerMessageSeconds: 16,
-    batchSize: 15,
-    batchPauseSeconds: 180,
-    dailyLimit: 250,
+    delayPerMessageSeconds: 75,
+    batchSize: 5,
+    batchPauseSeconds: 900,
+    dailyLimit: 40,
     stopOnHighFailure: true
   },
   normal: {
     speedPreset: "normal",
-    delayPerMessageSeconds: 12,
-    batchSize: 20,
-    batchPauseSeconds: 120,
-    dailyLimit: 350,
+    delayPerMessageSeconds: 60,
+    batchSize: 6,
+    batchPauseSeconds: 720,
+    dailyLimit: 50,
     stopOnHighFailure: true
   },
   fast: {
     speedPreset: "fast",
-    delayPerMessageSeconds: 9,
-    batchSize: 25,
-    batchPauseSeconds: 90,
-    dailyLimit: 500,
+    delayPerMessageSeconds: 50,
+    batchSize: 8,
+    batchPauseSeconds: 600,
+    dailyLimit: 60,
     stopOnHighFailure: true
   },
   custom: {
     speedPreset: "custom",
-    delayPerMessageSeconds: 22,
-    batchSize: 12,
-    batchPauseSeconds: 300,
-    dailyLimit: 150,
+    delayPerMessageSeconds: 90,
+    batchSize: 4,
+    batchPauseSeconds: 1200,
+    dailyLimit: 30,
     stopOnHighFailure: true
   }
 };
